@@ -1,0 +1,28 @@
+# .env file (contains secrets)
+.env
+.env.maxkb
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Data directory
+maxkb_data/
+dingtalk_data/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Token cache
+.token_cache

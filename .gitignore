@@ -1,0 +1,15 @@
+# 忽略文件
+*.zip
+*.log
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+.env
+.env.local
+.vscode/
+.idea/
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db

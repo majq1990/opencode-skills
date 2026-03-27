@@ -1,0 +1,57 @@
+# Default configuration for skill-security-auditor
+
+# Scanner settings
+scanner:
+  # Minimum severity to report (critical, high, medium, low, info)
+  severity_threshold: medium
+  
+  # Scanners to enable
+  scanners:
+    - cisco
+    - clawsec
+
+# Cisco Skill Scanner settings
+cisco_scanner:
+  # Timeout per skill scan (seconds)
+  timeout: 60
+  
+  # Output format (sarif, json)
+  output_format: sarif
+
+# ClawSec integration
+clawsec:
+  # Threat intelligence feed URL
+  feed_url: https://api.clawsec.io/v1/feed
+  
+  # Cache refresh interval (hours)
+  cache_refresh_hours: 24
+
+# Report settings
+report:
+  # Default output format (sarif, markdown, json)
+  default_format: markdown
+  
+  # Include code snippets in reports
+  include_snippets: true
+  
+  # Include remediation advice
+  include_remediation: true
+
+# Auto-remediation settings
+auto_remediation:
+  # Enable automatic quarantine of suspicious skills
+  enabled: false
+  
+  # Threshold for auto-quarantine (critical, high)
+  threshold: critical
+  
+  # Quarantine directory
+  quarantine_dir: ./quarantine
+
+# Performance settings
+performance:
+  # Maximum parallel scan workers
+  max_workers: 4
+  
+  # Memory limit per scan (MB)
+  memory_limit_mb: 200
