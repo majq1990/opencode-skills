@@ -1,0 +1,10 @@
+version = 1
+id = "task-reminder-test-11-32"
+name = "Task Reminder Test 11:32"
+status = "ACTIVE"
+schedule_type = "once"
+scheduled_at = "2026-03-27T11:32"
+cwds = ["c:/Users/majq1/WorkBuddy/20260327100241"]
+model_id = "auto"
+model_is_thinking = false
+push_to_wechat = true

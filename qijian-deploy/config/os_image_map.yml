@@ -1,0 +1,188 @@
+# OS 别名 → 镜像（按区） → dl_v2.sh 菜单输入 映射
+#
+# 工作流：
+#   用户给"操作系统版本"（如 "kylin V10 SP3 x86"）
+#   → aliases 匹配到某个 OS key
+#   → 按 region 选 ImageId（默认 cn-beijing）
+#   → dl_v2_menu 提供阶段 3 的前 3 行输入
+#   → 合并 dl_v2_input_template 生成完整 10 行输入序列
+#
+# 注意：
+#   - 架构菜单 1/2 基于 2026-04-16 实测（kylin V10 SP3 x86 用 3→1→2），推断 2=x86 / 1=arm；首次跑新 OS 需在 node1 手工确认
+#   - CentOS 7.9 自定义镜像都是已特化业务镜像，跑麒舰栈建议选公共镜像或重装
+#   - 镜像清单最后一次同步时间：2026-04-16（aliyun ecs DescribeImages --ImageOwnerAlias self）
+
+default_region: cn-beijing
+default_os: kylin_v10_sp3_x86
+
+# 完整 dl_v2.sh 交互输入序列构造规则：
+# line 1-3  ← dl_v2_menu（各 OS 独立）
+# line 4    ← base_select
+# line 5    ← script_select
+# line 6    ← web_ver（空行）
+# line 7-9  ← account / password / project
+# line 10   ← web_app_select（应对 ini 含 '-' 触发的子菜单）
+dl_v2_input_template:
+  base_select: 2       # 2 = 含 env/repo
+  script_select: 1     # 1 = 麒舰微服务 v14-standard
+  web_ver: ""          # 空 = release720（默认）
+  account: majianquan
+  password: Egova@123
+  project: faq
+  web_app_select: 0    # 0 = 全选（[dataflow-毕升采集] 含 '-' 会触发菜单）
+
+# OS 定义
+operating_systems:
+
+  kylin_v10_sp3_x86:
+    aliases: ["麒麟 V10 SP3 x86", "kylin V10 SP3", "kylin V10 SP3 x86", "银河麒麟 V10 SP3", "kylinv10sp3"]
+    dl_v2_menu: [3, 1, 2]     # 银河麒麟 → V10 SP3 → x86（本次实测基线）
+    images:
+      cn-beijing: m-2ze1eyekppxowe73c3g7      # kylinv10-sp3-amd64-修改后
+      cn-wulanchabu: m-0jl4fem5xgqm8roo9hhq   # kylin_v10_amd64_修改后
+    verified: true
+
+  kylin_v10_sp3_arm:
+    aliases: ["麒麟 V10 SP3 arm", "kylin V10 SP3 aarch64"]
+    dl_v2_menu: [3, 1, 1]
+    images:
+      cn-beijing: m-2zehu0jx6c7q8lad2hlu
+    verified: false
+
+  kylin_v10_sp2_x86:
+    aliases: ["麒麟 V10 SP2 x86", "kylin V10 SP2"]
+    dl_v2_menu: [3, 1, 2]
+    images:
+      cn-beijing: m-2zedkh03c8ya77q74u6w
+    verified: false
+    notes: "SP2 与 SP3 在 dl_v2 第二层菜单是否同一项未验证"
+
+  kylin_v10_sp2_arm:
+    aliases: ["麒麟 V10 SP2 arm"]
+    dl_v2_menu: [3, 1, 1]
+    images:
+      cn-beijing: m-2ze9ffpkb4ub5hpydgm3
+    verified: false
+
+  kylin_v11_x86:
+    aliases: ["麒麟 V11 x86", "kylin V11", "kylin V11 x86"]
+    dl_v2_menu: [3, 2, 2]
+    images:
+      cn-beijing: m-2ze0a20l9jhmopm4dy7z
+      cn-wulanchabu: m-0jlhgu3f9jvs80d8elic
+    verified: false
+
+  kylin_v11_arm:
+    aliases: ["麒麟 V11 arm", "kylin V11 aarch64"]
+    dl_v2_menu: [3, 2, 1]
+    images:
+      cn-wulanchabu: m-0jl2z1197ubufxclgyr8
+    verified: false
+
+  openeuler_22_03_x86:
+    aliases: ["openEuler 22.03 x86", "欧拉 22.03 x86", "oe22 x86"]
+    dl_v2_menu: [4, 1, 2]
+    images:
+      cn-beijing: m-2zebxvvlhhlzc1gz7g7w
+    verified: false
+
+  openeuler_22_03_sp3_x86:
+    aliases: ["openEuler 22.03 SP3 x86", "欧拉 22.03 SP3"]
+    dl_v2_menu: [4, 1, 2]
+    images:
+      cn-beijing:
+        - m-2zejfb04k51sz319jfkz      # SP3 修改后
+        - m-2ze9td3gmh8icpfcjya2      # 智信云考核
+    verified: false
+
+  openeuler_22_03_arm:
+    aliases: ["openEuler 22.03 arm"]
+    dl_v2_menu: [4, 1, 1]
+    images:
+      cn-beijing: m-2zeh1vs8fk3u0pmi8djk
+    verified: false
+
+  openeuler_24_03_arm:
+    aliases: ["openEuler 24.03 arm"]
+    dl_v2_menu: [4, 2, 1]
+    images:
+      cn-beijing: m-2ze8w05w50xt6v4zulbx
+    verified: false
+    notes: "24.03 在 dl_v2 是否有独立子菜单未验证；麒舰栈可能不兼容"
+
+  uos_20_1060a_x86:
+    aliases: ["UOS 20-1060a x86", "UOS 1060a"]
+    dl_v2_menu: [5, 1, 2]
+    images:
+      cn-beijing:
+        - m-2zefa314583c355vwhwm
+        - m-2zehpyonkxarf558mhbm
+    verified: false
+
+  uos_20_1060e_x86:
+    aliases: ["UOS 20-1060e x86", "UOS 1060e"]
+    dl_v2_menu: [5, 2, 2]
+    images:
+      cn-beijing: m-2zeabncvie959om9c366
+    verified: false
+
+  uos_20_1060e_arm:
+    aliases: ["UOS 20-1060e arm"]
+    dl_v2_menu: [5, 2, 1]
+    images:
+      cn-beijing: m-2zeadf6n0zljw1vdzggg
+    verified: false
+
+  uos_20_1070a_x86:
+    aliases: ["UOS 20-1070a x86", "UOS 1070a"]
+    dl_v2_menu: [5, 3, 2]
+    images:
+      cn-beijing: m-2ze8evnkq7t348bs34n6
+    verified: false
+
+  uos_20_1070a_arm:
+    aliases: ["UOS 20-1070a arm"]
+    dl_v2_menu: [5, 3, 1]
+    images:
+      cn-beijing: m-2ze6loodapa82m4jmquf
+    verified: false
+    notes: "explore 文档说 1070a 仅 x86，但有 arm 镜像，首次需验证 dl_v2 支持"
+
+  centos_7_9_x86:
+    aliases: ["CentOS 7.9 x86", "centos 7.9", "centos7"]
+    dl_v2_menu: [1, 1, 2]
+    images:
+      cn-beijing:
+        - m-2ze2uwuh7evifz8l8hne      # bs-20230114
+        - m-2zeaqvvx1yzok13fw55x      # mysql修复
+        - m-2ze8y7d34kxdv44cvomt      # dex-chuji
+        - m-2zeaiur0sb0dh15ur7fq      # 安全模拟
+      cn-wulanchabu:
+        - m-0jl22vozu97jj96wru8i      # k8s work
+        - m-0jliv0gvwk5ehxz4nx76      # 用户中心
+        - m-0jl7rgdnkdly8mvx8to8      # 统一出口
+        - m-0jl9rw1qeefufy7gf0ty      # k8s master
+        - m-0jli8o3j6w3nxggxqwtp      # k8s work
+        - m-0jl3vqdaqaow8o98nsvj      # dameng8
+    verified: false
+    notes: "所有自定义 CentOS 7.9 都是已特化业务镜像，跑纯净麒舰栈建议用公共镜像 centos_7_9_x64_20G_alibase_*.vhd"
+
+# 特殊用途镜像（非 OS 分类，仅供用户明确指名时使用）
+special_purpose_images:
+  cn-beijing:
+    m-2zedcgvb03la4m6ii7yx: "qijiankaohe103_1201（麒舰考核特化）"
+    m-2ze8uf9aa8gqa4meyk37: "悟空实操环境"
+    m-2zedix3uaqew0oietuix: "麒舰认证1224"
+  cn-wulanchabu:
+    m-0jl28gqs8fj7iu3t69w7: "灵珑认证-260326"
+    m-0jlhxmv92km96c2hhqzk: "maxkb-new"
+    m-0jlcmosx8s2xqnl128fu: "maxKB-2.7"
+    m-0jl8vs8ua331d7en70j0: "住建部融合通讯"
+    m-0jlfq5370vfv4mwci42v: "k8s-soft环境"
+
+# 已知不确定项（每发现一个就从 verified:false 推向 true，或修正 dl_v2_menu）
+known_quirks:
+  - "架构菜单 1/2 的含义（arm vs x86）未文档化。实测 kylin V10 SP3 x86 用 3→1→2 成功，推断 2=x86 / 1=arm；其他 OS 首次跑前需 ssh node1 手工跑一次 dl_v2.sh 核对"
+  - "麒麟 V10 SP2 vs SP3 在 dl_v2 第二层菜单是否独立未验证"
+  - "openEuler 24.03 / UOS 1070a arm 的 dl_v2 支持情况未验证"
+  - "镜像清单来自 2026-04-16 同步，新加镜像需重跑 aliyun ecs DescribeImages --ImageOwnerAlias self 并回写本文件"

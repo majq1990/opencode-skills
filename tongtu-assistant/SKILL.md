@@ -1,3 +1,13 @@
+---
+name: tongtu-assistant
+description: 通途平台数据操作助手，提供数据查询、写入、更新、删除能力，并自动记录所有写操作日志
+license: MIT
+compatibility: opencode
+metadata:
+  category: support-dept
+  platform: tongtu
+  features: data-query, data-write, data-update, data-delete, operation-logging
+---
 # 通途助手 (TongTu Assistant)
 
 通途平台数据操作助手，提供数据查询、写入、更新、删除能力，并自动记录所有写操作日志。

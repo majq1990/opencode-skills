@@ -4,7 +4,7 @@ description: Periodically scan DingTalk knowledge bases, track document updates,
 license: MIT
 compatibility: opencode
 metadata:
-  category: integration
+  category: support-dept
   platform: dingtalk
   features: knowledge-base-scanning, incremental-sync, knowledge-graph, rag-ready, change-tracking
 ---

@@ -1,3 +1,13 @@
+---
+name: tongtu-pbc
+description: 通途平台工程PBC表数据导入工具，支持从Excel批量导入PBC职级数据，自动记录所有操作日志
+license: MIT
+compatibility: opencode
+metadata:
+  category: support-dept
+  platform: tongtu
+  features: excel-import, pbc-data, batch-import, operation-logging
+---
 # 通途PBC导入助手 (TongTu PBC Importer)
 
 通途平台工程PBC表数据导入工具，支持从Excel批量导入PBC职级数据，自动记录所有操作日志。
