@@ -52,7 +52,7 @@ TIMEZONE=Asia/Shanghai
 5. **company month**：上月 26 日 ~ 本月 25 日，`get_company_month_range(d)`。
 6. **免填来源**：请假条（`LeaveApproval.exempt_daily_report = True`）∪ 白名单 ∪ 新人免填。
 7. **部门层级**：统计服务为每个部门生成 `{自身} ∪ {所有后代}` 的汇总行，模板维度在 `DailyReportTemplate`（None 表示全部模板合计）。
-8. **周报应交人按职位界定**（2026-06-28 起）：`job_template_mapping(job_title, template_id)` 把**职位**映射到周报模板，`job_title` 匹配的是 `employees.position`（不是工号）。`_calc_weekly_one` 用它界定每模板应交人：有映射 → 只有该职位的在职员工算应交；无映射 → 沿用「部门子树全员在职」。已配置：`工程周会周报(id=4)→工程技术中心大区总经理 + 工程技术中心副总经理`（共 7 人）、`工程技术中心周报(id=7)→15 类工程岗职位`（共 284 人）。
+8. **周报应交人按职位界定**（2026-06-28 起）：`job_template_mapping(job_title, template_id)` 把**职位**映射到周报模板，`job_title` 匹配的是 `employees.position`（不是工号）。`_calc_weekly_one` 用它界定每模板应交人：有映射 → 只有该职位的在职员工算应交；无映射 → 沿用「部门子树全员在职」。已配置：`工程周会周报(id=4)→工程技术中心大区总经理 + 工程技术中心副总经理`（共 7 人）、`工程技术中心周报(id=7)→15 类工程岗职位`（共 284 人）。**当前 active 周报模板仅 id=4、id=7**；`研发中心重点专项工作周报(id=18)` 已停用（工程不需提交，原先无映射→按部门全员算出 应交370/漏交370 纯噪音，已停用并清空其统计行）。
 9. **`employees.position` 存的是钉钉职位 `title`**（采集 `position=info.get("title")`，2026-06-28 修复，此前误取不存在的 `position` 键恒为空）。`job_title` 仍是工号（export 依赖）。新增/改职位规则后需重跑 employee_sync 或定向回填 position。
 10. **周报归属周推导**：采集用 `_derive_week_start(submit_time)`——某周「首个工作日」结束前提交算**上一周**的报（典型周一上午补交），否则算本周。采集窗口 = 本周一 ~ 下周首个工作日 23:59，覆盖「下周才提交」常态。周报截止 = 下一工作周**首个工作日 23:59**，两档（≤截止=已交，其余=漏交，看板把 late 并入漏交）。
    - ⚠️ 调度 `weekly_report_collect` 在周一 22:00，早于截止 23:59，周一晚 22:00–23:59 的提交会漏采。建议挪到周二凌晨（未改，待定）。
