@@ -119,6 +119,7 @@ ssh root@demo.egova.com.cn 'docker logs --tail 200 dingtalk-report-v3'
 | 日期/工作日/新人免填工具 | `src/utils/date_util.py` |
 | 调度任务 | `src/scheduler/scheduler.py` JOBS |
 | 管理页面 / 白名单 CRUD / 漏报看板 | `src/api/routes.py`（`stats_missing_page`, `/admin/whitelist/*`） |
+| 周报看板 + 未交反查 | `src/api/routes.py`（`stats_weekly_page` 汇总；`stats_weekly_missing_page` = `/stats/weekly/missing?dept_id&week_start&template_id` 按职位规则解析应交人列未交/迟交名单）；模板 `stats_weekly.html`（未交数字下钻）、`stats_weekly_missing.html` |
 | 模型 | `src/models/`（`DailyReport`, `WeeklyReport`, `DailyReportStatistics`, `WeeklyReportStatistics`, `EmployeeDailyStats`, `DailyReportWhitelist`, `LeaveApproval`, `Department`, `Employee`, `Holiday`, `PushHistory`） |
 
 ## 常见坑
