@@ -56,6 +56,7 @@ TIMEZONE=Asia/Shanghai
 9. **`employees.position` 存的是钉钉职位 `title`**（采集 `position=info.get("title")`，2026-06-28 修复，此前误取不存在的 `position` 键恒为空）。`job_title` 仍是工号（export 依赖）。新增/改职位规则后需重跑 employee_sync 或定向回填 position。
 10. **周报归属周推导**：采集用 `_derive_week_start(submit_time)`——某周「首个工作日」结束前提交算**上一周**的报（典型周一上午补交），否则算本周。采集窗口 = 本周一 ~ 下周首个工作日 23:59，覆盖「下周才提交」常态。周报截止 = 下一工作周**首个工作日 23:59**，两档（≤截止=已交，其余=漏交，看板把 late 并入漏交）。
    - ⚠️ 调度 `weekly_report_collect` 在周一 22:00，早于截止 23:59，周一晚 22:00–23:59 的提交会漏采。建议挪到周二凌晨（未改，待定）。
+11. **周报整周请假免交**（2026-07 起）：某周「所有工作日」都落在已批准免填请假（`LeaveApproval.exempt_daily_report=True` 且 `result='agree'`）区间内的人，本周免交，从应交里扣除。判定统一走 `statistics_service.week_leave_exempt_ids(db, week_start, week_end, candidate_ids=None)`。已在 `_calc_weekly_one`（聚合 `exempt_employees/required/missing`）与反查页 `stats_weekly_detail_page`（`required`/`missing` 模式排除、新增 `exempt` 模式看免交名单）两处应用。改了免交规则后需 `calc_weekly` 重算相关周。
 
 ## 调度任务（13 个，`src/scheduler/scheduler.py`）
 
@@ -119,7 +120,8 @@ ssh root@demo.egova.com.cn 'docker logs --tail 200 dingtalk-report-v3'
 | 日期/工作日/新人免填工具 | `src/utils/date_util.py` |
 | 调度任务 | `src/scheduler/scheduler.py` JOBS |
 | 管理页面 / 白名单 CRUD / 漏报看板 | `src/api/routes.py`（`stats_missing_page`, `/admin/whitelist/*`） |
-| 周报看板 + 未交反查 | `src/api/routes.py`（`stats_weekly_page` 汇总；`stats_weekly_missing_page` = `/stats/weekly/missing?dept_id&week_start&template_id` 按职位规则解析应交人列未交/迟交名单）；模板 `stats_weekly.html`（未交数字下钻）、`stats_weekly_missing.html` |
+| 周报看板 + 反查 | `src/api/routes.py`：`stats_weekly_page` 汇总；**活反查** `stats_weekly_detail_page` = `/stats/weekly/detail?dept_id&week_start&template_id&mode=`（`total/required/on_time/late/missing/exempt` 六模式，看板 5 列全部下钻）；旧 `stats_weekly_missing_page`(`/weekly/missing`) 已无链接保留。模板 `stats_weekly.html`、`stats_weekly_detail.html` |
+| 模板管理 + 职位映射配置 | `src/api/routes.py` `admin_templates_page`（传 `tpl_names`）；模板 `admin_templates.html` 可配 `job_template_mapping` 职位→周报映射 |
 | 模型 | `src/models/`（`DailyReport`, `WeeklyReport`, `DailyReportStatistics`, `WeeklyReportStatistics`, `EmployeeDailyStats`, `DailyReportWhitelist`, `LeaveApproval`, `Department`, `Employee`, `Holiday`, `PushHistory`） |
 
 ## 常见坑
