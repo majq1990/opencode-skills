@@ -1,0 +1,1476 @@
+领导看板主页数据对接说明文档
+领导看板主页基本采用api接口+脚本的方式实现数据对接。
+示例表单：http://10.250.1.50:8080/linglongZT/design.html#/design/a977f52b-bad7-49c8-9c2f-415550074929-6e3b
+全局方法注册于表单部件didMount事件：
+function main() {
+    // 卡片id
+    const COMPONENT_IDS = {
+        REC_TYPE: "com_board_table_23n9ug" // 案件类型
+    }
+    // 公共筛选组件id
+    const COMMON_PARAMS_CMP_ID = {
+        DATE_TAB: "csdn_form_custom_date_5jic6i", // 时间选择
+        REGION_CASCADER: "csdn_form_field_cascader_3yt91k", // 区域级联选择
+SINGLE_SELECT:"csdn_single_select_apkxm" // 下拉单选
+    }
+    window.COMPONENT_IDS = COMPONENT_IDS
+    window.COMMON_PARAMS_CMP_ID = COMMON_PARAMS_CMP_ID
+    let self = this;
+    /**
+     * 获取时间参数
+     */
+    function getTimePara() {
+        const timeCmp = self.$$(COMMON_PARAMS_CMP_ID.DATE_TAB)
+        const { currentTime, selectDate } = timeCmp || {};
+        let startTime = "";
+        let endTime = ""
+        let tabs = []
+        if (currentTime) {
+            startTime = currentTime.start.format("YYYY-MM-DD 00:00:00")
+            endTime = currentTime.end.format("YYYY-MM-DD 00:00:00")
+            tabs = timeCmp.data.props.tabs
+        }
+
+        return {
+            startTime,
+            endTime,
+            currentTime,
+            selectDate,
+            tabs
+        }
+    }
+    /**
+     * 获取区域参数
+     */
+    function getRegionParam() {
+        const regionCmp = self.$$(COMMON_PARAMS_CMP_ID.REGION_CASCADER) || {}
+        let regionCode = ""
+        let regionId = ""
+        let regionArr = []
+        if (regionCmp) {
+            const { itemOptions = {} } = regionCmp.textData.props.defaultValue || {};
+            regionCode = itemOptions.regionCode;
+            regionId = itemOptions.regionId;
+            regionArr = regionCmp.defaultValue
+        }
+        return {
+            regionCode,
+            regionArr,
+            regionId
+        }
+    }
+    window.GLOBAL_PARAM_TIME = getTimePara();
+    window.GLOBAL_PARAM_REGION = getRegionParam();
+
+    /**
+     * 全局获取参数
+     */
+    window.GET_GLOBAL_PARAM = (id) => {
+        const { startTime, endTime } = getTimePara();
+        const { regionCode, regionArr,regionId } = getRegionParam();
+        // 公共筛选组件的参数
+        let commonParams = {
+            startTime,
+            endTime,
+            startCreateTime: startTime,
+            endCreateTime: endTime,
+            regionCode,
+            regionArr,
+            regionId
+        }
+        // 这里可以根据传入的组件id，写某个组件需要用到的特殊参数
+        // if (id === COMPONENT_IDS.BUSINESS_TYPE) {
+        //     let tabType = self.$$("csdn_form_tab_container_3u4tiu").data.props.value
+        //     Object.assign(commonParams, {
+        //         tab: tabType === 1 ? '二级分类' : '三级分类'
+        //     })
+        // }
+        // console.log("获取参数", commonParams)
+
+        return commonParams
+    }
+    /**
+     * 根据id设置组件加载状态
+     * id 组件id
+     * loading 加载状态 true/false
+     * list 加载完后的数据
+     */
+    window.SET_CMP_LOADING = (id, loading, list) => {
+        const cmp = self.$$(id);
+        if (cmp) {
+            // 设置加载状态
+            cmp.data.props.loadingConfig.loading = loading;
+            // 组件赋值
+            if (list && list.length) {
+                cmp.data.props.dataSource.options = list || []
+
+            }
+        } else {
+            console.warn("SET_CMP_LOADING----未找到组件实例:" + id)
+        }
+    }
+    /**
+     * 刷新所有组件
+     */
+    window.REFRESH_ALL = () => {
+        for (const key in COMPONENT_IDS) {
+            if (Object.prototype.hasOwnProperty.call(COMPONENT_IDS, key)) {
+                const id = COMPONENT_IDS[key];
+                refresh(id)
+            }
+        }
+    }
+    /**
+     * 根据id刷新某个组件
+     */
+    function refresh(id) {
+        // debugger
+        const cmp = self.$$(id);
+        if (cmp) {
+           cmp.$$executeApiDataSource(cmp.data.props.dataSource.apiId)
+        } else {
+            console.warn("REFRESH_CMP---未找到组件实例:" + id )
+        }
+    }
+    window.REFRESH_CMP = refresh;
+}
+常量声明
+window.COMPONENT_IDS 用于声明组件id
+window.COMMON_PARAMS_CMP_ID用于声明全局筛选组件
+声明格式为 {大写key: "组件id"} // 备注组件业务名称
+比如业务类型卡片里面的这个组件，声明为
+{
+        BUSINESS_TYPE: "csdn_form_chart_category_9qpabg" // 业务类型
+}
+其他地方需要用时，直接通过window.COMPONENT_IDS.BUSINESS_TYPE调用。不允许在脚本的其他地方出现组件标识。
+全局获取参数方法
+window.GET_GLOBAL_PARAM(),可按需传入组件id。
+/**
+     * 全局获取参数
+     */
+    window.GET_GLOBAL_PARAM = (id) => {
+        const { startTime, endTime } = getTimePara();
+        const { regionCode, regionArr,regionId } = getRegionParam();
+        // 公共筛选组件的参数
+        let commonParams = {
+            startTime,
+            endTime,
+            startCreateTime: startTime,
+            endCreateTime: endTime,
+            regionCode,
+            regionArr,
+            regionId
+        }
+        // 这里可以根据传入的组件id，写某个组件需要用到的特殊参数
+        // if (id === COMPONENT_IDS.BUSINESS_TYPE) {
+        //     let tabType = self.$$("csdn_form_tab_container_3u4tiu").data.props.value
+        //     Object.assign(commonParams, {
+        //         tab: tabType === 1 ? '二级分类' : '三级分类'
+        //     })
+        // }
+        // console.log("获取参数", commonParams)
+
+        return commonParams
+    }
+全局设置组件加载状态方法
+window.SET_CMP_LOADING(id),组件id必传。
+/**
+     * 根据id设置组件加载状态
+     * id 组件id
+     * loading 加载状态 true/false
+     * list 加载完后的数据
+     */
+    window.SET_CMP_LOADING = (id, loading, list) => {
+        const cmp = self.$$(id);
+        if (cmp) {
+            // 设置加载状态
+            cmp.data.props.loadingConfig.loading = loading;
+            // 组件赋值
+            if (list && list.length) {
+                cmp.data.props.dataSource.options = list || []
+
+            }
+        } else {
+            console.warn("SET_CMP_LOADING----未找到组件实例:" + id)
+        }
+    }
+全局刷新所有组件方法
+window.REFRESH_ALL()
+/**
+     * 刷新所有组件
+     */
+    window.REFRESH_ALL = () => {
+        for (const key in COMPONENT_IDS) {
+            if (Object.prototype.hasOwnProperty.call(COMPONENT_IDS, key)) {
+                const id = COMPONENT_IDS[key];
+                refresh(id)
+            }
+        }
+    }
+全局刷新某个组件方法
+window.REFRESH_CMP(id)
+/**
+     * 根据id刷新某个组件
+     */
+    function refresh(id) {
+        const cmp = self.$$(id);
+        if (cmp) {
+            cmp.$$executeApiDataSource(cmp.data.props.dataSource.apiId)
+        } else {
+            console.warn("REFRESH_CMP---未找到组件实例:" + id )
+        }
+    }
+    window.REFRESH_CMP = refresh;
+时间选择添加onChange动作
+function main(params) {
+    if (window.REFRESH_ALL && params) {
+        window.REFRESH_ALL();
+    }
+}
+区域级联选择
+接口对接
+function fit(result) {
+  // fit用于成功解析数据源响应后回调
+  // result为数据源返回结果
+  // console.log(result,"result")
+  // 如果是api接口 则需要进行数据格式的转换
+  const newRes = JSON.parse(result).result;
+  /* 获取区划 */
+  let filterData = (data, needAll, parent) => {
+    let list = (data || []).map(item => {
+      return {
+        value: item.regionCode,
+        label: item.regionName,
+        id: item.id,
+        text: item.regionName,
+        regionType: item.regionType,
+        regionId: item.id,
+        regionCode: item.regionCode,
+        children: item.children && item.children.length ? filterData(item.children, true, item) : ""
+      }
+    });
+
+    if (needAll) {
+      list.unshift({
+        value: parent.regionCode,
+        label: "全部",
+        id: parent.id,
+        text: "全部",
+        regionType: parent.type,
+        regionId: parent.id,
+        regionCode: parent.regionCode,
+      })
+    }
+
+    return list;
+  }
+  // 一般为JSON字符串，建议先进行JSON.parse(result)操作)
+  // 若要配置到select的option上则需要保证返回结构包含label及value属性
+  const newList = filterData(newRes)
+  return newList;
+}
+添加onChange动作
+function main(temp) {
+    let content = this.textData.props.defaultValue.itemOptions;
+    if (!content) {
+        const optionList = this.data.props.dataSource.options;
+        const option = {
+            selectedOptions: [
+                optionList[0],
+                // optionList[0].children[0]
+            ],
+            tabIndex: 1,
+            value: optionList[0].value
+        }
+        this.onFinish(option);
+    }       
+}
+案件来源下拉单选
+function fit(result) {
+  // fit用于成功解析数据源响应后回调
+  // result为数据源返回结果
+  // 一般为JSON字符串，建议先进行JSON.parse(result)操作)
+  // 若要配置到select的option上则需要保证返回结构包含label及value属性
+  let newRes = JSON.parse(result)
+  // console.log(newRes)
+  let list = []
+  if (newRes && newRes.result && newRes.result.length) {
+    list = newRes.result.map(g=>{
+      return {
+        label: g.eventSrcName,
+        value: g.id
+      }
+    })
+  }
+  list.unshift({
+    label: "全部",
+    value: ""
+  })
+  return list;
+}
+单个组件数据对接
+添加数据源
+query参数关联组件
+【注】
+受灵珑平台限制，必须要在query参数里关联组件，并加上时间参数。如果接口没有query参数，可以在api管理里面加一下  regionCodestartTimeendTimeeventSrcId这四个参数。
+请求发送处理前函数
+function willFetch(queryParams, formParams, json, requestHeaders) {
+    // 可以更改queryParams, formParams, json, requestHeaders参数
+
+
+    // 调用全局获取参数的方法
+    if (window.GET_GLOBAL_PARAM) {
+        const params = window.GET_GLOBAL_PARAM(window.COMPONENT_IDS.REC_TYPE);
+
+        let curPara = JSON.parse(json)
+        for (const key in curPara) {
+            if (Object.prototype.hasOwnProperty.call(curPara, key)) {
+                if (params[key]) {
+                    curPara[key] = params[key]
+                }
+            }
+        }
+        // 处理query参数的格式
+        queryParams.forEach(g => {
+            if (Object.keys(params).includes(g.name)) {
+                g.valueContent = params[g.name]
+            }
+            if (Object.keys(curPara).includes(g.name)) {
+                curPara[g.name] = g.valueContent;
+            }
+        })
+        // console.log(curPara, "new json")
+        json = JSON.stringify(curPara)
+        // console.log(queryParams, json, "参数"); // 可以查看还有哪些参数可以修改。
+    }
+
+    if (window.SET_CMP_LOADING) {
+        // 设置组件加载中状态
+        window.SET_CMP_LOADING(window.COMPONENT_IDS.REC_TYPE, true);
+
+    }
+    return {
+        queryParams,
+        formParams,
+        json,
+        requestHeaders
+    }
+}
+【注】
+如果调用了window上自己挂的方法，点击确认的时候可能会报这个错
+这个时候需要把代码复制一下，在小窗里重新粘贴，再点一下空白处。可能要多试几次才能保存成功
+请求返回时的数据适配
+在这里对数据结果进行过滤处理
+function fit(result) {
+  // fit用于成功解析数据源响应后回调
+  // result为数据源返回结果
+  // 一般为JSON字符串，建议先进行JSON.parse(result)操作)
+  // 若要配置到select的option上则需要保证返回结构包含label及value属性
+  let newRes = JSON.parse(result);
+  // console.log(newRes, "案件类型")
+  if (window.SET_CMP_LOADING) {
+    const params = (window.GET_GLOBAL_PARAM && window.GET_GLOBAL_PARAM()) || {};
+    // console.log('params===>', params)
+    //  如果全局参数中startTime、endTime 则还是加载中
+    const loading = !params.startTime || !params.endTime
+    // console.log('loading===>', loading)
+    //  设置组件加载完成，将值传给方法内部赋值
+    window.SET_CMP_LOADING(window.COMPONENT_IDS.REC_TYPE, loading);
+    // console.log(window.GET_YWZL_PARAMS(), "params")
+  }
+  if (newRes.result) {
+    newRes.result.forEach(g => {
+      g.archiveRate = (g.archiveRate || 0) + "%"
+    })
+  }
+  return newRes.result;
+}
+请求错误处理函数
+同样需要修改组件常量
+function onError(error) {
+    console.error(error);
+    if (window.SET_CMP_LOADING) {
+        window.SET_CMP_LOADING(window.COMPONENT_IDS.REC_TYPE, false, []);
+    }
+    // 可以在这里做弹框提示等操作
+}
+组件关联网关数据，配置加载状态
+看板指标展示组件数据对接
+添加数据源
+query参数关联组件
+【注】
+受灵珑平台限制，必须要在query参数里关联组件，并加上时间参数。如果接口没有query参数，可以在api管理里面加一下  regionCodestartTimeendTimeeventSrcId这四个参数。
+请求发送处理前函数
+function willFetch(queryParams, formParams, json, requestHeaders) {
+    // 可以更改queryParams, formParams, json, requestHeaders参数
+    // 调用全局获取参数的方法
+    if (window.GET_GLOBAL_PARAM) {
+        const params = window.GET_GLOBAL_PARAM(window.COMPONENT_IDS.CASE_OVERVIEW);
+
+        let curPara = JSON.parse(json)
+        for (const key in curPara) {
+            if (Object.prototype.hasOwnProperty.call(curPara, key)) {
+                if (params[key]) {
+                    curPara[key] = params[key]
+                }
+            }
+        }
+        // 处理query参数的格式
+        queryParams.forEach(g => {
+            if (Object.keys(params).includes(g.name)) {
+                g.valueContent = params[g.name]
+            }
+            if (Object.keys(curPara).includes(g.name)) {
+                curPara[g.name] = g.valueContent;
+            }
+        })
+        // console.log(curPara, "new json")
+        json = JSON.stringify(curPara)
+        // console.log(queryParams, json, "参数"); // 可以查看还有哪些参数可以修改。
+    }
+
+    if (window.SET_CMP_LOADING) {
+        // 设置组件加载中状态
+        window.SET_CMP_LOADING(window.COMPONENT_IDS.CASE_OVERVIEW, true);
+
+    }
+    return {
+        queryParams,
+        formParams,
+        json,
+        requestHeaders
+    }
+}
+【注】
+如果调用了window上自己挂的方法，点击确认的时候可能会报这个错
+这个时候需要把代码复制一下，在小窗里重新粘贴，再点一下空白处。可能要多试几次才能保存成功
+请求返回时的数据适配
+在这里对数据结果进行过滤处理，看板指标展示组件比较特殊，可能需要设置展示样式模板，根据自己情况按需设置样式并将接口返回的数据筛入模板即可。
+function fit(result) {
+  // fit用于成功解析数据源响应后回调
+  // result为数据源返回结果
+  // 一般为JSON字符串，建议先进行JSON.parse(result)操作)
+  // 若要配置到select的option上则需要保证返回结构包含label及value属性
+
+  const newRes = JSON.parse(result);
+  const data = newRes && newRes.result ? newRes.result : null;
+  function getImageUrl(url) {
+    return `url(${commonSetting.baseUrl}/files/iconfont/image/${url}.png)`
+  }
+  let newList = [
+    {
+      "name": "reportNum",
+      "text": "案件总数",
+      "value": `${data ? data.report : null}`,
+      "unit": "件",
+      "checked": false,
+      "valueStyle": {
+        "marginRight": "4px",
+        "fontSize": "28px",
+        "color": "#FF4B50",
+        // "fontStyle": "italic",
+        // "font-weight": "600"
+      },
+      "infoBoxStyle": {
+        "flexDirection": "row",
+        "justifyContent": "space-between",
+        "alignItems": "center"
+      },
+      "unitStyle": {
+        "fontSize": "16px",
+        "color": "#6B7A99",
+        "fontWeight": "normal"
+      },
+      "textStyle": {
+        "marginText": "0",
+        "fontSize": "16px",
+        "color": "#223355"
+      }
+    },
+    {
+      "name": "reportNum",
+      "text": "上报数",
+      "value": `${data ? data.report : null}`,
+      "unit": "",
+      "checked": false,
+      "valueStyle": {
+        "marginRight": "4px",
+        // "fontSize": "22px",
+        // "color": "#0091FA",
+        // "fontStyle": "italic",
+        // "font-weight": "600"
+      },
+      "itemBgStyle": {
+        "backgroundImage": getImageUrl("55yL5p2LeaMh+agh+Wxleekui3og4zmma8t6JOd")
+        // "backgroundImage": getImageUrl("55yL5p2LeaMh+agh+Wxleekui3og4zmma8t6JOd")
+      },
+      "itemIconStyle": {
+        "backgroundImage": getImageUrl("55yL5p2LeWbvuaghy3kuIrmiqXmlbBWMg")
+      }
+    },
+    {
+      "name": "disposeNum",
+      "text": "处置数",
+      "value": `${data ? data.dispose : null}`,
+      "unit": "",
+      "checked": false,
+      "valueStyle": {
+        "marginRight": "4px",
+        // "fontSize": "22px",
+        // "color": "#FA9804",
+        // "fontStyle": "italic",
+        // "font-weight": "600"
+      },
+      "itemBgStyle": {
+        "backgroundImage": getImageUrl("55yL5p2LeaMh+agh+Wxleekui3og4zmma8t6buE")
+      },
+      "itemIconStyle": {
+        "backgroundImage": getImageUrl("55yL5p2LeWbvuaghy3lpITnva7mlbBWMg")
+      }
+    },
+    {
+      "name": "archiveNum",
+      "text": "结案数",
+      "value": `${data ? data.archive : null}`,
+      "unit": "",
+      "checked": false,
+      "valueStyle": {
+        "marginRight": "4px",
+        // "fontSize": "22px",
+        // "color": "#28CD78",
+        // "fontStyle": "italic",
+        // "font-weight": "600"
+      },
+      "itemBgStyle": {
+        "backgroundImage": getImageUrl("55yL5p2LeaMh+agh+Wxleekui3og4zmma8t57u")
+      },
+      "itemIconStyle": {
+        "backgroundImage": getImageUrl("55yL5p2LeWbvuaghy3nu5PmoYjmlbBWMg")
+      }
+    },
+    {
+      "name": "5",
+      "text": "结案率",
+      "value": `${data ? data.archiveRate : null}`,
+      "unit": "%",
+      "checked": false,
+      "valueStyle": {
+        "marginRight": "4px",
+        "fontSize": "22px",
+        // "color": "#28CD78",
+        // "fontStyle": "italic",
+        // "font-weight": "600"
+      },
+      "unitStyle": {
+        // "fontSize": "22px",
+        // "color": "#28CD78",
+        // "fontStyle": "italic",
+        // "font-weight": "600",
+        "margin-left": "-4px"
+      },
+      "itemBgStyle": {
+        "backgroundImage": getImageUrl("55yL5p2LeaMh+agh+Wxleekui3og4zmma8t57u")
+      },
+      "itemIconStyle": {
+        "backgroundImage": getImageUrl("55yL5p2LeWbvuaghy3nu5PmoYjnjodWMg")
+      }
+    }
+  ]
+  if (window.SET_CMP_LOADING) {
+    const params = (window.GET_GLOBAL_PARAM && window.GET_GLOBAL_PARAM()) || {};
+    // console.log('params===>', params)
+    //  如果全局参数中startTime、endTime 则还是加载中
+    const loading = !params.startTime || !params.endTime
+    // console.log('loading===>', loading)
+    //  设置组件加载完成，将值传给方法内部赋值
+    window.SET_CMP_LOADING(window.COMPONENT_IDS.CASE_OVERVIEW, loading);
+    // console.log(window.GET_YWZL_PARAMS(), "params")
+  }
+  return newList
+}
+请求错误处理函数
+同样需要修改组件常量
+function onError(error) {
+    console.error(error);
+    if (window.SET_CMP_LOADING) {
+        window.SET_CMP_LOADING(window.COMPONENT_IDS.CASE_OVERVIEW, false, []);
+    }
+    // 可以在这里做弹框提示等操作
+}
+组件关联网关数据，配置加载状态
+组件后续交互处理
+给组件绑定onClick事件，该事件在点击看板指标展示组件的每个栏目时触发，一般用于实现案件列表的反查交互。
+function main(e) {
+    // e 为点击某栏目时, 该栏目的信息
+    // console.log('e===>', e);
+    if (e.text.includes("率"))  return;
+    const params = window.GET_GLOBAL_PARAM() || {};
+    ["archiveNum", "overtimeDisposeNum", "reportNum", "instNum", "checkNum", "dispatchNum", "disposeNum"].forEach(g => {
+        params[g] = "";
+    })
+    params[e.name] = 1;
+    console.log(params, "参数")
+    // 使用vue router 跳转
+    // return;
+    this.$router.push({
+        name: "page-preview",
+        query: {
+            title: "案件列表",
+            pageId: 'rec-list', // 页面id
+            showHeader: this.$route.query.showHeader,
+            isFromAction: 1,
+            _t: new Date().getTime() + ""
+        },
+        params
+    })
+}
+【注】
+这里的交互逻辑是按业务和接口而定，需自行编写，故只提供模板。
+看板表格组件数据对接
+添加看板表格展示字段
+添加数据源
+query参数关联组件
+【注】
+受灵珑平台限制，必须要在query参数里关联组件，并加上时间参数。如果接口没有query参数，可以在api管理里面加一下  regionCodestartTimeendTimeeventSrcId这四个参数。
+请求发送处理前函数
+function willFetch(queryParams, formParams, json, requestHeaders) {
+    // 可以更改queryParams, formParams, json, requestHeaders参数
+    // 调用全局获取参数的方法
+    if (window.GET_GLOBAL_PARAM) {
+        const params = window.GET_GLOBAL_PARAM(window.COMPONENT_IDS.REC_TYPE);
+
+        let curPara = JSON.parse(json)
+        for (const key in curPara) {
+            if (Object.prototype.hasOwnProperty.call(curPara, key)) {
+                if (params[key]) {
+                    curPara[key] = params[key]
+                }
+            }
+        }
+        // 处理query参数的格式
+        queryParams.forEach(g => {
+            if (Object.keys(params).includes(g.name)) {
+                g.valueContent = params[g.name]
+            }
+            if (Object.keys(curPara).includes(g.name)) {
+                curPara[g.name] = g.valueContent;
+            }
+        })
+        // console.log(curPara, "new json")
+        json = JSON.stringify(curPara)
+        // console.log(queryParams, json, "参数"); // 可以查看还有哪些参数可以修改。
+    }
+
+    if (window.SET_CMP_LOADING) {
+        // 设置组件加载中状态
+        window.SET_CMP_LOADING(window.COMPONENT_IDS.REC_TYPE, true);
+
+    }
+    return {
+        queryParams,
+        formParams,
+        json,
+        requestHeaders
+    }
+}
+【注】
+如果调用了window上自己挂的方法，点击确认的时候可能会报这个错
+这个时候需要把代码复制一下，在小窗里重新粘贴，再点一下空白处。可能要多试几次才能保存成功
+请求返回时的数据适配
+在这里对数据结果进行过滤处理。
+function fit(result) {
+  // fit用于成功解析数据源响应后回调
+  // result为数据源返回结果
+  // 一般为JSON字符串，建议先进行JSON.parse(result)操作)
+  // 若要配置到select的option上则需要保证返回结构包含label及value属性
+  let newRes = JSON.parse(result);
+  // console.log(newRes, "案件类型")
+  if (window.SET_CMP_LOADING) {
+    const params = (window.GET_GLOBAL_PARAM && window.GET_GLOBAL_PARAM()) || {};
+    // console.log('params===>', params)
+    //  如果全局参数中startTime、endTime 则还是加载中
+    const loading = !params.startTime || !params.endTime
+    // console.log('loading===>', loading)
+    //  设置组件加载完成，将值传给方法内部赋值
+    window.SET_CMP_LOADING(window.COMPONENT_IDS.REC_TYPE, loading);
+    // console.log(window.GET_YWZL_PARAMS(), "params")
+  }
+  if (newRes.result) {
+    newRes.result.forEach(g=>{
+      g.archiveRate = (g.archiveRate||0)+"%"
+    })
+  }
+  return newRes.result;
+}
+请求错误处理函数
+同样需要修改组件常量
+function onError(error) {
+    console.error(error);
+    if (window.SET_CMP_LOADING) {
+        window.SET_CMP_LOADING(window.COMPONENT_IDS.REC_TYPE, false, []);
+    }
+    // 可以在这里做弹框提示等操作
+}
+组件关联网关数据，配置加载状态
+组件后续交互处理
+给组件绑定onRowClick事件，该事件在点击看板表格组件的行数据时触发，一般用于实现案件列表的反查交互。
+function main(e) {
+    // console.log('e===>', e)
+    const { fieldName } = e;
+    // return;
+    if (fieldName.includes("Rate")) return;
+
+    fieldName = fieldName + "Num";
+    const params = window.GET_GLOBAL_PARAM() || {};
+    ["archiveNum", "overtimeDisposeNum", "reportNum", "instNum", "checkNum", "dispatchNum", "disposeNum"].forEach(g => {
+        params[g] = "";
+    })
+    params[fieldName] = 1;
+    params.typeCode = e.data.code;
+    // console.log(params, "参数")
+    // 使用vue router 跳转
+    // return;
+    this.$router.push({
+        name: "page-preview",
+        query: {
+            title: "案件列表",
+            pageId: 'rec-list',
+            showHeader: this.$route.query.showHeader,
+            isFromAction: 1,
+            _t: new Date().getTime() + ""
+        },
+        params
+    })
+}
+【注】
+这里的交互逻辑是按业务和接口而定，需自行编写，故只提供模板。
+数据概览组件数据对接
+添加数据源
+query参数关联组件
+【注】
+受灵珑平台限制，必须要在query参数里关联组件，并加上时间参数。如果接口没有query参数，可以在api管理里面加一下  regionCodestartTimeendTimeeventSrcId这四个参数。
+请求发送处理前函数
+function willFetch(queryParams, formParams, json, requestHeaders) {
+    // 可以更改queryParams, formParams, json, requestHeaders参数
+    // 调用全局获取参数的方法
+    if (window.GET_GLOBAL_PARAM) {
+        // 获取案件分布关联的参数
+        const params = window.GET_GLOBAL_PARAM(window.COMPONENT_IDS.CASE_DISTRIBUTION);
+
+        let curPara = JSON.parse(json)
+        for (const key in curPara) {
+            if (Object.prototype.hasOwnProperty.call(curPara, key)) {
+                if (params[key]) {
+                    curPara[key] = params[key]
+                }
+            }
+        }
+        // 处理query参数的格式
+        queryParams.forEach(g => {
+            if (Object.keys(params).includes(g.name)) {
+                g.valueContent = params[g.name]
+            }
+            if (Object.keys(curPara).includes(g.name)) {
+                curPara[g.name] = g.valueContent;
+            }
+            if (g.name === "regionId") {
+                curPara.parentRegionIdList = [g.valueContent]
+            }
+        })
+        // console.log(curPara, "new json")
+        json = JSON.stringify(curPara)
+        // console.log(curPara, "new json")
+        // console.log(queryParams, formParams, json, requestHeaders); // 可以查看还有哪些参数可以修改。
+        json = JSON.stringify(curPara)
+    }
+    return {
+        queryParams,
+        formParams,
+        json,
+        requestHeaders
+    }
+}
+需要修改对应组件id常量。
+【注】
+如果调用了window上自己挂的方法，点击确认的时候可能会报这个错
+这个时候需要把代码复制一下，在小窗里重新粘贴，再点一下空白处。可能要多试几次才能保存成功
+请求完成回调函数
+在这里对数据结果进行过滤处理。
+function didFetch(result) {
+  let newRes = JSON.parse(result);
+
+  const processItem = (item) => [
+    {
+      text: item.text,
+      value: item.value,
+      unit: "",
+      color: "#FFFFFF",
+      checked: false,
+    },
+    {
+      name: "reportNum",
+      text: "上报数",
+      value: item.report,
+      unit: "",
+      color: "#33A7FB",
+      checked: false,
+      regionCode: item.code
+    },
+    {
+      name: "disposeNum",
+      text: "处置数",
+      value: item.dispose,
+      unit: "",
+      color: "#FA9804",
+      checked: false,
+      regionCode: item.code
+    },
+    {
+      name: "archiveNum",
+      text: "结案数",
+      value: item.archive,
+      unit: "",
+      color: "#28CD78",
+      checked: false,
+      regionCode: item.code
+    },
+    {
+      text: "结案率",
+      value: item.archiveRate,
+      unit: "%",
+      color: "#28CD78",
+      checked: false,
+      regionCode: item.code
+    },
+  ];
+
+  let newList = newRes && newRes.result && newRes.result.length > 5
+    ? newRes.result.slice(0, 5).map(processItem)
+    : newRes.result.map(processItem);
+  // console.log(newList, "案件分布")
+  if (window.SET_DATA) {
+    const distributionKeys = [
+      "csdn_form_data_overview_42dpar",
+      "csdn_form_data_overview_bkofnn",
+      "csdn_form_data_overview_eer10",
+      "csdn_form_data_overview_28pjhu",
+      "csdn_form_data_overview_ci1x90",
+    ];
+
+    window.SET_DATA(distributionKeys, newList);
+  }
+  return newList[0]
+}
+请求错误处理函数
+根据情况自行编写错误处理
+function onError(error) {
+    console.error(error);
+    // 可以在这里做弹框提示等操作
+}
+组件关联网关数据，配置加载状态
+数据概览组件目前好像还不支持设置加载状态，可先不设置。
+组件后续交互处理
+给组件绑定onClick事件，该事件在点击数据概览组件时触发，一般用于实现案件列表的反查交互。
+function main(e) {
+    console.log('e===>', e)
+    if (e.text.includes("率")) return;
+
+    const params = window.GET_GLOBAL_PARAM() || {};
+    ["archiveNum", "overtimeDisposeNum", "reportNum", "instNum", "checkNum", "dispatchNum", "disposeNum"].forEach(g => {
+        params[g] = "";
+    })
+    params[e.name] = 1;
+    params.regionCode = e.regionCode;
+    params.regionArr.push(e.regionCode);
+    // console.log(params, "参数")
+    // 使用vue router 跳转
+    // return;
+    this.$router.push({
+        name: "page-preview",
+        query: {
+            title: "案件列表",
+            pageId: 'rec-list',
+            showHeader: this.$route.query.showHeader,
+            isFromAction: 1,
+            _t: new Date().getTime() + ""
+        },
+        params
+    })
+}
+【注】
+这里的交互逻辑是按业务和接口而定，需自行编写，故只提供模板。
+排行列表组件数据对接
+添加数据源
+query参数关联组件
+【注】
+受灵珑平台限制，必须要在query参数里关联组件，并加上时间参数。如果接口没有query参数，可以在api管理里面加一下  regionCodestartTimeendTimeeventSrcId这四个参数。
+请求发送处理前函数
+function willFetch(queryParams, formParams, json, requestHeaders) {
+    // 可以更改queryParams, formParams, json, requestHeaders参数
+
+
+    // 调用全局获取参数的方法
+    if (window.GET_GLOBAL_PARAM) {
+        const params = window.GET_GLOBAL_PARAM();
+
+        let curPara = JSON.parse(json)
+        for (const key in curPara) {
+            if (Object.prototype.hasOwnProperty.call(curPara, key)) {
+                if (params[key]) {
+                    curPara[key] = params[key]
+                }
+            }
+        }
+        // 处理query参数的格式
+        queryParams.forEach(g => {
+            if (Object.keys(params).includes(g.name)) {
+                g.valueContent = params[g.name]
+            }
+            if (Object.keys(curPara).includes(g.name)) {
+                curPara[g.name] = g.valueContent;
+            }
+        })
+        // console.log(curPara, "new json")
+        json = JSON.stringify(curPara)
+    }
+
+    if (window.SET_CMP_LOADING) {
+        // 设置组件加载中状态
+        window.SET_CMP_LOADING(window.COMPONENT_IDS.REC_SRC, true);
+
+    }
+    return {
+        queryParams,
+        formParams,
+        json,
+        requestHeaders
+    }
+}
+需要修改对应组件id常量。
+【注】
+如果调用了window上自己挂的方法，点击确认的时候可能会报这个错
+这个时候需要把代码复制一下，在小窗里重新粘贴，再点一下空白处。可能要多试几次才能保存成功
+请求返回时的数据适配
+在这里对数据结果进行过滤处理。
+function fit(result) {
+  // fit用于成功解析数据源响应后回调
+  // result为数据源返回结果
+  // 一般为JSON字符串，建议先进行JSON.parse(result)操作)
+  // 若要配置到select的option上则需要保证返回结构包含label及value属性
+  let newRes = JSON.parse(result);
+  let newList = [];
+  if (newRes.result && newRes.result.length) {
+    newList = newRes.result.map(g => {
+      return {
+          "name": g.name,
+          "text": g.text,
+          "value": [
+            {
+              "name": "report",
+              "text": "上报数",
+              "value": g.report || "0",
+              "unit": ""
+            },
+            {
+              "name": "dispose",
+              "text": "数值2",
+              "value": g.dispose || "0",
+              "unit": ""
+            },
+            {
+              "name": "archive",
+              "text": "数值3",
+              "value": g.archive || "0",
+              "unit": ""
+            },
+            {
+              "name": "archiveRate",
+              "text": "结案率",
+              "value": g.archiveRate || "0",
+              "unit": "%"
+            }
+          ],
+          "checked": false
+        }
+      
+    })
+  }
+  if (window.SET_CMP_LOADING) {
+    // console.log(newList, "高发问题")
+    const params = (window.GET_GLOBAL_PARAM && window.GET_GLOBAL_PARAM()) || {};
+    //  如果全局参数中startTime、endTime 则还是加载中
+    const loading = !params.startTime || !params.endTime
+    //  设置组件加载完成，将值传给方法内部赋值
+    window.SET_CMP_LOADING(window.COMPONENT_IDS.REC_SRC, loading);
+    // console.log(window.GET_YWZL_PARAMS(), "params")
+  }
+  // console.log(newList)
+  return newList;
+}
+需要修改对应组件id常量。
+请求错误处理函数
+根据情况自行编写错误处理
+function onError(error){
+    console.error(error);
+    if (window.SET_CMP_LOADING) {
+    window.SET_CMP_LOADING(window.COMPONENT_IDS.REC_SRC, false,[]);
+    }
+    // 可以在这里做弹框提示等操作
+}
+组件关联网关数据，配置加载状态
+组件后续交互处理
+给组件绑定onClick事件，该事件在点击数据概览组件时触发，一般用于实现案件列表的反查交互。
+function main(e) {
+    // console.log('e===>', e)
+    const { current,row } = e;
+    if (current.fieldName.includes("Rate")) return;
+
+    let fieldName = current.fieldName + "Num";
+    const params = window.GET_GLOBAL_PARAM() || {};
+    ["archiveNum", "overtimeDisposeNum", "reportNum", "instNum", "checkNum", "dispatchNum", "disposeNum"].forEach(g => {
+        params[g] = "";
+    })
+    params[fieldName] = 1;
+    params.eventSrcId = row.data.name;
+    // console.log(params, "参数")
+    // 使用vue router 跳转
+    // return;
+    this.$router.push({
+        name: "page-preview",
+        query: {
+            title: "案件列表",
+            pageId: 'rec-list',
+            showHeader: this.$route.query.showHeader,
+            isFromAction: 1,
+            _t: new Date().getTime() + ""
+        },
+        params
+    })
+}
+【注】
+这里的交互逻辑是按业务和接口而定，需自行编写，故只提供模板。
+折线图组件数据对接
+添加数据源
+query参数关联组件
+【注】
+受灵珑平台限制，必须要在query参数里关联组件，并加上时间参数。如果接口没有query参数，可以在api管理里面加一下  regionCodestartTimeendTimeeventSrcId这四个参数。
+请求发送处理前函数
+function willFetch(queryParams, formParams, json, requestHeaders) {
+    // 可以更改queryParams, formParams, json, requestHeaders参数
+    // 调用全局获取参数的方法
+    if (window.GET_GLOBAL_PARAM) {
+        // 获取案件趋势关联的参数
+        const params = window.GET_GLOBAL_PARAM(window.COMPONENT_IDS.CASE_TRENDS);
+
+        let curPara = JSON.parse(json)
+        for (const key in curPara) {
+            if (Object.prototype.hasOwnProperty.call(curPara, key)) {
+                if (params[key]) {
+                    curPara[key] = params[key]
+                }
+            }
+        }
+        // 处理query参数的格式
+        queryParams.forEach(g => {
+            if (Object.keys(params).includes(g.name)) {
+                g.valueContent = params[g.name]
+            }
+            if (Object.keys(curPara).includes(g.name)) {
+                curPara[g.name] = g.valueContent;
+            }
+        })
+        if (window.TIME_INTER_PARAMS) {
+            Object.assign(curPara, window.TIME_INTER_PARAMS)
+        }
+        // console.log(window.TIME_INTER_PARAMS, "时间")
+        // console.log(curPara, "new json")
+        json = JSON.stringify(curPara)
+    }
+
+    if (window.SET_CMP_LOADING) {
+        // 设置组件加载中状态
+        window.SET_CMP_LOADING(window.COMPONENT_IDS.CASE_TRENDS, true);
+
+    }
+    return {
+        queryParams,
+        formParams,
+        json,
+        requestHeaders
+    }
+}
+需要修改对应组件id常量。
+【注】
+如果调用了window上自己挂的方法，点击确认的时候可能会报这个错
+这个时候需要把代码复制一下，在小窗里重新粘贴，再点一下空白处。可能要多试几次才能保存成功
+请求返回时的数据适配
+在这里对数据结果进行过滤处理。
+function fit(result) {
+  // didFetch用于请求完成后回调
+  // result为数据源返回结果，若要配置到select的option上则需要保证返回结构包含label及value属性
+
+  const dataMap = {
+    report: '上报数',
+    dispose: '处置数',
+    archive: '结案数',
+    archiveRate: '结案率',
+  };
+
+  const newRes = JSON.parse(result);
+  let newList = [];
+  if (newRes && newRes.result && newRes.result.length) {
+    newList = Object.entries(dataMap).map(([name, text]) => ({
+      name,
+      text,
+      value: newRes.result.map(item => ({ text: item.name, value: item[name] })),
+      checked: false,
+    }));
+  }
+  if (window.SET_CMP_LOADING) {
+    const params = window.GET_GLOBAL_PARAM && window.GET_GLOBAL_PARAM();
+    //  如果全局参数中startTime、endTime 则还是加载中
+    const loading = !params.startTime || !params.endTime
+    //  设置组件加载完成，将值传给方法内部赋值
+    window.SET_CMP_LOADING(window.COMPONENT_IDS.CASE_TRENDS, loading);
+  }
+  return newList
+}
+需要修改对应组件id常量。
+请求错误处理函数
+根据情况自行编写错误处理，注意修改组件id常量
+function onError(error){
+    console.error(error);
+    if (window.SET_CMP_LOADING) {
+    window.SET_CMP_LOADING(window.COMPONENT_IDS.REC_SRC, false,[]);
+    }
+    // 可以在这里做弹框提示等操作
+}
+组件关联网关数据，配置加载状态
+颜色配置可以修改折线图显示颜色。
+横向柱状图组件数据对接
+添加数据源
+query参数关联组件
+【注】
+受灵珑平台限制，必须要在query参数里关联组件，并加上时间参数。如果接口没有query参数，可以在api管理里面加一下  regionCodestartTimeendTimeeventSrcId这四个参数。
+请求发送处理前函数
+function willFetch(queryParams, formParams, json, requestHeaders) {
+    // 可以更改queryParams, formParams, json, requestHeaders参数
+    // 调用全局获取参数的方法
+    if (window.GET_GLOBAL_PARAM) {
+        // 获取案件趋势关联的参数
+        const params = window.GET_GLOBAL_PARAM(window.COMPONENT_IDS.HIGH_INCIDENCE_OF_CASES);
+
+        let curPara = JSON.parse(json)
+        for (const key in curPara) {
+            if (Object.prototype.hasOwnProperty.call(curPara, key)) {
+                if (params[key]) {
+                    curPara[key] = params[key]
+                }
+            }
+        }
+        // 处理query参数的格式
+        queryParams.forEach(g => {
+            if (Object.keys(params).includes(g.name)) {
+                g.valueContent = params[g.name]
+            }
+            if (Object.keys(curPara).includes(g.name)) {
+                curPara[g.name] = g.valueContent;
+            }
+        })
+        // console.log(curPara, "new json")
+        json = JSON.stringify(curPara)
+    }
+
+    if (window.SET_CMP_LOADING) {
+        // 设置组件加载中状态
+        window.SET_CMP_LOADING(window.COMPONENT_IDS.HIGH_INCIDENCE_OF_CASES, true);
+
+    }
+    return {
+        queryParams,
+        formParams,
+        json,
+        requestHeaders
+    }
+}
+需要修改对应组件id常量。
+【注】
+如果调用了window上自己挂的方法，点击确认的时候可能会报这个错
+这个时候需要把代码复制一下，在小窗里重新粘贴，再点一下空白处。可能要多试几次才能保存成功
+请求返回时的数据适配
+在这里对数据结果进行过滤处理。
+function fit(result) {
+  // result为数据源返回结果，若要配置到select的option上则需要保证返回结构包含label及value属性
+
+  const newRes = JSON.parse(result);
+  let newList = newRes && newRes.result && newRes.result.length ? newRes.result.slice(0, 5).map((item) => {
+    return {
+      name: item.text,
+      text: item.text,
+      value: item.report,
+      unit: "件",
+      code: item.code,
+      checked: false
+    }
+  }) : [];
+  if (window.SET_CMP_LOADING) {
+    const params = (window.GET_GLOBAL_PARAM && window.GET_GLOBAL_PARAM()) || {};
+    //  如果全局参数中startTime、endTime 则还是加载中
+    const loading = !params.startTime || !params.endTime;
+    //  设置组件加载完成，将值传给方法内部赋值
+    window.SET_CMP_LOADING(window.COMPONENT_IDS.HIGH_INCIDENCE_OF_CASES, loading);
+    window.SET_TOP_BAR_VALUE(newList);
+  }
+  return newList
+}
+需要修改对应组件id常量。
+请求错误处理函数
+根据情况自行编写错误处理
+function onError(error){
+    console.error(error);
+    // 可以在这里做弹框提示等操作
+}
+组件关联网关数据，配置加载状态，设置占比基数
+占比基数设置2000时，只有组件的value值达到2000或2000以上，才会把横向柱状图撑满。
+也可通过接口返回数据的最大值设置占比基数，具体脚本如下：
+this.$$m('横向柱状图唯一标识').props.chartOption.baseDataValue = 接口返回的最大值;
+组件后续交互处理
+给组件绑定onClickBar事件，该事件在点击横向柱状图某一行时触发，一般用于实现案件列表的反查交互。
+function main(e) {
+    // console.log('e===>', e)
+    // return;
+    const params = window.GET_GLOBAL_PARAM() || {};
+
+    params.typeCode = e.code;
+    // console.log(params, "参数")
+    // 使用vue router 跳转
+    // return;
+    this.$router.push({
+        name: "page-preview",
+        query: {
+            title: "案件列表",
+            pageId: 'rec-list',
+            showHeader: this.$route.query.showHeader,
+            isFromAction: 1,
+            _t: new Date().getTime() + ""
+        },
+        params
+    })
+}
+【注】
+这里的交互逻辑是按业务和接口而定，需自行编写，故只提供模板。
+列表通过hook方法获取数据
+创建获取列表的接口
+编写列表hook方法
+列表部件->卡片容器->打开hook配置
+function main(pageId, param) {
+    let self = this;
+    console.log(self.$route, "route")
+    let params = {};
+    if (self && self.$route && self.$route.params && self.$route.params.startCreateTime) {
+        params = self.$route.params;
+        window.REC_LIST_PARAMS = params;
+    } else {
+        params = window.REC_LIST_PARAMS || {};
+    }
+
+    setDefaultCondition()
+    // console.log(self.$$("query_field_wrapper_h49bdi"))
+    const CONDITION_KEY = {
+        EVENT_SRC: "58a07552-da8e-44af-a036-27d2b2204c67-0dc9",
+        REGION: "0eaf5ac3-5be5-4773-b063-575a0ee76a12-0dc9",
+        TIME: "542648d4-54dc-4eb5-ba2d-c99c1074c747-0dc9",
+    }
+    // 设置筛选默认值
+    function setDefaultCondition() {
+        const eventSrcCmp = self.$$("query_field_wrapper_a0zx93");
+        const regionCmp = self.$$("query_field_wrapper_b4wnu");
+        const dateCmp = self.$$("query_field_wrapper_blrxgq");
+        const { startCreateTime, endCreateTime, regionArr, eventSrcId } = params;;
+
+        if (eventSrcId && eventSrcCmp) {
+            eventSrcCmp.queryField.props.defaultValue.value = params.eventSrcId;
+        }
+
+        if (regionArr && regionArr.length && regionCmp) {
+            regionCmp.queryField.props.defaultValue.value = regionArr;
+        }
+
+        if (startCreateTime && dateCmp) {
+            dateCmp.queryField.props.startTime.defaultValue.value = startCreateTime
+            dateCmp.queryField.props.endTime.defaultValue.value = endCreateTime
+        }
+    }
+    function getConditionParams() {
+        let eventSrcId = params.eventSrcId || "";
+        let regionCode = params.regionCode || "";
+        let startCreateTime = params.startCreateTime || "";
+        let endCreateTime = params.endCreateTime || "";
+        const { reportNum, archiveNum, disposeNum } = params;
+
+        if (getTableCondition(CONDITION_KEY.EVENT_SRC)) {
+            eventSrcId = getTableCondition(CONDITION_KEY.EVENT_SRC);
+        }
+        if (getTableCondition(CONDITION_KEY.REGION)) {
+            regionCode = getTableCondition(CONDITION_KEY.REGION, "cascader");
+        }
+        if (getTableCondition(CONDITION_KEY.TIME).length) {
+            const [startTime, endTime] = getTableCondition(CONDITION_KEY.TIME)
+            startCreateTime = startTime;
+            endCreateTime = endTime;
+        }
+        const keyword = param.condition.keyword || ""
+        return {
+            regionCode,//区域编码regionCode字段
+            "typeCode": params.typeCode || "",//类型编码typeCode字段
+            startCreateTime,
+            endCreateTime,
+            "keyword": {//模糊查询
+                "taskNum": keyword,
+                "eventDesc": keyword,
+                "address": keyword
+            },
+            eventSrcId,//来源id
+            reportNum, //点击上报数时传1
+            // "instNum": 0, //点击立案数时传1
+            archiveNum, //点击结案数时传1
+            disposeNum // 处置数
+        }
+    }
+    function getTableCondition(id, type = "") {
+        let value = ""
+        if (param.condition.tableConditionDescriptor && param.condition.tableConditionDescriptor.members) {
+            // console.log(param.condition.tableConditionDescriptor.members, "筛选参数")
+            const members = param.condition.tableConditionDescriptor.members;
+
+            const curMember = members.find(e => e.field == id);
+            if (curMember) {
+                switch (curMember.fieldType) {
+                    case "string":
+                        value = curMember.value
+                        break;
+                    case "array":
+                        value = curMember.values.join(",")
+                        if (type === "cascader") {
+                            value = curMember.values[curMember.values.length - 1]
+                        }
+                        break;
+                    case "datetime":
+                        value = curMember.values[0] ? [`${curMember.values[0]} 00:00:00`, `${curMember.values[1]} 23:59:59`] : ""
+                        break;
+                }
+            }
+
+        }
+        return value
+    }
+    return new Promise((resolve, reject) => {
+        const conditionParams = getConditionParams()
+        param.condition.params = {
+            condition: {},
+            paging: {
+                "pageIndex": param.paging.pageIndex,
+                "pageSize": param.paging.pageSize
+            }
+
+        };
+        Object.assign(param.condition.params.condition, conditionParams);
+        // console.log('conditionParams-----', conditionParams)
+        console.log('params-----', param.condition.params)
+        api.API_DATA_EXECUTE("7aaca78d-5d15-457a-99a3-db08fb9da252-7d18", "BUNCHES", param, { lostAbility: "00" })
+            .then((res) => {
+                const newRes = res;
+                resolve(newRes);
+            }).catch(() => {
+                reject();
+            });
+    });
+}
+上述代码，用户通过一级页面跳转到列表页面时，携带了一级页面的筛选参数到列表页面的查询面板中，具体如下：
+一级页面显示的是本月的参数，那么用户跳转至案件列表时，也应筛选展示本月的数据。
+【注】
+这种情况下，存在一个逻辑：若查询面板存在筛选条件，hook函数的param.condition参数中会存在tableConditionDescriptor，若查询字段未选择或未输入任何值，tableConditionDescriptor.members中就没有这个查询字段对象，相反若选择或输入了值，tableConditionDescriptor.members种就有这个查询字段对象，且每个查询字段都有自己的field标识, 需要自己打印出来查看。所以，我们可以根据members种存在哪些查询字段，去动态的给接口更新参数，从而获取到准确的结果。
+列表通过脚本跳转至详情页面配置
+列表部件->卡片容器->卡片外框->属性->打开并编辑卡片点击动作
+function main(params) {
+    this.$router.push({
+        name: "page-preview",
+        query: {
+            title: "案件详情",
+            pageId: "rec-detail",  // 页面PageId
+            showHeader: this.$route.query.showHeader,
+            isFromAction: 1,
+            _t: new Date().getTime() + "",
+            id: params.id.value
+        }
+    });
+}
+这里传递id字段，详情部件的hook和办理经过会接收传递的id。
+详情通过hook方法获取数据
+创建获取详情的接口
+编写详情hook方法
+详情数据是通过接口传id，查询获得。
+1）列表跳转详情，用灵珑自带跳转，传id参数，详情页面接收id
+2）详情部件->属性->打开hook配置，编写hook方法，刚刚接收的id已经存在hook方法的param参数中，可以不做任何处理，直接请求接口即可。
+function main(pageId, param) {
+    return new Promise((resolve, reject) => {
+        console.log('详情请求前参数：', param.condition.params)
+        api.API_DETAIL_DATA_EXECUTE("d4248521-f50c-483b-bfd7-55f7de097cc7-7d18", "BUNCHES", param, { lostAbility: "00" })
+            .then(res => {
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+    });
+}
+上述步骤，详情会拿到列表跳转传的id参数，通过请求详情接口，获取到当前id的详情数据，并展示到详情页面中。
+详情中办理经过组件配置
+step1：办理经过的数据可能由案件详情接口返回，也可能另开一个接口返回，根据业务情况而定。
+step2：办理经过组件，选择 移动办理经过[自定义接口] 组件。
+step3：在详情部件绑定didMount事件，并编写脚本请求接口获取办理经过数据。
+function main() {
+    const recID = this.$route.query.id || 19
+    const self = this
+    const PROCESS_ID = "csdn_detail_task_process_1_c92tw0"
+    const processCmp = self.$$(PROCESS_ID);
+    processCmp.data.props.dataSource.options = [];
+    this.$nextTick(() => {
+        processCmp.data.props.dataSource.options = [];
+        const paramArr = [
+            { "name": "id", "valueContent": recID },
+        ]
+        api.DATA_SOURCE_EXECUTE("d4248521-f50c-483b-bfd7-55f7de097cc7-7d18", "api", paramArr, [], "").then(res => {
+            if (res && !res.hasError) {
+                const data = JSON.parse(res.result);
+                if (data && !data.hasError && data.result) {
+                    const list = data.result;
+                    const processes = list.processes.map(item => {
+                        return {
+                            humanName: item.humanName,
+                            actDefName: item.actDefName || "",
+                            actionName: item.actionName || item.actStateName,
+                            actionTime: item.actionTime || item.startTime,
+                            bundleRemain: item.bundleRemain,
+                            actRemain: item.actRemain,
+                            detail: item.detail || '',
+                            itemContent: item.processItem.itemContent || "",
+                            itemTypeId: item.itemTypeId || "",
+                            itemTypeName: item.itemTypeName || "",
+                            title: item.title || '',
+                            actId: item.actId,
+                            unitName: item.unitName
+                        }
+                    });
+                    processCmp.data.props.dataSource.options = processes;
+                } else {
+                    processCmp.data.props.dataSource.options = [];
+                }
+            } else {
+                processCmp.data.props.dataSource.options = [];
+            }
+        }).catch(err => {
+            processCmp.data.props.dataSource.options = [];
+        });
+    })
+}
+上述代码会通过点击案件列表卡片时，传递的id字段，请求案件详情接口，拿到接口返回的processes字段，再对processes字段进行格式化处理，处理成 移动办理经过[自定义接口] 组件能够接收并渲染的字段形式。

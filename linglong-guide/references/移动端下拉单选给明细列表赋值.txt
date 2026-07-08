@@ -1,0 +1,39 @@
+移动端下拉单选给明细列表赋值
+1 使用场景
+移动端表单中，使用下拉单选组件给明细列表赋值
+具体场景：检查记录表单中有一个明细列表，明细列表的数据和表单中的一个下拉单选有关联，通过下拉单选选择后，将关联的数据填入到明细列表中
+2 效果
+检查主题选择后，检查项明细列表自动填入主题中存放的数据
+3 配置
+在下拉单选的值改变中加入如下脚本
+代码中出现的数据模型标识需要到数据模型页面中获取，图中框起来的部分就是数据模型id
+function main() {
+    const self = this;
+    // 获取明细列表
+    const detailComp = self.$$("detail_list_1jqijc");
+    // 每次选择先清空列表内容
+    detailComp.data.props.list=[]
+    //定义常量获取当前下拉单选的值，后面作为参数传递使用
+    const themeValue = self.cValue;
+  
+    //定义变量存放数据模型的标识
+    const apiEnum = "0ba335a0-cf5a-4e51-bf34-dcdd579d05b1";
+    // 定义参数，调用数据模型时使用
+    const params = [{ name: "themeId", valueContent: themeValue }];
+    // 调用数据模型获取对应的检查项
+    api.DATA_SOURCE_EXECUTE(apiEnum, "ddcat", params).then(resp => {
+        if (resp && resp.result) {
+            const list = resp.result || [];
+            //根据返回的数据进行便利添加的操作，如果有两条则会添加两条
+            list.forEach((item, index) => {
+                detailComp.$$addRow();
+                //这里数组的下标需要根据明细列表中的组件位置决定
+                detailComp.data.props.list[index]["children"][0].props.defaultValue.value = Number(item.id);
+                detailComp.data.props.list[index]["children"][2].props.defaultValue.value = item.item_info;
+            })
+        }
+    }).catch(err => {
+        console.error(err);
+    });
+}
+关键代码已注释

@@ -1,0 +1,136 @@
+页面中实现按照单独用户实现收藏功能和取消收藏功能
+1 使用场景
+在用户管理中会出现需要出现用户对某条数据进行收藏的情况，按照需求需要按照用户对收藏进行隔离操作，A用户看不到B用户的收藏，A用户的收藏和B用户的收藏为独立的收藏内容，互相不干扰。
+抽象出来业务逻辑为，当用户点击收藏后在收藏表里插入一对应的收藏字段，下面例子插入收藏人和 举报人的字段。取消收藏按照业务需求来只需要删除掉对应的字段。同时需要在视图里面利用 case when 增加一个类型字段用来判定是否当前用户已经收藏，最后在列表中配置相应的过滤条件。
+2 效果
+用户点击收藏按钮，列表刷新，收藏按钮隐藏，显示取消收藏按钮，同时我的收藏里面显示当前收藏的字段，在其他的列表点击取消收藏后，实时更新为收藏字段同时我的收藏列表隐藏掉当前数据
+3 配置
+在视图中通过左连接拼接收藏表，并且增加对应的变量字段，按照业务需求配置IF判断语句；参考示例代码如下
+SELECT   
+    mr.reporter_id,  
+    mr.reporter_name,  
+    mr.contact,  
+    mr.gender_id,  
+    mr.gender_name,  
+    mr.region_id,  
+    mr.region_name,  
+    mr.age,  
+    mr.birthday,  
+    mr.id_card_no,  
+    mr.occupation_id,  
+    mr.occupation_name,  
+    mr.work_dept_name,  
+    mr.address,  
+    mr.postal_code,  
+    mr.fax_no,  
+    mr.email,  
+    mr.update_human_id,  
+    mr.update_human_name,  
+    mr.update_time,
+    case when mgrc.id is null then 0 else 1 end as '收藏表type',
+    mgrc.reporter_id AS '收藏表诉求人id',  
+    mgrc.id AS '收藏记录ID',  
+    mgrc.human_uid,  
+    mgrc.human_name,  
+    mgrc.create_time,  
+    mrr.reporter_id AS '备注表诉求人id',  
+    mrr.remark    
+FROM   
+    mis_reporter mr  
+LEFT JOIN  
+    mis_gh_reporter_collection mgrc ON mgrc.reporter_id = mr.reporter_id and mgrc.human_name = ${humanName__equal__value}
+LEFT JOIN  
+    mis_reporter_remark mrr ON mrr.reporter_id = mr.reporter_id
+设置收藏和取消收藏的按钮显隐，首先打开显示条件，配置代码如下；
+//取消收藏
+function main(row) {
+    //console.log('列表值', row);
+    //const state = row['1d512eb3-9c23-40ed-943f-0d26cdb5655f'];//原始字段名称
+    //const state = row['782a68bc-259f-4862-96a5-ea1c1c17d7b3'];//原始字段名称
+    //获取当前用户名称
+    var userInfo = JSON.parse(window.localStorage.getItem("linglong:user"));
+    //console.log('userInfo', userInfo)
+    const state = userInfo.user.username;
+    const state1 = row['8c5a2c0b-2d3d-44de-8234-37603e63e70a'];
+    const state3 = row['1d512eb3-9c23-40ed-943f-0d26cdb5655f'];
+
+    if (state3 === 1) {
+        return "NORMAL";
+    } else {
+        return "HIDDEN";
+    }
+    // NORMAL 普通状态
+    // HIDDEN 隐藏状态
+    // DISABLED 禁用状态
+}
+//收藏
+function main(row) {
+    //console.log('列表值',row);
+    //const state = row['1d512eb3-9c23-40ed-943f-0d26cdb5655f'];//原始字段名称
+    //const state = row['782a68bc-259f-4862-96a5-ea1c1c17d7b3'];//原始字段名称
+    //获取当前用户名称
+    var userInfo = JSON.parse(window.localStorage.getItem("linglong:user"));
+    const state3 = row['1d512eb3-9c23-40ed-943f-0d26cdb5655f'];//收藏typeid
+    if (state3 === 1) {
+        return "HIDDEN";
+    } else {
+        return "NORMAL";
+    }
+    // NORMAL 普通状态
+    // HIDDEN 隐藏状态
+    // DISABLED 禁用状态
+}
+配置收藏按钮脚本；
+function main(params) {
+    var self = this; // 重置作用域
+    var tableComp = self.$$element("table_4okw6w"); // 获取表格元素
+    //找到对应的列表reporter_id
+    var reporterId = params['d09418b9-277c-49b8-a090-4543f2d997d4'];
+    var reporterName = params['e35e6af0-ee31-4836-bc04-32b36afb659a']
+    //定义收藏时间
+    var currentDate = new Date();
+    const create_time = currentDate.getFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate() + ' ' + currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds()
+    //操作人
+    var userInfo = JSON.parse(window.localStorage.getItem("linglong:user"));
+    let userName = userInfo.user.username
+    console.log('userInfo', userInfo)
+    api.EXEC_FORMULA("UPSERT('t_580ba97c3337411d8ad3782e0ba71951',QUERY_AND(QUERY_EQ('reporter_id', '" + reporterId + "'),QUERY_EQ('human_name', '" + userName + "')),'', ['reporter_name','" + reporterName + "','reporter_id', '" + reporterId + "', 'human_name', '" + userName + "', 'create_time', '" + create_time + "'], ['reporter_id', 'human_name'])").then((res) => {
+        if (!res.hasError) {
+            tableComp.$$refreshData().then(() => {
+                console.log("保存成功")
+            });
+        } else {
+            self.$message.error(res); // 显示错误提示信息
+        }
+    }).catch(err => {
+        self.$message.error(err.message); // 显示错误提示信息
+    });
+}
+配置取消收藏按钮脚本；
+function main(params) {
+    var self = this; // 重置作用域
+    var tableComp = self.$$element("table_4okw6w"); // 获取表格元素
+    //找到对应的列表reporter_id
+    var collectionId = params['959aa48f-6825-46ad-81e5-805e315632ee'];
+    console.log('collectionId', collectionId)
+    //定义收藏时间
+    //var currentDate = new Date();
+    //const create_time = currentDate.getFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate() + ' ' + currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds()
+    //操作人
+    //var userInfo = JSON.parse(window.localStorage.getItem("linglong:user"));
+    //let userName = userInfo.user.username
+    api.EXEC_FORMULA("DELETE('t_580ba97c3337411d8ad3782e0ba71951',QUERY_EQ('id','" + collectionId + "'),'')").then((res) => {
+        if (!res.hasError) {
+            tableComp.$$refreshData().then(() => {
+                console.log("保存成功")
+            });
+        } else {
+            self.$message.error(res); // 显示错误提示信息
+        }
+    }).catch(err => {
+        self.$message.error(err.message); // 显示错误提示信息
+    });
+}
+配置列表过滤条件。
+4 常见问题
+使用视图脱敏数据库可能会出现字段过滤消失的情况。

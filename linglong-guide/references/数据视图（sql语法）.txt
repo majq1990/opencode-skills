@@ -1,0 +1,483 @@
+数据视图（sql语法）
+一、视图简介
+视图是一种虚拟表，它基于一个或多个表的查询结果而创建。视图并不实际存储数据，而是在每次查询时动态生成结果。
+二、使用视图
+1、多表联合
+（1）INNER JOIN（内连接）
+只会返回两个表中匹配的行。
+SELECT * 
+FROM table1 
+INNER JOIN table2 ON table1.column = table2.column;
+例如，假设有 students 表（student_id，student_name）和 scores 表（student_id，score），要获取学生的姓名及其对应的分数，可以这样写：
+SELECT s.student_name, sc.score 
+FROM students s 
+INNER JOIN scores sc ON s.student_id = sc.student_id;
+视图：
+SELECT
+b.type_name AS type_name,
+    a.senior_id AS senior,
+a.type_name AS matter_name,
+a.id AS id,
+
+CASE
+WHEN a.score_type = 1 THEN
+0-a.score ELSE a.score 
+END AS score 
+FROM
+law_litigant_event_type a inner join 
+law_litigant_event_type b 
+on
+a.senior_id = b.id 
+WHERE b.type_level = 1
+AND a.delete_flag = 0
+AND b.delete_flag = 0
+（2）LEFT JOIN（左连接）
+返回左表中的所有行，以及右表中与左表匹配的行。如果右表中没有匹配的行，则相应的列值为 NULL 。
+SELECT * 
+FROM table1 
+LEFT JOIN table2 ON table1.column = table2.column;
+例如，有 departments 表（department_id，department_name）和 employees 表（employee_id，employee_name，department_id），要获取所有部门及其所属员工的信息：
+SELECT d.department_name, e.employee_name 
+FROM departments d 
+LEFT JOIN employees e ON d.department_id = e.department_id;
+商铺列表中展示 违规次数
+视图
+SELECT
+a.*,
+f.warn_level_color,
+IFNULL( b.wgCount, 0 ) AS wgCount,
+c.NAME AS streetName,
+d.NAME AS cityName,
+e.NAME AS area_name,
+c.id AS streetId,
+d.id AS cityId,
+e.id AS area_Id,
+CASE
+
+WHEN ( b.wgCount IS NULL OR b.wgCount = 0 ) THEN
+1 
+WHEN ( b.wgCount < 3 AND b.wgCount > 0 ) THEN
+2 
+WHEN ( b.wgCount >= 3 ) THEN
+3 
+END AS wgCountFlag 
+FROM
+law_litigant_base a
+LEFT JOIN ( SELECT litigant_id, count(*) AS wgCount FROM law_case_source_info GROUP BY litigant_id ) b ON a.id = b.litigant_id
+LEFT JOIN sys_region c ON a.street_region_id = c.id
+LEFT JOIN sys_region d ON a.city_region_id = d.id
+LEFT JOIN sys_region e ON a.area_region_id = e.id
+JOIN lawcheck_warn_level f ON a.credit_score BETWEEN f.score_range_min 
+AND f.score_range_max
+（3） RIGHT JOIN（右连接）
+与左连接相反，返回右表中的所有行，以及左表中与右表匹配的行。如果左表中没有匹配的行，则相应的列值为 NULL 。
+SELECT * 
+FROM table1 
+RIGHT JOIN table2 ON table1.column = table2.column;
+假设还是上述的 departments 表和 employees 表，要获取所有员工及其所属部门的信息（包括没有部门的员工）：
+SELECT d.department_name, e.employee_name 
+FROM departments d 
+RIGHT JOIN employees e ON d.department_id = e.department_id;
+注意点
+连接查询 条件过滤的使用
+SELECT * from tc_video_cell a INNER JOIN tc_video_group b on a.group_id = b.group_id WHERE b.group_name = '房镇镇人民政府'
+
+
+
+SELECT * from tc_video_cell a INNER JOIN tc_video_group b on a.group_id = b.group_id and b.group_name = '房镇镇人民政府'
+
+
+SELECT * from tc_video_cell a INNER JOIN tc_video_group b on a.group_id = b.group_id WHERE b.group_name = '房镇镇人民政府'
+
+
+
+SELECT * from tc_video_cell a left JOIN tc_video_group b on a.group_id = b.group_id and  a.location = '华光路与心环西路路口'
+
+  SELECT * from tc_video_cell a left JOIN tc_video_group b on a.group_id = b.group_id where  a.location = '华光路与心环西路路口'
+2、利用视图对数据进行格式化
+（1）concat 连接
+SELECT
+law_litigant_warn_level.warn_level_id, 
+law_litigant_warn_level.warn_level_color, 
+law_litigant_warn_level.warn_level_name,
+    law_litigant_warn_level.score_range_min,
+    law_litigant_warn_level.score_range_max,
+    @CONCAT(law_litigant_warn_level.score_range_min,'-',law_litigant_warn_level.score_range_max) as score_range
+FROM
+law_litigant_warn_level
+（2）复杂的格式化和计算
+SELECT
+b.type_name AS type_name,
+    a.senior_id AS senior,
+a.type_name AS matter_name,
+a.id AS id,
+
+CASE
+WHEN a.score_type = 1 THEN
+0-a.score ELSE a.score 
+END AS score 
+FROM
+law_litigant_event_type a,
+law_litigant_event_type b 
+WHERE
+a.senior_id = b.id 
+AND b.type_level = 1
+AND a.delete_flag = 0
+AND b.delete_flag = 0
+（3）时间格式化
+-- 小类视图
+SELECT 
+b.type_name AS type_name,
+    a.senior_id AS senior,
+a.type_name AS matter_name,
+a.id AS id,
+case WHEN a.score_type = 1 then '减分项' else '加分项' end as score_type_name,
+ case WHEN a.score_type = 1 then 0-a.score else a.score end as score ,
+ a.create_human,
+ @DATE_FORMAT(a.create_time,'%Y年%m月%d日',nli) as create_time1,
+ @DATE_FORMAT(a.create_time,'%Y年%m月%d日 %H时%i分%s',nli) as create_time
+
+
+FROM
+law_litigant_event_type a,
+law_litigant_event_type b 
+WHERE
+a.senior_id = b.id 
+AND b.type_level = 1
+AND a.delete_flag = 0
+AND b.delete_flag = 0
+（4）其他函数
+字符串函数
+CONCAT(str1, str2, ...): 连接一个或多个字符串。
+LENGTH(str): 返回字符串的长度。
+UPPER(str): 将字符串转换为大写。
+LOWER(str): 将字符串转换为小写。
+REPLACE(str, find_string, replace_with): 替换字符串中的子串。
+SUBSTRING(str, start, length): 返回字符串的一部分。
+LOCATE(substring, string[, position]): 查找子串的位置。
+INSTR(str, substring): 查找子串的位置，同LOCATE。
+REVERSE(str): 反转字符串。
+数学函数
+ABS(X): 返回X的绝对值。
+CEIL(X): 返回小于等于X的最小整数。
+FLOOR(X): 返回大于等于X的最大整数。
+ROUND(X[, D]): 四舍五入X到D位小数。
+RAND(): 返回0到1之间的随机数。
+MOD(N, M): 返回N除以M的余数。
+PI(): 返回π的值。
+POW(X, Y): 返回X的Y次方。
+SQRT(X): 返回X的平方根。
+日期和时间函数
+CURDATE(): 返回当前日期。
+CURTIME(): 返回当前时间。
+NOW(): 返回当前的日期和时间。
+DATE_ADD(date, INTERVAL expr unit): 添加时间间隔。
+DATE_SUB(date, INTERVAL expr unit): 减去时间间隔。
+DATE_FORMAT(date, format): 格式化日期和时间。
+TIMESTAMPDIFF(unit, date1, date2): 计算两个日期之间的差值。
+STR_TO_DATE(str, format): 将字符串转换为日期。
+流程控制函数
+IF(condition, true_expr, false_expr): 如果条件为真则返回true_expr，否则返回false_expr。
+CASE ... WHEN ... THEN ... ELSE ... END: 多分支条件表达式。
+IFNULL(expr1, expr2): 如果expr1为NULL则返回expr2，否则返回expr1。
+其他常用函数
+COUNT(expr): 计算非NULL值的数量。
+SUM(expr): 计算所有值的总和。
+AVG(expr): 计算所有值的平均值。
+MAX(expr): 返回最大值。
+MIN(expr): 返回最小值。
+（5）函数使用 注意国产化环境数据库适配
+select str_to_date('2023-01-01 09:09:09','%Y-%m-%d %H:%i:%s') as strdate
+union all
+select @STR_TO_DATE('\\'2023-01-01 09:09:09\\'') as strdate
+union all
+select now() as strdate
+union all
+select @NOW() as strdate
+TEXT_EQUAL("TEXT_EQUAL", 2),
+TIMESTAMP_DIFF("TIMESTAMPDIFF", 3),
+GROUP_CONCAT("GROUP_CONCAT", 1),
+SUBSTRING_INDEX("SUBSTRING_INDEX", 3),
+ST_GEOM_FROM_TEXT("ST_GEOMFROMTEXT", 2),
+ST_CONTAINS("ST_CONTAINS", 2),
+ST_INTERSECTS("ST_INTERSECTS", 2),
+ST_DIFFERENCE("ST_DIFFERENCE", 3),
+ST_WITHIN("ST_WITHIN", 2),
+FIND_IN_SET("FIND_IN_SET", 2),
+CONCAT("CONCAT", -1),
+NOW("NOW", 0),
+DAY("DAY", 1),
+MINUTE("MINUTE", 1),
+HOUR("HOUR", 1),
+LOCALTIME("LOCALTIME", 0),
+LOCALTIMESTAMP("LOCALTIMESTAMP", 0),
+CURDATE("CURDATE", 0),
+CURRENTDATE("CURRENTDATE", 0),
+CURRENT_TIME("CURRENT_TIME", 0),
+CURRENT_TIMESTAMP("CURRENT_TIMESTAMP", 0),
+DATE_DIFF("DATEDIFF", -1),
+ISNULL("ISNULL", 1),
+IF_NULL("IFNULL", 2),
+ST_DISTANCE("ST_DISTANCE", 2),
+TRUNCATE("TRUNCATE", 2),
+RAND("RAND", 0),
+POW("POW", 2),
+LOG2("LOG2", 1),
+INTEGER_DIVISION("INTEGER_DIVISION", 2),
+TO_DAYS("TO_DAYS", 1),
+TIME_DIFF("TIMEDIFF", 2),
+TIME_TO_SEC("TIME_TO_SEC", 1),
+SYSDATE("SYSDATE", 0),
+STR_TO_DATE("STR_TO_DATE", 1),
+DATE_SUB("DATE_SUB", 3),
+ADD_DATE("ADDDATE", 3),
+DATE_FORMAT_CONCAT("DATE_FORMAT_CONCAT", -1),
+LIKE("LIKE", -1),
+DATE_FORMAT("DATE_FORMAT", 1),
+ST_ASTEXT("ST_ASTEXT", 1),
+ST_X("ST_X", 1),
+ST_Y("ST_Y", 1),
+ST_SRID("ST_SRID", 1),
+ST_CLIPBYBOX2D("ST_CLIPBYBOX2D", 2),
+ST_MAKEENVELOPE("ST_MAKEENVELOPE", 5),
+ST_MULTI("ST_MULTI", 1),
+ST_UNION("ST_UNION", 1),
+ST_BUILDAREA("ST_BUILDAREA", 1),
+ST_COLLECT("ST_COLLECT", 1),
+ST_DUMPRINGS("ST_DUMPRINGS", 1),
+ST_DUMP("ST_DUMP", 1),
+ST_AREA("ST_AREA", 1),
+ST_BUFFER("ST_BUFFER", 1),
+ST_CENTROID("ST_CENTROID", 1),
+ST_DUMPPOINTS("ST_DUMPPOINTS", 1),
+ST_INTERSECTION("ST_INTERSECTION", 1),
+ST_LINEINTERPOLATEPOINT("ST_LINEINTERPOLATEPOINT", 1),
+ST_LINEMERGE("ST_LINEMERGE", 1),
+ST_LINELOCATEPOINT("ST_LINELOCATEPOINT", 1),
+DB_UNIQUE_ID_SQL("DB_UNIQUE_ID_SQL", 0),
+FIELD_SORT_BY_PINYIN("FIELD_SORT_BY_PINYIN", 1),
+CURRENT_USER_TABLES_SQL("CURRENT_USER_TABLES_SQL", 0),
+INSTR("INSTR", 2),
+COLUMN_OF_TABLE("COLUMN_OF_TABLE", 2),
+DATABASE("DATABASE", 0),
+YEAR("YEAR", 1),
+MONTH("MONTH", 1),
+QUARTER("QUARTER", 1),
+LIKE_ESCAPE("LIKE_ESCAPE", 2);
+目前灵珑1.5.3版本及以后已支持一些自定义函数，注意自定义函数需要大写，请至钉钉文档查看附件《国产化自定义函数示例》。
+注意：
+如果要在自定义函数中嵌套原生函数，需使用单引号将原生函数进行包裹（自定义函数中嵌套自定义函数则不需要）。
+@DATE_FORMAT(‘TRUNC(createTime,\'D\' + 1','YY-MM-DD')’)
+如果单引号里还有单引号，请使用\转义；另外这种情况下自定义函数中的内容不能换行。
+为了有更明确的语义，引入调用原生函数的自定义函数：@RAW('原生函数')，故上面的函数也可以写成@DATE_FORMAT(@RAW(‘TRUNC(createTime,\'D\' + 1','YY-MM-DD')’))
+3、合并数据
+举例：
+分组树
+分组和设备树
+视图
+SELECT group_id,group_name,senior_id from tc_video_group
+union 
+SELECT device_guid,device_name,group_id from tc_video_cell
+注意
+UNION vs UNION ALL
+UNION: 默认会去除重复的行，只保留唯一的行。
+UNION ALL: 包含所有行，包括重复的行。
+三、SQL注意细节
+1、避免使用 % 前缀模糊查询
+例如：like '%name'或者like '%name%'，这种查询会导致索引失效而进行全表扫描。但是可以使用like 'name%'，这种会使用到索引。
+2、避免在 where 子句中对字段进行表达式操作
+这种不会使用到索引：
+select user_id,user_project from user_base where age*2=36;
+可以改为：
+select user_id,user_project from user_base where age=36/2;
+任何对列的操作都将导致表扫描，它包括数据库函数、计算表达式等等，查询时要尽可能将操作移至等号右边。
+3、避免隐式类型转换
+where 子句中出现的 column 字段要和数据库中的字段类型对应
+SELECT * from tc_video_group where group_id = 2773
+SELECT * from tc_video_group where group_id = '2773'
+4、提高group by语句的效率
+1、反例
+先分组，再过滤
+select job, avg（salary） from employee
+group by job
+having job ='develop' or job = 'test';
+2、正例
+先过滤，后分组
+select job，avg（salary） from employee
+where job ='develop' or job = 'test'
+group by job;
+5、查询SQL尽量不要使用select *，而是具体字段
+select *弊端：
+增加很多不必要的消耗，比如CPU、IO、内存、网络带宽；
+增加了回表的可能性；
+查询效率低；
+https://zhuanlan.zhihu.com/p/607569018
+四、视图性能问题
+灵珑平台有性能检测，但是只能作为参考，因为数据量一般都不大测不出性能问题
+使用explain分析SQL执行计划
+（1）type
+system：表仅有一行，基本用不到；
+const：表最多一行数据配合，主键查询时触发较多；
+eq_ref：对于每个来自于前面的表的行组合，从该表中读取一行。这可能是最好的联接类型，除了const类型；
+ref：对于每个来自于前面的表的行组合，所有有匹配索引值的行将从这张表中读取；
+range：只检索给定范围的行，使用一个索引来选择行。当使用=、<>、>、>=、<、<=、IS NULL、<=>、BETWEEN或者IN操作符，用常量比较关键字列时，可以使用range；
+index：该联接类型与ALL相同，除了只有索引树被扫描。这通常比ALL快，因为索引文件通常比数据文件小；
+all：全表扫描；
+性能排名：system > const > eq_ref > ref > range > index > all。
+实际sql优化中，最后达到ref或range级别。
+（2）Extra常用关键字
+Using index：只从索引树中获取信息，而不需要回表查询；
+Using where：WHERE子句用于限制哪一个行匹配下一个表或发送到客户。除非你专门从表中索取或检查所有行，如果Extra值不为Using where并且表连接类型为ALL或index，查询可能会有一些错误。需要回表查询。
+Using temporary：mysql常建一个临时表来容纳结果，典型情况如查询包含可以按不同情况列出列的GROUP BY和ORDER BY子句时；
+EXPLAIN
+SELECT * from tc_video_cell WHERE device_guid = 37030121001310000204
+
+
+EXPLAIN
+SELECT * FROM tc_video_cell where location = '华光路与心环西路路口'
+
+
+EXPLAIN
+SELECT * FROM tc_video_cell where location like  '%华光路%'
+
+
+EXPLAIN
+SELECT * FROM tc_video_cell where location like  '华光路%'
+
+;
+
+EXPLAIN
+SELECT * from tc_video_cell a INNER JOIN tc_video_group b on a.group_id = b.group_id 
+;
+
+EXPLAIN
+SELECT * from tc_video_cell a INNER JOIN tc_video_group b on a.group_id = b.group_id WHERE b.group_name = '房镇镇人民政府'
+
+
+EXPLAIN
+SELECT * from tc_video_cell a INNER JOIN tc_video_group b on a.group_name = b.group_name
+五、特别的用法
+灵珑视图可参考文档：《数据视图》
+1、带参数的视图
+页面 didMount 动作中设置参数的值
+function main() {
+    this.params.groupId=13    
+}
+详细可参考：《数据视图》的2.4.4视图的条件参数化，注意如果是使用in，需要在变量外再加个()，例如：in (${dregion})
+2、视图中调用公式
+在某些场景中，视图中需要调公式来进行数据过滤，比如按当前登录者信息过滤数据，下面的示例给出了如何在视图中调用公式：
+SELECT * from sys_region where name in ('${com.egova.lowcode.base.util.TemplateFormulaUtils::runInSQL("IF_FORMULA(ISEMPTY(REGION_ID()),\"\",\"REGION_CHILD_LIST(REGION_ID(),1,true,name)\")")}')
+上面的sql实现了按当前登录者所属区域及子孙区域的区域名过滤出相关区划数据
+可以看到使用了内置的公式执行方法:
+com.egova.lowcode.base.util.TemplateFormulaUtils::runInSQL("公式表达式")方法，括号中为公式表达式，里面可以根据场景替换成需要的公式（注意：示例中用了IF_FORMULA做了兼容处理，避免因为region_id取到的是空导致报错）
+注意：
+引用上述公式调用方法时需要用'${  }'括起来，里面的公式表达式需要用双引号引起来，如果公式表达式内部也有双引号，则需要用\"来替代避免被截断
+执行的公式不支持使用sql中的其他字段作为公式的入参，只支持固定值或者内置的会话变量公式
+3、表格数据使用hook
+效果
+调用API的写法：
+function main(pageId, param) {
+    return new Promise((resolve, reject) => {
+        console.log(param)
+        api.API_DATA_EXECUTE("e3f6bdd0-32a1-4903-973d-e9fdc2b05aed", "WIDZOM", param, { lostAbility: "01" })
+            .then(res => {
+                console.log(res);
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+    })
+}
+调用数据模型的写法：
+function main(pageId, param) {
+    debugger
+    return new Promise((resolve, reject) => {
+        console.log(pageId, param);
+      
+        // 使用数据模型来代替默认查询逻辑，dataModeId为数据模型ID
+        const dataModeId = "a39e130f-0f2a-474e-b49d-20b1550fe0b6";
+         api.DATA_EXECUTOR().executeDataModelForList(dataModeId, param)
+             .then(res => {
+                 debugger
+                 resolve(res);
+             }).catch(() => {
+                 reject();
+             })
+    })
+}
+数据模型定义
+数据模型id 获取方法（浏览器地址最后的一串id）
+4、交流一下 使用过程中的视图
+WITH RECURSIVE sys_region_hierarchy AS (
+  SELECT id, type, senior_id, name
+  FROM sys_region
+  WHERE senior_id = -1
+
+  UNION ALL
+
+  SELECT sr.id, sr.type, sr.senior_id, sr.name
+  FROM sys_region sr
+  JOIN sys_region_hierarchy srh ON sr.senior_id = srh.id
+),
+patrol_with_hierarchy AS (
+  SELECT
+    p.id,
+    p.name,
+    p.card_no,
+    p.region_id,
+    p.delete_flag,
+    p.gender_id,
+    p.unit_id,
+    p.description,
+    p.mobile_verify_media_id,
+    p.valid_flag,
+    p.phone AS 联系电话,
+    CASE
+      WHEN p.valid_flag = 1 THEN '在线'
+      ELSE '离线'
+    END AS status,
+    su.name AS 所属部门,
+    sh.id AS current_region_id,
+    sh.type AS current_hierarchy_type,
+    sh.senior_id
+  FROM
+    patrol p
+  JOIN
+    sys_unit su ON p.unit_id = su.id
+  LEFT JOIN
+    sys_region_hierarchy sh ON p.region_id = sh.id
+)
+SELECT
+  pw.id,
+  pw.name,
+  pw.card_no,
+  pw.region_id,
+  pw.delete_flag,
+  pw.gender_id,
+  pw.unit_id,
+  pw.description,
+  pw.mobile_verify_media_id,
+  pw.valid_flag,
+  pw.联系电话,
+  pw.status,
+  pw.所属部门,
+  CASE
+    WHEN pw.current_hierarchy_type = 2 THEN pw.current_region_id
+    WHEN pw.current_hierarchy_type = 3 THEN (SELECT sh.id FROM sys_region_hierarchy sh WHERE sh.id = pw.senior_id AND sh.type = 2)
+    ELSE NULL
+  END AS 区域,
+  CASE
+    WHEN pw.current_hierarchy_type = 3 THEN pw.current_region_id
+    WHEN pw.current_hierarchy_type = 4 THEN (SELECT sh.id FROM sys_region_hierarchy sh WHERE sh.id = pw.senior_id AND sh.type = 3)
+    ELSE NULL
+  END AS 街道,
+  CASE
+    WHEN pw.current_hierarchy_type = 4 THEN pw.current_region_id
+    ELSE NULL
+  END AS 社区
+FROM
+  patrol_with_hierarchy pw
+ORDER BY
+  pw.id
+六、常见问题
+请至钉钉文档查看附件《灵珑应用检查清单》。

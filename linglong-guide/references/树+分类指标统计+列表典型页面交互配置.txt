@@ -1,0 +1,327 @@
+树+分类指标统计+列表典型页面交互配置
+1 使用场景
+左侧为行政区划树，右侧上方为社会主体分类统计，右侧下方为社会主体列表，可对社会主体数据进行增删改查。
+2 效果
+请至钉钉文档查看附件《交互录屏.mp4》。
+3 配置
+（1）树交互：
+页面加载后自动选中区划树的根节点
+function main() {
+    var pageTreeEle = this.$$("page_tree_abcdef");
+    var treeRenderEle = pageTreeEle.$$getRenderElement();
+    var treePanelEle = treeRenderEle.$$getTreeElement();
+    treePanelEle.$$clickNode(treePanelEle.renderTreeData[0]);
+}
+点击树节点，基于当前节点和所有子节点过滤右侧的指标卡和表格列表数据：
+首先需要调取公式获取当前选中节点的所有子孙节点（参见《点击树节点通过js获取其所有子孙节点》）
+将拼好的子孙节点区划字符串作为参数传递给右侧卡片列表的查询组件（注意查询组件的匹配规则配置为在...中），并执行查询，调用如下函数：
+function refreshCard(regionId, self) {
+
+    var pageTableList = self.$$("page_widget_list_abcde");
+    // 获取列表渲染页实例
+    var listRenderView = pageTableList.$$getRenderElement();
+    // 获取当前显示的组件，表格或者卡片
+    var currentListEle = listRenderView.$$getListElement();
+
+    //如果要给列表的查询组件传参赋值，需要找到组件的model进行赋值，见如下示例
+    let queryElement = pageTableList.dataEngine.state.getElement("query_field_wrapper_abcdef");
+    if (queryElement && queryElement.data && queryElement.data.members) {
+        const queryProjectIdModel = queryElement.data.members[0];
+        queryProjectIdModel.props.defaultValue.value = regionId;
+    }
+    //基于查询面板组件执行查询
+    let tableCondition = pageTableList.dataEngine.state.getElement("condition_abcdef");
+    if (tableCondition) {
+        setTimeout(function () {
+            tableCondition.onQuery();
+        })
+    }
+}
+将调用公式的返回值res.result作为参数传递给右侧表格列表，需构建filterData，并执行查询，调用如下函数：
+function refreshTable(result, self) {
+
+    let pageTableList = self.$$("page_widget_list_abcdef");
+
+        if (pageTableList && pageTableList.dataEngine && pageTableList.dataEngine.state) {
+            const tableComp = pageTableList.dataEngine.state.getElement("table_abcdef");
+            if (tableComp) {
+
+                var members = pageTableList.dataEngine.state.layout.props.dataSet.filterData.filter.members.slice(0, 1);
+                members.push({
+                    field: "950f03ae-1234-1234-ae1e-617c5aea2e88-1234",
+                    fieldName: "street_region_id",
+                    "fieldType": "TYPE_INTEGER",
+                    valueType: "Constant",
+                    values: result || [],
+                    value: "",
+                    operate: "In", // 范围查询
+                    className: "Single",
+                    treeUnitIdFiter: "1"
+                });
+                var filter = {
+                    "combine": "And",
+                    "className": "List",
+                    "members": members
+                };
+
+                pageTableList.dataEngine.state.layout.props.dataSet.filterData = {
+                    "enabled": true,
+                    "filter": filter,
+                    "filterType": "FILTER",
+                    "rawCondition": {},
+                    "rawFormula": ""
+                }
+
+                tableComp.onRefresh();
+            }
+        }
+}
+其中field参数代表查询条件的字段在列表里的标识，查询方式如下：
+这种实现方式，类似于灵珑查询列表，F12录制查询接口，直接传参查询字段和条件，无需配置查询条件，此处使用这种方式实现的原因，是因为此列表使用的视图未构建变量，本身列表里的street_region_id是整数，无法作为查询条件配置在...之中，因此采用此方式实现，与上述卡片列表构建变量传参方式相比，是另外一种实现思路。
+其他同类场景完整脚本示例（非本场景，其他场景示例）：
+①判断是否为叶子节点，不为叶子节点取该节点下的所有节点
+②查询列表数据，其中参数为数据组，进行范围查询；以及如果之前列表已有过滤需要进行members拼接；
+③查询统计数据，统计查询使用in函数，可查询多个
+function main(defaultParams) {
+    var self = this;
+    let pageRootList = this.$$roots();
+    let rootPageElement = pageRootList[0];
+    let pageTableList = rootPageElement.$$element("page_widget_list_2ozkl3");
+    var ids = [];
+    var unitIds = '';
+
+    //判断是否为叶子节点，不为叶子节点取该节点下的所有节点
+    if (defaultParams.data.isLeaf === 0) {
+        api.EXEC_FORMULA("TREE_QUERY_CHILDRENS('3fdc002c-419a-4736-bf2c-0e42c4dcde3e','" + defaultParams.id + "',['id'])").then((res) => {
+            ids = res.result;
+            searchTable();
+            unitIds = '(' + ids.join(",") + ')';
+            searchStatic(unitIds);
+        }).catch(err => {
+            self.$message.error(err.message); // 显示错误提示信息
+        });
+    } else {
+        ids[0] = defaultParams.id;
+        searchTable();
+        unitIds = '(' + defaultParams.id + ')';
+        searchStatic(unitIds);
+    }
+
+    //查询列表数据
+    function searchTable () {
+        if (pageTableList && pageTableList.dataEngine && pageTableList.dataEngine.state) {
+            const tableComp = pageTableList.dataEngine.state.getElement("table_937fiy");
+            if (tableComp) {
+                var members = pageTableList.dataEngine.state.layout.props.dataSet.filterData.filter.members.slice(0, 1)
+                members.push({
+                    field: "7002269d-9445-48dd-8de5-94d3e4a13237",
+                    fieldName: "responsibility_unit_id",
+                    "fieldType": "TYPE_INTEGER",
+                    valueType: "Constant",
+                    values: ids || [],
+                    value: "",
+                    operate: "In", // 范围查询
+                    className: "Single"
+                });
+                var filter = {
+                    "combine": "And",
+                    "className": "List",
+                    "members": members
+                };
+                pageTableList.dataEngine.state.layout.props.dataSet.filterData.filter = filter;
+                tableComp.onRefresh();
+                let tableCondition = pageTableList.dataEngine.state.getElement("condition_4ibdyh");
+                if (tableCondition) {
+                    setTimeout(function () {
+                        tableCondition.onQuery();
+                    })
+                }
+            }
+        }
+    }
+
+    //查询统计数据
+    function searchStatic(unitIds) {
+        // 统计组件
+        const zdqyStat = self.findElement("zfyy_page_statistics_card_73frbn");
+        const zdldStat = self.findElement("zfyy_page_statistics_card_gw477y");
+        const gjtdStat = self.findElement("zfyy_page_statistics_card_4cyokj");
+        const gjljStat = self.findElement("zfyy_page_statistics_card_fctzm");
+        const gjtqStat = self.findElement("zfyy_page_statistics_card_1taqjh");
+        const sdcrStat = self.findElement("zfyy_page_statistics_card_7sxl2h");
+        const bdzyStat = self.findElement("zfyy_page_statistics_card_4w15f");
+        const yjblStat = self.findElement("zfyy_page_statistics_card_6z3f8t");
+        const allStat = self.findElement("zfyy_page_statistics_card_9ngi0f");
+
+        api.DATA_SOURCE_EXECUTE("98d6f847-b57a-4994-befb-f76a80432ad8", "api", [{
+            name: "unitId",
+            text: "单位ids",
+            type: "QueryString",
+            valueContent: unitIds,
+            valueType: null
+        }], [], "").then((res) => {
+            const statisticJson = JSON.parse(res['result']);
+            console.log(statisticJson);
+            if (statisticJson && !statisticJson.hasError && statisticJson.result.length > 0) {
+                const zdqyCount = statisticJson.result[0].value || 0;
+                const zdldCount = statisticJson.result[1].value || 0;
+                const gjtdCount = statisticJson.result[2].value || 0;
+                const gjljCount = statisticJson.result[3].value || 0;
+                const gjtqCount = statisticJson.result[4].value || 0;
+                const sdcrCount = statisticJson.result[5].value || 0;
+                const bdzyCount = statisticJson.result[6].value || 0;
+                const yjblCount = statisticJson.result[7].value || 0;
+                zdqyStat._props.data.props.defaultValue.value = zdqyCount;
+                zdldStat._props.data.props.defaultValue.value = zdldCount;
+                gjtdStat._props.data.props.defaultValue.value = gjtdCount;
+                gjljStat._props.data.props.defaultValue.value = gjljCount;
+                gjtqStat._props.data.props.defaultValue.value = gjtqCount;
+                sdcrStat._props.data.props.defaultValue.value = sdcrCount;
+                bdzyStat._props.data.props.defaultValue.value = bdzyCount;
+                yjblStat._props.data.props.defaultValue.value = yjblCount;
+
+                allStat._props.data.props.defaultValue.value = parseInt(zdqyCount) + parseInt(zdldCount) + parseInt(gjtdCount) + parseInt(gjljCount) + parseInt(gjtqCount) + parseInt(sdcrCount) + parseInt(bdzyCount) + parseInt(yjblCount);
+            }
+
+        }).catch(err => {
+            console.error(err);
+        });
+    }
+}
+（2）指标卡交互：
+点击指标卡，对下方表格列表进行过滤
+指标卡的构建方式参见《基于卡片列表制作指标卡并与表格列表联动》
+添加卡片点击事件onCardClick，取到当前卡片中的类型编码字段值，并传递给表格列表的查询组件（主体类型），然后执行查询
+function main(params) {
+    console.log(params);
+    var value = params.record.litigant_big_type_code.value;
+    let pageTableList = this.$$("page_widget_list_abcdef");
+    if (pageTableList) {
+        let queryElement = pageTableList.dataEngine.state.getElement("query_field_wrapper_abcdef");
+        if (queryElement && queryElement.data && queryElement.data.members) {
+            const queryProjectIdModel = queryElement.data.members[0];
+            queryProjectIdModel.props.defaultValue.value = value;
+        }
+        let tableCondition = pageTableList.dataEngine.state.getElement("condition_abcdef");
+        if (tableCondition) {
+              setTimeout(function() {
+                tableCondition.onQuery();
+            })
+        }
+    }
+}
+指标卡初次加载选中第一个卡片，数据刷新后保持之前选中的卡片不变
+在卡片列表的卡片容器组件上添加onListChange事件，执行如下脚本：
+如果之前没有选中则在数据变化时选中第一个卡片，如果之前有选中，列表刷新之后会清除选中状态，因此需要在数据变化时再执行一次选中
+function main(){
+    var self = this.$$("card_container_abcdef");
+
+    var index = 0;
+    // 获取之前已选中的卡片
+    var selection = self.$$getSelection();
+
+    // 取已选中卡片的key
+    if (selection.selectedRowKeys.length > 0 )
+        index = selection.selectedRowKeys[0];
+    // 基于index执行卡片选中，之前没有选中则选第一个，之前有选中则仍选中之前的
+    if (self && self.dataList && self.dataList.length && self.onCheckedChange) {
+        var item = self.dataList[index];
+        self.onCheckedChange("radio", item, true);
+    }
+}
+（3）新增数据交互：
+点击数据采集按钮进入新增页面时，需要获取树中当前选中的街道和指标卡中当前选中的主体类型作为参数进行传参；注意：只有树选中的节点为街道级节点时才传递参数。调整页面的参数基于自定义参数
+function main() {
+    var pageTableList = this.$$("page_widget_list_abcde");
+    // 获取列表渲染页实例
+    var listRenderView = pageTableList.$$getRenderElement();
+    // 获取当前显示的组件，表格或者卡片
+    var currentListEle = listRenderView.$$getListElement();
+    // 获取当前选中
+    var cardSelect = currentListEle.$$getSelection();
+    var type_id = "";
+    if (cardSelect.selectedRows.length > 0)
+        type_id = cardSelect.selectedRows[0].litigant_big_type_code.value;
+
+    var pageTreeEle = this.$$("page_tree_abcdef");
+    var treeRenderEle = pageTreeEle.$$getRenderElement();
+    var treePanelEle = treeRenderEle.$$getTreeElement();
+    var street_id = "";
+    if (treePanelEle.$$getSelection().selectedKeys.length != 0) {
+        if (treePanelEle.$$getSelection().selectedRows[0].data.columns.type == 3) {
+            street_id = treePanelEle.$$getSelection().selectedKeys[0];
+        }
+    }
+    if (street_id != "")
+        return {
+            'street_id': street_id,
+            'type_id': type_id
+        };
+    else
+        return { 'type_id': type_id};
+}
+在表单页面接收传递的街道id参数值赋给表单对应组件，并基于主体类型参数值控制指定标签页显示、其他隐藏；
+新增页面中表单需配置接收参数：
+在标签页组件的didmount中获取上游传递过来的type_id参数，然后条件判断控制标签页显隐
+function main(){
+    // 查找页面参数
+    var rootEleParams = this.$$roots()[0].$$getRenderElement().extraParams;
+    if (rootEleParams) 
+    {
+        var type_id = rootEleParams.type_id;
+        if (type_id && type_id === "1") {
+            //设置指定索引的标签页是否可见，序号从1开始
+            //设置指定索引的标签页选中
+            this.params.currentTab = 3;
+            this.data.children[1].props.visible = false;
+            this.data.children[2].props.visible = false;
+        }
+        else if (type_id && type_id === "2")
+        {
+            //设置指定索引的标签页是否可见，序号从1开始
+            this.data.children[2].props.visible = false;
+            this.data.children[3].props.visible = false;
+            //设置指定索引的标签页选中
+            this.params.currentTab = 1;
+        }
+        else if (type_id && type_id === "3") {
+            //设置指定索引的标签页是否可见，序号从1开始
+            this.data.children[1].props.visible = false;
+            this.data.children[3].props.visible = false;
+            //设置指定索引的标签页选中
+            this.params.currentTab = 2;
+        }
+    }
+        
+}
+表单数据提交后需刷新指标卡数据和表格列表数据（此处不做赘述，基于脚本模板）；
+（4）编辑数据交互：
+编辑页面与新增页面共用，打开编辑页面后需基于当前数据的主体类型控制指定标签页的显隐，编辑提交后刷新表格列表
+页面传参可基于标准参数，传文号和type_id；控制标签页显隐与上面新增页面一致
+（5）删除数据交互：
+删除数据后刷新指标卡和表格列表数据（此处不做赘述，基于脚本模板）
+（6）查看详情交互：
+不同类型的主体对应不同的详情表单，共用一个详情页面，故打开详情页面时需基于主体类型控制详情页面中只显示对应类型的表单详情，其他的隐藏。
+表格列表的第一列配置链接，跳转详情页面，传参可以用标准参数传文号和type_id
+详情页面中三个不同主体类型的表单默认均隐藏，在页面didmount中获取上游传递的type_id条件判断控制对应的部件显隐
+export function didMount() {
+  console.log("「页面 JS」：当前页面地址 " + location.href);
+  var rootEleParams = this.$$roots()[0].$$getRenderElement().extraParams;
+  let form_part1 = this.$$m("form_part_123456");
+  let form_part2 = this.$$m("form_part_abcdef");
+  let form_part3 = this.$$m("form_part_654321");
+  if (rootEleParams) {
+    var type_id = rootEleParams.type_id;
+    if (type_id && type_id === "1") {
+      form_part1.props.hide = false;
+    }
+    else if (type_id && type_id === "2") {
+      form_part2.props.hide = false;
+    }
+    else if (type_id && type_id === "3") {
+      form_part3.props.hide = false;
+    }
+  }
+}
+4 常见问题
+无。

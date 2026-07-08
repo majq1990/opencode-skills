@@ -1,0 +1,431 @@
+灵珑性能配置及问题排查
+灵珑性能配置
+环境配置
+nginx开启gzip
+灵珑平台nginx配置
+（1）gzip开启
+（2）gzip和缓存检查 F12查看前端请求是否有开启gzip和缓存
+（3）多媒体缓存
+nginx的wiki里也包含，请检查。
+#预览图片的接口增加缓存提高效率  2024.05.11增加  #360429
+location ~ ^/linglong-api/unity/establish/file/(.*)/preview {
+         proxy_pass http://192.168.101.38:10000/linglong-api/unity/establish/file/$1/preview?$args;
+#         proxy_redirect default;
+         proxy_connect_timeout 5;
+         send_timeout 10;
+         proxy_http_version 1.1;
+         proxy_set_header Upgrade $http_upgrade;
+         proxy_set_header Connection "upgrade";
+         proxy_set_header Host $http_host;
+         proxy_set_header Cookie $new_cookie;
+         proxy_set_header X-Forwarded-Proto $scheme;
+         proxy_set_header X-Real-IP $remote_addr;
+         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+         proxy_hide_header X-Powered-By;
+         proxy_hide_header Server;
+         proxy_hide_header Pragma;
+         proxy_hide_header Expires;
+         proxy_hide_header Cache-Control;
+         add_header Cache-Control max-age=36000;
+         proxy_cookie_path /sso /linglong-api;
+         proxy_cookie_flags ~ nosecure samesite=strict;
+}
+
+location ~ ^/linglong-api/free/login/(.*)/preview {
+         proxy_pass http://192.168.101.38:10000/linglong-api/free/login/$1/preview?$args;
+#         proxy_redirect default;
+         proxy_connect_timeout 5;
+         send_timeout 10;
+         proxy_http_version 1.1;
+         proxy_set_header Upgrade $http_upgrade;
+         proxy_set_header Connection "upgrade";
+         proxy_set_header Host $http_host;
+         proxy_set_header Cookie $new_cookie;
+         proxy_set_header X-Forwarded-Proto $scheme;
+         proxy_set_header X-Real-IP $remote_addr;
+         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+         proxy_hide_header X-Powered-By;
+         proxy_hide_header Server;
+         proxy_hide_header Pragma;
+         proxy_hide_header Expires;
+         proxy_hide_header Cache-Control;
+         add_header Cache-Control max-age=36000;
+         proxy_cookie_path /sso /linglong-api;
+         proxy_cookie_flags ~ nosecure samesite=strict;
+}
+数据源连接数检查：
+如果并发数量大，考虑修改这里的参数
+启动脚本检查
+在启动脚本spring-boot.sh/linglong.env中添加 --MAXIMUM_POOL_SIZE=300   #最大连接数设置
+数据源配置
+最大连接树调整为300，之前较早项目可能配置为8需调整；
+生产环境进入配置平台开启构建应用前端的资源缓存可减少大量不必要的布局接口调用，可提升页面性能。
+补：开启之后设计类数据会缓存到浏览器端。配置人员如果用两种不同浏览器操作，如页面设计时用chrome浏览器，查看构建之后的应用用edge浏览器。此时因为两种浏览器前端存储是隔离的，就会无法主动清除，需要手动清除indexdb缓存才能解决。
+页面配置
+移动性能配置优化
+需要按移动显示区块选择合适的分页面大小
+页大小可设计数=可视区显示数量  + 1
+补：页大小对性能影响较大，调整之后效率也会很明显
+移动页面总数非必需情况可关闭
+移动时滚动加载下一页内容，没有必要开启总记录数。除非是在列表头上要显示计数。如下图：
+使用字段集组件来替换多个字段组件
+在卡片列表或详情模式下，会涉及到多个字段的逻列。这种情况下可以通过字段集组件替换多个字段组件。
+选择卡片容器可使用高级下性能优化按钮自动完成转换
+补：如果涉及到比较复杂布局，这种一键优化无法做到智慧排版，需要手动调整一下。
+可使用动态部件替换多标签页面
+可以通过动态部件来动态加载列表部件，这样就可以不至于在初始就加载过多的列表。从而影响插件性能。
+可以在标签的onTabChange事件中
+export function onTabChange(tab) {
+    // 部件ID与标签页面顺序对应
+    const tabWidgetList = [
+        "effbe7bd-21b3-42a7-8f42-b9316441a482",
+        "55e42ef6-ffa0-492c-8924-853262fb7733",
+        "05c85ab4-93ce-4aa2-af5b-eb4381dd93b7",
+        "b4fc6fd4-d263-4134-8c00-29b6beb9145c"
+    ];
+
+    const widgetId = tabWidgetList[tab - 1];
+ 
+    const dynamic_widget = this.$$("dynamic_widget_render_7bfohv");
+   // 动态
+   dynamic_widget.data.props.widgetPageProps.id = widgetId;
+   // type：LIST、FORM、DETAIL
+   dynamic_widget.data.props.widgetPageProps.type = "LIST";
+  
+}
+使用内置字段替换不必要的组件隐藏以及强制渲染场景
+组件隐藏并开启强制渲染代表组件还是渲染了只是不显示，使用内置字段来替换一方面可以去掉影响设计隐藏组件，另外内置字段组件相关其他组件更简单，效率更高。特殊隐藏组件很多时非常明显。
+选择表单设置对内置字段进行管理
+避免使用不必要的布局组件嵌套
+在设计页面时尽量减少组件，很多人配置时使用了大量不必要的布局组件，会对性能有一定影响。
+嵌套层级越深，渲染效率越差。
+避免在列表或详情中展示原图
+灵珑自己多媒体服务是提供缩略图功能，但在接入外部数据时，可能存在没有对应的缩略图服务。如果图片很大时，就会存在严重的性能问题。
+补：灵珑自带多媒体已有缩略图功能，但外部数据来源的可能存在这种情况。
+如何优化
+可参见南京的处理《20241212关于南京图片处理办法》
+避免采用长页滚动设计来制作页面
+采用长页模式无限叠加部件的设计会增加页面初始加载内容，对性能较大影响。如下图有近10个部件：
+如何优化
+可采用标签页来替换这种设计，如下图当前显示的只有两个部件，其他的是在切换标签页之后才显示。
+PC性能配置优化
+避免使用iframe集成灵珑外部应用页面
+iframe集成是一种极其低效的方式，其中有些因为前端架构原因只能使用这种方式（如：mis集成灵珑），但有些是现场灵珑应用集成另外一个灵珑应用时也使用该方式。
+如何优化
+可以基于iframe组件按 配置地址：uri://page-id/${pageId}?a=${a}&b=${b} 来配置外部应用页面。
+pageId:页面ID
+?a=${a}&b=${b}:为传入的参数，来源urlParams或路由参数
+此时生成的页面并不会出现iframe
+页面设计时避免默认展示地图
+如下面列表页面默认显示地图，这会使得该页面首次加载的资源过多。
+可采用按钮二次触发打开方式进行优化。
+图片预览时避免使用x-download类型
+补：不要下载图片然后显示
+配置图片大小不得大于300kb（除大屏外）
+要求UI提供符合要求大小的文件
+基于https://tinypng.com/ 进行压缩
+视图配置
+基于视图变量性能优化
+灵珑视图主要用于不固定条件的场景，如列表查询其条件是用户传入的，生成SQL规则默认：select * from （配置SQL）tmp where 条件。 在复杂大表查询场景，这种会引起索引失效、执行计划劣化问题。灵珑提供sql模块+视图变量方式来可以将部分条件植入到里面，从而提升查询效率。
+场景示例
+福建12345诉求详情会涉及到从  mis_rec 与 mis_rec_his 中查询案卷详情，同时需要取多张子表关联信息给前端展示。其中 mis_rec 与 mis_rec_his 涉及数据量较大，场景压测接口压测平均响应时间约6590ms。
+配置SQL
+select
+    mr.event_desc,
+    mr.task_num,
+    mr.rec_id,
+    mr.event_src_id,
+    mr.event_src_name,
+    mr.create_time,
+    mr.occur_time,
+    mr.event_grade_id,
+    mr.event_grade_name,
+    mr.event_property_id,
+    mr.event_property_name,
+    mr.rec_type_id,
+    mr.rec_type_name,
+    mr.main_type_name,
+    mr.sub_type_name,
+    mr.third_type_name,
+    mr.max_event_type_name,
+    mr.address,
+    mr.province_name,
+    mr.city_name,
+    mr.street_name,
+    mr.district_name
+from
+    mis_rec mr
+union all
+select
+    mrh.event_desc,
+    mrh.task_num,
+    mrh.rec_id,
+    mrh.event_src_id,
+    mrh.event_src_name,
+    mrh.create_time,
+    mrh.occur_time,
+    mrh.event_grade_id,
+    mrh.event_grade_name,
+    mrh.event_property_id,
+    mrh.event_property_name,
+    mrh.rec_type_id,
+    mrh.rec_type_name,
+    mrh.main_type_name,
+    mrh.sub_type_name,
+    mrh.third_type_name,
+    mrh.max_event_type_name,
+    mrh.address,
+    mrh.province_name,
+    mrh.city_name,
+    mrh.street_name,
+    mrh.district_name
+from
+    mis_rec_his mrh
+如何优化
+定义视图变量来控制rec_id=5351条件的位置，以便能够分别在 mis_rec  与 mis_rec_his 后面增加过滤条件之后在 union all
+补：本质将影响到索引走向的条件通过视图变量输出到指定sql位置，从而进行sql优化
+知识扩展
+灵珑的视图生成的SQL默认只能按通用的规则自动化处理，生成的SQL的性能存在局限性，无法做到智能。可以借用视图的模板语法和视图变量来控制sql的输出，从而达到优化的效果。视图变量定义规则：
+该规则用于组件与视图变量绑定规则，存在一个组件多个变量和组件值处理问题。通过上述约定数据引擎就能够理解这个值用途，该如何进行格式优化。
+基于会话变量性能优化
+在涉及到与当前用户相关的数据查询时,可以结合会话变量作为sql条件的值，灵珑会将会话变量的值计算出来再进行sql，可以减少联表数量从而达到性能优化效果。
+场景示例
+燃气居民用户列表需要根据当前用户所属归属来过滤列表，条件为：city_id = '当前登录所属区域' or region_id  = '当前登录所属区域'  or region_id  = '当前登录所属区域'  or  enterprise_id = '当前登录所属企业'，之前是通过列表条件过滤来配置该条件的，500并发300s场景压测表现为9755ms
+配置SQL
+SELECT user_info.id, user_info.documentNo, user_info.user_name, user_info.shop_name, user_info.enterprise_id, user_info.enterprise_name, 
+user_info.gas_type_id, user_info.gas_type, user_info.agreement_expires_time, user_info.agreement_flag, user_info.agreement_sign_time, 
+user_info.agreement_media_id, user_info.x, user_info.y, user_info.region_id, user_info.region_name, user_info.address, user_info.nonresident_user_nature,
+user_info.nonresident_user_nature_name, user_info.enterprise_mobile, user_info.social_credit_code, user_info.legal_person_name, user_info.legal_person_mobile,
+user_info.legal_person_cardno, user_info.business_status_name, user_info.business_status, user_info.business_user_name, user_info.business_user_mobile, 
+user_info.business_user_cardno, user_info.license_expires_date, user_info.business_license_media_id, user_info.household_number, user_info.household_media_id, 
+user_info.registered_address, user_info.install_gas_alarm_flag, user_info.gas_alarm_unit, user_info.gas_alarm_unit_id, user_info.gas_alarm_install_person, 
+user_info.gas_alarm_install_time, user_info.gas_alarm_media_id, user_info.safety_person_name, user_info.safety_person_mobile, user_info.gas_maintenance_unit_id,
+user_info.gas_maintenance_unit, user_info.estate_name, user_info.estate_credit_code, user_info.estate_mobile, user_info.estate_business_license_media_id, 
+user_info.remark, user_info.nonresident_type_id, user_info.nonresident_type, user_info.street_id, user_info.street_name, user_info.community_id, user_info.community_name, 
+user_info.station_id, user_info.station_name, user_info.is_tenant, user_info.is_resident, user_info.station_type, user_info.create_date, user_info.deleted, 
+user_info.registered_name, user_info.city_id, user_info.city_name, user_info.install_gas_alarm_name, user_info.tenant_flag_name, user_info.object_type,
+user_info.auto_vale_flag, user_info.metal_connector_flag, user_info.bottle_to_tube_flag, user_info.bottle_to_tube_date, user_info.old_enterprise_id, 
+user_info.old_enterprise_name, user_info.transform_amount, user_info.create_time, user_info.update_time, user_info.cut_film_flag,   
+                 user_info.enterprise_name AS enterprise_register_name, 'MANAGER_CITY' as cityRight, 'MANAGER_REGION' as regionRight
+            FROM mf_gas_nonresident_user AS user_info
+where is_resident = 1 and deleted=0  
+order by update_time
+如何优化
+1)、在灵珑应用工作台-应用设置->基础配置->系统变量->会话变量一栏可添加或查询会话变量。
+2)、可以在视图里面使用工具类来调用会话变量，手动调整相关的where条件，同时开启会话变量缓存。
+where is_resident = 1 and deleted=0  
+and (
+    city_id = ${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("3", true)} or 
+    region_id = ${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("3", true)} or 
+    enterprise_id = ${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("0b7475b4-cb45-4b80-84db-9efe9baa8bb8", true)}
+)
+  order by update_time
+知识扩展
+会话变量会根据调用用户预先计算然后再参与sql查询，是一种预计算优化手段。
+会话变量是基于当前用户信息来扩展会话的场景，它会按用户来缓存相关数据。
+视图中可以使用工具类来调用会话变量，从而更灵活组织自己的SQL。
+可以使用会话变量可以解决数据越权问题。
+基于导航属性性能优化
+列表或详情涉及到多张表数据查询时，可以通过导航属性来加载对应的数据。这样可以减少不必要的在联表查询，从而提升查询效率。
+场景示例
+临沂广告系统面向市民公众号服务中的备案记录一栏页面打开极慢，工程反馈需要半分钟。能否打开全凭运气，极大影响用户使用。
+配置SQL
+select 
+ad.approval_id,
+ad.documentNo,
+ad.remark,
+ad.check_result,
+case check_result when 1 then '服务中' when 2 then '服务完成' when 3 then '退回' when 4 then '作废' else '待提交' end as checkResult,
+ad.advert_status_id,
+ad.advert_status_name,
+ad.advert_name,
+ad.create_time,
+ad.set_location,
+ad.evaluate_flag,
+ad.safe_check_state,
+ad.applicant_unit,
+ad.setter_person,
+wf.taskId,
+wf.nodeName,
+service.documentNo as serviceNo
+ from advert_record ad
+left join 
+( SELECT
+  _main.ID_ taskId,
+_main.CREATE_TIME_ createTime,
+_main.NAME_ nodeName,
+record.documentNo documentNo
+FROM
+act_ru_task _main
+INNER JOIN lcwf_process_record record ON _main.PROC_INST_ID_ = record.processInstanceId 
+WHERE
+_main.ASSIGNEE_ IS NULL 
+ORDER BY
+_main.CREATE_TIME_ DESC) wf 
+on ad.documentNo = wf.documentNo
+left join 
+advert_service_evaluation service
+on ad.documentNo = service.approval_no
+where ad.advert_type_id = 2 and ad.valid_flag = 1 
+group by ad.approval_id
+order by ad.approval_id desc
+经上述分析，页面无法正常打开其核心问题是SQL性能较差，advert_record与act_ru_task两张表记录较多，大表之间关联查询致使SQL速度慢。
+如何优化
+在列表或详情部件采用查询关联表的字段来展示数据信息的场景，可以使用数据视图的“导航属性”两次查询特性来解决大表关联查询带回的性能问题，操作如下：
+添加导航属性“任务信息”，配置关联关系
+在列表的数据面板“隐藏字段”栏点击添加来增加计算字段，把任务信息里面的taskId和nodeName字段进行拆解。如下图：
+配置内容：ARRAY_FIRST('#{tasks.taskId}')
+因为之前的列表会使用到taskId来进行参数传参，所以才需要通过这种方式把之前的字段取出
+知识扩展
+可以借助公式对数据进行一次加工以解决取出的数据无法满足现有场景要求。
+《灵珑内存实例操作公式说明》
+基于视图计数的性能优化
+在进行列表部件数据查询时会先生成对应的count语句用于计数，但是在性能压测时发现count语句的性能很差，这主要是原因灵珑默认生成的计数sql：select count(0) from (配置sql) where 条件。
+场景示例
+福建项目-批转平台-待办-全部待办，压测时发现计数较为耗时，其中生成的sql与取数sql没有区别，存在不必要的性能损耗
+配置SQL
+SELECT
+    a.id AS act_id,
+    a.act_def_id,
+    a.act_def_name,
+    a.start_time,
+    a.part_id,
+    a.human_id,
+    b.event_type_name,
+    b.event_title,
+    b.event_src_id,
+    b.event_src_name,
+    b.coordinate_x,
+    b.coordinate_y,
+    b.address,
+    b.district_name,
+    b.street_name,
+    b.community_name,
+    b.event_desc,
+    b.rec_id,
+    b.task_num,
+    b.create_time,
+    b.rec_type_name,
+    b.rec_type_id,
+    b.main_type_name,
+    b.sub_type_name,
+    b.sub_type_id,
+    b.city_name,
+    b.event_grade_id,
+    b.event_grade_name,
+    b.event_property_id,
+    b.event_property_name,
+    b.merge_type_name,
+    b.validate_code,
+    b.online_public_flag,
+    c.display_name as call_subject_name,
+    b.reporter_name,
+    b.contact,
+    b.accepter_code,
+    b.dispose_unit_name,
+    b.dispose_opinion,
+    b.transit_begin_time,
+    b.occur_time,
+    b.accepter_name,
+    b.state_name,
+    b.archive_time,
+    a.deadline_time,
+    a.time_state_id,
+    e.sign_human_id,
+    (CASE 
+        WHEN now() >= a.warning_time and now() < a.deadline_time THEN '即将超期'
+        WHEN now() < a.deadline_time THEN '未超期'
+        WHEN now() > a.deadline_time THEN '已超期'
+        ELSE '暂停计时' END) AS time_state,
+    cal_rec_deadline(a.deadline_time) remain_time
+FROM
+     mis_rec b LEFT JOIN sys_dic_item c ON b.call_subject_id=c.value AND c.dic_info_id=18,
+    wf_act a left join mis_rec_sign e on a.biz_entry_id = e.rec_id and a.id=e.act_id
+  WHERE
+    a.biz_entry_id = b.rec_id
+    AND a.ard_state_id <>1
+    AND a.act_property_id in(1,5)
+    AND b.merge_flag <> 2
+    AND b.state_id <> 101
+    AND b.rec_type_id <> 4
+    and b.merge_state_id<>101
+    AND a.human_id in (0, ${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("d03a7c48-aa1b-4f8c-87de-3a2ea5130000-e00b-3700",true)})
+    AND a.part_id in (${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("e5385f38-04bf-4627-8d49-1c5e69790148-e00b-3700",true)})
+ORDER BY
+    a.id DESC
+如何优化
+存在两种处理方法：
+1）视图可以针对计数单独配置sql，这样可以针对计数进行sql简化
+注意：这种需要保证两边外部条件一致，增加条件或删减内容时需要两边同步
+2）可以基于内置的sql_mode_变量来针对数据查询和计数进行差异化配置（推荐）
+性能问题排查
+性能指标要求
+核心性能指标
+LCP (Largest Contentful Paint)：最大内容渲染时间（≤2.5s）
+FID (First Input Delay)：首次输入延迟（≤100ms）
+CLS (Cumulative Layout Shift)：累计布局偏移（≤0.1）
+TTI (Time to Interactive)：可交互时间（≤5s）
+FCP (First Contentful Paint)：首次内容渲染时间（≤1.8s）
+基础加载指标
+《前端性能指标要求规范-V0.1》
+测试说明：
+1、在对应浏览器中地址栏输入：https://browserbench.org/Speedometer3.0/，在出来的界面中点击“Start Test”即可
+2、F12在性能标签下，分别把CPU降低4倍、6倍。并分别进行跑分，测试其得分情况。
+3、然后在地址栏打开要测试的页面，查看相关的指标值。
+性能分析工具
+Chrome 开发工具
+Network：分析资源加载瀑布流、请求头、缓存策略
+Performance：录制运行时性能，分析主线程活动、长任务、渲染耗时
+Lighthouse：生成性能报告并给出优化建议
+Memory：检测内存泄漏（堆快照对比）
+Coverage：分析未使用的JS/CSS代码
+Firefox 并发数限制
+Firefox 是可以修改的，想要修改首先在地址栏输入 about:config，搜索 http.max 关键字，network.http.max-connections 为全局 HTTP 同时最大的连接数量，默认为 900；network.http.max-persistent-connections-per-server 为单个域名最大链接数量，默认为 6，双击此列可以进行修改。
+性能自查规范
+《前端性能自查指南》
+性能排查：《珠海灵珑性能排查记录》
+性能验证：《20250121-灵珑性能分析》
+典型场景
+资源缓存
+灵珑前端 js 和组件 js 没有配置 gzip
+原因：一键部署nginx没有处理application/cjs类型
+资源加载
+存在大字体文件
+原因：加载未压缩的大字体文件（13.5M）
+加载未使用资源
+原因：案件详情默认显示地图，但有地图相关资源加载
+资源请求
+请求时序问题
+原因：地图多个接口串行调用，可调整为并行
+接口合并问题
+原因：有大量灵珑列表计数查询接口，可合并
+优化结果：提供批量计数接口
+运行效率
+页面重绘问题
+原因：插件在处理数据加载时 loading完成之后显示页面（v-if）。
+优化结果
+内存溢出
+组件未卸载引起内存溢出
+《麒舰坪山内存泄漏问题分析》
+console打印对象引起内存溢出
+原因：console打印对象引起
+《仙桃-移动列表内存泄露分析》
+
+[表格0]
+优化之前，4.98S | 优化之后，3.53S
+
+[表格1]
+ | 
+
+[表格2]
+场景 | 页面参数 | SQL参数 | 模板示例
+等值查询 | p | p__equal__value 或 p | p = ${p__equal__value}
+范围查询 | p | p__between__start p__between__end | p between ${p__between__start} and ${p__between__end}
+IN查询 | p | p__in__value | p in ${p__in__value}
+
+[表格3]
+ | 浏览跑分>=3分 | 浏览跑分>=6分
+移动页面 | 响应速度 < 3S | 
+PC-标准页面 | - | 响应速度 <=3S
+PC-iframe嵌入页面 | - | 响应速度 <=4S
+iframe嵌入+地图 | - | 响应速度 <=5S

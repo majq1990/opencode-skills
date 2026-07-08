@@ -1,0 +1,165 @@
+列表查询基于Hook查询
+1.概述
+灵珑的列表是基于视图来制作的，其中视图并不会存在动态条件的约定。条件是通过外面传过来的，动态拼接上的。项目应用中有一个部门绩效的列表，数据来源并不适合视图来处理，它是需要在SQL视图中预设变量来完成。
+通过ddcat配置sql，sql条件中设置变量，变量名为数据集的列名，对于介于条件的约定在列名前加start、end前缀；
+列表查询时配置为ddcat查询，则将查询组件的值作为参数带入，列表上的查询匹配方式不生效，但要求配置成跟ddcat中的sql条件一致，避免产生误解。
+2.使用场景
+列表查询基于ddcat的查询方案，查询条件可以传参，且可以分页。需求 #275998
+列表里使用时间类型字段查询结果如下：
+多条件查询结果如下：
+有分页时查询结果如下：
+3.配置
+3.1创建列表用的数据集
+第一种：业务实体
+第二种：数据视图，需要写时间条件，条件的参数可以写任意时间。如下图：
+注意：这里的createTime字段如果作为“列表部件-查询面板”的条件，不能起别名。目的是与“列表部件-查询面板”里的条件字段相匹配，能够进行查询。
+3.2新建数据模型
+第一种：业务实体
+注意：SQL里的字段名和实体表里的“列名”保持一致，不能起别名。否则影响列表部件的数据显示。
+第二种：数据视图
+（1）保证视图有正确的返回，时间参数正常。同样，这里的createTime字段如果作为“列表部件-查询面板”的条件，不能起别名。
+（2）查询数据模型的接口ID，为表格列表的hook脚本做准备。
+3.3列表部件
+（1）Hook配置
+第一种：业务实体
+表格列表增加“Hook配置“，将开关配置为【开】，点击【设置方法】填写后面的脚本。如下图：
+第二种：数据视图
+表格列表增加“Hook配置“，将开关配置为【开】，点击【设置方法】填写后面的脚本。如下图：
+“查询面板”的查询条件选择视图里未取别名的字段，然后点击【批量修改】将“标题”改为中文显示（这样做的目的是满足查询时字段的匹配，同时满足显示时显示中文）。
+（2）hook脚本。有两种，一种是ddcat脚本，一种是api脚本。
+注意：hook脚本里不允许修改param参数，否则影响到excel导出数据与查询数据不一致。
+ddcat脚本
+【新版】
+1.6.0
+增加默认填充参数apiType
+function main(pageId, param) {
+    return new Promise((resolve, reject) => {
+        console.log(pageId, param);
+        // 使用API来代替默认查询逻辑，apiId为API接口ID
+        const apiId = "3a2ebb83-1cb2-4af6-8a51-e95e69a05206";
+        // WIDZOM: 智云; BUNCHES: 灵珑
+        const apiType = "BUNCHES";
+        api.DATA_EXECUTOR().executeApiModelForList(apiId, apiType, param)
+            .then(res => {
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+
+        // 使用数据模型来代替默认查询逻辑，dataModeId为数据模型ID
+        // const dataModeId = "3a2ebb83-1cb2-4af6-8a51-e95e69a05206";
+        // api.DATA_EXECUTOR().executeDataModelForList(dataModeId, param)
+        //     .then(res => {
+        //         resolve(res);
+        //     }).catch(() => {
+        //         reject();
+        //     })
+    })
+}
+api的hook脚本
+【新版】
+1.4.4版本升级为以下模板，同时兼容旧版的模板。
+DATA_EXECUTOR().executeApiModelForList方法 【代替了API_DATA_EXECUTE方法，同时兼容】
+function main(pageId, param) {
+    return new Promise((resolve, reject) => {
+        console.log(pageId, param);
+        // 使用数据模型来代替默认查询逻辑，dataModeId为数据模型ID
+        const dataModeId = "f8dfa394-d8c4-4a3d-9a5f-18584ad3c4f5";
+        api.DATA_EXECUTOR().executeApiModelForList(dataModeId, "BUNCHES", param, { lostAbility: "01" })
+            .then(res => {
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+    })
+}
+【旧版】
+重点是API_DATA_EXECUTE，和列表部件里的hook区分开。
+/**
+ * api数据获取
+ * @param apiId 模型id
+ * @param apiType WIDZOM：智云；BUNCHES：灵珑
+ * @param params 查询条件
+ * @param extraParams lostAbility 第一位表示1：缺失分页能力，第二位 表示缺失排序能力。
+ * @return Promise<ResponseResult>
+ */
+function main(pageId, param) {
+    return new Promise((resolve, reject) => {
+        console.log(pageId, param)
+        api.API_DATA_EXECUTE("8e0956b2-1c53-407f-a109-4725610963cb", "BUNCHES", param, { lostAbility: "01" })
+            .then(res => {
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+    })
+}
+（3）列表查询条件的比较符配置：
+时间条件：数据模型里配置的where后面的条件，需要与列表上方的查询条件比较符相匹配
+字符条件：默认为“等于”，列表查询时相当于“包含”。
+历史版本
+ddcat
+1.4.4版本升级为以下模板，同时兼容旧版的模板。
+DATA_EXECUTOR().executeDataModelForList方法  【代替了API_DATA_EXECUTE方法，同时兼容】
+function main(pageId, param) {
+    return new Promise((resolve, reject) => {
+        console.log(pageId, param);
+        // 使用数据模型来代替默认查询逻辑，dataModeId为数据模型ID
+        const dataModeId = "3a2ebb83-1cb2-4af6-8a51-e95e69a05206";
+        api.DATA_EXECUTOR().executeDataModelForList(dataModeId, param)
+            .then(res => {
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+    })
+}
+【旧版】
+重点是MODEL_DETAIL_DATA_EXCUTE，和列表部件里的hook区分开。
+替换e1f92211-a472-4373-830a-f284f0c436ee为前面查到的值，点击【保存】
+内容如下：
+/**
+ * 模型数据获取
+ * @param modelId 模型id
+ * @param params 查询条件
+ * @return Promise<ResponseResult>
+ */
+function main(pageId, param) {
+    return new Promise((resolve, reject) => {
+        console.log(pageId, param)
+        api.MODEL_DATA_EXCUTE("e1f92211-a472-4373-830a-f284f0c436ee", param)
+            .then(res => {
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+    })
+}
+3.4 列表有分页的配置
+3.4.1 ddcat和列表的分页
+（1）数据模型：开启“是否分页”，此时pageIndex和pageSize生效。
+（2）列表部件：选中“表格列表”在“属性”栏开启“分页”，设置“每页条数”
+注意：数据模型的“是否分页”和表格列表的“分页”需要保持同步，全开或全关。
+注意：从功能完整角度
+（1）时间条件可以设置“校验”为“必填”。这样点击【重置】再【查询】时保证时间条件必须有值（暂时不支持，2023.4.11）
+（2）时间条件可以设置默认值，根据需要设置，也可以为空（支持）
+3.4.2 api和列表的分页
+参考：《基于api和ddcat代理查询列表/详情/树部件数据》
+3.5 hook查询ES数据
+3.5.1 使用场景
+灵珑应用的某的列表里存在大数据场景，传统数据库查询不能满足正常工作效率要求。因此，考虑大数据量的表使用ES查询。
+环境组合是：灵珑应用仍为传统数据库，在ES里创建大数据量的表，通过星桥将数据接入到ES，灵珑里创建列表部件，通过hook的数据模型查询ES的数据，仅查询使用，不用于写入和删除。
+3.5.2 使用效果
+列表里查询ES的数据。PC列表，PC卡片列表和移动卡片列表均可以使用。
+修改查询条件执行查询可以按结果返回数据，列表排序可以正常使用。
+列表【导出数据】可以导出查询到的结果数据。注意：ES最多只能导出1万条数据。
+3.5.2 配置说明
+数据源：配置ES数据源并且测试通过。
+业务实体：在应用所属的数据源（mysql或达梦）里创建与ES表相同结构的物理表，【导入】到业务实体。
+数据模型：连接ES数据源，编辑SQL查询ES数据源的表。建议开启分页，当前已知的是列表里【数据导出】时需要使用。
+列表部件：基于实体或视图创建列表部件
+开启hook查询，配置数据模型。
+列表查询条件：与数据模型里的查询条件匹配，并且比较符的“默认设置”也一致。
+4 其他资料
+研发完整文档：《基于api和ddcat代理查询列表/详情/树部件数据》
+《如何使用ddcat数据模型动态查询列表数据》

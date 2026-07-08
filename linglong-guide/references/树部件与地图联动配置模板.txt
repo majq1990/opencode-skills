@@ -1,0 +1,67 @@
+树部件与地图联动配置模板
+1 使用场景
+树部件与地图联动显示树部件所有数据点位，并点击点位跳转详情页面。
+2 效果
+1）获取树的所有节点数据的坐标并在地图撒点：
+2）点击树部件节点时定位放大至具体位置其他点位不清空：
+3）点击地图点位时页面跳转至该信息详情：
+3 配置
+1）获取树的所有节点数据的坐标并在地图撒点：
+function main() {
+  //获取树部件的所有数据
+    var treeData = this.renderTreeData || [];
+    //console.log("dataTree", treeData);
+    // 获取地图组件的model
+    let mapData = this.$$model("map_base_256w01");
+    //console.log(mapData);
+    var list = [];
+  //调用下面的bianli方法
+    bianli(list, treeData);
+    //console.log("list", list);
+
+    if (list.length) {
+        // 设置图层数据
+        mapData.members[0].props.defaultValue.value = list;
+        // 设置中心点
+        if (list.length) {
+            mapData.props.mapConfig.coordX = list[0].x;
+            mapData.props.mapConfig.coordY = list[0].y;
+        }
+    }
+}
+//定义一个bianli方法对树的所有数据遍历获取树的节点数据
+function bianli(list, arr) {
+    for (item in arr) {
+        //检索第一层级信息的CODE编码，含有toilet_为厕所，region_为区划；当检索到含有toilet_时会返回0因此大于-1
+        if (arr[item].CODE.indexOf("toilet_") > -1) {
+            //当大于-1时，向数组的末尾添加信息，并返回新的长度数组
+            list.push({
+                "名称": arr[item].NAME,
+                "编码": arr[item].CODE,
+                id: arr[item].data.columns.id,
+                x: arr[item].data.columns.coordinate_x,
+                y: arr[item].data.columns.coordinate_y
+            })
+        } else if (arr[item].children.length) {  //检索信息的children是否有值，有就递归当前bianli方法
+            bianli(list, arr[item].children);
+        }
+    }
+}
+2）点击树部件节点时定位放大至具体位置其他点位不清空：
+function main(params) {
+    // 节点参数
+    console.log("节点参数", params);
+    let mapData = this.$$("map_base_256w01");
+    console.log(mapData);
+    const x = params.data.columns.coordinate_x;
+    const y = params.data.columns.coordinate_y;
+    if (x && y) {
+        mapData.eMap.centerAndZoom(x, y, 8);
+    }
+}
+3）点击地图点位时页面跳转至该信息详情：
+第一步：地图-高级-绑定动作-页面跳转。
+第二步：配置跳转的页面-对详情页面自定义传参将地图id与详情页的id传参。
+4）地图需要配置点图层：
+4 常见问题
+无

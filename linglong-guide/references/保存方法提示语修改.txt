@@ -1,0 +1,43 @@
+保存方法提示语修改
+1 使用场景
+对于灵珑自身的保存方法，onSubmit、onContinuousSubmit、saveData、onSave都默认自带提示语返回信息。但是部分方法也支持修改提交数据成功的提示语。因此使用这些方法时，注意避免提示语重复问题。
+2 效果
+onSubmit和onContinuousSubmit，提交成功默认会返回提示语“保存数据成功！”，使用该方法支持修改提示信息，见配置。
+saveData方法，提交成功默认会返回提示语“保存数据成功！”，此保存方法与onSave的区别是默认不会校验表单，使用该方法，支持关闭提示语，可自定义提示语，见配置。
+onSave方法，提交成功默认会返回提示语“保存数据成功！”，使用该方法无需在脚本里再添加提示信息，但是此方法不支持提示语修改。
+3 配置
+1.onSubmit和onContinuousSubmit，支持使用setSuccessTipMessage方法修改提示语信息；不支持关闭提示语；
+function main() {
+        let formPartEle = this.$$element("form_part_6yni28");
+        if (formPartEle) {
+            formPartEle.onSubmit();
+            //formPartEle.$$getRenderElement().$$setSuccessTipMessage("12344444");
+            
+        }
+    }
+2.saveData，传true则关闭默认的提示语，传false则不关闭，进行提示；
+function main() {
+    var formPartEle = this.$$("form_part_fldu40");
+    if (!formPartEle){
+        this.$message.success("表单部件不存在");
+        return;
+    }
+    var renderEle = formPartEle.$$getRenderElement();
+    if (renderEle) {
+        renderEle.$$validateData().then(vRes=>{
+            if (!(vRes && vRes.success)){
+                return;
+            }
+            renderEle.$$saveData(true).then((res)=>{
+                if (res && res.result) {
+                    renderEle.$message.success("数据提交成功11");
+                }else{
+                    renderEle.$message.error("数据提交失败11");
+                }
+            });
+        });
+    }
+}
+3.onSave方法，不支持修改或关闭提示语，默认有提示语；
+4 常见问题
+基于灵珑1.5.3版本验证，低于1.5.3版本的情况下不一定符合本文档。

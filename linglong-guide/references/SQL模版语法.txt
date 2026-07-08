@@ -1,0 +1,123 @@
+SQL模版语法
+SQL模版语法
+本质上是通过模板引擎渲染成最终的 SQL 语句，交由驱动层执行
+基础语法
+变量、条件控制语法
+值变量
+渲染单值
+语法
+${value}
+例子
+select * from xxx where name = '${name}'
+select * from xxx where age = ${age}
+注意：对于字符串变量，SQL中需要增加引号；对于数值类型，SQL无需引号
+条件
+if 语句
+语法
+#if (role == "admin")
+ ...
+#elseif (role == "user")
+ ...
+#else
+ ...
+#end
+例子
+比如前端传递字符串，而数据库存储的数值枚举
+select * from xxx where
+#if (role == "admin")
+ role = 2
+#elseif (role == "user")
+ role = 1
+#else
+ role = 0
+#end
+循环
+for 语句
+语法
+#for (String userId : userIds)
+ // 内部循环计数器，从 1 开始计数
+ ${for.index}
+ ...
+#end
+例子
+比如前端传递数组，数据库查询需要拼接IN查询
+select * from com_user
+#if (userIds == null)
+#else
+  where id in (
+  #for (String userId : userIds)
+    #if (for.index > 1)
+    ,
+    #end
+    '${userId}'
+  #end
+  )
+#end
+扩展语法
+SQL WHERE 关键字
+渲染 where 关键词，并移除 where 后面紧跟着的第一个 and
+语法
+#tag where()
+ ...
+#end
+例子
+对于多条件判定条件下，为了防止 SQL 语法错误，我们一般采用 where 1 = 1 作为默认条件
+select * from records 
+where 1 = 1 
+#if (startTime != null && startTime != '') 
+  and _meta.createTime >= '${startTime}'
+#end
+#if (endTime != null && endTime != '') 
+  and _meta.createTime < '${endTime}'
+#end
+这里增加 MyBatis  标签的类似处理：
+select * from records 
+#tag where()
+  #if (startTime != null && startTime != '') 
+    and _meta.createTime >= '${startTime}'
+  #end
+  #if (endTime != null && endTime != '') 
+    and _meta.createTime < '${endTime}'
+  #end
+#end
+today 函数
+当前时间
+语法
+${today("yyyy-MM-dd")}
+输出：
+2021-06-01
+例子
+select * from records where 
+#if (startTime == null || startTime == '') 
+ _meta.createTime >= '${today("yyyy-MM-dd HH:mm:ss")}'
+#else
+ _meta.createTime >= 'startTime'
+#end
+limit 5
+引用工具类
+有时需要在模板中引用工具类，比如 StringUtils
+语法
+${全类名::方法名(参数...)}
+比如：
+${org.apache.commons.lang3.StringUtils::trim(xxx)}
+例子
+值使用：
+select * from table where xxx = '${org.apache.commons.lang3.StringUtils::trim(xxx)}'
+或在 if 语句中使用：
+select * from table
+#tag where()
+  #if(org.apache.commons.lang3.StringUtils::isNotBlank(xxx))
+    xxx = '${xxx}'
+  #end
+#end
+#if (userIds == null)
+#else
+  ( 
+  #for (String userId : userIds)
+    #if (for.index > 1)
+    ,
+    #end
+    '${userId}'
+  #end
+  )
+#end

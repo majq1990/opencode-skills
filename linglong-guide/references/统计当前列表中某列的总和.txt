@@ -1,0 +1,26 @@
+统计当前列表中某列的总和
+1 使用场景
+页面中需要展示列表其中一列数据的总和数。
+具体场景：有一个巡检的列表，其中有一列数据为计划巡检场站数，现在需要将当前列表中所有的计划巡检场站数加起来然后展示。
+2 效果
+在右上角显示当前列表数据中计划巡检场站数的综合。
+3 配置
+在列表中增加顶部操作按钮，属性要设置为不可用，仅作展示使用。
+打开开关并点击设置条件。根据需求设置按钮状态
+在表格数据变化事件中加上如下脚本
+function main() {
+    //获取显示综合的按钮组件
+    let button = this.findElement("custom_button_81e0zf");
+    //获取列表
+    let list = this.$$("page_widget_list_gwbehs").$$getRenderElement().$$getListElement();
+    //获取当前列表数据
+    let arr = list.dataList
+    let sum = 0;
+    //遍历列表数据并累加
+    arr.forEach(t => {
+        sum += t["plan_station_num"].value
+    })
+    //为显示的按钮赋值
+    button.data.props.operateItem.title = sum
+}
+关键代码已注释

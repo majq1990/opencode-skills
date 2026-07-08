@@ -1,0 +1,4089 @@
+灵珑Token配置与使用说明
+背景说明
+因历史原因公司前后端架构或标准存在不统一情况，在一项目中有 MIS、用户中心 1.0、用户中心 2.0，执法等多套独立认证体系，这些系统通过灵珑平台组装或集成时就需要对token进行置换等操作，一旦处理不当就会存在服务认证失败、会话过期、统一退出等问题。需要对不同系统中认证机制进行规范化说明，以解决此类问题。
+Token现状
+前端Token相关问题
+读取方式不统一
+各系统的token取值方式不统一，这会使得在同一个现场前端token管理混乱，开发人员不知道该如何取取哪一个。
+用户中心2.0
+在cookies中，键为：admin_sso_token
+麒舰平台
+存在Indexdb中，以加密方式来存储该值，存储格式：${serviceUrl}/auth-access-token-with-type:${value}
+用户中心1.0
+在cookies中，键为sso_access_token
+灵珑平台
+在cookies中，键为：linglong:access_token
+灵珑应用
+在cookies中，键为：applicationId:access_token
+MIS应用
+在cookies中，键为：eUrbanToken
+过期步调不一致
+不同认证体系会生成并管理各自的token，致使token的时效性无法统一。所以经常会出现一个系统过期了另外一个系统却可以正常访问
+系统Token传递多种
+主要存在以下4种传递机制，其中有些项目对此类问题做了限制，如不可以通过url传递、禁用cookies等问题。
+通过URL传递
+Cookies传递
+LocalStorage传递
+IndexDB传递
+免密连接标准不统一
+用户中心免密连接
+格式:xxx/sso/authorize?responseType=code&applicationId=${applicationId}&redirectUrl=${redirectUrl}
+CAS免密连接
+格式:redirectUrl?cas-type=${cas-type}&cas-type=${cas-token}
+智信插件免密连接
+格式:redirectUrl?token=${token}&tokenType=${tokenType}
+后端Token相关问题
+认证信息读取
+灵珑平台
+请求头:Authorization: Bearer ${tokenValue}
+Query参数：url?access_token=${tokenValue}
+用户中心2.0
+请求头:Authorization: Bearer ${tokenValue}
+Query参数：url?access_token=${tokenValue}
+麒舰平台
+请求头:x-Authorization: Bearer ${tokenValue}
+Query参数：url?access_token=${tokenValue}
+MIS平台
+MIS：url?token=${tokenValue}
+Token无法相互识别
+主入口的token如果是子系统以及其服务无法识别的认证机制，这样就会出现无法正常访问情况。
+常见错误配置
+大量重复授权逻辑配置
+麒舰平台所有的授权认证都写在前置脚本中，所有的几乎都是相关的。
+服务地址没有统一管理
+授权认证兼容性不足
+规范约定
+前提条件
+当子系统被集成时，该子系统需要具备识别主入口认证机制能力。其中公司关于Token有两套标准体系，各产品可按仓库中reademe方式来集成适配即可，如：
+Token置换标准协议-服务端：http://10.255.30.1:8000/zn/egova-base/identity-authing-client
+基于该协议可以实现其他外部系统与自身系统Token的置换
+Token置换标准协议-调用端：http://10.255.30.1:8000/zn/egova-bigdata/dex-token
+基于该协议在灵珑侧端使用，可实现代理API的token获取与管理
+《统一Token》
+API注册规范管理
+环境变量
+服务地址管理
+所有涉及到API地址的配置统一在对应的应用API管理模块下的环境变量模块统一管理
+服务变量管理
+api中涉及到非服务地址环境变量，也可以在该模板中来添加，但需要按一定命名规则来添加：
+规则：P_{变量名}，如P_CLIENT_ID = unity-client
+在授权认证和前后置脚本上，可以通过Groovry工具方法来实现变量的统一管理。
+API信息注册
+灵珑脚本涉及到三方API服务调用的，需要注册到灵珑API管理中，以便后面纳入标准化版本管理。
+说明：灵珑版本管理后续会将该部分内容纳入配置版本管理，以方便灵珑化应用多版本机制处理。
+API授权认证配置
+用户授权认证
+涉及到用户身份信息的传递，然后再进行token置换得到服务调用所需要的认证信息，目前收集了统一环境中相关认证信息并进行标准化流程的处理，处理流程如下：
+补充说明：可在存在其他场景没有纳入进来，但可以参照下面模块复制调整即可。
+麒舰认证示例 （见6.2 auth_urbanpro 认证）
+待实现：需要基于dex-token标准实现token获取的协议，否则非用户中心2.0登录的无法使用
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+import com.flagwind.application.Application
+import com.egova.usercenter.config.NewVerAuthingClientProperties
+
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'x-Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['admin_sso_token','qijian','v22']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "auth_user"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def variables;
+    
+    TokenUtils(tokenStore,variables, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.variables = variables
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            var properties = Application.resolve(NewVerAuthingClientProperties);
+            this.out.println("用户中心2.0开启: ${properties.enabled }");;
+            return [
+                authorizationType: 'Bearer',
+                tokenType: properties.enabled ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+          def env =  this.variables['ENV'];
+        return env[key] ?: defaultValue;
+    }
+
+    def getVariableWithParams(String key, String defaultValue) {
+        def staticEnv = this.variables['STATIC_ENV']?: [:]
+        def env =  this.variables['ENV']
+        def value = null;
+        if(staticEnv && staticEnv[key]){
+            value = staticEnv[key];
+        }
+        if(!value){
+           value =  (env[key]?:"").replace("http://","")  ;
+        }
+        return value ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables, out)
+    
+    // 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'Bearer';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('svc_token_qijian',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+待配置参数
+svc_token_qijian：token交换服务地址
+AuthConstants.AUTH_TYPE = "auth_qijian" 对应dex-token的TokenObtain.type()
+facV22认证模板 （见6.2 auth_v22_fac 认证）
+待实现：需要基于dex-token标准实现token获取的协议，否则非生命线登录的无法使用。
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+import com.flagwind.application.Application
+import com.egova.usercenter.config.NewVerAuthingClientProperties
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['fac_access_token']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'fac_access_token': 'fac_access_token',
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "facV22"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def variables;
+    
+    TokenUtils(tokenStore,variables, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.variables = variables
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            var properties = Application.resolve(NewVerAuthingClientProperties);
+            this.out.println("用户中心2.0开启: ${properties.enabled }");;
+            return [
+                authorizationType: 'Bearer',
+                tokenType: properties.enabled ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+          def env =  this.variables['ENV'];
+        return env[key] ?: defaultValue;
+    }
+
+    def getVariableWithParams(String key, String defaultValue) {
+        def staticEnv = this.variables['STATIC_ENV']?: [:]
+        def env =  this.variables['ENV']
+        def value = null;
+        if(staticEnv && staticEnv[key]){
+            value = staticEnv[key];
+        }
+        if(!value){
+           value =  (env[key]?:"").replace("http://","")  ;
+        }
+        return value ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables, out)
+    
+    // 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'Bearer';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('svc_token_v22_fac',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+待配置参数
+svc_token_v22_fac：token交换服务地址
+AuthConstants.AUTH_TYPE = "auth_v22_fac" 对应dex-token的TokenObtain.type()
+eUrbanMIS认证模板 （见6.2 auth_mis 认证）
+待实现：需要基于dex-token标准实现token获取的协议，否则非MIS登录入口无法使用。
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+import com.flagwind.application.Application
+import com.egova.usercenter.config.NewVerAuthingClientProperties
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['fac_access_token']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'eUrbanToken': 'eUrbanToken',
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "auth_mis"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def env;
+    
+    TokenUtils(tokenStore,env, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.env = env
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            var properties = Application.resolve(NewVerAuthingClientProperties);
+            this.out.println("用户中心2.0开启: ${properties.enabled }");;
+            return [
+                authorizationType: 'Bearer',
+                tokenType: properties.enabled ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+        return this.env[key] ?: defaultValue;
+    }
+
+    def getVariableWithOther(String key, String defaultValue) {
+        return (this.env[key]?:"").replace("http://","")  ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables['ENV'], out)
+    
+    // 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'queryToken';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('svc_token_mis',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+待配置参数
+svc_token_mis：token交换服务地址
+AuthConstants.AUTH_TYPE = "auth_mis" 对应dex-token的TokenObtain.type()
+client授权认证
+OAuth的Client认证 （见6.2 auth_client 认证）
+已实现：dex-token已有该实现，可参照下面方式使用
+import java.util.regex.Pattern
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String TOKEN_HEADER = 'Authorization'
+    // 重写的头
+    static final String TOKEN_HEADER_NEW = 'Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String AUTH_TYPE = "default"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out
+    private final def variables;
+    
+    TokenUtils(tokenStore,variables, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.variables = variables
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(String url, Map clientInfo) {
+        if (!url) {
+            throw new IllegalArgumentException("无效的token服务地址")
+        } 
+        if (!clientInfo?.clientId || !clientInfo?.clientSecret) {
+            throw new IllegalArgumentException("client认证配置信息无效")
+        }
+        
+        this.out.println("====== 开始Token交换 ======")
+        this.out.println("服务地址: ${url}")
+        this.out.println("Client ID: ${clientInfo.clientId}")
+        
+        def authParams = [
+            url: url,
+            clientId: clientInfo.clientId,
+            clientSecret: clientInfo.clientSecret
+        ]
+        
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw new IllegalStateException("获取认证token失败")
+        }
+        
+        this.out.println("====== Token交换成功 ======")
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request, tokenValue) {
+        if (!request || !tokenValue) {
+            throw new IllegalArgumentException("请求对象或token值不能为空")
+        }
+        
+        request.removeHeader(AuthConstants.COOKIE_HEADER)
+        request.removeHeader(AuthConstants.TOKEN_HEADER)
+        // 直接使用原始Token
+        request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "${AuthConstants.BEARER_PREFIX} ${tokenValue}")
+        out.println("认证头设置完成")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+          def env =  this.variables['ENV'];
+        return env[key] ?: defaultValue;
+    }
+
+    def getVariableWithParams(String key, String defaultValue) {
+        def staticEnv = this.variables['STATIC_ENV']?: [:]
+        def env =  this.variables['ENV']
+        def value = null;
+        if(staticEnv && staticEnv[key]){
+            value = staticEnv[key];
+        }
+        if(!value){
+           value =  (env[key]?:"").replace("http://","")  ;
+        }
+        return value ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+
+// 初始化TokenUtils
+def tokenUtils = new TokenUtils(tokenStore,variables, out)
+
+// 对于不支持的类型，进行Token交换
+try {
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl("token_exchange_default",null)
+
+    // 先从环境变量来取，取不到取后面的默认值
+    
+    var clientId = tokenUtils.getVariableWithParams("P_CLIENT_ID",'unity-client')
+    var clientSecret = tokenUtils.getVariableWithParams("P_CLIENT_SECRET",'unity')
+
+
+    out.println("========= Token交换流程开始 =========")
+    out.println("env: ${variables['ENV']}")
+    out.println("认证类型: ${AuthConstants.AUTH_TYPE}")
+    out.println("端点地址: ${exchangeEndpoint}")
+    out.println("clientId: ${clientId}")
+    out.println("clientSecret: ${clientSecret}")
+    
+    def clientInfo = [
+        clientId: clientId,
+        clientSecret: clientSecret
+    ]
+    
+    def newToken = tokenUtils.exchangeToken(exchangeEndpoint, clientInfo)
+    out.println("获取新token: ${newToken}")
+    tokenUtils.setAuthHeader(request, newToken)
+    
+} catch (Exception e) {
+    throw ExceptionUtils.api("交换处理失败: ${e.message}")
+}
+待配置参数
+token_exchange_default: client认证服务地址
+P_CLIENT_ID:client认证的id
+P_CLIENT_SECRET:client认证的secret
+补充说明
+上述的授权认证模块脚本中使用了环境变量进行配置管理，但环境变量存在一个缓存更新的BUG，研发已处理，待更新。
+上述的认识需要各业务线先在产品侧验证，避免存在其他隐藏场景没有考虑到问题。
+如果没有实现token转换功能也没有关系，可后面再完善，完善之后再调整上述模块即可。
+三方API调用规范
+基于用户中心2.0体系
+因为不同系统对请求的处理有所不同，开发或插件组件开发时如涉及非灵珑服务调用需要开发各业务插件来实现各自服务相关请求的配置。如下：
+API动态代理服务调用
+1）灵珑提供全局 api.TOKEN_INFO():{tokenType:string;tokenValue:string} 方法来获取当前环境下的token信息。
+2）组件开发涉及到服务调用的需要《灵珑三方服务动态代理方案》提供的方法来调用第三方服务。
+调用入口：api.PROXY_API或CommonService.sendProxyApi
+方法定义：
+public sendProxyApi(
+        // 代理资源类型
+        resourceType: "unity" | "free",
+        // 请求参数
+        params: {
+            serviceEnvId: string; // 服务环境变量
+            path: string;  // 服务地址
+            authId: string; // 认证方式
+            method: "GET" | "POST"; // GET ,POST等
+            data: any; // 接口的参数信息，如果为表单类型，解析为map，为json格式不解析
+            headers: any; // map，保存请求头信息
+        },
+        config: any = { remote: true }
+    ): Promise<ServiceResult> {
+        return this._post(`${this.linglongServer}/${resourceType}/rest/proxy/v2`, params, {
+            ...config,
+            remote: true
+        });
+    }
+错误示例
+补充说明
+1、组件中上述问题可暂时不用调整，避免因版本不同引入新的BUG。
+2、因为引入了动态代理三方服务方案来管理这些服务的认证，调用的服务需要能在后端服务器正常访问。
+3、用户中心2.0体系的组件会作为后续标准的授权认证方式，新的组件只提交1.6.0分支，配合插件来管理各自产品服务
+免密链接配置规范
+下面免密链接方式不同方式有不同的前提条件，如推荐方式的前端条件不满足，依次降级选择适合方案。
+用户中心2.0认识体系
+灵珑平台部署微服务版本，开启用户中心2.0配置
+【推荐】1）由主入口写入，链接配置时不传token信息
+说明：前提需要保证所有子系统都能够识别admin_sso_token,同时在一个域下
+【推荐】2）用户中心免密地址 xxx/sso/authorize?responseType=code&applicationId=${applicationId}&redirectUrl=${redirectUrl}
+说明：该链接方式为用户中心的标准免密地址，见《统一用户中心对接文档(V2.0)》中3.2.1。
+【不推荐】3）url?cas-type=admin_sso_token&cas-token=${cas-token}
+说明：灵珑默认将admin_sso_token视为用户中心2.0的token，此时不会以cas协议来存储该信息。
+【不推荐】4）url?cas-type=${cas-type}&cas-token=${cas-token}
+说明：这里面的cas-type是灵珑认证配置中生成的
+非用户中心2.0认识体系
+【推荐】由主入口写入，链接配置时不传token信息
+说明：前提：是所有子系统都能够识别主入口token。如有不满足，其他子系统需要适配。
+【不推荐】url?cas-type=${cas-type}&cas-token=${cas-token}
+说明：大部分是基于这种来配置，但项目反馈这种不安全。
+整改方式
+建议分阶段来调整：
+第一阶段（产品与项目都要改）
+整改内容：整改API授权认证配置
+整改方式：相关产品自行检查
+第二阶段（产品与项目都要改）
+整改内容：补充TOKEN交换能力
+整改方式：在第一阶段成果之上，只需要调整授权认证即可。
+第三阶段（产品回归需要整改）
+整改内容：
+调整链接配置
+统一Token管理方式
+整改方式：由产品侧来整改，项目上很难调整，建议别动。
+Token导读
+TokeInfo定义
+export interface TokenInfo {
+    /**
+     * 认证传递类型
+     */
+    authorizationType: 'cas' | 'Bearer' | 'queryToken';
+    /**
+     * token类型
+     */
+    tokenType: string;
+    /**
+     * token值
+     */
+    tokenValue: string;
+}
+authorizationType
+Authorization:cas ${tokenType}:${tokenValue}
+Authorization:Bearer ${tokenValue}
+url?${tokenType}=${tokenValue}
+tokenType
+authorizationType == 'cas' 表示为cas-type
+灵珑
+authorizationType == 'Bearer' 表示为authType
+用户中心、灵珑、麒舰
+authorizationType == 'queryToken' 表示为token为
+如mis：url?token=${tokenValue}；灵珑：url?access_token=${tokenValue}
+TOKEN分类
+全局Token
+如用户中心的Token，需要多个子系统共同约定。
+存储：放在cookie与localstorage来管理；
+名称：用户中心1.0：sso_access_token；用户中心2.0：admin_sso_token;
+私有Token
+各子系统自定义token
+存储：建议在localstorage或indexdb中管理
+名称：各子系统自行定义，但是必要冲突。
+临时Token
+外部系统的token或code，这些都可以理解为临时token。因为在一个项目中一般会存在多个外部系统的token的，所以一般会即用即毁。
+存储：通过URL获取；（其他三方token）
+名称：cas-type,cas-token
+TOKEN事故原因
+1、token“：”问题
+将code伪装成cas-token被外部知道然后使用。
+在前置脚本上通过token split时没有考虑兼容性。
+2、cas-token 置换
+性能优化，把 置换去掉了。业务线依据交换的token进行服务鉴树
+3、token转换问题
+将qijian配置使用cas方式自动转成admin_sso_token
+前置脚本只针对cas做了处理，其他场景没有兼容。
+TOKEN读取规则
+优先级：cas-token->全局token->私有token
+TOKEN生命周期
+TOKEN生成
+由主入口生成，各子系统能够识别主入口token并完成与自身token交换，交换前提为实现authing-client协议。
+TOKEN销毁
+各子系统需要能够配置统一token退出机制，即退出之后能够调用一个页面完成其他系统的退出。
+TOKEN失效监听
+用户中心2.0
+参照《用户中心2.0Token退出消息订阅的处理》处理
+iframe集成失效
+参照 《子系统token失效后跳转处理方案》 处理
+TOKEN续租
+这种机制一般只会用户中心才有，用户中心统一实现即可。
+服务调用
+方案1：
+先获取tokenInfo信息，然后根据各自系统能够识别的决定怎么来传递认证信息。
+方案2：
+通过灵珑api代理能力来解决认yghd问题。
+方式1：api注册+自定义授权认识
+方式2：api动态代理+自定义授权认识
+TOKEN授权认证
+TOKEN置换协议
+通过这两个协议解决各服务认证不统一问题
+Token置换标准协议-服务端：http://10.255.30.1:8000/zn/egova-base/identity-authing-client
+基于该协议可以实现其他外部系统与自身系统Token的置换
+Token置换标准协议-调用端：http://10.255.30.1:8000/zn/egova-bigdata/dex-token
+基于该协议在灵珑侧端使用，可实现代理API的token获取与管理
+统一授权认证流程
+见 3.2.3
+服务调用鉴权
+服务设计
+URL约定：${微服务名}/a/b/c
+微服务名：可配置
+服务调用：采用灵珑插件定义基础服务调用方法或配置
+认证传递：
+请求头
+Authorization: Bearer ${tokenValue}
+Authorization: cas ${cas-type}:${cas-type}
+x-Authorization: Bearer ${tokenValue}
+URL参数
+url?access_token=${tokenValue}
+url?cas-type=${tokenType}&cas-token=${tokenValue}
+url?token=${tokenValue}
+Session
+大家不要再引入新的方式，避免约定太多。
+服务代理
+由灵珑定义插件来调用（>=1.6.0）
+api管理模块 注册由灵珑统一的方法来调用
+动态代理方式处理《组件开发灵珑三方服务动态代理方案》
+整改案卷
+公共环境变量
+服务地址命名规范：svc_${架构体系代号}_${微服务代整改}，如：svc_urbanpro_safe
+urbanpro：表示旗舰体系
+safe ：生命线服务代号
+授权认证命名规范：auth_${架构体系代号}_${认证子类}，如：auth_mis_elaw
+mis：表示智信云体系
+elaw：表示执法
+授权认证模板
+auth_urbanpro 认证
+旗舰体系
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+import com.flagwind.application.Application
+import com.egova.usercenter.config.NewVerAuthingClientProperties
+
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'x-Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['admin_sso_token','qijian','v22']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "user"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def variables;
+    
+    TokenUtils(tokenStore,variables, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.variables = variables
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            var properties = Application.resolve(NewVerAuthingClientProperties);
+            this.out.println("用户中心2.0开启: ${properties.enabled }");;
+            return [
+                authorizationType: 'Bearer',
+                tokenType: properties.enabled ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+          def env =  this.variables['ENV'];
+        return env[key] ?: defaultValue;
+    }
+
+    def getVariableWithParams(String key, String defaultValue) {
+        def staticEnv = this.variables['STATIC_ENV']?: [:]
+        def env =  this.variables['ENV']
+        def value = null;
+        if(staticEnv && staticEnv[key]){
+            value = staticEnv[key];
+        }
+        if(!value){
+           value =  (env[key]?:"").replace("http://","")  ;
+        }
+        return value ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables, out)
+    
+    // 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'Bearer';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('svc_token_urbanpro',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+待配置参数
+svc_token_urbanpro：token交换服务地址
+auth_bunches 认证
+低代码体系
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+import com.flagwind.application.Application
+import com.egova.usercenter.config.NewVerAuthingClientProperties
+
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['admin_sso_token','qijian','v22']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "user"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def variables;
+    
+    TokenUtils(tokenStore,variables, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.variables = variables
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            var properties = Application.resolve(NewVerAuthingClientProperties);
+            this.out.println("用户中心2.0开启: ${properties.enabled }");;
+            return [
+                authorizationType: 'Bearer',
+                tokenType: properties.enabled ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+          def env =  this.variables['ENV'];
+        return env[key] ?: defaultValue;
+    }
+
+    def getVariableWithParams(String key, String defaultValue) {
+        def staticEnv = this.variables['STATIC_ENV']?: [:]
+        def env =  this.variables['ENV']
+        def value = null;
+        if(staticEnv && staticEnv[key]){
+            value = staticEnv[key];
+        }
+        if(!value){
+           value =  (env[key]?:"").replace("http://","")  ;
+        }
+        return value ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables, out)
+    
+    // 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'Bearer';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('svc_token_bunches',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+待配置参数
+svc_token_bunches：token交换服务地址
+auth_mis 认证
+MIS体系
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+import com.flagwind.application.Application
+import com.egova.usercenter.config.NewVerAuthingClientProperties
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['eUrbanToken']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'eUrbanToken': 'eUrbanToken',
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "user"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def env;
+    
+    TokenUtils(tokenStore,env, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.env = env
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            var properties = Application.resolve(NewVerAuthingClientProperties);
+            this.out.println("用户中心2.0开启: ${properties.enabled }");;
+            return [
+                authorizationType: 'Bearer',
+                tokenType: properties.enabled ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+        return this.env[key] ?: defaultValue;
+    }
+
+    def getVariableWithOther(String key, String defaultValue) {
+        return (this.env[key]?:"").replace("http://","")  ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables['ENV'], out)
+    
+    // 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'queryToken';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('svc_token_mis',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+待配置参数
+svc_token_mis：token交换服务地址
+auth_v22_fac认证
+fac认证
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+import com.flagwind.application.Application
+import com.egova.usercenter.config.NewVerAuthingClientProperties
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['fac_access_token']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'fac_access_token': 'fac_access_token',
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "user"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def variables;
+    
+    TokenUtils(tokenStore,variables, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.variables = variables
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            var properties = Application.resolve(NewVerAuthingClientProperties);
+            this.out.println("用户中心2.0开启: ${properties.enabled }");;
+            return [
+                authorizationType: 'Bearer',
+                tokenType: properties.enabled ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+          def env =  this.variables['ENV'];
+        return env[key] ?: defaultValue;
+    }
+
+    def getVariableWithParams(String key, String defaultValue) {
+        def staticEnv = this.variables['STATIC_ENV']?: [:]
+        def env =  this.variables['ENV']
+        def value = null;
+        if(staticEnv && staticEnv[key]){
+            value = staticEnv[key];
+        }
+        if(!value){
+           value =  (env[key]?:"").replace("http://","")  ;
+        }
+        return value ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables, out)
+    
+    // 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'Bearer';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('exchange_endpoint_facV22',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+待配置参数
+svc_token_v22_fac：token交换服务地址
+auth_mis_elaw 认证
+mis体系-执法
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+import com.flagwind.application.Application
+import com.egova.usercenter.config.NewVerAuthingClientProperties
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['eUrbanToken']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'eUrbanToken': 'eUrbanToken',
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "user"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def env;
+    
+    TokenUtils(tokenStore,env, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.env = env
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            var properties = Application.resolve(NewVerAuthingClientProperties);
+            this.out.println("用户中心2.0开启: ${properties.enabled }");;
+            return [
+                authorizationType: 'Bearer',
+                tokenType: properties.enabled ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+        return this.env[key] ?: defaultValue;
+    }
+
+    def getVariableWithOther(String key, String defaultValue) {
+        return (this.env[key]?:"").replace("http://","")  ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables['ENV'], out)
+    
+    // 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'queryToken';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('svc_token_mis_elaw',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+待配置参数
+svc_token_mis_elaw：token交换服务地址
+auth_client 认证
+标准oAuth的client认证
+import java.util.regex.Pattern
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String TOKEN_HEADER = 'Authorization'
+    // 重写的头
+    static final String TOKEN_HEADER_NEW = 'Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String AUTH_TYPE = "default"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out
+    private final def variables;
+    
+    TokenUtils(tokenStore,variables, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.variables = variables
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(String url, Map clientInfo) {
+        if (!url) {
+            throw new IllegalArgumentException("无效的token服务地址")
+        } 
+        if (!clientInfo?.clientId || !clientInfo?.clientSecret) {
+            throw new IllegalArgumentException("client认证配置信息无效")
+        }
+        
+        this.out.println("====== 开始Token交换 ======")
+        this.out.println("服务地址: ${url}")
+        this.out.println("Client ID: ${clientInfo.clientId}")
+        
+        def authParams = [
+            url: url,
+            clientId: clientInfo.clientId,
+            clientSecret: clientInfo.clientSecret
+        ]
+        
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw new IllegalStateException("获取认证token失败")
+        }
+        
+        this.out.println("====== Token交换成功 ======")
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request, tokenValue) {
+        if (!request || !tokenValue) {
+            throw new IllegalArgumentException("请求对象或token值不能为空")
+        }
+        
+        request.removeHeader(AuthConstants.COOKIE_HEADER)
+        request.removeHeader(AuthConstants.TOKEN_HEADER)
+        // 直接使用原始Token
+        request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "${AuthConstants.BEARER_PREFIX} ${tokenValue}")
+        out.println("认证头设置完成")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+          def env =  this.variables['ENV'];
+        return env[key] ?: defaultValue;
+    }
+
+    def getVariableWithParams(String key, String defaultValue) {
+        def staticEnv = this.variables['STATIC_ENV']?: [:]
+        def env =  this.variables['ENV']
+        def value = null;
+        if(staticEnv && staticEnv[key]){
+            value = staticEnv[key];
+        }
+        if(!value){
+           value =  (env[key]?:"").replace("http://","")  ;
+        }
+        return value ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+
+// 初始化TokenUtils
+def tokenUtils = new TokenUtils(tokenStore,variables, out)
+
+// 对于不支持的类型，进行Token交换
+try {
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl("svc_token_client",null)
+
+    // 先从环境变量来取，取不到取后面的默认值
+    
+    var clientId = tokenUtils.getVariableWithParams("p_client_id",'unity-client')
+    var clientSecret = tokenUtils.getVariableWithParams("p_client_secer",'unity')
+
+
+    out.println("========= Token交换流程开始 =========")
+    out.println("env: ${variables['ENV']}")
+    out.println("认证类型: ${AuthConstants.AUTH_TYPE}")
+    out.println("端点地址: ${exchangeEndpoint}")
+    out.println("clientId: ${clientId}")
+    out.println("clientSecret: ${clientSecret}")
+    
+    def clientInfo = [
+        clientId: clientId,
+        clientSecret: clientSecret
+    ]
+    
+    def newToken = tokenUtils.exchangeToken(exchangeEndpoint, clientInfo)
+    out.println("获取新token: ${newToken}")
+    tokenUtils.setAuthHeader(request, newToken)
+    
+} catch (Exception e) {
+    throw ExceptionUtils.api("交换处理失败: ${e.message}")
+}
+待配置参数
+svc_token_client：token交换服务地址
+p_client_id：client认证协议客户端id
+p_client_secert：client认证协议客户端密钥
+各部门情况
+基础平台
+一网统管应用研发部
+授权认证
+// 授权脚本（福建、坪山、罗湖等现场已验证）
+auth_urbanpro
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'x-Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['admin_sso_token','sso_access_token','qijian','v22']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "v22"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def variables;
+    
+    TokenUtils(tokenStore,variables, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.variables = variables
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            
+            
+            def usercenter2Enabled = (System.getenv("EXTRA_PARAMS") ?: "") =~ /USERCENTER2_ENABLE=(\S+)/
+            return [
+                authorizationType: 'Bearer',
+                tokenType: usercenter2Enabled.find() && usercenter2Enabled.group(1) == "true" ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+          def env =  this.variables['ENV'];
+        return env[key] ?: defaultValue;
+    }
+
+    def getVariableWithParams(String key, String defaultValue) {
+        def staticEnv = this.variables['STATIC_ENV']?: [:]
+        def env =  this.variables['ENV']
+        def value = null;
+        if(staticEnv && staticEnv[key]){
+            value = staticEnv[key];
+        }
+        if(!value){
+           value =  (env[key]?:"").replace("http://","")  ;
+        }
+        return value ?: defaultValue;
+    }
+}
+
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables, out)
+    
+// 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'Bearer';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        variables['tokenInfo'] = tokenInfo;
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('exchange_endpoint_qijian',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+        variables['tokenInfo'] = newTokenInfo;
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+//参数获取variables['tokenInfo']
+// 配置变量
+城市生命线研发部
+授权认证
+// 授权脚本
+// 认证类型
+// 配置变量
+城市运管服研发部
+授权认证
+灵珑版广告
+// 授权脚本
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+import com.flagwind.application.Application
+import com.egova.usercenter.config.NewVerAuthingClientProperties
+
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'x-Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['admin_sso_token','qijian','v22']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "auth_user"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def variables;
+    
+    TokenUtils(tokenStore,variables, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.variables = variables
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            var properties = Application.resolve(NewVerAuthingClientProperties);
+            this.out.println("用户中心2.0开启: ${properties.enabled }");;
+            return [
+                authorizationType: 'Bearer',
+                tokenType: properties.enabled ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+          def env =  this.variables['ENV'];
+        return env[key] ?: defaultValue;
+    }
+
+    def getVariableWithParams(String key, String defaultValue) {
+        def staticEnv = this.variables['STATIC_ENV']?: [:]
+        def env =  this.variables['ENV']
+        def value = null;
+        if(staticEnv && staticEnv[key]){
+            value = staticEnv[key];
+        }
+        if(!value){
+           value =  (env[key]?:"").replace("http://","")  ;
+        }
+        return value ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables, out)
+    
+    // 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'Bearer';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('svc_token_qijian',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+// 认证类型
+auth_urbanpro
+有广告微服务的扩展交换接口 /api/auth/exchange-token，服务名一般是microadvert
+// 配置变量
+数据填报
+// 授权脚本
+import com.egova.api.util.http.HttpUtils;
+
+var token = request.getHeader('Authorization');
+var authToken = null;
+var casType = null;
+if (token != null && token.contains(" ") && token.contains("Bearer")) {
+    authToken = token.split(" ")[1]
+} else if (token != null && token.contains("cas ") && token.contains(":") ) {
+    authToken = token.split(":")[1];
+    casType = token.split(":")[0].replaceAll('cas ', '');
+}
+var newToken = null;
+if(authToken != null){
+    var env = variables['ENV'];
+    //如果是cas方式，则需要先交换灵珑的token
+    if (null != casType) {
+        var linglongServer = env['svc_bunches_linglong'];
+        var linglongUrl = linglongServer + '/sso/client/token/exchange?code=' + authToken + '&type=' + casType;
+        var linglongResp = HttpUtils.get(linglongUrl, String.class);
+        var linglongResMap = com.egova.json.utils.JsonUtils.deserialize(linglongResp.getBody().toString(), Map.class);
+        authToken = linglongResMap['result']['access_token'];
+        out.println('===交换后调用灵珑的token===' + authToken);
+    }
+    var advertMicroServer = env['svc_csgl_evalreport_micro'];
+    var url = advertMicroServer + '/token/exchange?token=' + authToken;
+    var tokenResp = HttpUtils.get(url, String.class);
+    var resMap = com.egova.json.utils.JsonUtils.deserialize(tokenResp.getBody().toString(), Map.class);
+    newToken = resMap['result']['access_token'];
+    out.println('===交换后调用微服务的token===' + newToken );
+}
+//替换token
+request.removeHeader("Cookie")
+request.removeHeader("Authorization")
+request.setQueryParam('access_token', newToken);
+// 认证类型
+兼容auth_urbanpro、auth_bunches、auth_mis
+// 配置变量
+svc_bunches_linglong 为数据填报后台地址
+城市大脑研发部
+授权认证
+// 授权脚本
+// 认证类型
+// 配置变量
+auth_urbanpro 认证
+旗舰体系
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+/**
+
+ * 认证配置常量类
+
+ */
+
+final class AuthConstants {
+
+    static final String ORIGIN_HEADER = 'origin'
+
+    static final String TOKEN_HEADER = 'Authorization'
+
+    static final String TOKEN_HEADER_NEW = 'x-Authorization'
+
+    static final String COOKIE_HEADER = 'Cookie'
+
+    static final String CAS_PREFIX = 'cas'
+
+    static final String BEARER_PREFIX = 'Bearer'
+
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+
+    static final List<String> SUPPORTED_CAS_TYPES = ['admin_sso_token','sso_access_token','qijian','v22']
+
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+
+        'admin_sso_token': 'admin_sso_token',
+
+        'cas_access_token': 'cas_access_token'
+
+    ]
+
+    static final String AUTH_TYPE = "v22"
+
+}
+
+
+
+/**
+
+ * Token工具类
+
+ */
+
+class TokenUtils {
+
+    private final def tokenStore
+
+    private final def out;
+
+    private final def variables;
+
+    
+
+    TokenUtils(tokenStore,variables, out) {
+
+        this.tokenStore = tokenStore
+
+        this.out = out
+
+        this.variables = variables
+
+    }
+
+    
+
+    /**
+
+     * 从Header中提取Token信息
+
+     */
+
+    def extractTokenFromHeader(String headerValue) {
+
+        if (!headerValue) return null
+
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+
+            // 旧格式处理
+
+            def arr = headerValue.split(":")
+
+            return [
+
+                authorizationType: 'cas',
+
+                tokenType: arr[0].split(" ")[1],
+
+                tokenValue: arr[1]
+
+            ]
+
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+
+            // Bearer token处理
+
+            def parts = headerValue.split(" ")
+
+            if (parts.size() < 2) return null
+
+            
+
+            
+
+            def usercenter2Enabled = (System.getenv("EXTRA_PARAMS") ?: "") =~ /USERCENTER2_ENABLE=(\S+)/
+
+            return [
+
+                authorizationType: 'Bearer',
+
+                tokenType: usercenter2Enabled.find() && usercenter2Enabled.group(1) == "true" ? 
+
+                     "admin_sso_token" : "sso_access_token",
+
+                tokenValue: parts[1]
+
+            ]
+
+        }
+
+        return null
+
+    }
+
+
+
+    /**
+
+     * 从Cookie中提取Token信息
+
+     */
+
+    def extractTokenFromCookies(String cookieStr) {
+
+        if (!cookieStr) return null
+
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+
+            if (matcher.find()) {
+
+                if (entry.value == "cas_access_token") {
+
+                    def arr = matcher.group(1).split(":")
+
+                    return arr.length >= 2 ? [
+
+                        authorizationType: 'Bearer',
+
+                        tokenType: arr[0], 
+
+                        tokenValue: arr[1]
+
+                    ] : null
+
+                } else {
+
+                    return [
+
+                        authorizationType: 'Bearer',
+
+                        tokenType: entry.value, 
+
+                        tokenValue: matcher.group(1)
+
+                    ]
+
+                }
+
+            }
+
+        }
+
+        return null
+
+    }
+
+    
+
+    /**
+
+     * 交换Token
+
+     */
+
+    def exchangeToken(url,tokenInfo) {
+
+        if (!url) {
+
+            throw ExceptionUtils.api("无效的token服务地址")
+
+        } 
+
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+
+            throw ExceptionUtils.api("无效的token信息")
+
+        }
+
+        def authParams = [
+
+            url: url,
+
+            username: UserContext.username(),
+
+            userId: UserContext.userId(),
+
+            casType: tokenInfo.tokenType,
+
+            casToken: tokenInfo.tokenValue
+
+        ]
+
+   
+
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+
+        if (!token?.value) {
+
+            throw ExceptionUtils.api("获取认证token失败")
+
+        }
+
+        return token.value
+
+    }
+
+
+
+    /**
+
+     * 设置认证头
+
+     */
+
+    def setAuthHeader(request,tokenInfo) {
+
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+
+        if (tokenInfo.authorizationType == 'Bearer'){
+
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+
+        } else if(tokenInfo.authorizationType == 'cas'){
+
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+
+        }
+
+
+
+         out.println("==========================")
+
+    }
+
+
+
+    def getVariableWithUrl(String key, String defaultValue) {
+
+          def env =  this.variables['ENV'];
+
+        return env[key] ?: defaultValue;
+
+    }
+
+
+
+    def getVariableWithParams(String key, String defaultValue) {
+
+        def staticEnv = this.variables['STATIC_ENV']?: [:]
+
+        def env =  this.variables['ENV']
+
+        def value = null;
+
+        if(staticEnv && staticEnv[key]){
+
+            value = staticEnv[key];
+
+        }
+
+        if(!value){
+
+           value =  (env[key]?:"").replace("http://","")  ;
+
+        }
+
+        return value ?: defaultValue;
+
+    }
+
+}
+
+
+
+// 主处理逻辑
+
+try {
+
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+
+
+    def tokenUtils = new TokenUtils(tokenStore,variables, out)
+
+    
+
+    // 1. 尝试从Header获取Token
+
+    def tokenInfo = null
+
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+
+    
+
+    if (authHeader) {
+
+        out.println("=========灵珑透传的token=========")
+
+        out.println(authHeader)
+
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+
+    }
+
+
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+
+    if (!tokenInfo) {
+
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+
+    }
+
+
+
+    // 3. 验证Token有效性
+
+    if (!tokenInfo?.tokenValue) {
+
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+
+    }
+
+
+
+    // 4. 检查是否支持的类型
+
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+
+
+    if (isSupportedType) {
+
+        tokenInfo.authorizationType = 'Bearer';
+
+        tokenUtils.setAuthHeader(request,tokenInfo);
+
+        return 
+
+    }
+
+
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('exchange_endpoint_qijian',null)
+
+
+
+    if(!exchangeEndpoint){
+
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+
+    }
+
+
+
+    // 5. 对于不支持的类型，进行Token交换
+
+    try {
+
+        out.println("=========Token交换=========")
+
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+
+        out.println("endpoint:${exchangeEndpoint}");
+
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+
+        out.println("获取新token: ${newToken}");
+
+        def newTokenInfo = [
+
+            authorizationType: 'Bearer',
+
+            tokenType: AuthConstants.AUTH_TYPE, 
+
+            tokenValue: newToken
+
+        ];
+
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+
+    } catch (Exception e) {
+
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+
+    }
+
+} catch (Exception e) {
+
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+
+}
+auth_mis_csdn 认证
+mis体系
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+import com.flagwind.application.Application
+import com.egova.usercenter.config.NewVerAuthingClientProperties
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['fac_access_token']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'eUrbanToken': 'eUrbanToken',
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "auth_mis"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def env;
+    
+    TokenUtils(tokenStore,env, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.env = env
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            var properties = Application.resolve(NewVerAuthingClientProperties);
+            this.out.println("用户中心2.0开启: ${properties.enabled }");;
+            return [
+                authorizationType: 'Bearer',
+                tokenType: properties.enabled ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+        return this.env[key] ?: defaultValue;
+    }
+
+    def getVariableWithOther(String key, String defaultValue) {
+        return (this.env[key]?:"").replace("http://","")  ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables['ENV'], out)
+    
+    // 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'queryToken';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('svc_token_mis',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+执法应用研发部
+授权认证
+// 授权脚本
+auth_urbanpro
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+import com.flagwind.application.Application
+import com.egova.usercenter.config.NewVerAuthingClientProperties
+
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'x-Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['admin_sso_token','qijian','v22','mjing']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "auth_urbanpro"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def variables;
+    
+    TokenUtils(tokenStore,variables, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.variables = variables
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            var properties = Application.resolve(NewVerAuthingClientProperties);
+            this.out.println("用户中心2.0开启: ${properties.enabled }");;
+            return [
+                authorizationType: 'Bearer',
+                tokenType: properties.enabled ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+          def env =  this.variables['ENV'];
+        return env[key] ?: defaultValue;
+    }
+
+    def getVariableWithParams(String key, String defaultValue) {
+        def staticEnv = this.variables['STATIC_ENV']?: [:]
+        def env =  this.variables['ENV']
+        def value = null;
+        if(staticEnv && staticEnv[key]){
+            value = staticEnv[key];
+        }
+        if(!value){
+           value =  (env[key]?:"").replace("http://","")  ;
+        }
+        return value ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables, out)
+    
+    // 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'Bearer';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('svc_token_urbanpro',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+auth_mis_elaw
+import java.util.regex.Pattern
+import com.egova.lowcode.base.util.UserContext
+import com.flagwind.application.Application
+import com.egova.usercenter.config.NewVerAuthingClientProperties
+
+
+/**
+ * 认证配置常量类
+ */
+final class AuthConstants {
+    static final String ORIGIN_HEADER = 'origin'
+    static final String TOKEN_HEADER = 'Authorization'
+    static final String TOKEN_HEADER_NEW = 'Authorization'
+    static final String COOKIE_HEADER = 'Cookie'
+    static final String CAS_PREFIX = 'cas'
+    static final String BEARER_PREFIX = 'Bearer'
+    static final String BEARER_PREFIX_LOWER = BEARER_PREFIX.toLowerCase()
+    static final List<String> SUPPORTED_CAS_TYPES = ['fac_access_token']
+    static final Map<String, String> COOKIE_TOKEN_PATTERNS = [
+        'eUrbanToken': 'eUrbanToken',
+        'admin_sso_token': 'admin_sso_token',
+        'cas_access_token': 'cas_access_token'
+    ]
+    static final String AUTH_TYPE = "auth_mis_elaw"
+}
+
+/**
+ * Token工具类
+ */
+class TokenUtils {
+    private final def tokenStore
+    private final def out;
+    private final def env;
+    
+    TokenUtils(tokenStore,env, out) {
+        this.tokenStore = tokenStore
+        this.out = out
+        this.env = env
+    }
+    
+    /**
+     * 从Header中提取Token信息
+     */
+    def extractTokenFromHeader(String headerValue) {
+        if (!headerValue) return null
+        
+        if (headerValue.contains(":") && headerValue.contains("${AuthConstants.CAS_PREFIX} ")) {
+            // 旧格式处理
+            def arr = headerValue.split(":")
+            return [
+                authorizationType: 'cas',
+                tokenType: arr[0].split(" ")[1],
+                tokenValue: arr[1]
+            ]
+        } else if (headerValue.startsWith(AuthConstants.BEARER_PREFIX) || 
+                  headerValue.startsWith(AuthConstants.BEARER_PREFIX_LOWER)) {
+            // Bearer token处理
+            def parts = headerValue.split(" ")
+            if (parts.size() < 2) return null
+            var properties = Application.resolve(NewVerAuthingClientProperties);
+            this.out.println("用户中心2.0开启: ${properties.enabled }");;
+            return [
+                authorizationType: 'Bearer',
+                tokenType: properties.enabled ? 
+                     "admin_sso_token" : "sso_access_token",
+                tokenValue: parts[1]
+            ]
+        }
+        return null
+    }
+
+    /**
+     * 从Cookie中提取Token信息
+     */
+    def extractTokenFromCookies(String cookieStr) {
+        if (!cookieStr) return null
+        for (entry in AuthConstants.COOKIE_TOKEN_PATTERNS) {
+            def matcher = (cookieStr =~ /${entry.key}=([^;,\s]+)/)
+            if (matcher.find()) {
+                if (entry.value == "cas_access_token") {
+                    def arr = matcher.group(1).split(":")
+                    return arr.length >= 2 ? [
+                        authorizationType: 'Bearer',
+                        tokenType: arr[0], 
+                        tokenValue: arr[1]
+                    ] : null
+                } else {
+                    return [
+                        authorizationType: 'Bearer',
+                        tokenType: entry.value, 
+                        tokenValue: matcher.group(1)
+                    ]
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * 交换Token
+     */
+    def exchangeToken(url,tokenInfo) {
+        if (!url) {
+            throw ExceptionUtils.api("无效的token服务地址")
+        } 
+        if (!tokenInfo?.tokenType || !tokenInfo?.tokenValue||!url) {
+            throw ExceptionUtils.api("无效的token信息")
+        }
+        def authParams = [
+            url: url,
+            username: UserContext.username(),
+            userId: UserContext.userId(),
+            casType: tokenInfo.tokenType,
+            casToken: tokenInfo.tokenValue
+        ]
+   
+        def token = this.tokenStore.load(AuthConstants.AUTH_TYPE, authParams)
+        if (!token?.value) {
+            throw ExceptionUtils.api("获取认证token失败")
+        }
+        return token.value
+    }
+
+    /**
+     * 设置认证头
+     */
+    def setAuthHeader(request,tokenInfo) {
+         request.removeHeader(AuthConstants.COOKIE_HEADER)
+        if (tokenInfo.authorizationType == 'Bearer'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "Bearer ${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'cas'){
+            request.removeHeader(AuthConstants.TOKEN_HEADER)
+            request.setHeader(AuthConstants.TOKEN_HEADER_NEW, "cas ${tokenInfo.tokenType}:${tokenInfo.tokenValue}")
+        } else if(tokenInfo.authorizationType == 'queryToken'){
+            request.setQueryParam(tokenInfo.tokenType, tokenInfo.tokenValue);
+        }
+
+         out.println("==========================")
+    }
+
+    def getVariableWithUrl(String key, String defaultValue) {
+        return this.env[key] ?: defaultValue;
+    }
+
+    def getVariableWithOther(String key, String defaultValue) {
+        return (this.env[key]?:"").replace("http://","")  ?: defaultValue;
+    }
+}
+
+// 主处理逻辑
+try {
+    // 初始化TokenUtils（需要先获取tokenStore实例）
+    // 注意：这里需要根据实际情况获取tokenStore实例
+
+    def tokenUtils = new TokenUtils(tokenStore,variables['ENV'], out)
+    
+    // 1. 尝试从Header获取Token
+    def tokenInfo = null
+    def authHeader = request.getHeader(AuthConstants.TOKEN_HEADER)
+    
+    if (authHeader) {
+        out.println("=========灵珑透传的token=========")
+        out.println(authHeader)
+        tokenInfo = tokenUtils.extractTokenFromHeader(authHeader)
+    }
+
+    // 2. 如果Header中没有，尝试从Cookie获取
+    if (!tokenInfo) {
+        out.println("没有获取透传的token,尝试从Cookie中获取token...")
+        def cookieStr = request.getHeader(AuthConstants.COOKIE_HEADER)
+        tokenInfo = tokenUtils.extractTokenFromCookies(cookieStr)
+    }
+
+    // 3. 验证Token有效性
+    if (!tokenInfo?.tokenValue) {
+        throw ExceptionUtils.api("未找到有效的token，无法进行身份验证！")
+    }
+
+    // 4. 检查是否支持的类型
+    def isSupportedType = AuthConstants.SUPPORTED_CAS_TYPES.any { tokenInfo.tokenType.startsWith(it) }
+
+    out.println("cas_type: ${tokenInfo.tokenType}");
+    out.println("cas_token: ${tokenInfo.tokenValue}");
+
+    if (isSupportedType) {
+        tokenInfo.authorizationType = 'queryToken';
+        tokenUtils.setAuthHeader(request,tokenInfo);
+        return 
+    }
+
+    def exchangeEndpoint = tokenUtils.getVariableWithUrl('svc_token_mis_elaw',null)
+
+    if(!exchangeEndpoint){
+        throw ExceptionUtils.api("没有配置token交换协议服务地址,无法获取服务token")
+    }
+
+    // 5. 对于不支持的类型，进行Token交换
+    try {
+        out.println("=========Token交换=========")
+        out.println("auth-type:${AuthConstants.AUTH_TYPE}");
+        out.println("endpoint:${exchangeEndpoint}");
+        def newToken = tokenUtils.exchangeToken(exchangeEndpoint,tokenInfo);
+        out.println("获取新token: ${newToken}");
+        def newTokenInfo = [
+            authorizationType: 'Bearer',
+            tokenType: AuthConstants.AUTH_TYPE, 
+            tokenValue: newToken
+        ];
+        tokenUtils.setAuthHeader(request,newTokenInfo);
+    } catch (Exception e) {
+        throw ExceptionUtils.api("交换处理失败: ${e.message}");
+    }
+} catch (Exception e) {
+    throw ExceptionUtils.api("Token处理失败: ${e.message}");
+}
+更新说明
+1、2025-4-2 更新了extractTokenFromHeader中关于用户中心2.0开启读取方式，修改如下。
+检查脚本
+1、地址写死的api 路径参数的上
+检查sql
+SELECT 
+  ai.id as 'ApiId',
+  ai.NAME as 'Api名称',
+ai.url as 'Api地址',
+  ca.id   as '应用ID',
+  ca.NAME   as '应用名'
+FROM api_info ai 
+LEFT JOIN com_application ca 
+  ON ai.applicationId = ca.id 
+WHERE ai.url LIKE 'http%';
+2、前后置脚本中固定地址
+检查脚本
+SELECT  
+  ai.id as 'ApiID',
+  ai.name as 'Api名称',
+ai.url as 'Api地址' ,
+  ca.id AS '应用ID' ,
+  ca.NAME AS '应用名' 
+FROM api_info ai 
+LEFT JOIN com_application ca  ON ai.applicationId = ca.id 
+LEFT JOIN api_event_script ae on ae.apiId=ai.id
+WHERE ae.content LIKE '%http%' limit 100;
+3、环境变量命名不规范
+见6.1环境变量约定
+检查sql （查询不规范环境变量）
+SELECT  
+  aep.id as '环境变量ID',
+  aep.name as '环境变量名',
+aep.value  as '环境变量值',
+  ca.id    as '应用ID',
+  ca.NAME   as '应用名'
+FROM api_environment_param aep 
+LEFT JOIN com_application ca  ON aep.applicationId = ca.id 
+WHERE aep.name not LIKE 'svc_%' &&  aep.name not LIKE 'p_%' limit 100;
+4、是否存在不符合规范的授权认证名
+检查sql （查询不规范的授权认证）
+SELECT
+ca.id  AS  '应用ID',
+ca.NAME  AS '应用名称',
+aa.NAME AS '授权认证名' 
+FROM
+com_application ca
+LEFT JOIN api_authentication aa on aa.applicationId = ca.id
+where aa.`name` not like 'auth_%'
+严格检查
+SELECT
+ca.id  AS  '应用ID',
+ca.NAME  AS '应用名称',
+aa.NAME AS '授权认证名' 
+FROM
+com_application ca
+LEFT JOIN api_authentication aa on aa.applicationId = ca.id
+where aa.name not in ('auth_urbanpro','auth_bunches','auth_mis','auth_v22_fac','auth_mis_elaw')
+5、授权内容没有使用模块范本
+检查sql
+SELECT
+ca.id  AS  '应用ID',
+ca.NAME  AS '应用名称',
+aa.NAME AS '授权认证名' 
+FROM
+com_application ca
+LEFT JOIN api_authentication aa on aa.applicationId = ca.id
+where aa.content not like '%class TokenUtils%'
+内容严格匹配@王秀红
+SELECT
+ca.id AS '应用ID',
+ca.NAME AS '应用名称',
+aa.NAME AS '授权认证名',
+aa.content AS '授权内容' 
+FROM
+com_application ca
+LEFT JOIN api_authentication aa ON aa.applicationId = ca.id 
+WHERE
+MD5(
+trim( aa.content )) NOT IN (
+'36cb419566ac5fa1a4be7882bca75b2c',
+'db42586220cac8ae936552a0ce18bea7',
+'b69536930eab8dbf78e077b64ca9b42e',
+'f3a707e1de6888e78fe0cd2dae65ffaf',
+'53a51a17dc5232bcdaf27cbf53609e33',
+'fad7d62f60ed344c968af37e60b62106')
+6、授权脚本中有固定地址
+检查 sql@王秀红
+SELECT
+ca.id  AS  '应用ID',
+ca.NAME  AS '应用名称',
+aa.NAME AS '授权认证名' 
+FROM
+com_application ca
+LEFT JOIN api_authentication aa on aa.applicationId = ca.id
+where aa.content not like '%http%' and aa.name is not null
+
+[表格0]
+标题 | 案卷 | 状态
+【灵珑平台】【TOKEN方案】参照dextoken方案实现authing扩展 | 426486 | 已解决
+【灵珑平台】【TOKEN方案】三方服务代理-前端 | 426487 | 已解决
+【灵珑平台】【TOKEN方案】三方服务代理 | 426555 | 已解决
+【灵珑平台】【TOKEN方案】前端token标准化 | 427216 | 开发中
+
+[表格1]
+服务 | 微服务服务地址变量名 | 认证类型变量名 | 交换服务地址名
+麒舰后台地址 | svc_urbanpro_qijian | auth_urbanpro | svc_token_urbanpro
+流程中心后台地址 | svc_urbanpro_workflow | auth_urbanpro | svc_token_urbanpro
+短信服务后台地址 | svc_urbanpro_sms | auth_urbanpro | svc_token_urbanpro
+多媒体服务后台地址 | svc_urbanpro_media | auth_urbanpro | svc_token_urbanpro
+标签服务地址 | svc_urbanpro_tag | auth_urbanpro | svc_token_urbanpro
+用户中心2.0后台地址 | svc_urbanpro_usercenter | auth_urbanpro | svc_token_urbanpro
+星桥服务后台地址 | svc_bunches_dex | auth_bunches | svc_token_bunches
+灵珑平台服务地址 | svc_bunches_linglong | auth_bunches | svc_token_bunches
+大数据中心 | svc_bunches_bigdata | auth_bunches | svc_token_bunches
+用户中心1.0后端地址 | svc_bunches_authing | auth_bunches | svc_token_bunches
+大模型算法服务地址 | svc_alg_ai | - | 
+MIS服务地址 | svc_mis | auth_mis | svc_token_mis
+生命线旗舰业务服务 | svc_urbanpro_safe | auth_urbanpro | svc_token_urbanpro
+生命线V22业务服务 | svc_v22_fac | auth_v22_fac | svc_token_v22_fac
+物联网服务 | svc_mis_iot | auth_mis | svc_token_mis
+运管服V14服务 | svc_mis_uma | auth_mis | svc_token_mis
+运管服-建筑垃圾服务 | svc_eubanpro_construction | auth_urbanpro | svc_token_urbanpro
+运管服-户外广告服务 | svc_eubanpro_advert | auth_urbanpro | svc_token_urbanpro
+运管服-环卫服务 | svc_eubanpro_sanitation | auth_urbanpro | svc_token_urbanpro
+市民通服务 | svc_mis_pbc | auth_mis | svc_token_mis
+全行业服务 | svc_urbanpro_ibility | auth_urbanpro | svc_token_urbanpro
+统计服务 | svc_mis_stats | auth_mis | svc_token_mis
+毕升服务 | svc_mis_bisheng | auth_mis | svc_token_mis_bisheng
+智云执法 | svc_mis_elaw | auth_mis_elaw | svc_token_mis_elaw
+悟能服务 | svc_urbanpro_wuneng | auth_urbanpro | svc_token_urbanpro
+明镜 | svc_urbanpro_mjing | auth_urbanpro | svc_token_urbanpro
+玄藏GIS服务 | svc_urbanpro_gis |  | 
+V14版本的GIS服务 | svc_mis_gis |  | 

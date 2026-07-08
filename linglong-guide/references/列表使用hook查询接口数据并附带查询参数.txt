@@ -1,0 +1,92 @@
+列表使用hook查询接口数据并附带查询参数
+1 使用场景
+在某些场景下需要使用获取接口的数据作为列表的数据源且需要附带查询条件，因此在灵珑中需要调用后端接口的数据作为列表的数据源。
+2 效果
+使用列表中的hook获取数据后会将接口中的数据以列表的形式进行展示，并且可以配置列表的操作列中的操作方式。且可以通过违则依据、案由内容进行查询过滤。
+3 配置
+1、注册api
+1.1、参数写外面(使用body的情况下也需要先将参数定义在Query参数中便于接收参数)：
+查询条件为：案由内容（lawName）、违则内容（matterName）
+1.2、 如果实际是post请求，且参数需要为body， 则需要在前置脚本处理：
+var params = request.getQueryParams();
+//out.println(params);
+// 因为配置了Query参数，因此在列表进行查询的时候可以通过getQueryParams获取到请求的参数，在前置中可以将请求的参数进行处理后即可对数据进行过滤查询，需要注意的是这里查询的条件需要和接口的查询条件保持一致
+var data = '{"condition":{"lawName":"'+params.lawName+'","matterName":"机动"},"paging":{"pageIndex":'+params.pageIndex+',"pageSize":'+params.pageSize+'}}';
+request.setBody(data);
+1.3、后置脚本需要处理，注意需要把数据总数写上，按灵珑的要求：
+import com.egova.json.utils.JsonUtils;
+import com.egova.model.OperateResult;
+
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
+// 响应字符串反序列化为map
+var map = JsonUtils.deserialize(data, Map.class);
+
+var resultList = map?.result.resultList
+out.println(map);
+
+var list = []
+for(var i=0;i<resultList.size;i++){
+    var item = resultList.get(i)
+    var punishBasis = item.punishBasis[0];
+    var infringeBasis = item.infringeBasis[0];
+    list.push([
+        matterId:item.matterId,
+        matterCode:item.matterCode,
+        matterName:item.matterName,
+        lawName:item.lawName,
+        lawExecuteTypeName:item.lawExecuteTypeName,
+        lawExecuteTypeCode:item.lawExecuteTypeCode
+       
+    ])
+}
+
+var returnRes = new OperateResult().success(list);
+
+// 重要，加上总数
+returnRes.totalCount = map.result.pageInfo.totalRecord;
+
+return  JsonUtils.serialize(returnRes);
+2、配置HOOK,列表
+2.1 列表视图
+配置搜索条件（定义的查询结果需要与接口返回数据保持一致）
+SELECT 
+    NULL AS matterId,
+    '' AS matterCode,
+    '' AS matterName,
+    '' AS lawName,
+    '' AS lawExecuteTypeName,
+    NULL AS lawExecuteTypeCode,
+    NULL AS fzItemId,
+    '' AS fzLawCode,
+    '' AS fzLawName,
+    '' AS fzLawItemCode,
+    '' AS fzLawItemName,
+    '' AS fzLawItemInfo,
+    NULL AS wzItemId,
+    '' AS wzLawCode,
+    '' AS wzLawName,
+    '' AS wzLawItemCode,
+    '' AS wzLawItemName,
+    '' AS wzLawItemInfo
+FROM law_std_rec_matter_rel_set_basis
+2.2 hook 脚本
+其中param参数需要和api外部的参数保持一致，时间参数需要 像这种加 _start
+function main(pageId, param) {
+    return new Promise((resolve, reject) => {
+        debugger
+        console.log(pageId, param);
+       
+        // 使用API来代替默认查询逻辑，apiId为API接口ID
+        const apiId = "27b84536-aea0-48df-b9ee-90ff69613c26";
+        api.API_DATA_EXECUTE(apiId, "BUNCHES", param, { lostAbility: "00" })
+            .then((res) => {
+                resolve(res);
+            }).catch(() => {
+                reject();
+            });
+    })
+}
+可参考：
+《列表通过hook调用接口显示数据方法》

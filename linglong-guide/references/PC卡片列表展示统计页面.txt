@@ -1,0 +1,92 @@
+PC卡片列表展示统计页面
+1 使用场景
+页面卡片展示统计数据，该页面适用于企业资质管理、行业监管及风险管理场景。
+2 效果
+3 配置
+1、编写视图，一列显示指标类型，一列显示对应的统计数值
+2、选择刚编写好的视图创建PC卡片列表
+3、从设计图中看到要求展示的是6个卡片(根据需求去设置每行列数列数)，在卡片容器—>整体—>每行列数调整为6
+4、将“卡片”标题关掉，关掉头部显示
+5、在card-body添加网格布局，在第一个网格项中加一个容器布局，增加字段（该字段可以用判断不同类型显示不一样的图标）
+6、关掉标题，添加设置图标脚本；
+function render(h, value, rows) {
+    // 定义图片地址数组（当前所有路径相同，实际应区分不同图标）
+    const imageSrc = [
+        "/linglong-api/files/iconfont/map/bWFwLWljb24.png",
+        "/linglong-api/files/iconfont/map/bWFwLWljb24.png",
+        "/linglong-api/files/iconfont/map/bWFwLWljb24.png",
+        "/linglong-api/files/iconfont/map/bWFwLWljb24.png",
+        "/linglong-api/files/iconfont/map/bWFwLWljb24.png",
+        "/linglong-api/files/iconfont/map/bWFwLWljb24.png"
+    ];
+
+    // 定义颜色数组（对应不同状态级别）
+    const colors = ["#20A9FF", "#20A9FF", "#17C28F", "#17C28F", "#FA713B", "#FA713B"];
+
+    // 初始化索引（未匹配到value时可能为null，需注意错误处理）
+    let idx = null;
+
+    // 根据value值匹配对应的索引
+    if (value === "许可证临期企业数") {
+        idx = 0;
+    } else if (value === "许可证到期企业数") {
+        idx = 1;
+    } else if (value === "证件临期从业人员数") {
+        idx = 2;
+    } else if (value === "证件到期从业人员数") {
+        idx = 3;
+    } else if (value === "人员证件临期企业数") {
+        idx = 4;
+    } else if (value === "人员证件到期企业数") {
+        idx = 5;
+    }
+
+    // 返回虚拟DOM节点（Vue的渲染函数用法）
+    return h("div", {
+        style: {
+            marginRight: "0.08rem",      // 右外边距
+            borderRadius: "0.5rem",      // 圆形边框（半径0.5rem）
+            width: "0.4rem",             // 固定宽度
+            height: "0.4rem",            // 固定高度
+            backgroundColor: colors[idx], // 动态背景色
+            backgroundImage: `url(${imageSrc[idx]})`, // 动态背景图
+            backgroundRepeat: 'no-repeat', // 图片不重复
+            backgroundPosition: 'center center', // 图片居中
+            backgroundSize: '0.16rem 0.16rem' // 图片缩放尺寸
+        }
+    });
+}
+7、调整容器布局，高度为0.7rem(可根据需求调整)，主轴和副轴设置center
+8、设置展示字体大小样式
+9、关闭显示分页
+10、设置卡片背景色
+function main() {
+    // 定义CSS样式字符串，为不同子元素设置渐变背景
+    // 格式说明：选择器 + 渐变背景样式（由下至上从深色到浅色渐变）
+    let styles = '#card_container_97ewn5_csshandler_generate .card-body-item:nth-child(1) .u-card-generate {background: linear-gradient(to top, #C7E8FE, #F5FDFF);}'
+    
+    // 为第2个子元素设置渐变背景
+    styles += '#card_container_97ewn5_csshandler_generate .card-body-item:nth-child(2) .u-card-generate {background: linear-gradient(to top, #C7E8FE, #F5FDFF);}'
+    
+    // 为第3个子元素设置渐变背景
+    styles += '#card_container_97ewn5_csshandler_generate .card-body-item:nth-child(3) .u-card-generate {background: linear-gradient(to top, #C9F2E6, #F7FEFC); }'
+    
+    // 为第4个子元素设置渐变背景
+    styles += '#card_container_97ewn5_csshandler_generate .card-body-item:nth-child(4) .u-card-generate {background: linear-gradient(to top, #C9F2E6, #F7FEFC); }'
+    
+    // 为第5个子元素渐变背景
+    styles += '#card_container_97ewn5_csshandler_generate .card-body-item:nth-child(5) .u-card-generate {background: linear-gradient(to top, #FFECD6, #FFFCF7); }'
+    
+    // 为第6个子元素设置渐变背景
+    styles += '#card_container_97ewn5_csshandler_generate .card-body-item:nth-child(6) .u-card-generate {background: linear-gradient(to top, #FFECD6, #FFFCF7); }'
+
+    // 创建style元素节点
+    const style = document.createElement("style");
+    
+    // 将CSS字符串转换为文本节点并添加到style元素
+    style.appendChild(document.createTextNode(styles));
+    
+    // 将style元素添加到文档body中生效
+    document.body.appendChild(style);
+}
+11、在页面管理新建一个页面，并拖入网格布局（简），设置第一个网格布局子项为1.42rem（根据需求设置）

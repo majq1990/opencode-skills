@@ -1,0 +1,29 @@
+移动端轨迹播放配置
+1 使用场景
+移动端轨迹播放记录，点击播放按钮可查看到作业车辆行驶的动态路线记录。
+2 效果
+3 配置
+1）在详情部件中添加地图组件，对地图组件配置轨迹图层和图标样式：
+2）将列表信息的轨迹字段传给轨迹页面：
+3）轨迹页面接收参数：
+4）轨迹地图详情部件didMount动作面板中接收轨迹字段：
+map_base_6immbz为地图标识；traceLayer_45cme9为轨迹图层id；
+export function didMount() {
+  console.log("「页面 JS」：当前页面地址 " + location.href);
+  //接收页面传过来的轨迹字段sim_card_num
+  let params = this.$route;
+  let vehicleId = params.query.sim_card_num;
+
+  //设置时间为当前日期
+  console.log(params);
+  let date = new Date();
+  let year = date.getFullYear();
+  let month = date.getMonth() + 1;
+  let day = date.getDate();
+  let currentDate = `${year}-${month}-${day}`;
+
+  this.$$("map_base_6immbz").$$showLocalObjectTrace("traceLayer_45cme9", vehicleId,
+    `${currentDate} 07:00`, `${currentDate} 23:00`)
+}
+4 常见问题
+无。

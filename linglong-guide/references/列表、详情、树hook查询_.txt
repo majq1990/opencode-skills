@@ -1,0 +1,103 @@
+列表、详情、树hook查询
+一、列表hook
+常规列表使用hook查询：
+1.数据源准备：
+注册的接口需要在后置脚本中处理成标准格式
+（1）包含数据的数组要在外层
+最外层多嵌套一层（如含 resultInfo）
+若返回结构为：
+{ "resultInfo": { "data": { "list": [...], "pageInfo": { "totalRecord": 108 } } } }
+后置脚本：
+import com.alibaba.fastjson.JSON;
+var data = JSON.parseObject(data).getJSONObject("resultInfo");
+return data;
+目标：提取出 resultInfo 内容作为新响应体
+（2）要包含totalCount
+若原始响应为 result.pageInfo.totalRecord，则需构造：
+var returnRes = new OperateResult().success(list);
+returnRes.totalCount = map.result.pageInfo.totalRecord;
+return JsonUtils.serialize(returnRes);
+注意：必须设置 totalCount，否则分页异常
+（3）接口注册完成后
+需要把参数添加到对应的参数形式下面
+2.新建一个假视图
+视图字段为数据源所需字段（包括传参字段），字段名必须与数据源字段名一致
+3.列表>高级>hook查询
+http://10.250.1.50:8080/linglongZT/design.html#/list-design/907d3bb3-8c40-4e07-ab69-da6b5849f57b
+4.编写hook脚本
+function main(pageId, param) {
+    console.log("param:::", param);
+    return new Promise((resolve, reject) => {
+        api.API_DATA_EXECUTE("ds_api_014202de-1afc-4759-b201-dfe881045894", "BUNCHES", param, { lostAbility: "00" })
+                .then((res) => {
+                    resolve(res);
+                }).catch((e) => {
+                    reject(e);
+                });
+        });
+
+}
+5.注意事项
+若列表需要分页刷新，则需api支持分页、参数中多加pageIndex（页数）、pageSize（每页条数）两个参数
+二、详情hook
+http://10.250.1.50:8080/linglongZT/design.html#/detail-design/5396aced-30da-4237-8b1d-2706970b9e55
+配置步骤参考列表：
+脚本编写有所区别：列表调用方法是：api.API_DATA_EXECUTE
+详情调用方法是：api.API_DETAIL_DATA_EXECUTE
+function main(pageId, param) {
+    return new Promise((resolve, reject) => {
+        console.log('param', param)
+        api.API_DETAIL_DATA_EXECUTE("ds_api_014202de-1afc-4759-b201-dfe881045894", "BUNCHES", param, { lostAbility: "00" })
+            .then((res) => {
+                resolve(res);
+            }).catch((e) => {
+                reject(e);
+            });
+    });
+}
+三、树hook
+http://10.250.1.50:8080/linglongZT/design.html#/tree-design/6212c9ea-195d-45a5-8ce1-1c08cba7c31a
+数据源准备参考列表
+树列表>hook
+脚本：
+function main(param, extraParams) {
+    // console.log(param)
+    // param.condition.params = {
+    //     pageSize: 1000,
+    //     pageIndex: 1
+    // }
+    return new Promise((resolve, reject) => {
+        const apiInfo = {
+            // 数据查询
+            queryDataApi: {
+                apiId: "ds_api_112dfa02-c7a1-409c-96b3-5d1850dfbf8b",
+                // WIDZOM: 智云; BUNCHES: 灵珑
+                apiType: "BUNCHES", // 可选 默认值: BUNCHES
+                lostAbility: "00" // 可选 默认值: 00
+            },
+            // 获取树的节点数量
+            countingApi: {
+                apiId: "ds_api_112dfa02-c7a1-409c-96b3-5d1850dfbf8b"
+            },
+            // 获取树的上级节点
+            parentQueryApi: {
+                apiId: "ds_api_112dfa02-c7a1-409c-96b3-5d1850dfbf8b"
+            },
+            // 获取树节点路径信息
+            pathQueryApi: {
+                apiId: "ds_api_112dfa02-c7a1-409c-96b3-5d1850dfbf8b"
+            },
+            // 关键字查询
+            keywordQueryApi: {
+                apiId: "ds_api_112dfa02-c7a1-409c-96b3-5d1850dfbf8b"
+            }
+        };
+        api.DATA_EXECUTOR().executeApiModelForTree(apiInfo, param, extraParams)
+            .then(res => {
+                console.log("res", res)
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+    })
+}

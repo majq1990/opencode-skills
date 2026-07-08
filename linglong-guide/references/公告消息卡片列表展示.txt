@@ -1,0 +1,54 @@
+公告消息卡片列表展示
+1.使用场景
+卡片列表配置消息、公告等卡片信息；
+（#294982）
+2.效果
+1）默认
+2）时间线效果
+3）业务指导
+3. 配置
+3.1 卡片主题设置
+1）卡片主题：默认
+2）卡片主题：时间线
+3）卡片主题：业务指导
+3.2 状态文字与图表配置
+1）需要使用自定义渲染函数
+function render(h, value, rows) {
+    const isVue2 = (this.Vue || this.vue).version.startsWith("2");
+    const map = {
+        "1": { text: "工作部署", icon: "icon-component-type-graph", v3Icon: "magic-linglong-edit-sp-v2" },
+        "2": { text: "材料报送", icon: "icon-upload1", v3Icon: "magic-linglong-feiji" }
+    }
+    const data = map[value] || map["1"];
+    const text = data.text; // 文本信息
+    const style = { // 图标样式
+        marginRight: "4px"
+    }
+    if (isVue2) {
+        const icon = data.icon;
+        return h("div", [h("i", { class: ["iconfont-form-design", icon], style }), h("span", text)])
+    }
+
+    const { appContext } = vue.getCurrentInstance();
+    const iconfont = appContext.components["u-iconfont-design-form"]
+    const icon = data.v3Icon;
+    // <u-iconfont-design-form class="icont-form" type="magic-linglong-component-type-form" />
+    return h("div", [h(iconfont, { type: icon, class: "icon-form", style }), h("span", text)])
+}
+2）未读状态（操作栏）：需要配置样式面板
+#custom_button_d34v4z_csshandler  .ant-btn {
+    vertical-align: bottom;
+    border-radius: 11px;
+    background: rgba(255, 80, 35, .1) !important;
+    color: #FF5023;
+    border: none;
+    margin-right: 8px;
+}
+3）时间字段：需要配置样式面板
+#card_field_b4xhty_csshandler  {
+    vertical-align: middle;
+    width: auto;
+    display: inline-block;
+    height: 22px;
+    line-height: 22px;
+}

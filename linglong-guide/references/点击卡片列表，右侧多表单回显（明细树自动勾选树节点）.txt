@@ -1,0 +1,62 @@
+点击卡片列表，右侧多表单回显（明细树自动勾选树节点）
+使用场景
+如图所示，左侧为卡片，右侧为多个标签页，标签页下有表单数据。当前需要做到：点击左侧卡片，右侧标签页下数据自动回显（标签页下的明细树自动勾选）。
+效果
+用户点击卡片，右侧明细树自动回显之前保存的数据。
+配置
+在列表中绑定’点击卡片‘动作，通过脚本向表单传参。
+脚本如下：
+function main(params) {
+    console.log('params', params);
+    // 获取record id
+    var recordId = params.record && params.record.id && params.record.id.value;
+
+    // 定义一个通用的函数来设置表单值
+    function setFormValue(formPartId, value) {
+        var formWidget = this.$$(formPartId);
+        if (formWidget && formWidget.$children) {
+            var formComponent = formWidget.$children[0];
+            if (formComponent) {
+                formComponent.$$setFormValue({
+                    documentNo: value
+                });
+            }
+        }
+    }
+
+    if (recordId) {
+        //使用循环来遍历所有需要设置的表单部分
+        const formParts = [
+            { id: "form_part_7scjio"},
+            { id: "form_part_49p2t0"},
+            { id: "form_part_bs7bkm"},
+            { id: "form_part_crdoa9"}
+        ];
+        formParts.forEach((formPart) => {
+            setFormValue.call(this, formPart.id, recordId);
+        });
+    }
+}
+在各个页面上配置参数：
+在表单中配置文号字段：
+其它表单中类似配置。
+常见问题
+当前保存逻辑为：在脚本总实现将卡片主键ID、树节点ID、关联类型ID存入mis_limit_rule_rel限制规则关联表中。
+回显逻辑为：通过点击卡片，触发脚本向右侧表单传入ID，表单拿到ID后，过滤查找到所有与ID关联的树节点ID，根据树节点ID勾选节点。
+左侧卡片对应视图的主表为：mis_limit_rule  规则表
+右侧明细树表单：
+主表：mis_limit_rule 限制规则表
+从表：mis_limit_rule_rel限制规则关联表
+关联关系：mis_limit_rule_rel.limit_rule_id =mis_limit_rule.id
+mis_limit_rule_rel.relation_id = sys_event_type_basic_property.id
+表单内明细树绑定树：启用条件_事项清单树_时段
+树对应的表：sys_event_type_basic_property  事项类别基础属性表
+问题一：单纯通过卡片传参过滤、回显多个明细树会导致问题：
+如图：假设当前事项管理明细树，勾选树节点，值为1，管控道路明细树也有一个树节点的值为1，新增时，勾选节点只勾选了管控道路明细树值为1的树节点，但保存回显后，事项管理明细树的树节点也可能被勾选上。
+解决办法：
+在视图中，为树节点与其父节点每个加10000（可根据实际出发，自由加值）。
+如图，事项清单的节点有3000多条，管控道路有2000多条，配置后，他们的值不会有相同情况发生。
+问题二：存入时，也将关联类型ID一同存入，为什么不用它进行过滤呢？
+在当前场景下，灵珑不支持此过滤
+在将卡片的主键ID传入表单后，已进行过滤，将规则关联表中所有limit_rule_id为卡片主键ID的过滤出来，然后
+暂未找到通过其它字段过滤的方法。

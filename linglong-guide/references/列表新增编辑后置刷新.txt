@@ -1,0 +1,47 @@
+列表新增编辑后置刷新
+1 使用场景
+列表点击新增和编辑进行页面跳转，点击新增或编辑页面的确定，成功提交数据后返回列表时刷新列表，点取消不刷新。灵珑中给的模板只适用于打开部件弹窗形式，偶尔会导致无法刷新。
+2 效果
+用户点击新增或者编辑按钮，点击新增或编辑页面的确定，成功提交数据后返回列表页面刷新列表
+3 配置
+1、表单页面的确定按钮中点击事件中添加如下脚本
+function main() {
+    //括号中标识替换为表单的标识
+    var formPartEle = this.$$element("form_part_gu56rw");
+    if (formPartEle) {
+        let pageRenderElement = this.$$getRouteView();
+        formPartEle.$$getRenderElement().onSave().then((res) => {
+            if (res.result) {
+                this.$message.success("提交成功");
+                if (pageRenderElement) {
+                  //定义一个页面参数用于新增后置动作的判断
+                    window["isSave"] = "save"
+                    pageRenderElement.goHistory(-1);
+                }
+            }
+        });
+
+    }
+}
+括号中表单标识获取地方
+2、在列表的新增或编辑按钮的后置动作中添加如下脚本
+function main() {
+    // 通过刚刚定义的参数值进行判断是否刷新
+    if (window["isSave"] === 'save') {
+      //将定义的参数销毁
+        window["isSave"]=null;
+        // 获取页面列表组件 这里的标识获取是页面中列表的唯一标识
+        var pageListEle = this.$$element("page_widget_list_95qgxe");
+        // 获取列表渲染页实例
+        var listRenderView = pageListEle.$$getRenderElement();
+        // 获取当前显示的组件，表格或者卡片
+        var currentListEle = listRenderView.$$getListElement();
+        // 调用刷新方法
+        currentListEle.$$refreshData();
+    }
+    //将定义的参数销毁
+    window["isSave"]=null;
+}
+脚本存放位置如下图
+括号中列表标识获取位置如下图
+关键代码已注释。
