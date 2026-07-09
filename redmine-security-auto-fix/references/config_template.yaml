@@ -1,0 +1,141 @@
+# Redmine安全案件自动化处理配置模板
+
+# Redmine配置
+redmine:
+  base_url: "https://faq.egova.com.cn:7787"
+  api_key: "YOUR_REDMINE_API_KEY"
+  verify_ssl: false
+
+# 钉钉知识库配置
+dingtalk:
+  kb_node_id: "dQPGYqjpJYg0vw9osZbj1mpgWakx1Z5N"
+  workspace_id: "9JOGOMQYOo0ARX4Q"
+
+# 钉钉机器人配置
+dingtalk_robot:
+  webhook: "https://oapi.dingtalk.com/robot/send?access_token=YOUR_ACCESS_TOKEN"
+  secret: "YOUR_SECRET"
+
+# 归档目录
+archive_dir: "/opt/redmine-security-auto-fix/archive"
+
+# 漏洞分类规则
+classification:
+  # 代码修复关键词
+  code_keywords:
+    - "XSS"
+    - "SQL注入"
+    - "命令注入"
+    - "文件包含"
+    - "文件上传"
+    - "反序列化"
+    - "SSRF"
+    - "CSRF"
+    - "越权"
+    - "权限绕过"
+    - "业务逻辑"
+  
+  # 依赖更新关键词
+  dependency_keywords:
+    - "jQuery"
+    - "RequireJS"
+    - "Bootstrap"
+    - "Angular"
+    - "React"
+    - "Vue"
+    - "JavaScript库"
+    - "JS库"
+    - "前端框架"
+  
+  # 配置修复关键词
+  config_keywords:
+    - "响应头缺失"
+    - "CORS"
+    - "跨域"
+    - "HttpOnly"
+    - "Secure"
+    - "SameSite"
+    - "HSTS"
+    - "CSP"
+    - "X-Frame-Options"
+    - "X-Content-Type-Options"
+    - "X-XSS-Protection"
+    - "Referrer-Policy"
+    - "Permissions-Policy"
+    - "HTTPS"
+    - "SSL"
+    - "TLS"
+    - "加密连接"
+    - "错误消息"
+    - "错误信息"
+    - "堆栈跟踪"
+    - "调试信息"
+
+# 依赖包版本映射
+dependency_versions:
+  jQuery:
+    current: "1.x"
+    suggested: "3.7.1"
+    command: "npm install jquery@3.7.1 或 手动替换js文件"
+  
+  RequireJS:
+    current: "2.x"
+    suggested: "2.3.7"
+    command: "npm install requirejs@2.3.7 或 手动替换js文件"
+  
+  Bootstrap:
+    current: "3.x"
+    suggested: "5.3.0"
+    command: "npm install bootstrap@5.3.0"
+
+# 配置修复模板
+config_fixes:
+  CORS:
+    file: "/egova/tomcat/conf/web.xml 或 Nginx配置"
+    item: "Access-Control-Allow-Origin"
+    method: "限制允许的来源域名，不要使用 *"
+  
+  HttpOnly:
+    file: "/egova/web/eUrbanMIS/WEB-INF/web.xml"
+    item: "cookie-config > http-only"
+    method: "设置 http-only 为 true"
+  
+  HTTPS:
+    file: "Nginx配置"
+    item: "ssl_certificate / ssl_certificate_key"
+    method: "配置SSL证书并强制HTTPS"
+  
+  HSTS:
+    file: "Nginx配置"
+    item: "Strict-Transport-Security"
+    method: "add_header Strict-Transport-Security 'max-age=31536000; includeSubDomains' always;"
+  
+  X-Frame-Options:
+    file: "Nginx配置"
+    item: "X-Frame-Options"
+    method: "add_header X-Frame-Options 'SAMEORIGIN' always;"
+  
+  X-Content-Type-Options:
+    file: "Nginx配置"
+    item: "X-Content-Type-Options"
+    method: "add_header X-Content-Type-Options 'nosniff' always;"
+  
+  X-XSS-Protection:
+    file: "Nginx配置"
+    item: "X-XSS-Protection"
+    method: "add_header X-XSS-Protection '1; mode=block' always;"
+  
+  Content-Security-Policy:
+    file: "Nginx配置"
+    item: "Content-Security-Policy"
+    method: "根据应用需求配置CSP策略"
+  
+  Referrer-Policy:
+    file: "Nginx配置"
+    item: "Referrer-Policy"
+    method: "add_header Referrer-Policy 'strict-origin-when-cross-origin' always;"
+  
+  Permissions-Policy:
+    file: "Nginx配置"
+    item: "Permissions-Policy"
+    method: "根据应用需求配置权限策略"
