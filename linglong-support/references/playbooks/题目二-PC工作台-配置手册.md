@@ -2,6 +2,7 @@
 
 > 原题存档：`../exam/题目二-PC工作台-原题.md`（nodeId=Y1OQX0akWm3gYmA4ivD7MZrkJGlDd3mE）
 > 面向对象：正在考试的工程师。本手册把每一步落到「点哪个菜单 → 弹什么界面 → 每个属性怎么填 → 保存 → 怎么验证」的粒度。
+> **JS 层已按 `references/scripting/` 最新脚本规范升级（2026-07-10）**：`const self = this;` 约定、const/let、数据源调用收拢进 `execDdcat` 适配函数、Promise 链 finally 收口 loading；SQL/操作步骤/评分表/坑总表未动。变更明细见文末「脚本规范升级说明」。
 > 所有 `xxx_替换我` 形式的 ID 都要换成你自己页面里的真实 ID：
 > - **资源 ID（数据模型/API/页面）**：任意动作绑定脚本窗口内按 **Ctrl+Shift+C**，弹出资源选择器 → 选类型（数据模型/api/页面）→ 选中目标 → 点【确定】，ID 自动回填到光标处。
 > - **组件 ID**：画布中选中组件 → 右侧属性面板切到「高级」→ 查看「唯一标识」（如 `text_7lxzjn`、`container_f3r5gg`）。
@@ -197,8 +198,9 @@
 
 ```js
 function setDefaultDateRange(self) {
-  var end = moment().format('YYYY-MM-DD');
-  var start = moment().subtract(29, 'days').format('YYYY-MM-DD');
+  // moment() 每次新建实例，无共享对象，直接 format 安全；若改用组件的 moment 对象（如 currentTime）必须先 .clone()
+  const end = moment().format('YYYY-MM-DD');
+  const start = moment().subtract(29, 'days').format('YYYY-MM-DD');
   self.$$('date_range').$$setValue([start, end]);
   return [start, end];
 }
@@ -257,12 +259,13 @@ function setDefaultDateRange(self) {
 
 ```js
 // 数据概览刷新：入参 queryParams 为 [{name,valueContent}] 数组
+// 数据源调用统一走 execDdcat 适配函数（定义见 §6.1）；返回 Promise，供 refreshAll 的 Promise.all 统一 finally 收口 loading
 function refreshOverview(self, queryParams) {
-  api.DATA_SOURCE_EXECUTE("DS_OVERVIEW", "ddcat", queryParams, [], "").then(function (res) {
-    var row = (res && !res.hasError && res.result && res.result.length) ? res.result[0] : {};
-    // 空数据兜底：整数显示 0，吨位显示 0.00，绝不出现 undefined/null/NaN
-    var fmtInt = function (v) { var n = Number(v); return isFinite(n) ? String(Math.round(n)) : '0'; };
-    var fmtTon = function (v) { var n = Number(v); return isFinite(n) ? n.toFixed(2) : '0.00'; };
+  // 空数据兜底：整数显示 0，吨位显示 0.00，绝不出现 undefined/null/NaN
+  const fmtInt = function (v) { const n = Number(v); return isFinite(n) ? String(Math.round(n)) : '0'; };
+  const fmtTon = function (v) { const n = Number(v); return isFinite(n) ? n.toFixed(2) : '0.00'; };
+  return execDdcat('DS_OVERVIEW', queryParams).then(function (res) {
+    const row = (res && !res.hasError && res.result && res.result.length) ? res.result[0] : {};
     self.$$('text_total').$$setValue(fmtInt(row.totalWaybillCount) + ' 单');
     self.$$('text_abnormal').$$setValue(fmtInt(row.abnormalWaybillCount) + ' 单');
     self.$$('text_clean').$$setValue(fmtTon(row.cleanAmount) + ' 吨');
@@ -278,7 +281,7 @@ function refreshOverview(self, queryParams) {
 ```
 
 逐段解释：
-- `api.DATA_SOURCE_EXECUTE(id, "ddcat", queryParams, [], "")`：平台数据源执行 API；第一参换成你登记的 `DS_OVERVIEW` 真实 ID（Ctrl+Shift+C 回填），第二参 `"ddcat"` 表示走数据模型。
+- `execDdcat('DS_OVERVIEW', queryParams)`：§6.1 定义的 ddcat 数据源适配函数，内部调 `api.DATA_SOURCE_EXECUTE(id, 'ddcat', queryParams, [], '')`；第一参换成你登记的 `DS_OVERVIEW` 真实 ID（Ctrl+Shift+C 回填）。环境若提示 DATA_SOURCE_EXECUTE 废弃，只改 execDdcat 一处即可。
 - `res.result[0]`：概览视图返回单行统计，取第一行；查不到就给空对象走兜底。
 - `Number(null)=0`、`Number(undefined)=NaN`、`Number('')=0`，`isFinite` 一网打尽；`fmtTon` 对 `null/''` 输出 `0.00`——这段就是「空数据显示 0/0.00，不出现 undefined/null/NaN」这 4 分的保命符。
 - 四个 `$$setValue` 的组件 ID 换成 3.1/3.3 登记的真实唯一标识。
@@ -327,10 +330,11 @@ function refreshOverview(self, queryParams) {
 
 ```js
 export function onChange() {
-  var typeValue = this.$$('single_select_cicle').$$getValue();
+  const self = this;
+  const typeValue = self.$$('single_select_cicle').$$getValue();
   window.circleTypeValue = typeValue; // 挂 window 供全局使用
   if (window.queryCircleData) {
-    window.queryCircleData(this);     // 粒度变化只重查趋势图
+    window.queryCircleData(self);     // 粒度变化只重查趋势图
   }
 }
 ```
@@ -343,33 +347,36 @@ export function onChange() {
 
 ```js
 // 联单趋势查询：cicleType 追加进 queryParams 后重查 DDCAT
+// 返回 Promise，供 refreshAll 的 Promise.all 统一 finally 收口 loading
 function queryCircleData(self) {
-  var queryParams = window.buildQueryParams(self); // 见第 6 节
+  const queryParams = window.buildQueryParams(self); // 见第 6 节
   queryParams.push({ name: 'cicleType', valueContent: window.circleTypeValue || 'day' });
   queryParams.push({ name: 'pageSize', valueContent: 1000 }); // 趋势不分页，取足量
-  initTrendChart(queryParams);
+  return initTrendChart(queryParams);
 }
 
 // 联单趋势渲染（柱线混合）
+// ECharts 走 getElementById + echarts.init 直接 DOM 操作是官方文档做法，规范升级保留不改
 function initTrendChart(queryParams) {
-  var chartDom = document.getElementById('container_trend_csshandler_generate');
-  if (!chartDom) return;
-  var myChart = echarts.init(chartDom);
+  const chartDom = document.getElementById('container_trend_csshandler_generate');
+  if (!chartDom) return Promise.resolve();
+  const myChart = echarts.init(chartDom);
 
-  api.DATA_SOURCE_EXECUTE("DS_TREND", 'ddcat', queryParams, [], "").then(function (res) {
-    var xData = [], countData = [], abcountData = [];
+  // 数据源调用统一走 execDdcat 适配函数（定义见 §6.1）
+  return execDdcat('DS_TREND', queryParams).then(function (res) {
+    let xData = [], countData = [], abcountData = [];
     if (res && !res.hasError && res.result && res.result.length) {
       xData = res.result.map(function (i) { return i.statDate || i.stat_date; });
       countData = res.result.map(function (i) { return i.electronicWaybillCount || i.record_count || 0; });
       abcountData = res.result.map(function (i) { return i.abnormalWaybillCount || i.abnormal_count || 0; });
     }
-    var isEmpty = xData.length === 0;
-    var gradient1 = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+    const isEmpty = xData.length === 0;
+    const gradient1 = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
       { offset: 0, color: '#85C0FF' },
       { offset: 1, color: '#3388FF' }
     ]);
 
-    var option = {
+    const option = {
       legend: isEmpty ? undefined : {
         data: ['电子联单', '异常联单'],
         top: '5%', left: 'center',
@@ -380,9 +387,9 @@ function initTrendChart(queryParams) {
         axisPointer: { type: 'shadow' },
         backgroundColor: 'rgba(8, 17, 38, 0.8)',
         formatter: function (params) {
-          var content = '<div style="padding:5px;font-size:12px;color:#fff">' + params[0].axisValue + '</div>';
+          let content = '<div style="padding:5px;font-size:12px;color:#fff">' + params[0].axisValue + '</div>';
           params.forEach(function (item) {
-            var color = item.seriesName === '电子联单' ? '#3388FF' : '#FF6600';
+            const color = item.seriesName === '电子联单' ? '#3388FF' : '#FF6600';
             content += '<div style="color:#FFFFFF;"><span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:' + color + ';"></span><strong>' + item.seriesName + ':</strong> ' + item.value + ' 单</div>';
           });
           return content;
@@ -419,6 +426,13 @@ function initTrendChart(queryParams) {
     };
 
     myChart.setOption(option, true); // 第二参 true=全量替换，防止粒度切换后旧序列残留
+  }).catch(function (err) {
+    console.error('趋势查询失败:', err);
+    // 异常兜底：清空旧序列并居中显示「暂无数据」，不留残图（loading 关闭统一在 refreshAll 的 finally）
+    myChart.setOption({
+      xAxis: {}, yAxis: [], series: [],
+      graphic: { type: 'text', left: 'center', top: 'middle', style: { text: '暂无数据', fill: '#999', fontSize: 14 } }
+    }, true);
   });
 }
 ```
@@ -433,7 +447,7 @@ function initTrendChart(queryParams) {
 *渲染段（initTrendChart）*
 - `getElementById('..._csshandler_generate')`：拿容器 DOM，把 `container_trend` 换成真实唯一标识，后缀照抄；拿不到直接 return（页面没渲染完时的保护）。
 - `echarts.init(chartDom)`：初始化实例——`echarts` 全局变量来自 §0.3 的隐藏环形图。
-- `DATA_SOURCE_EXECUTE("DS_TREND", 'ddcat', queryParams, [], "")`：带着查询条件 + `cicleType` + `pageSize` 重查 DDCAT；第四参空数组是表单参数、第五参空串是 JSON 参数，本题用不到但**位置不能省**。
+- `execDdcat('DS_TREND', queryParams)`：走 §6.1 适配函数，带着查询条件 + `cicleType` + `pageSize` 重查 DDCAT；适配函数内部 `DATA_SOURCE_EXECUTE` 的第四参空数组是表单参数、第五参空串是 JSON 参数，本题用不到但**位置不能省**。
 - 三个 `.map`：接口字段做了驼峰/下划线双兜底（`statDate/stat_date`、`electronicWaybillCount/record_count`、`abnormalWaybillCount/abnormal_count`）；**先在 F12 里 `console.log(res)` 确认考试环境真实字段名再定稿**。
 
 *option 各配置块 → 评分点映射*
@@ -494,15 +508,19 @@ function initTrendChart(queryParams) {
 
 ```js
 function main(pageId, param) {
+    const self = this;
+    // 【Hook 纪律】只允许合并 queryParams / condition.params 追加查询条件；
+    // 绝不动 param.paging（pageIndex/pageSize 等分页字段），分页由平台统一管理，
+    // 这样导出数据与页面查询走同一条件、结果天然一致。
     return new Promise(function (resolve, reject) {
         console.log(pageId, param);
         // 把工作台顶部查询条件合并进查询参数（导出数据走同一 hook，条件自动一致）
-        var extra = window.workbenchParams || [];
+        const extra = window.workbenchParams || [];
         param.queryParams = (param.queryParams || []).concat(extra);
         // 用数据模型代替默认查询逻辑，DS_LIST 为「电子联单列表」数据模型 ID
         api.DATA_EXECUTOR().executeDataModelForList("DS_LIST", param)
             .then(function (res) { resolve(res); })
-            .catch(function () { reject(); });
+            .catch(function (err) { reject(err); });
     });
 }
 ```
@@ -526,12 +544,13 @@ function main(pageId, param) {
 
 ```js
 function main() {
-  var element = this, rootPageElement = null;
+  const self = this;
+  let element = self, rootPageElement = null;
   while (element) {
     if (element.getPageInfo && element.goHistory) { rootPageElement = element; break; }
     element = element.$parent;
   }
-  var p = window.currentFilter || {};
+  const p = window.currentFilter || {};
   rootPageElement.getPageInfo('PAGE_LIST', 'PAGE', {
     isPageHeader: true,
     pageHeaderTitle: '联单列表',
@@ -565,9 +584,9 @@ function main() {
 ```js
 // 联单列表页 didMounted：接收“更多>”带来的筛选参数（加分项，可选）
 function main() {
-  var self = this;
-  var p = (self.extraParams_ || (self.$route && self.$route.query)) || {}; // 参数取法以现场实际为准，F12 打印确认
-  var qp = [];
+  const self = this;
+  const p = (self.extraParams_ || (self.$route && self.$route.query)) || {}; // 参数取法以现场实际为准，F12 打印确认
+  const qp = [];
   ['siteIds', 'vehicleNum', 'muckType', 'startDate', 'endDate'].forEach(function (k) {
     if (p[k]) qp.push({ name: k, valueContent: p[k] });
   });
@@ -594,14 +613,16 @@ function main() {
 
 ```js
 function main() {
-  var self = this;
+  const self = this;
 
   // ---------- 工具：读取查询区当前值 ----------
   window.getFilter = function () {
-    var siteIds = self.$$('site_select').$$getValue();        // 多选 -> 数组
-    var vehicleNum = self.$$('vehicle_select').$$getValue();
-    var muckType = self.$$('muck_select').$$getValue();
-    var range = self.$$('date_range').$$getValue() || [];
+    const siteIds = self.$$('site_select').$$getValue();        // 多选 -> 数组
+    const vehicleNum = self.$$('vehicle_select').$$getValue();
+    const muckType = self.$$('muck_select').$$getValue();
+    const range = self.$$('date_range').$$getValue() || [];
+    // moment(range[0]) 是基于取出值新建的副本，直接 format 安全；
+    // 若改用组件自身的 moment 对象（如 currentTime），必须先 .clone() 再 format，避免污染组件内部状态
     return {
       siteIds: Array.isArray(siteIds) ? siteIds.join(',') : (siteIds || ''),
       vehicleNum: vehicleNum || '',
@@ -613,9 +634,9 @@ function main() {
 
   // ---------- 工具：过滤空值，拼 queryParams ----------
   window.buildQueryParams = function () {
-    var p = window.getFilter();
+    const p = window.getFilter();
     window.currentFilter = p;                    // 给“更多>”跳转用
-    var qp = [];
+    const qp = [];
     ['siteIds', 'vehicleNum', 'muckType', 'startDate', 'endDate'].forEach(function (k) {
       if (p[k] !== '' && p[k] != null) qp.push({ name: k, valueContent: p[k] }); // 空条件不生效
     });
@@ -623,37 +644,52 @@ function main() {
   };
 
   // ---------- 全页刷新 ----------
-  window.refreshAll = function (ctx) {
-    var qp = window.buildQueryParams();
+  window.refreshAll = function () {
+    const qp = window.buildQueryParams();
     window.workbenchParams = qp;                 // 列表 hook 读它
-    refreshOverview(self, qp);                   // 1) 概览（第 3 节函数）
-    window.queryCircleData(self);                // 2) 趋势（第 4 节函数）
-    var tableComp = self.$$element('table_list'); // 3) 列表：重查并回到第一页
+    // loading 句柄双保险：这里开，Promise.all 的 finally 里关（成功/失败都收口）
+    const hideLoading = (self.$message && self.$message.loading) ? self.$message.loading('数据加载中...', 0) : null;
+    const tasks = [
+      refreshOverview(self, qp),                 // 1) 概览（第 3 节函数，返回 Promise）
+      window.queryCircleData(self)               // 2) 趋势（第 4 节函数，返回 Promise）
+    ];
+    const tableComp = self.$$element('table_list'); // 3) 列表：重查并回到第一页
     if (tableComp && tableComp.onRefresh) { tableComp.onRefresh(); }
     else if (tableComp && tableComp.$$refreshData) { tableComp.$$refreshData(); }
+    return Promise.all(tasks)
+      .catch(function (err) { console.error('全页刷新异常:', err); }) // 各函数内部已兜底，这里兜网络级异常
+      .finally(function () { if (typeof hideLoading === 'function') hideLoading(); });
   };
 
-  window.queryCircleData = function (ctx) { queryCircleData(self); }; // 供粒度下拉 onChange 调
+  window.queryCircleData = function () { return queryCircleData(self); }; // 供粒度下拉 onChange 调
 
   // ---------- 初始化：默认近 30 天 + 首屏加载 ----------
   setTimeout(function () {
     setDefaultDateRange(self);       // 第 2.4 节函数
     window.circleTypeValue = 'day';
-    window.refreshAll(self);
+    window.refreshAll();
   }, 300);                           // 等组件渲染完成再取/赋值
 }
 
+// —— ddcat 数据源统一适配函数：所有 api.DATA_SOURCE_EXECUTE 调用只出现在这一处。
+//    若环境提示 DATA_SOURCE_EXECUTE 已废弃，只需改这一个函数换成 api.DATA_EXECUTOR() 对应方法，
+//    refreshOverview / initTrendChart 等调用处一行不用动 ——
+function execDdcat(modelId, queryParams) {
+  return api.DATA_SOURCE_EXECUTE(modelId, 'ddcat', queryParams, [], '');
+}
+
 // —— 把第 2.4 的 setDefaultDateRange、第 3.4 节 refreshOverview、
-//     第 4.3 的 queryCircleData / initTrendChart 四个函数原样贴在 main 下方 ——
+//     第 4.3 的 queryCircleData / initTrendChart 四个函数原样贴在 execDdcat 下方 ——
 ```
 
-**最终页面脚本的完整组装结构（自查用）**——粘贴完成后编辑器里应从上到下依次是这 5 段，缺一段联动链就断：
+**最终页面脚本的完整组装结构（自查用）**——粘贴完成后编辑器里应从上到下依次是这 6 段，缺一段联动链就断：
 
 ```text
-function main() { ... }                 // 6.1 骨架：getFilter/buildQueryParams/refreshAll/初始化
+function main() { ... }                 // 6.1 骨架：getFilter/buildQueryParams/refreshAll(loading双保险)/初始化
+function execDdcat(modelId, qp) {...}   // 6.1：ddcat 数据源适配（API 废弃时只改这一处）
 function setDefaultDateRange(self) {..} // 2.4：日期默认近30天
-function refreshOverview(self, qp) {..} // 3.4：概览4指标
-function queryCircleData(self) {...}    // 4.3：趋势查询（拼 cicleType）
+function refreshOverview(self, qp) {..} // 3.4：概览4指标（返回 Promise）
+function queryCircleData(self) {...}    // 4.3：趋势查询（拼 cicleType，返回 Promise）
 function initTrendChart(qp) {...}       // 4.3：趋势渲染（echarts option）
 ```
 
@@ -672,7 +708,8 @@ function initTrendChart(qp) {...}       // 4.3：趋势渲染（echarts option�
 
 ```js
 function main() {
-  window.refreshAll(this);
+  const self = this;
+  window.refreshAll(self);
 }
 ```
 
@@ -680,13 +717,13 @@ function main() {
 
 ```js
 function main() {
-  var self = this;
+  const self = this;
   self.$$('site_select').$$setValue([]);      // 多选清空传空数组
   self.$$('vehicle_select').$$setValue('');
   self.$$('muck_select').$$setValue('');
-  // 运输时间恢复默认近 30 天
-  var end = moment().format('YYYY-MM-DD');
-  var start = moment().subtract(29, 'days').format('YYYY-MM-DD');
+  // 运输时间恢复默认近 30 天（moment() 为新建实例，直接 format 安全）
+  const end = moment().format('YYYY-MM-DD');
+  const start = moment().subtract(29, 'days').format('YYYY-MM-DD');
   self.$$('date_range').$$setValue([start, end]);
   window.circleTypeValue = 'day';
   setTimeout(function () { window.refreshAll(self); }, 100); // 等赋值生效再查
@@ -784,3 +821,24 @@ function main() {
 15. **复制卡片后组件 ID 是新的**：4 个数值文本必须逐个重新抄「唯一标识」，沿用第一张的 ID 是概览不刷新的头号原因。（→ §3.3）
 16. **下拉 value 绑错字段**：值字段必须是 `site_id`/`vehicle_num`/`muck_type`，绑成展示名传参全查空。（→ §2.3）
 17. **中文标点**：动作面板脚本里出现中文逗号/引号/分号直接语法报错，全程英文输入法。（→ §0.4）
+
+---
+
+## 脚本规范升级说明（2026-07-10）
+
+本手册 JS 层已按 `references/scripting/`（components-api-reference.md 等 6 份）+ SKILL.md「② JS 脚本规范」核心约束升级。**只动了 JS 代码块与相关说明文字；SQL、操作步骤、评分表、坑总表全部保持原样**。变更明细：
+
+| # | 变更 | 涉及位置 | 依据 |
+|---|---|---|---|
+| 1 | 所有脚本入口函数首行 `const self = this;`，后续统一用 self；全部 `var` 改 `const`/`let` | §2.4、§3.4、§4.2、§4.3、§5.4、§5.5、§5.7、§6.1、§6.2、§6.3（共 10 个 JS 块） | 核心约束 1：function 回调里 this 会变 |
+| 2 | `api.DATA_SOURCE_EXECUTE` 调用收拢进适配函数 `execDdcat(modelId, queryParams)`（§6.1 新增，紧跟 main 之后）；`refreshOverview`/`initTrendChart` 只调适配函数。**环境提示该 API 废弃时，只改 execDdcat 一处换成 `api.DATA_EXECUTOR()` 对应方法** | §3.4、§4.3、§6.1（组装结构 5 段 → 6 段） | SKILL.md「API 版本差异」：新版标废弃、存量环境仍可用，以目标环境实测为准 |
+| 3 | Promise 链统一 `.then().catch().finally()` 收口：`refreshOverview`/`queryCircleData`/`initTrendChart` 均返回 Promise；`refreshAll` 里开 `$message.loading` 句柄，`Promise.all(tasks).finally` 里关（双保险）；`initTrendChart` 新增 catch 兜底渲染「暂无数据」空态 | §3.4、§4.3、§6.1 | 核心约束 5：Promise 必须有 catch、耗时操作有 loading 管理 |
+| 4 | 列表 Hook 加纪律注释：只合并 `queryParams`/`condition.params`，绝不动 `param.paging`（pageIndex/pageSize），保证导出与查询条件一致；`reject()` 改为 `reject(err)` 透传错误 | §5.4 | list-scripts-guide Hook 分页规范 + §9 坑 4 |
+| 5 | 日期取值加注释说明：`moment(range[0])` / `moment()` 均为新建副本可直接 format；**若改用组件自身 moment 对象（如 currentTime）必须先 `.clone()`** | §2.4、§6.1、§6.3 | scripting 规范：moment 对象可变，共享实例须 clone |
+
+**未变部分（有意保留，不是漏改）**：
+- 概览空数据兜底 0/0.00（`fmtInt`/`fmtTon` + catch 兜底）逻辑原样保留——这是评分点保命符；
+- 文本组件赋值 `$$setValue` 保留（规范认可的文本组件赋值方式）；本手册无图表/看板组件 `data.props` 直改写法，故无需改 `self.$$m(id).props...`；
+- ECharts 走 `getElementById('..._csshandler_generate')` + `echarts.init` 的直接 DOM 操作保留（官方文档做法，规范升级不涉及）；
+- §4.3 注意事项里的 `window.addEventListener('resize', ...)` 加分项提示保留原文（一次性图表 resize，非组件事件监听场景）；
+- `cicleType` 参数名、`setOption(option, true)`、`setTimeout` 时序保护、双分页开关等全部业务逻辑与坑位提示未动。
