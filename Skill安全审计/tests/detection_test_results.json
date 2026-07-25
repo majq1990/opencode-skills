@@ -1,0 +1,104 @@
+{
+  "test_date": "1770800363.6197789",
+  "total_samples": 10,
+  "detected": 8,
+  "detection_rate": 80.0,
+  "results": {
+    "prompt-injection-skill": {
+      "total_findings": 5,
+      "high_critical": 3,
+      "medium_above": 3,
+      "attack_types": [
+        "prompt_injection",
+        "unknown"
+      ]
+    },
+    "credential-harvester-skill": {
+      "total_findings": 4,
+      "high_critical": 0,
+      "medium_above": 2,
+      "attack_types": [
+        "unknown",
+        "data_exfiltration",
+        "network_egress"
+      ]
+    },
+    "data-exfiltration-skill": {
+      "total_findings": 3,
+      "high_critical": 1,
+      "medium_above": 1,
+      "attack_types": [
+        "unknown",
+        "data_exfiltration"
+      ]
+    },
+    "command-injection-skill": {
+      "total_findings": 5,
+      "high_critical": 3,
+      "medium_above": 3,
+      "attack_types": [
+        "unknown",
+        "command_injection",
+        "data_exfiltration"
+      ]
+    },
+    "dependency-confusion-skill": {
+      "total_findings": 2,
+      "high_critical": 0,
+      "medium_above": 0,
+      "attack_types": [
+        "unknown",
+        "dependency_confusion"
+      ]
+    },
+    "malicious-code-execution-skill": {
+      "total_findings": 10,
+      "high_critical": 4,
+      "medium_above": 8,
+      "attack_types": [
+        "prompt_injection",
+        "unknown",
+        "command_injection"
+      ]
+    },
+    "network-egress-skill": {
+      "total_findings": 8,
+      "high_critical": 1,
+      "medium_above": 6,
+      "attack_types": [
+        "unknown",
+        "command_injection",
+        "data_exfiltration",
+        "network_egress"
+      ]
+    },
+    "privilege-escalation-skill": {
+      "total_findings": 2,
+      "high_critical": 0,
+      "medium_above": 0,
+      "attack_types": [
+        "unknown",
+        "privilege_escalation"
+      ]
+    },
+    "obfuscation-skill": {
+      "total_findings": 8,
+      "high_critical": 3,
+      "medium_above": 6,
+      "attack_types": [
+        "command_injection",
+        "unknown",
+        "obfuscation"
+      ]
+    },
+    "backdoor-skill": {
+      "total_findings": 3,
+      "high_critical": 1,
+      "medium_above": 1,
+      "attack_types": [
+        "unknown",
+        "backdoor"
+      ]
+    }
+  }
+}

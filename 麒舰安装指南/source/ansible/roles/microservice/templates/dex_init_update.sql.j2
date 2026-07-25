@@ -1,0 +1,23 @@
+-- 此文件应该放在 dex-db.tar 中，一键部署脚本中的文件为备份
+{% macro get_ip(host_info) %}
+{%- set master = host_info.hosts.master if host_info is defined and host_info.hosts is defined else None %}
+{%- set ip = hostvars[master]['ansible_ssh_host'] if master and master in hostvars and 'ansible_ssh_host' in hostvars[master] else '127.0.0.1'  %}
+{{ ip }}
+{%- endmacro -%}
+
+{%- set biz_db_ip = get_ip(ip_db_biz) %}
+
+-- 修改用户中心数据源ip端口
+UPDATE data_source SET url = 'jdbc:mysql://{{ biz_db_ip }}:3306/usercenter?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&autoReconnect=true&connectTimeout=60000&socketTimeout=3600000' WHERE name = '用户中心';
+UPDATE data_source SET user= 'root' WHERE name = '用户中心';
+UPDATE data_source SET password= '77507949502a2587656f53f102909ae0' WHERE name = '用户中心';
+
+-- 修改毕升数据源ip端口
+UPDATE data_source SET url = 'jdbc:mysql://{{ biz_db_ip }}:3306/becensus?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&autoReconnect=true&connectTimeout=60000&socketTimeout=3600000' WHERE name = '用户中心';
+UPDATE data_source SET user= 'root' WHERE name = '用户中心';
+UPDATE data_source SET password= '77507949502a2587656f53f102909ae0' WHERE name = '用户中心';
+
+-- 修改玄藏数据源ip端口
+UPDATE data_source SET url = 'jdbc:mysql://{{ biz_db_ip }}:3306/xuanzang?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&autoReconnect=true&connectTimeout=60000&socketTimeout=3600000' WHERE name = '用户中心';
+UPDATE data_source SET user= 'root' WHERE name = '用户中心';
+UPDATE data_source SET password= '77507949502a2587656f53f102909ae0' WHERE name = '用户中心';

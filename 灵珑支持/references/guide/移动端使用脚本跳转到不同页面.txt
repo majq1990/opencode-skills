@@ -1,0 +1,43 @@
+移动端使用脚本跳转到不同页面
+1 使用场景
+在移动端中，同一个列表展示不同的主体信息，当点击列表中的对应的卡片列时，跳转到不同的页面进行页面的展示，但是使用选择页面跳转只能够跳转到一个页面，无法根据列的内容进行跳转，使用脚本跳转即可解决这以问题。
+2 效果
+点击公民、法人、其他组织等能够跳转到对应的详情页面
+3 配置
+1.    新建移动端卡片列表，在卡片列表中选择卡片外框，切换到属性
+2.    对点击动作进行编写跳转脚本实现页面的跳转和传参
+function main(params) {
+    debugger
+    console.log(params)
+    var litigant_type_id = params.litigant_type_id.value
+    //1819318008167911424
+    if(litigant_type_id === "1"){
+        pageId = "1820358001925648384"
+    } else if (litigant_type_id === "2"){
+        pageId = "1819318008167911424"
+        //pageId = "a3ad3836-f44b-4876-828f-738fb0cf453f"
+    } else if (litigant_type_id === "3") {
+        pageId = "b0e66457-f4db-4cbc-903f-951ccf3fd387"
+    } else if (litigant_type_id === "4") {
+        pageId = "a3ad3836-f44b-4876-828f-738fb0cf453f"
+    }
+    // 使用vue router 跳转
+    
+    this.$router.push({
+        name: "page-preview",
+        query: {
+            title: "查看详情",
+            pageId: pageId,
+            id: parseInt(params.id.value),
+            showHeader: this.$route.query.showHeader,
+            pageTitle: "查看详情",
+            linkTitle:'查看详情',
+            showBackHeade: true,
+            isFromAction: 1,
+            _t: new Date().getTime() + ""
+        }
+    });
+
+}
+4 常见问题
+1.    使用路由打开的页面会没有返回按钮（为灵珑bug）

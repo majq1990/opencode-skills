@@ -1,0 +1,46 @@
+如何配置导航菜单、标签页角标
+背景概述
+以案卷 http://faq.egova.com.cn:7777/issues/349251 为背景，介绍如何配置导航菜单、标签页展示角标
+如何配置
+开启计数配置
+在导航菜单、标签页展示角标，首先需要开启计数配置（默认关闭），每个导航菜单、标签页需要单独配置
+导航配置部分，开启菜单计数配置，可设置计数样式、字体颜色、背景颜色
+示例地址：http://10.250.1.39:30095/magic/linglong/workspace.html#/baeb2a1f-1758-4a95-b856-be8e098d65d9/nav
+标签页部分
+示例地址：http://10.250.1.39:30095/magic/linglong/workspace.html#/baeb2a1f-1758-4a95-b856-be8e098d65d9/page-build/page/1768522881070792704
+配置角标数据源
+开启计数配置后，还需要为角标配置角标数据源，灵珑平台提供内置方法，用于设置角标数据，配置人员需要在角标数据需要变化时，通过灵珑动作配置，在组件生命周期、组件动作中使用自定义方法更新角标数据源
+内置方法说明
+灵珑api接口：
+PUBLISH_COUNTING_EVENT，主要用于更新导航菜单和标签页的角标显示
+$$setTabCounting，主要用户更新标签页的角标显示，该方法为标签页组件提供的方法，需要先使用  $$element获取标签页组件
+接口说明
+PUBLISH_COUNTING_EVENT(
+    self: 执行上下文,
+    {
+        type: "appMenu" | "tabs",
+        counting: 以键值对设置对应值（key 为导航菜单编号、标签页显示标题）
+    }
+)
+
+// appMenu：是指导航配置的导航方式
+// tabs：是指页面管理里的标签页方式
+/**
+ * 为标签页设置角标计数
+ * @param code 标签页显示标题
+ * @param value 计数值
+ */
+function $$setTabCounting(code: string, value: number | string) {
+    //
+}
+导航菜单编号
+标签页标题
+导航菜单角标配置示例
+示例地址
+http://10.250.1.39:30095/magic/linglong/static/vue2/pc/app.html?key=baeb2a1f-1758-4a95-b856-be8e098d65d9&devMode=2#/path6/path613?menuId=1768454194968133632
+最终效果
+首次进入系统，需要显示角标
+此处，通过挂载应用 js 资源，在初始化时执行，通过查询数据模型，获取对应的列表记录，调用角标赋值方法，完成初始化赋值
+在列表新增、删除内容后，需要更新角标值
+此处，在列表数据变化后，调用内置方法，更新角标值
+列表页面地址：http://10.250.1.39:30095/magic/linglong/workspace.html#/baeb2a1f-1758-4a95-b856-be8e098d65d9/page-build/page/1768454555002994688?isMobileMode=0

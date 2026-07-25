@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 图片预览</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; margin-top: 32px; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; }
+.trigger-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 20px; border-radius: 4px;
+  border: 1px solid #DDE1EB; background: #FFFFFF;
+  font-size: 14px; color: #223355; cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.trigger-btn:hover { border-color: #3388FF; background: #F0F9FF; color: #3388FF; }
+
+/* ===================== 图片预览遮罩层 ===================== */
+.z-image-viewer {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+.z-image-viewer.is-open { display: flex; }
+
+/* 蒙层 */
+.z-viewer-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* 左侧主区域 */
+.z-viewer-main {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 顶部信息 */
+.z-viewer-header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 24px 32px 0;
+}
+.z-viewer-uploader {
+  font-size: 14px;
+  font-weight: 500;
+  color: #FFFFFF;
+}
+.z-viewer-time {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+}
+
+/* 大图区域 */
+.z-viewer-stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.z-viewer-img {
+  width: 1072px;
+  height: 724px;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 2px;
+  transition: transform 0.2s ease;
+  user-select: none;
+  /* 演示用渐变占位 */
+  background: linear-gradient(135deg, #2A3F6F 0%, #1a2a4a 50%, #2A3F6F 100%);
+  position: relative;
+}
+
+/* 演示图片占位内容 */
+.z-viewer-img-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: rgba(255,255,255,0.3);
+  font-size: 13px;
+  pointer-events: none;
+}
+.z-viewer-img-placeholder svg {
+  opacity: 0.3;
+}
+
+/* 左右切换按钮 */
+.z-viewer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  transition: background 0.15s;
+  z-index: 10;
+}
+.z-viewer-nav:hover { background: rgba(0, 0, 0, 0.65); }
+.z-viewer-nav.is-prev { left: 24px; }
+.z-viewer-nav.is-next { right: 24px; }
+
+/* 底部工具栏 */
+.z-viewer-toolbar {
+  position: absolute;
+  top: 1080px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 522px;
+  height: 48px;
+  padding: 0 16px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.z-toolbar-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.z-toolbar-btn:hover { background: rgba(255,255,255,0.12); color: #FFFFFF; }
+.z-toolbar-btn:disabled { color: rgba(255,255,255,0.25); cursor: not-allowed; }
+.z-toolbar-btn:disabled:hover { background: transparent; }
+
+.z-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255,255,255,0.2);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.z-toolbar-counter {
+  font-size: 13px;
+  color: rgba(255,255,255,0.8);
+  padding: 0 4px;
+  min-width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* ===================== 抽屉 Tab ===================== */
+.z-drawer-tabs {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 0;
+}
+.z-drawer-tab {
+  position: relative;
+  height: 44px;
+  padding: 0 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: rgba(255,255,255,0.4);
+  cursor: pointer; border: none; background: transparent;
+  transition: color .15s;
+  white-space: nowrap;
+}
+.z-drawer-tab:hover { color: rgba(255,255,255,0.7); }
+.z-drawer-tab.is-active { color: #FFFFFF; font-weight: 500; }
+.z-drawer-tab span { position: relative; display: inline-block; }
+.z-drawer-tab::after {
+  content: '';
+  position: absolute;
+  left: 12px; right: 12px; bottom: -1px;
+  height: 2px;
+  background: transparent;
+  border-radius: 1px;
+  transition: background .15s;
+}
+.z-drawer-tab.is-active::after {
+  background: #FFFFFF;
+}.z-viewer-drawer {
+  position: relative;
+  z-index: 10;
+  width: 392px;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.6);
+  overflow-y: auto;
+  padding: 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.z-viewer-drawer::-webkit-scrollbar { width: 4px; }
+.z-viewer-drawer::-webkit-scrollbar-track { background: transparent; }
+.z-viewer-drawer::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+.z-viewer-drawer-title {
+  font-size: 13px;
+  color: #FFFFFF;
+  margin-bottom: 4px;
+}
+
+.z-thumb-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 112px);
+  gap: 8px;
+}
+
+.z-thumb-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 112px;
+}
+
+.z-thumb-name {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s;
+}
+.z-thumb-wrap.is-active .z-thumb-name { color: #3388FF; }
+
+.z-drawer-download-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  align-self: flex-start;
+  height: 32px; padding: 0 16px; border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.3); background: transparent;
+  font-size: 13px; color: rgba(255,255,255,0.8); cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+  white-space: nowrap;
+}
+.z-drawer-download-btn:hover { border-color: #3388FF; background: rgba(51,136,255,0.12); color: #3388FF; }
+
+.z-thumb-item {
+  width: 112px;
+  height: 112px;
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0.4;
+  border: 2px solid transparent;
+  transition: opacity 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+  position: relative;
+}
+.z-thumb-item:hover { opacity: 0.7; }
+.z-thumb-item.is-active {
+  opacity: 1;
+  border-color: #3388FF;
+}
+
+.z-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* 缩略图演示占位 */
+.z-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  background: linear-gradient(135deg, #2A3F6F, #1a2a4a);
+}
+
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 图片预览 ImageViewer</h1>
+<p class="page-desc">全屏蒙层预览，支持切换、缩放、旋转、下载等操作，右侧抽屉显示缩略图列表</p>
+
+<h2>触发预览</h2>
+<div class="section">
+  <div style="display:flex;gap:12px;">
+    <button class="trigger-btn" onclick="openViewer(false)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+        <circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
+      单组图片预览
+    </button>
+    <button class="trigger-btn" onclick="openViewer(true)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+        <circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
+      多组图片预览
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================
+     图片预览层
+============================================================ -->
+<div class="z-image-viewer" id="imageViewer">
+  <div class="z-viewer-mask" onclick="closeViewer()"></div>
+
+  <!-- 左侧主区域 -->
+  <div class="z-viewer-main">
+
+    <!-- 顶部信息 -->
+    <div class="z-viewer-header">
+      <span class="z-viewer-uploader">上传人：章小蕙&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;上传时间：2026-05-19 14:32:34</span>
+    </div>
+
+    <!-- 大图 -->
+    <div class="z-viewer-stage">
+      <!-- 左切换 -->
+      <button class="z-viewer-nav is-prev" onclick="switchImage(-1)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8l5 5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- 大图占位 -->
+      <div id="mainImg" style="width:1072px;height:724px;max-width:calc(100% - 120px);max-height:calc(100% - 40px);border-radius:2px;overflow:hidden;position:relative;transition:transform 0.2s ease;">
+        <div class="z-thumb-placeholder" style="width:100%;height:100%;font-size:16px;color:rgba(255,255,255,0.4);">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <rect x="4" y="8" width="40" height="32" rx="3" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+              <circle cx="16" cy="20" r="4" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+              <path d="M4 32l10-8 8 6 8-10 14 10" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+            <span id="mainImgLabel" style="font-size:14px;">图片 1 / 4 &nbsp;·&nbsp; 1072 × 724 px</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右切换 -->
+      <button class="z-viewer-nav is-next" onclick="switchImage(1)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M6 3l5 5-5 5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- 底部工具栏 -->
+    <div class="z-viewer-toolbar">
+
+      <!-- 1:1 -->
+      <button class="z-toolbar-btn" title="1:1 显示" onclick="resetTransform()">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <rect x="2" y="2" width="5" height="5" rx="0.8" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="11" y="2" width="5" height="5" rx="0.8" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="2" y="11" width="5" height="5" rx="0.8" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="11" y="11" width="5" height="5" rx="0.8" stroke="currentColor" stroke-width="1.3"/>
+        </svg>
+      </button>
+
+      <!-- 缩小 -->
+      <button class="z-toolbar-btn" title="缩小" onclick="zoom(-0.2)">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M5.5 8h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <path d="M12.5 12.5L16 16" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <!-- 放大 -->
+      <button class="z-toolbar-btn" title="放大" onclick="zoom(0.2)">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M8 5.5v5M5.5 8h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <path d="M12.5 12.5L16 16" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <!-- 全屏 -->
+      <button class="z-toolbar-btn" title="全屏">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M2 6V2h4M12 2h4v4M16 12v4h-4M6 16H2v-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="z-toolbar-divider"></div>
+
+      <!-- 上一张 -->
+      <button class="z-toolbar-btn" title="上一张" onclick="switchImage(-1)">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- 计数 -->
+      <span class="z-toolbar-counter" id="toolbarCounter">1 / 4</span>
+
+      <!-- 下一张 -->
+      <button class="z-toolbar-btn" title="下一张" onclick="switchImage(1)">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M7 4l5 5-5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="z-toolbar-divider"></div>
+
+      <!-- 向左旋转 -->
+      <button class="z-toolbar-btn" title="向左旋转" onclick="rotate(-90)">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M3.5 9A5.5 5.5 0 1 1 9 14.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <path d="M3.5 5.5V9H7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- 向右旋转 -->
+      <button class="z-toolbar-btn" title="向右旋转" onclick="rotate(90)">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M14.5 9A5.5 5.5 0 1 0 9 14.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <path d="M14.5 5.5V9H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="z-toolbar-divider"></div>
+
+      <!-- 编辑 -->
+      <button class="z-toolbar-btn" title="编辑">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M12.5 2.5l3 3L5 16H2v-3L12.5 2.5z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- 下载 -->
+      <button class="z-toolbar-btn" title="下载">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M9 2v10M5.5 8.5L9 12l3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 14h14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <!-- 更多 -->
+      <button class="z-toolbar-btn" title="更多">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <circle cx="4" cy="9" r="1.2" fill="currentColor"/>
+          <circle cx="9" cy="9" r="1.2" fill="currentColor"/>
+          <circle cx="14" cy="9" r="1.2" fill="currentColor"/>
+        </svg>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- 右侧抽屉 -->
+  <div class="z-viewer-drawer">
+    <!-- 单组：标题 + 信息图标 + 关闭 -->
+    <div id="drawerHeaderSingle" style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="z-viewer-drawer-title" id="drawerTitle">全部图片（4）</div>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button style="width:28px;height:28px;border-radius:4px;border:none;background:transparent;color:rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;cursor:pointer;" onmouseenter="this.style.color='#fff'" onmouseleave="this.style.color='rgba(255,255,255,0.5)'">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/>
+            <rect x="7.2" y="7" width="1.6" height="4.5" rx="0.8" fill="currentColor"/>
+            <circle cx="8" cy="5" r="0.9" fill="currentColor"/>
+          </svg>
+        </button>
+        <button onclick="closeViewer()" style="width:28px;height:28px;border-radius:4px;border:none;background:transparent;color:rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;cursor:pointer;" onmouseenter="this.style.color='#fff'" onmouseleave="this.style.color='rgba(255,255,255,0.5)'">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <!-- 多组：Tab + 信息图标 + 关闭同行 -->
+    <div id="drawerHeaderMulti" style="display:none;align-items:flex-end;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.2);margin:0 -20px;padding:0 20px;">
+      <div class="z-drawer-tabs" id="drawerTabs">
+        <button class="z-drawer-tab is-active" onclick="switchTab(0)"><span>第一组图片</span></button>
+        <button class="z-drawer-tab" onclick="switchTab(1)"><span>第二组图片</span></button>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;flex-shrink:0;">
+        <button style="width:28px;height:28px;border-radius:4px;border:none;background:transparent;color:rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,color .15s;" onmouseenter="this.style.color='#fff'" onmouseleave="this.style.color='rgba(255,255,255,0.5)'">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/>
+            <rect x="7.2" y="7" width="1.6" height="4.5" rx="0.8" fill="currentColor"/>
+            <circle cx="8" cy="5" r="0.9" fill="currentColor"/>
+          </svg>
+        </button>
+        <button onclick="closeViewer()" style="width:28px;height:28px;border-radius:4px;border:none;background:transparent;color:rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,color .15s;" onmouseenter="this.style.color='#fff'" onmouseleave="this.style.color='rgba(255,255,255,0.5)'">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="z-thumb-grid" id="thumbGrid"></div>
+  </div>
+
+</div>
+
+<script>
+let currentIndex = 0;
+let currentScale = 1;
+let currentRotation = 0;
+let currentTab = 0;
+
+const groups = [
+  [
+    { label: '图片 1', name: '产品外观图_01.jpg' },
+    { label: '图片 2', name: '产品外观图_02.jpg' },
+    { label: '图片 3', name: '产品外观图_03.jpg' },
+    { label: '图片 4', name: '产品外观图_04.jpg' },
+  ],
+  [
+    { label: '图片 5', name: '使用场景图_01.jpg' },
+    { label: '图片 6', name: '使用场景图_02.jpg' },
+    { label: '图片 7', name: '使用场景图_03.jpg' },
+  ]
+];
+
+let isMultiGroup = false;
+
+function currentGroup() {
+  return isMultiGroup ? groups[currentTab] : groups[0];
+}
+
+function openViewer(multiGroup) {
+  isMultiGroup = !!multiGroup;
+  currentTab = 0;
+  currentIndex = 0;
+  document.getElementById('drawerHeaderSingle').style.display = isMultiGroup ? 'none' : 'flex';
+  document.getElementById('drawerHeaderMulti').style.display = isMultiGroup ? 'flex' : 'none';
+  renderThumbs();
+  updateViewer();
+  document.getElementById('imageViewer').classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeViewer() {
+  document.getElementById('imageViewer').classList.remove('is-open');
+  document.body.style.overflow = '';
+  resetTransform();
+}
+
+function switchTab(tabIndex) {
+  currentTab = tabIndex;
+  currentIndex = 0;
+  document.querySelectorAll('.z-drawer-tab').forEach((t, i) => t.classList.toggle('is-active', i === tabIndex));
+  renderThumbs();
+  updateViewer();
+}
+
+function renderThumbs() {
+  const group = currentGroup();
+  const grid = document.getElementById('thumbGrid');
+  grid.innerHTML = group.map((img, i) => `
+    <div class="z-thumb-wrap${i === currentIndex ? ' is-active' : ''}" onclick="selectThumb(${i})">
+      <div class="z-thumb-item${i === currentIndex ? ' is-active' : ''}">
+        <div class="z-thumb-placeholder">${img.label}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function switchImage(dir) {
+  const group = currentGroup();
+  currentIndex = (currentIndex + dir + group.length) % group.length;
+  renderThumbs();
+  updateViewer();
+}
+
+function selectThumb(index) {
+  currentIndex = index;
+  renderThumbs();
+  updateViewer();
+}
+
+function updateViewer() {
+  resetTransform();
+  const group = currentGroup();
+  document.getElementById('toolbarCounter').textContent = (currentIndex + 1) + ' / ' + group.length;
+  document.getElementById('mainImgLabel').textContent = group[currentIndex].label + '  ·  1072 × 724 px';
+}
+
+function applyTransform() {
+  document.getElementById('mainImg').style.transform =
+    'scale(' + currentScale + ') rotate(' + currentRotation + 'deg)';
+}
+
+function zoom(delta) {
+  currentScale = Math.min(3, Math.max(0.2, currentScale + delta));
+  applyTransform();
+}
+
+function rotate(deg) {
+  currentRotation += deg;
+  applyTransform();
+}
+
+function resetTransform() {
+  currentScale = 1;
+  currentRotation = 0;
+  applyTransform();
+}
+
+document.addEventListener('keydown', function(e) {
+  const viewer = document.getElementById('imageViewer');
+  if (!viewer.classList.contains('is-open')) return;
+  if (e.key === 'Escape') closeViewer();
+  if (e.key === 'ArrowLeft') switchImage(-1);
+  if (e.key === 'ArrowRight') switchImage(1);
+});
+</script>
+
+</body>
+</html>

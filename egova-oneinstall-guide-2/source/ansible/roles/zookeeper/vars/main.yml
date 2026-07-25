@@ -1,0 +1,17 @@
+---
+# variables for install
+src_path: "{{ src_env_package_path }}/zookeeper"
+deploy_path: /egova
+
+# variables for zk
+zookeeper_version: 3.9.3
+log_path: "{{ log_root_dir }}/zookeeper"
+port: 2182
+# 默认变量，暂不支持配置
+zk_data_path: "{{ data_root_dir }}/zookeeper"
+
+# 授权
+zk_user: egova
+zk_password: q3tTqs_m5aGy_A_
+# digest: egova:5EKOpn+iKC+GcPC52dYhubSNjnE=
+# 通过 echo -n "egova:q3tTqs_m5aGy_A_" | openssl dgst -binary -sha1 | openssl base64 生成

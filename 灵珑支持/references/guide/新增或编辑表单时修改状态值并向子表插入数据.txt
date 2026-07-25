@@ -1,0 +1,55 @@
+新增或编辑表单时修改状态值并向子表插入数据
+1 使用场景
+新增或编辑表单数据时，可在表单按钮上修改状态值并向子表插入一条数据。
+2 效果
+3 配置
+1、在页面上增加一个顶部操作按钮，并绑定动作
+function main() {
+    let self = this;
+    var userInfo = JSON.parse(window.localStorage.getItem("linglong:user"));
+    var departmentId = userInfo.user.departmentId
+    var departmentName = userInfo.user.departmentName
+    var username = userInfo.user.name
+    let formPartEle = self.$$element("form_part_4yhnt8");
+    var renderEle = formPartEle.$$getRenderElement();
+    if (renderEle) {
+        // 修改状态为已提交
+        var state = this.$$("builtin_field_4krwvh");
+        state.$$setValue(4);
+        // 提示已受理
+        // alert('已受理');
+        let pageRenderElement = self.$$getRouteView();
+        renderEle.$$validateData().then(vRes => {
+            if (!(vRes && vRes.success)) {
+                return;
+            }
+            renderEle.$$saveData(true).then((res) => {
+                if (res && res.result) {
+                    renderEle.$message.success("已重复");
+                    let id = res.result.documentNo;
+                    api.EXEC_FORMULA(`INSERT('t_81aa08b8ddaa4f9e837bd53a488607c2-73cc', ['id', UUID(),'documentNo','${id}','create_human_name','${username}','create_time',NOW(),'role','${departmentName}','role_id','${departmentId}','process_code',2,'process_name','扫黑办','operate_type_name','重复'])`).then(() => {
+                        // generateSerialNumber(id, self);
+                        // self.$message.success("已重复");
+                        window["isSave"] = "save";
+                        pageRenderElement.goHistory(-1);
+                    }).catch(err => {
+                        self.$message.error(err.message); // 显示错误提示信息
+                    });
+
+                } else {
+                    renderEle.$message.error("数据提交失败");
+                }
+            });
+        });
+    }
+}
+function IsJsonString(str) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true
+}
+4 常见问题
+无

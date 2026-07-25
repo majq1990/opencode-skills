@@ -1,0 +1,49 @@
+{
+  "skill_name": "egova-eurbanpro-thirdparty-troubleshooting",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "第三方调公钥接口一直 404，地址是 https://现场域名/v22-api/oauth/extras/openapi/pubkey。我们已经把 clientId 给对方了，你先别讲完整接入方案，直接按排障顺序告诉我先查什么。",
+      "expected_output": "应识别为地址/网络排障，先给真实地址与 v22-api 误拼的前置核查，再给最小排查动作，并引用 precheck 与 common-issues。",
+      "files": [],
+      "expectations": [
+        "回答开头先给 2-4 条默认前置核查，而不是直接展开接口手册",
+        "回答会明确指出现场真实地址与误带 v22-api 是 404 高发原因",
+        "回答会引用 references/precheck-and-selftest.md 或 references/common-issues.md"
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "现在 token 接口返回‘用户名或密码不正确’，第三方说他们 clientId 和 secret 都是照着抄的。我们现场怀疑是代理人配置有问题，你先按排障顺序给我最小核查项，再告诉我该查哪张表。",
+      "expected_output": "应识别为 token/代理人排障，先查代理人账号、脏字符、登录账号与配置刷新，再引到认证与配置表 reference。",
+      "files": [],
+      "expectations": [
+        "回答会先给代理人、凭证、clear-sys-config 相关前置核查",
+        "回答会明确区分登录账号与人员名称",
+        "回答会引用 references/precheck-and-selftest.md、references/auth-apis.md 或 references/config-tables-and-checks.md"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "案件已经走到派遣节点了，但 api_message_send 和 api_message_send_his 都没记录。我们想知道先查开关、local_flag、触发表还是先看 wf_act_inst，你按最小排障顺序给我。",
+      "expected_output": "应识别为流程/采集排障，先给采集链路前置核查，再给 wf_act_inst、采集表、触发表的最小排查顺序。",
+      "files": [],
+      "expectations": [
+        "回答会先列出 local_flag、OPEN_ACTION_TRIGGER_FLAG、目标节点命中等前置核查",
+        "回答会明确提到 wf_act_inst、api_message_send、api_message_send_his",
+        "回答会引用 references/precheck-and-selftest.md 或 references/config-tables-and-checks.md"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "我给你一个 action 和 JSON，你帮我看为什么接口不过。action 写的是 4.22，JSON 里字段倒是都带了，但我们现场怀疑文档本身有冲突。请按定向诊断方式输出。",
+      "expected_output": "应先给最小前置核查，再进入字段级诊断，并在命中 4.22 时明确提示‘需现场确认’。",
+      "files": [],
+      "expectations": [
+        "回答会保留定向诊断格式，而不是退回泛泛排障",
+        "回答会在问题清单前加入默认前置核查",
+        "回答会明确写出 4.22 命中文档冲突，需现场确认"
+      ]
+    }
+  ]
+}

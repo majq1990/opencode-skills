@@ -1,0 +1,40 @@
+{
+  "with_skill": {
+    "expectations": [
+      {
+        "text": "明确属于接入准备问题",
+        "passed": true,
+        "evidence": "分流建议中明确写'这部分属于接入准备与方案决策'"
+      },
+      {
+        "text": "提示切换 preparation-guide",
+        "passed": true,
+        "evidence": "明确写'建议切换到 preparation-guide skill'，并列出该skill覆盖的内容"
+      },
+      {
+        "text": "不展开 API 参数细节",
+        "passed": false,
+        "evidence": "虽然进行了分流，但仍展开了命中接口路径、最小必要字段（client_id/client_secret/grant_type/uid）和关键约束（认证链路顺序、AK/SK签名机制等）等API参数细节"
+      }
+    ]
+  },
+  "old_skill": {
+    "expectations": [
+      {
+        "text": "明确属于接入准备问题",
+        "passed": true,
+        "evidence": "明确写'您询问的「联调前需要准备什么材料和账号」属于总体接入方案设计和前置配置范畴'"
+      },
+      {
+        "text": "提示切换 preparation-guide",
+        "passed": true,
+        "evidence": "明确写'建议您使用 preparation-guide（第三方对接前置指南）skill'"
+      },
+      {
+        "text": "不展开 API 参数细节",
+        "passed": true,
+        "evidence": "未展开任何API参数细节，仅说明本skill的范围局限并引导用户切换到preparation-guide"
+      }
+    ]
+  }
+}

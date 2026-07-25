@@ -1,0 +1,72 @@
+# Properties file with JDBC-related settings.
+# eUrbanV14 standard database
+
+# MySQL port 3306
+# MySQL-Proxy port 3307
+
+#if encode jdbc username and password
+jdbc.encrypt=false
+
+{% for depend in service[app_type][app_name].depends %}
+{% if depend.type == 'mysql' %}
+{%- set db_prefix = 'cetus' if 'cetus' in depend.depend_key else 'mysql' %}
+#MySQL
+{% if depend.sub_type == 'biz' %}
+{% if depend.jdbc_type == 'default' %}
+biz.jdbc.url=jdbc:mysql://{{ vars[db_prefix][depend.depend_key].ip }}:{{ vars[db_prefix][depend.depend_key].port }}/{{ depend.database }}?useUnicode=true&characterEncoding=utf8&connectTimeout=10000&socketTimeout=600000&allowPublicKeyRetrieval=true
+biz.jdbc.driverClassName={{ mysql_datasource_driver }}
+biz.jdbc.username={{ vars[db_prefix][depend.depend_key].username }}
+biz.jdbc.cryptogram={{ vars[db_prefix][depend.depend_key].password }}
+biz.jdbc.validation.query=select now()
+{% endif %}
+{% if depend.jdbc_type == 'mms' %}
+# stat can set different stat.jdbc.url for separation of business
+#mms can set different mms.jdbc.url for separation of business
+mms.jdbc.url=jdbc:mysql://{{ vars[db_prefix][depend.depend_key].ip }}:{{ vars[db_prefix][depend.depend_key].port }}/{{ depend.database }}?useUnicode=true&characterEncoding=utf-8&connectTimeout=10000&socketTimeout=600000&allowPublicKeyRetrieval=true
+mms.jdbc.driverClassName={{ mysql_datasource_driver }}
+mms.jdbc.username={{ vars[db_prefix][depend.depend_key].username }}
+mms.jdbc.cryptogram={{ vars[db_prefix][depend.depend_key].password }}
+mms.jdbc.validation.query=select now()
+{% endif %}
+{% if depend.jdbc_type == 'gis' %}
+jdbc.driverClassName={{ mysql_datasource_driver }}
+jdbc.url=jdbc:mysql://{{ vars[db_prefix][depend.depend_key].ip }}:{{ vars[db_prefix][depend.depend_key].port }}/{{ depend.database }}?characterEncoding=utf-8&connectTimeout=10000&socketTimeout=600000&allowPublicKeyRetrieval=true
+jdbc.username={{ vars[db_prefix][depend.depend_key].username }}
+jdbc.cryptogram={{ vars[db_prefix][depend.depend_key].password }}
+jdbc.version=MYSQLV14
+jdbc.validationQuery=select now()
+{% endif %}
+{% if depend.jdbc_type == 'public' %}
+biz.jdbc.url=jdbc:mysql://{{ vars[db_prefix][depend.depend_key].ip }}:{{ vars[db_prefix][depend.depend_key].port }}/{{ depend.database }}?useUnicode=true&characterEncoding=utf8&connectTimeout=10000&socketTimeout=600000&allowPublicKeyRetrieval=true
+biz.jdbc.driverClassName={{ mysql_datasource_driver }}
+biz.jdbc.username={{ vars[db_prefix][depend.depend_key].username }}
+biz.jdbc.password={{ vars[db_prefix][depend.depend_key].password }}
+biz.jdbc.validation.query=select now()
+{% endif %}
+{% endif %}
+{% if depend.sub_type == 'stat' %}
+# stat can set different stat.jdbc.url for separation of business
+stat.jdbc.url=jdbc:mysql://{{ vars[db_prefix][depend.depend_key].ip }}:{{ vars[db_prefix][depend.depend_key].port }}/{{ depend.database }}?useUnicode=true&characterEncoding=utf8&connectTimeout=10000&socketTimeout=600000&allowPublicKeyRetrieval=true
+stat.jdbc.driverClassName={{ mysql_datasource_driver }}
+stat.jdbc.username={{ vars[db_prefix][depend.depend_key].username }}
+stat.jdbc.cryptogram={{ vars[db_prefix][depend.depend_key].password }}
+stat.jdbc.validation.query=select now()
+{% endif %}
+{% endif %}
+{% if depend.type == 'postgresql' %}
+#PG
+geo.jdbc.driverClassName ={{ pg_datasource_driver }}
+geo.jdbc.url = jdbc:postgresql://{{ postgresql[depend.depend_key].ip }}:{{ postgresql[depend.depend_key].port }}/{{ depend.database }}?characterEncoding=utf8
+geo.jdbc.username={{ postgresql[depend.depend_key].username }}
+geo.jdbc.cryptogram={{ postgresql[depend.depend_key].password }}
+geo.jdbc.validationQuery = select 1
+{% endif %}
+{% if depend.type == 'TDengine' and app_type not in ['eUrbanMIS','eUrbanMF','eUrbanUMA','eUrbanSG'] %}
+#TDengine
+td.driverClassName={{ td_datasource_driver }}
+td.url=jdbc:TAOS-RS://{{ TDengine[depend.depend_key].ip }}:{{ TDengine[depend.depend_key].port }}/{{ depend.database }}?charset=UTF-8
+td.username={{ TDengine[depend.depend_key].username }}
+td.cryptogram={{ TDengine[depend.depend_key].password }}
+td.validationQuery=select server_status()
+{% endif %}
+{% endfor %}

@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  tdengine:
+    image: tdengine/tsdb:{{ td_version }}
+    container_name: {{ container_name }}
+    restart: unless-stopped
+    environment:
+      - TAOS_ROOT_PASSWORD={{ init_password }}
+      - TAOS_DISABLE_KEEPER=1     # 禁用 taoskeeper
+      - TAOS_DISABLE_EXPLORER=1   # 禁用 taos-explorer
+    volumes:
+      - {{ data_dir }}:/var/lib/taos                     # 数据目录
+      - {{ log_dir }}:/var/log/taos # 日志目录
+      - {{ deploy_path }}/init-sql:/docker-entrypoint-initdb.d   # 初始化SQL目录
+      - {{deploy_path}}/config/taos.cfg:/etc/taos/taos.cfg
+    ports:
+      - "6030:6030"   # taosd native port
+      - "6041:6041"   # taosadapter REST API / WebSocket
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"

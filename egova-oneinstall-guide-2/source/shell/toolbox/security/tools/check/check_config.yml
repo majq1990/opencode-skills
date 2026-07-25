@@ -1,0 +1,25 @@
+checks:
+  - name: "网格化核心库"
+    script: "check_cgdb.sh"
+    display: true
+  - name: "毕升"
+    script: "check_bisheng.sh"
+    display: true
+  - name: "星桥"
+    script: "check_dex.sh"
+    display: true
+  - name: "灵珑"
+    script: "check_linglong.sh"
+    display: true
+  - name: "市民通"
+    script: "check_smt.sh"
+    display: true
+  - name: "悟空"
+    script: "check_wukong.sh"
+    display: true
+  - name: "执法"
+    script: "check_law.sh"
+    display: true
+  - name: "用户中心"
+    script: "check_usercenter.sh"
+    display: true

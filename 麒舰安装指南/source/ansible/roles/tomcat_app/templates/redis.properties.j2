@@ -1,0 +1,32 @@
+{% for depend in service[app_type][app_name].depends %}
+{% if depend.type == 'redis' %}
+#if encode redis password
+redis.encrypt=false
+
+redis.host.name={{ redis[depend.depend_key].ip }}
+redis.port={{ redis[depend.depend_key].port }}
+redis.auth={{ redis[depend.depend_key].password }}
+
+redis.maxTotal=2000
+redis.maxIdle=2000
+redis.maxWait=1000
+redis.testOnBorrow=false
+redis.testOnReturn=false
+
+{% if app_type == 'IMserver' %}
+redis.namespace=egovaimserver
+{% else %}
+redis.namespace=egova
+{% endif %}
+
+# redis cluster
+redis.cluster.enable=false
+spring.redis.cluster.nodes=127.0.0.1:6380,127.0.0.1:6381,127.0.0.1:6382,127.0.0.1:6383,127.0.0.1:6384,127.0.0.1:6385
+spring.redis.cluster.max-redirects=3
+
+{% if app_type == 'IMserver' %}
+redis.enable=false
+{% endif %}
+
+{% endif %}
+{% endfor %}

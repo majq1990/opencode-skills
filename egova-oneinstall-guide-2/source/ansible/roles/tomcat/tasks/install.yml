@@ -1,0 +1,56 @@
+---
+# 安装tomcat
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 输出应用名称和端口
+  debug:
+    msg: "输出app_type_suffix: {{ app_type_suffix }} , app_port: {{ app_port }}"
+
+- name: Install required packages
+  package:
+    name: "{{ tomcat_packages[ansible_distribution] }}"
+    state: present
+  when: ansible_distribution in ['openEuler', 'kylin_arm','kylin_x86','Ubuntu','CentOS','UOS','uos_x86','uos_arm','anolis_x86','anolis_arm']
+
+- name: 创建{{ dest_path }}目录
+  file:
+    path: "{{ dest_path }}"
+    state: directory
+    mode: '0755'
+
+- name: 解压tomcat压缩包
+  unarchive:
+    src: "{{ src_path }}/apache-tomcat-{{ tomcat_version }}.tar.gz"
+    dest: "{{ dest_path }}"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    mode: '0755'
+
+- name: 重命名tomcat
+  shell: |
+    cd {{ dest_path }}
+    mv  apache-tomcat-{{ tomcat_version }} apache-tomcat-{{ tomcat_suffix }}
+
+- name: 创建软链接并授权
+  file:
+    src: "{{ dest_path }}/apache-tomcat-{{ tomcat_suffix }}"
+    dest: "{{ link_path }}"
+    state: link
+    force: yes
+
+- name: 授权用户组
+  file:
+    path: "{{ item }}"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    recurse: yes
+  with_items:
+    - "{{ link_path }}/"
+    - "{{ dest_path }}/apache-tomcat-{{ tomcat_suffix }}/"
+
+
+
+

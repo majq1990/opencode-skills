@@ -1,0 +1,33 @@
+version: "3.8"
+
+# 只复用一个 Neo4j 实例作为统一图存储。
+# 当前本机已运行容器 neo4j-kg（手动 docker run 的，密码 neo4j123）。
+# 如果该容器还在跑：不要再 `docker compose up`，会端口冲突。
+# 如果想用 compose 接管，请先 `docker rm -f neo4j-kg`，再 `docker compose up -d`。
+
+services:
+  neo4j:
+    image: neo4j:5.26
+    container_name: kg-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/neo4j123
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512m
+    volumes:
+      - kg-neo4j-data:/data
+      - kg-neo4j-logs:/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  kg-neo4j-data:
+  kg-neo4j-logs:

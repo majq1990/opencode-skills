@@ -1,0 +1,49 @@
+---
+# default vars for mysql, TODO: 单节点部署多个mysql，目录需区分，可考虑在目录名加上端口号后缀
+password: "{{ common_password }}"
+data_dir: /egova/db/mysql
+temp_dir: /egova/db/.mysql_temp
+log_dir: /egova/log/mysql
+apparmor_mysqld_file: /etc/apparmor.d/usr.sbin.mysqld
+ncat_port: "33061"
+
+# deploy path
+src_path: "{{ src_env_package_path }}/mysql"
+dest_path: "{{ dest_package_root_path }}/mysql"
+
+mysql_version: 8.0.35
+
+mysql_packages:
+  Ubuntu:
+    - mysql-server
+  kylin_arm:
+    - mysql-community-server
+    - mysql-community-client
+  CentOS:
+    - mysql-community-server
+    - mysql-community-client
+  openEuler:
+    - mysql
+    - mysql-server
+    - mysql-common
+  kylin_x86:
+    - mysql-community-server
+    - mysql-community-client
+  UOS:
+    - mysql-community-server
+    - mysql-community-client
+  uos_x86:
+    - mysql-community-server
+    - mysql-community-client
+  uos_arm:
+    - mysql-community-server
+    - mysql-community-client
+  anolis_x86:
+    - mysql-community-server
+    - mysql-community-client
+  anolis_arm:
+    - mysql-community-server
+    - mysql-community-client
+  Anolis:
+    - mysql-community-server
+    - mysql-community-client

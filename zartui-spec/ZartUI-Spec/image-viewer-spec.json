@@ -1,0 +1,184 @@
+{
+  "name": "image-viewer-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 图片预览规范，全屏蒙层覆盖，支持切换、缩放、旋转、下载等操作，右侧抽屉显示缩略图列表，支持单组与多组模式",
+
+  "overlay": {
+    "position": "fixed",
+    "inset": "0",
+    "background": "rgba(0, 0, 0, 0.6)",
+    "z_index": 2000
+  },
+
+  "main_area": {
+    "description": "左侧主区域，flex: 1，纵向排列",
+    "layout": "flex-direction: column",
+
+    "header": {
+      "padding": "24px 32px 0",
+      "uploader_text": {
+        "font_size": "14px",
+        "font_weight": "500",
+        "color": "#FFFFFF",
+        "format": "上传人：{name}　　　　　上传时间：{datetime}"
+      }
+    },
+
+    "image_stage": {
+      "width": "1072px",
+      "height": "724px",
+      "max_width": "calc(100% - 120px)",
+      "max_height": "calc(100% - 40px)",
+      "object_fit": "contain",
+      "border_radius": "2px",
+      "transition": "transform 0.2s ease"
+    },
+
+    "nav_buttons": {
+      "size": "32px",
+      "shape": "圆形",
+      "background": "rgba(0, 0, 0, 0.4)",
+      "background_hover": "rgba(0, 0, 0, 0.65)",
+      "icon_color": "#FFFFFF",
+      "position_prev": "left: 24px，垂直居中",
+      "position_next": "right: 24px，垂直居中"
+    },
+
+    "toolbar": {
+      "width": "522px",
+      "height": "48px",
+      "padding": "0 16px",
+      "background": "rgba(0, 0, 0, 0.6)",
+      "border_radius": "4px",
+      "position": "top: 1080px; left: 50%; transform: translateX(-50%)",
+      "z_index": 10,
+
+      "icon_button": {
+        "size": "36px",
+        "border_radius": "4px",
+        "color": "rgba(255, 255, 255, 0.8)",
+        "hover_background": "rgba(255, 255, 255, 0.12)",
+        "hover_color": "#FFFFFF",
+        "disabled_color": "rgba(255, 255, 255, 0.25)"
+      },
+
+      "divider": {
+        "width": "1px",
+        "height": "20px",
+        "background": "rgba(255, 255, 255, 0.2)",
+        "margin": "0 4px"
+      },
+
+      "counter": {
+        "font_size": "13px",
+        "color": "rgba(255, 255, 255, 0.8)",
+        "min_width": "32px",
+        "text_align": "center"
+      },
+
+      "tools": [
+        { "id": "actual-size",  "label": "1:1 显示" },
+        { "id": "zoom-out",     "label": "缩小" },
+        { "id": "zoom-in",      "label": "放大" },
+        { "id": "fullscreen",   "label": "全屏" },
+        { "id": "divider-1",    "type": "divider" },
+        { "id": "prev",         "label": "上一张" },
+        { "id": "counter",      "label": "计数（如 1 / 4）", "type": "text" },
+        { "id": "next",         "label": "下一张" },
+        { "id": "divider-2",    "type": "divider" },
+        { "id": "rotate-left",  "label": "向左旋转" },
+        { "id": "rotate-right", "label": "向右旋转" },
+        { "id": "divider-3",    "type": "divider" },
+        { "id": "edit",         "label": "编辑" },
+        { "id": "download",     "label": "下载" },
+        { "id": "more",         "label": "更多" }
+      ]
+    }
+  },
+
+  "drawer": {
+    "width": "392px",
+    "background": "rgba(0, 0, 0, 0.6)",
+    "padding": "20px",
+    "layout": "flex-direction: column; gap: 16px",
+    "scrollbar": {
+      "width": "4px",
+      "thumb_color": "rgba(255, 255, 255, 0.2)",
+      "border_radius": "2px"
+    },
+
+    "single_group_header": {
+      "description": "单组模式顶部，标题在左，图标在右",
+      "title": {
+        "font_size": "13px",
+        "color": "#FFFFFF"
+      },
+      "icon_buttons": {
+        "size": "28px",
+        "border_radius": "4px",
+        "color": "rgba(255, 255, 255, 0.5)",
+        "hover_color": "#FFFFFF",
+        "items": ["信息图标", "关闭图标"]
+      }
+    },
+
+    "multi_group_header": {
+      "description": "多组模式顶部，Tab 行与图标同行，底部分隔线延伸至抽屉两端",
+      "divider": {
+        "border_bottom": "1px solid rgba(255, 255, 255, 0.2)",
+        "extends_to_edges": true,
+        "margin": "0 -20px",
+        "padding": "0 20px"
+      },
+      "tabs": {
+        "height": "44px",
+        "padding": "0 12px",
+        "font_size": "14px",
+        "background": "transparent",
+        "color_default": "rgba(255, 255, 255, 0.4)",
+        "color_hover": "rgba(255, 255, 255, 0.7)",
+        "color_active": "#FFFFFF",
+        "font_weight_active": "500",
+        "active_indicator": {
+          "position": "bottom: -1px（紧贴分隔线上方）",
+          "height": "2px",
+          "color": "#FFFFFF",
+          "border_radius": "1px",
+          "width": "与 tab 文字区域等宽（left: 12px, right: 12px）"
+        }
+      },
+      "icon_buttons": {
+        "size": "28px",
+        "border_radius": "4px",
+        "color": "rgba(255, 255, 255, 0.5)",
+        "hover_color": "#FFFFFF",
+        "margin_bottom": "8px",
+        "items": ["信息图标", "关闭图标"]
+      }
+    },
+
+    "thumbnail_grid": {
+      "columns": 3,
+      "item_size": "112px × 112px",
+      "gap": "8px",
+      "border_radius": "2px",
+      "opacity_default": 0.4,
+      "opacity_hover": 0.7,
+      "opacity_active": 1,
+      "border_active": "2px solid #3388FF",
+      "border_default": "2px solid transparent"
+    }
+  },
+
+  "interactions": {
+    "keyboard": [
+      { "key": "Escape",      "action": "关闭预览" },
+      { "key": "ArrowLeft",   "action": "切换上一张" },
+      { "key": "ArrowRight",  "action": "切换下一张" }
+    ],
+    "click_mask": "关闭预览",
+    "switch_image": "切换图片时重置缩放与旋转状态",
+    "zoom_range": "0.2 ～ 3（每次步进 0.2）",
+    "rotate_step": "90deg"
+  }
+}

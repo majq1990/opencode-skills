@@ -1,0 +1,29 @@
+{
+  "_comment": "拷贝改名为 <CVE-id>_plan.json 或 <topic>_plan.json，丢到 D:/opencode/_archive/，跑 python -m scripts.main path/to/plan.json",
+
+  "topic": "CVE-2026-XXXXX",
+  "base_name": "CVE-2026-XXXXX 漏洞修复跟踪反馈表",
+  "base_desc": "工作说明：项目经理 SSH 到对应服务器跑 https://example.com/check.sh，把【操作系统名称/OS 版本/内核版本】+【扫描结果（4 选 1）】填回来。详细修复方案见钉钉云文档『...』。",
+
+  "result_field_name": "脚本扫描结果",
+  "result_options": [
+    {"name": "PATCHED 已修复",   "color": "#00C853"},
+    {"name": "MITIGATED 已缓解", "color": "#FFC107"},
+    {"name": "VULNERABLE 受影响", "color": "#D32F2F"},
+    {"name": "UNKNOWN 未知",     "color": "#757575"}
+  ],
+
+  "extra_text_fields": [
+    "操作系统名称",
+    "OS版本",
+    "内核版本(uname -r)"
+  ],
+
+  "include_engineering_leads": true,
+
+  "feedback_status_options": ["未反馈", "已反馈", "反馈中", "无法反馈"],
+
+  "_optional_overrides": {
+    "work_dir": "D:/opencode/_archive/<topic>_workdir/  (默认按 topic 自动)"
+  }
+}

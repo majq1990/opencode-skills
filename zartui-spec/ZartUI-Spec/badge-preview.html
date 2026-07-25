@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 徽标</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; margin-top: 32px; }
+h2:first-of-type { margin-top: 0; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; display: flex; flex-direction: column; gap: 32px; }
+.demo-label { font-size: 12px; color: #A8B4C8; margin-bottom: 16px; }
+.demo-row { display: flex; align-items: center; gap: 40px; flex-wrap: wrap; }
+
+/* ===================== 头像基础（复用） ===================== */
+.z-avatar {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; flex-shrink: 0;
+}
+.z-avatar-lg { width: 48px; height: 48px; }
+.z-avatar-md { width: 36px; height: 36px; }
+.z-avatar-sm { width: 28px; height: 28px; }
+.z-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.z-avatar-default {
+  background: #F0F9FF; border-radius: 50%; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.z-avatar-default svg { width: 75%; height: 75%; }
+.z-avatar-text {
+  background: #3388FF; border-radius: 50%; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  color: #FFFFFF; font-weight: 600;
+}
+.z-avatar-lg .z-avatar-text { font-size: 20px; }
+.z-avatar-md .z-avatar-text { font-size: 15px; }
+.z-avatar-sm .z-avatar-text { font-size: 12px; }
+
+/* ===================== 徽标基础 ===================== */
+.z-badge {
+  position: absolute;
+  top: 0; right: 0;
+  transform: translate(50%, -30%);
+  z-index: 10;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+
+/* 红点徽标 */
+.z-badge-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #FF4433;
+  border: 1.5px solid #FFFFFF;
+}
+.z-badge:has(.z-badge-dot) {
+  transform: translate(0%, -20%);
+}
+.z-avatar-lg .z-badge:has(.z-badge-dot) {
+  transform: translate(calc(0% - 4px), -20%);
+}
+
+/* 数字/文字徽标 */
+.z-badge-count {
+  height: 18px; min-width: 18px; padding: 0 5px;
+  border-radius: 9px;
+  background: #FF4433;
+  color: #FFFFFF; font-size: 11px; font-weight: 600;
+  border: 1.5px solid #FFFFFF;
+  white-space: nowrap;
+}
+
+/* 自定义图标徽标 */
+.z-badge-icon {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #FF4433;
+  border: 1.5px solid #FFFFFF;
+  display: flex; align-items: center; justify-content: center;
+}
+.z-badge-icon svg { width: 10px; height: 10px; color: #FFFFFF; }
+
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 徽标 Badge</h1>
+<p class="page-desc">四种徽标类型：红点 / 数字 / 文字 / 自定义图标，显示于头像右上角</p>
+
+<!-- ============================================================
+     红点徽标
+============================================================ -->
+<h2>红点徽标</h2>
+<div class="section">
+  <div>
+    <div class="demo-label">默认人形 / 文字 / 图片头像 × 三种尺寸</div>
+    <div class="demo-row">
+
+      <!-- 大 -->
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/><rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/></svg>
+        </div>
+        <div class="z-badge"><div class="z-badge-dot"></div></div>
+      </div>
+
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-text">张</div>
+        <div class="z-badge"><div class="z-badge-dot"></div></div>
+      </div>
+
+      <div class="z-avatar z-avatar-lg">
+        <img src="https://picsum.photos/seed/avatar1/48/48" alt="">
+        <div class="z-badge"><div class="z-badge-dot"></div></div>
+      </div>
+
+      <!-- 中 -->
+      <div class="z-avatar z-avatar-md">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/><rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/></svg>
+        </div>
+        <div class="z-badge"><div class="z-badge-dot"></div></div>
+      </div>
+
+      <div class="z-avatar z-avatar-md">
+        <div class="z-avatar-text">李</div>
+        <div class="z-badge"><div class="z-badge-dot"></div></div>
+      </div>
+
+      <!-- 小 -->
+      <div class="z-avatar z-avatar-sm">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/><rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/></svg>
+        </div>
+        <div class="z-badge"><div class="z-badge-dot"></div></div>
+      </div>
+
+      <div class="z-avatar z-avatar-sm">
+        <div class="z-avatar-text">王</div>
+        <div class="z-badge"><div class="z-badge-dot"></div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     数字徽标
+============================================================ -->
+<h2>数字徽标</h2>
+<div class="section">
+  <div>
+    <div class="demo-label">数字 1～99，超过 99 显示 99+</div>
+    <div class="demo-row">
+
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/><rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/></svg>
+        </div>
+        <div class="z-badge"><div class="z-badge-count">1</div></div>
+      </div>
+
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-text">张</div>
+        <div class="z-badge"><div class="z-badge-count">8</div></div>
+      </div>
+
+      <div class="z-avatar z-avatar-lg">
+        <img src="https://picsum.photos/seed/avatar1/48/48" alt="">
+        <div class="z-badge"><div class="z-badge-count">26</div></div>
+      </div>
+
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/><rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/></svg>
+        </div>
+        <div class="z-badge"><div class="z-badge-count">99</div></div>
+      </div>
+
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-text">李</div>
+        <div class="z-badge"><div class="z-badge-count">99+</div></div>
+      </div>
+
+      <!-- 中尺寸 -->
+      <div class="z-avatar z-avatar-md">
+        <img src="https://picsum.photos/seed/avatar2/36/36" alt="">
+        <div class="z-badge"><div class="z-badge-count">12</div></div>
+      </div>
+
+      <div class="z-avatar z-avatar-md">
+        <div class="z-avatar-text">王</div>
+        <div class="z-badge"><div class="z-badge-count">99+</div></div>
+      </div>
+
+      <!-- 小尺寸 -->
+      <div class="z-avatar z-avatar-sm">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/><rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/></svg>
+        </div>
+        <div class="z-badge"><div class="z-badge-count">5</div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     文字徽标
+============================================================ -->
+<h2>文字徽标</h2>
+<div class="section">
+  <div>
+    <div class="demo-label">显示自定义文字，如 HOT、NEW</div>
+    <div class="demo-row">
+
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/><rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/></svg>
+        </div>
+        <div class="z-badge"><div class="z-badge-count">HOT</div></div>
+      </div>
+
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-text">张</div>
+        <div class="z-badge"><div class="z-badge-count">HOT</div></div>
+      </div>
+
+      <div class="z-avatar z-avatar-lg">
+        <img src="https://picsum.photos/seed/avatar1/48/48" alt="">
+        <div class="z-badge"><div class="z-badge-count">NEW</div></div>
+      </div>
+
+      <!-- 中 -->
+      <div class="z-avatar z-avatar-md">
+        <div class="z-avatar-text">李</div>
+        <div class="z-badge"><div class="z-badge-count">HOT</div></div>
+      </div>
+
+      <!-- 小 -->
+      <div class="z-avatar z-avatar-sm">
+        <img src="https://picsum.photos/seed/avatar2/28/28" alt="">
+        <div class="z-badge"><div class="z-badge-count">HOT</div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     自定义图标徽标
+============================================================ -->
+<h2>自定义图标徽标</h2>
+<div class="section">
+  <div>
+    <div class="demo-label">红色圆形背景（#FF4433）+ 白色图标</div>
+    <div class="demo-row">
+
+      <!-- 铃铛 -->
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/><rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/></svg>
+        </div>
+        <div class="z-badge">
+          <div class="z-badge-icon">
+            <svg viewBox="0 0 10 10" fill="none">
+              <path d="M5 1.5a3 3 0 013 3v2l.5.5H1.5L2 6.5v-2a3 3 0 013-3z" fill="currentColor"/>
+              <path d="M4 8h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- 邮件 -->
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-text">张</div>
+        <div class="z-badge">
+          <div class="z-badge-icon">
+            <svg viewBox="0 0 10 10" fill="none">
+              <rect x="1" y="2.5" width="8" height="5.5" rx="1" stroke="currentColor" stroke-width="1"/>
+              <path d="M1.5 3l3.5 2.5L8.5 3" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- 感叹号 -->
+      <div class="z-avatar z-avatar-lg">
+        <img src="https://picsum.photos/seed/avatar1/48/48" alt="">
+        <div class="z-badge">
+          <div class="z-badge-icon">
+            <svg viewBox="0 0 10 10" fill="none">
+              <path d="M5 2.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <circle cx="5" cy="7.5" r="0.7" fill="currentColor"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- 加号 -->
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-text">李</div>
+        <div class="z-badge">
+          <div class="z-badge-icon">
+            <svg viewBox="0 0 10 10" fill="none">
+              <path d="M5 2v6M2 5h6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- 中尺寸 -->
+      <div class="z-avatar z-avatar-md">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/><rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/></svg>
+        </div>
+        <div class="z-badge">
+          <div class="z-badge-icon">
+            <svg viewBox="0 0 10 10" fill="none">
+              <path d="M5 1.5a3 3 0 013 3v2l.5.5H1.5L2 6.5v-2a3 3 0 013-3z" fill="currentColor"/>
+              <path d="M4 8h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- 小尺寸 -->
+      <div class="z-avatar z-avatar-sm">
+        <div class="z-avatar-text">王</div>
+        <div class="z-badge">
+          <div class="z-badge-icon">
+            <svg viewBox="0 0 10 10" fill="none">
+              <path d="M5 1.5a3 3 0 013 3v2l.5.5H1.5L2 6.5v-2a3 3 0 013-3z" fill="currentColor"/>
+              <path d="M4 8h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

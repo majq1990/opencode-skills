@@ -1,0 +1,102 @@
+{
+  "name": "captcha-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 验证码规范，含右侧行内小图和下方大图两种形态，两种均支持左右/上下布局",
+
+  "layout": {
+    "ref": "formitem-spec.json",
+    "label": {
+      "font_size": "14px",
+      "color": "#223355",
+      "colon": "::after { content: '：'; color: #223355 }",
+      "required_mark": {
+        "width": "14px",
+        "color": "#FF4433",
+        "font_size": "14px"
+      },
+      "required_placeholder": {
+        "width": "14px",
+        "description": "非必填时空占位，保持与必填项对齐"
+      }
+    },
+    "horizontal": {
+      "description": "标题在左，控件在右",
+      "label_height": "32px",
+      "label_vertical_align": "center",
+      "gap": "20px"
+    },
+    "vertical": {
+      "description": "标题在上，控件在下",
+      "label_margin_bottom": "8px",
+      "control_margin_left": "14px"
+    }
+  },
+
+  "input": {
+    "ref": "input-spec.json",
+    "height": "32px",
+    "border_radius": "4px",
+    "padding": "0 8px",
+    "font_size": "14px",
+    "color": "#223355",
+    "placeholder_color": "#A8B4C8",
+    "states": {
+      "default":  { "border": "1px solid #DDE1EB", "background": "#FFFFFF" },
+      "hover":    { "border": "1px solid #3388FF" },
+      "focus":    { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF" },
+      "error":    { "border": "1px solid #FF4433" },
+      "disabled": { "border": "1px solid #DDE1EB", "background": "#F5F7FA", "color": "#A8B4C8" }
+    }
+  },
+
+  "captcha_image": {
+    "border": "1px solid #DDE1EB",
+    "border_radius": "4px",
+    "background": "#F5F7FA",
+    "content": "4位随机字符，含干扰线与干扰点",
+    "refresh": {
+      "trigger": "点击图片",
+      "hover_overlay": {
+        "background": "rgba(255,255,255,0.72)",
+        "icon": "刷新 SVG，20×20px，颜色 #3388FF"
+      }
+    }
+  },
+
+  "type_inline": {
+    "description": "类型一：输入框右侧行内验证码",
+    "layout": "水平排列，输入框 flex:1，验证码图片 flex-shrink:0",
+    "gap": "8px",
+    "captcha_image_size": {
+      "width": "96px",
+      "height": "32px",
+      "note": "与输入框等高"
+    }
+  },
+
+  "type_block": {
+    "description": "类型二：输入框下方大图验证码",
+    "layout": "垂直排列，输入框在上，验证码图片在下",
+    "gap": "8px",
+    "input_width": "240px",
+    "captcha_image_size": {
+      "width": "240px",
+      "height": "96px",
+      "note": "与输入框同宽"
+    },
+    "hint": {
+      "text": "点击图片可刷新验证码",
+      "font_size": "12px",
+      "color": "#A8B4C8",
+      "icon": "信息图标，12×12px，颜色 #A8B4C8，左侧间距 4px"
+    }
+  },
+
+  "error_message": {
+    "ref": "global-spec.json",
+    "margin_top": "4px",
+    "font_size": "12px",
+    "color": "#FF4433",
+    "example": "验证码错误，请重新输入"
+  }
+}

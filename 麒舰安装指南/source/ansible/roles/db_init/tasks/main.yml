@@ -1,0 +1,108 @@
+---
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: check if mysql client exists
+  connection: local
+  shell: which mysql
+  register: check_mysql_output
+  ignore_errors: yes
+
+- block:
+    - name: 安装mysql客户端
+      connection: local
+      package:
+        name: "{{ mysql_client_packages[ansible_distribution] }}"
+        state: 'present'
+  when:
+    - check_mysql_output.rc > 0
+    - ansible_distribution in ['openEuler', 'kylin_arm','kylin_x86','UOS','Ubuntu','CentOS','uos_x86','uos_arm','anolis_x86','anolis_arm']
+
+# 本地执行
+- name: 注册mysql库依赖
+  set_fact:
+    mysql_dependencies: "{{ vars[prefix][app_type][app_name].depends | filter_list_by_attribute }}"
+
+
+- name: Print MySQL dependencies
+  debug:
+    msg: "{{ mysql_dependencies }}"
+
+- name: 检查{{ app_type }}-db.tar是否存在
+  connection: local
+  shell: test -e {{ src_path }}/{{ app_type }}-db.tar && echo true || echo false
+  register: db_tar_exists
+  when: app_type not in ['eUrbanMIS','eUrbanUMA','eUrbanMF','eUrbanSG']
+
+- name: 检查{{ app_type }}-db.tar是否存在
+  connection: local
+  shell: test -e {{ src_common_db_path }}/common-db.tar && echo true || echo false
+  register: tar_exists
+  when: app_type in ['eUrbanMIS','eUrbanUMA','eUrbanMF','eUrbanSG']
+
+- block:
+    - name: 定义解压路径
+      set_fact:
+        untar_dir: "{{ '/opt/egova/' if prefix == 'service' else db_path }}"
+
+    - name: 准备目录
+      connection: local
+      file: name={{ db_path }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='0755'
+
+    - name: 解压{{ app_type }}-db.tar
+      connection: local
+      unarchive:
+        src: "{{ src_path }}/{{ app_type }}-db.tar"
+        dest: "{{ untar_dir }}"
+      when: app_type not in ['eUrbanMIS','eUrbanUMA','eUrbanMF','eUrbanSG'] and db_tar_exists.stdout == 'true'
+
+    - name: 解压{{ app_type }}-db.tar
+      connection: local
+      unarchive:
+        src: "{{ src_common_db_path }}/common-db.tar"
+        dest: "{{ untar_dir }}"
+      when: app_type in ['eUrbanMIS','eUrbanUMA','eUrbanMF','eUrbanSG'] and tar_exists.stdout == 'true'
+
+    - name: 注册统计库依赖key
+      connection: local
+      shell: echo $(yq '.{{ prefix }}.{{ app_type }}.{{ app_name }}.depends[] | select(.type=="mysql" and .sub_type=="stat") | .depend_key' inventory/metadata.yml)
+      register: stat_db_key_output
+    - set_fact: stat_db_key="{{ stat_db_key_output.stdout_lines[0] }}"
+      when: stat_db_key_output.stdout_lines | length > 0
+
+    - name: 注册redis依赖key
+      connection: local
+      shell: echo $(yq '.{{ prefix }}.{{ app_type }}.{{ app_name }}.depends[] | select(.type=="redis") | .depend_key' inventory/metadata.yml)
+      register: redis_key_output
+    - set_fact: redis_key="{{ redis_key_output.stdout_lines[0] }}"
+      when: redis_key_output.stdout_lines | length > 0
+
+    - name: 注册minio依赖key
+      connection: local
+      shell: echo $(yq '.{{ prefix }}.{{ app_type }}.{{ app_name }}.depends[] | select(.type=="minio") | .depend_key' inventory/metadata.yml)
+      register: minio_key_output
+    - set_fact: minio_key="{{ minio_key_output.stdout_lines[0] }}"
+      when: minio_key_output.stdout_lines | length > 0
+
+    - name: 注册kafka依赖key
+      connection: local
+      shell: echo $(yq '.{{ prefix }}.{{ app_type }}.{{ app_name }}.depends[] | select(.type=="kafka") | .depend_key' inventory/metadata.yml)
+      register: kafka_key_output
+    - set_fact: kafka_key="{{ kafka_key_output.stdout_lines[0] }}"
+      when: kafka_key_output.stdout_lines | length > 0
+
+    - name: 注册ES依赖key
+      connection: local
+      shell: echo $(yq '.{{ prefix }}.{{ app_type }}.{{ app_name }}.depends[] | select(.type=="elasticsearch") | .depend_key' inventory/metadata.yml)
+      register: elasticsearch_key_output
+    - set_fact: elasticsearch_key="{{ elasticsearch_key_output.stdout_lines[0] }}"
+      when: elasticsearch_key_output.stdout_lines | length > 0
+
+    - name: 导入数据库
+      include_tasks: import_db.yml
+      with_items: "{{ mysql_dependencies }}"
+  when:
+    - mysql_dependencies != []
+    - (db_tar_exists.stdout | default('false') == 'true' or tar_exists.stdout | default('false') == 'true')

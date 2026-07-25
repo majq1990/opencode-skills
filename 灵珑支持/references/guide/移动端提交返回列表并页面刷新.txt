@@ -1,0 +1,40 @@
+移动端提交返回列表并页面刷新
+1 使用场景
+点击提交返回按钮后，保存数据成功并且返回列表并刷新。
+2 效果
+3 配置
+1.列表的页面刷新js配置：左侧写公共方法，右侧页面属性进行绑定
+export function didMount() {
+  this._routerRoot._router.afterEach((to, from) => {
+    //refresh === "1"此是页面提交按钮的提交返回的1；
+    if (from.query.refresh === "1") {
+      Vue.nextTick(() => {
+        let list = document.getElementById("card_container_fhsoui_csshandler_generate")
+        //将card_container_fhsoui替换为自己的卡片容器唯一标识，_csshandler_generate不变
+        if (list) {
+          let com = list.__vue__
+          com && com.onRefresh()
+        }
+      })
+    }
+  });
+}
+"card_container_fhsoui_csshandler_generate"获取方法：F12在移动页面上查找。
+2.在表单页面，配置提交并返回按钮的js脚本；
+function main() {
+    //需要替换表单的标识
+    var formPartEle = this.$$element("form_part_7xqdgf");
+    if (formPartEle) {
+        formPartEle.$$getRenderElement().onSave().then((res) => {
+            if (res.result) {
+              //此时的query.refresh = "1"传值给页面js进行页面刷新动作
+                this.$route.query.refresh = "1";
+                this.$router.back();
+            }
+        });
+    }
+}
+如果是使用灵珑自带的提交按钮，配置提交前动作；
+如果是自定义的按钮，配置自定义动作。
+4 常见问题
+无。

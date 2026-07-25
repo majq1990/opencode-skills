@@ -1,0 +1,10 @@
+---
+# variable for common
+dest_path: "{{ dest_package_root_path }}/common"
+
+
+# lvm2 rpm package
+lvm_package_path: "{{ src_env_package_path }}/lvm2"
+
+# type
+mode: default

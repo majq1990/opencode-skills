@@ -1,0 +1,92 @@
+eUrbanGIS:
+  name: eUrbanGIS
+  server_port: 8081
+  base_path: /egova/web/eUrbanGIS
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+
+eUrbanUMA:
+  name: eUrbanUMA
+  login_url: http://ip:port/eUrbanMIS/main.htm
+  user: egova
+  password: Egova@123
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E6%99%BA%E4%BF%A1%E4%BA%91%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 8082
+  base_path: /egova/web/eUrbanUMA
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: mysql
+      name: 统计库
+      database: cgdbstat
+      sub_type: stat
+    - type: redis
+      name: redis内存数据库
+      database: 0
+      
+eUrbanMF:
+  name: eUrbanMF
+  login_url: http://ip:port/eUrbanMIS/main.htm
+  user: egova
+  password: Egova@123
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E6%99%BA%E4%BF%A1%E4%BA%91%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 8083
+  base_path: /egova/web/eUrbanMF
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: mysql
+      name: 统计库
+      database: cgdbstat
+      sub_type: stat
+    - type: redis
+      name: redis内存数据库
+      database: 0
+      
+eUrbanSG:
+  name: eUrbanSG
+  login_url: http://ip:port/eUrbanMIS/main.htm
+  user: egova
+  password: Egova@123
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E6%99%BA%E4%BF%A1%E4%BA%91%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 8084
+  base_path: /egova/web/eUrbanSG
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: mysql
+      name: 统计库
+      database: cgdbstat
+      sub_type: stat
+    - type: redis
+      name: redis内存数据库
+      database: 0
+
+IMserver:
+  name: IMserver
+  server_port: 18080
+  user: egovahttp
+  password: Http@123EgoVe
+  base_path: /egova/web/IMserver
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+      
+HttpFileServer:
+  name: HttpFileServer
+  server_port: 18080
+  base_path: /egova/web/httpfileservice

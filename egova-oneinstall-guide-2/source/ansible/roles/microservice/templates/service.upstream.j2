@@ -1,0 +1,4 @@
+upstream srvs_{{ app_type }}_backend {
+  # server 192.168.101.205:10000;
+  server {{ hostvars[inventory_hostname]['ansible_ssh_host'] }}:{{ web_app_port }};
+}

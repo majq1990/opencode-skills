@@ -1,0 +1,231 @@
+---
+# check service count
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: Set JDK version variable
+  set_fact:
+    service_jdk_version: "{{ microservice[app_type][app_name].environment.jdk_version | default(default_jdk_version) }}"
+
+- name: Check JDK requirements
+  include_tasks: check_jdk.yml
+
+
+- name: count service
+  shell: find /etc/systemd/system -name "{{ app_type }}*.service" -type f | grep -E "^/etc/systemd/system/{{ app_type }}(_[0-9]+)?\.service$" | wc -l
+
+  register: service_count
+
+- name: 输出service_count值
+  debug:
+    msg: "service_count: {{ service_count.stdout }}"
+
+- block:
+    - set_fact: web_app_name={{ app_type }}
+    - set_fact: web_app_dir={{ app_type }}
+  when: service_count.stdout == '0'
+
+- block:
+    - set_fact: web_app_name={{ app_type }}_{{ service_count.stdout }}
+    - set_fact: web_app_dir={{ app_type }}_{{ service_count.stdout }}
+  when: service_count.stdout != '0'
+
+- name: 输出web_app_name名称
+  debug:
+    msg: "web_app_name: {{ web_app_name }}"
+
+- set_fact:
+    app_root_dir: "/{{ microservice[app_type][app_name].base_path.split('/')[1] }}/{{ microservice[app_type][app_name].base_path.split('/')[2]  }}/{{ microservice[app_type][app_name].base_path.split('/')[3]  }}"
+
+- name: 输出 app_root_dir
+  debug:
+    msg: "{{app_root_dir}}"
+
+# create dest package dir
+- name: create dest dir
+  file: path={{ item }} state=directory mode='0755'
+  with_items:
+    - "{{ dest_path }}"
+    - "{{ app_root_dir }}"
+    - "{{ microservice[app_type][app_name].base_path }}"
+
+# copy packages
+- name: copy package
+  copy: src={{ src_path }}/{{ app_type }}-backend.tar dest={{ dest_path }}/
+
+# 打包后端包,前端已部署
+#shell命令解析：解压后端到dest_path,然后判断是否是第一次部署，若部署第一次部署则直接备份后端文件（因为前端文件固定放在app_ype下）
+#若是第一次则需要判断是否已经存在包,存在了再判断前端包是否为空，为空就先备份前端，然后备份整个后端端，再恢复前端，不为空就直接备份后端包，最后把新的后端包放到web_app_dir下
+- name: deploy backend package
+  shell: |
+    tar xf {{ dest_path }}/{{ app_type }}-backend.tar -C {{ dest_path }}
+    rm -rf {{ dest_path }}/{{ app_type }}/custom
+    if [ "{{ web_app_dir }}" != "{{ app_type }}" ];then
+        if test -e {{ app_root_dir }}/{{ web_app_dir }};then
+            mv {{ app_root_dir }}/{{ web_app_dir }} {{ app_root_dir }}/{{ web_app_dir }}_$(date +%s)
+        fi
+        mv -f {{ dest_path }}/{{ app_type }}  {{ app_root_dir }}/{{ web_app_dir }}
+    else
+        if [ "$(ls -A {{ app_root_dir }}/{{ web_app_dir }})" ]; then
+            if test -e {{ app_root_dir }}/{{ web_app_dir }}/webApps;then
+                mv  {{ app_root_dir }}/{{ web_app_dir }}/webApps {{ app_root_dir }}/.{{ app_type }}-webApps
+                echo "备份后端包完成"
+            fi
+        fi
+        cp -rf {{ dest_path }}/{{ web_app_dir }} {{ app_root_dir }}/
+        rm -rf {{ dest_path }}/{{ web_app_dir }}
+        if test -e {{ app_root_dir }}/.{{ app_type }}-webApps;then
+            mv  {{ app_root_dir }}/.{{ app_type }}-webApps {{ app_root_dir }}/{{ web_app_dir }}/webApps
+        fi
+    fi
+
+- name: create JVM dest dir
+  file: path={{ microservice[app_type][app_name].base_path }}/jvm/ state=directory mode='0755'
+
+# check server port
+- name: check server port
+  script: check_port.sh {{ microservice[app_type][app_name].server_port }}
+  register: check_server_port
+
+- name: debug server port
+  debug:
+    msg: "server port is {{ check_server_port }}"
+
+- set_fact: web_app_port={{ check_server_port.stdout_lines[0] }}
+
+- name: update server_port
+  connection: local
+  shell: yq -i '.microservice.'{{ app_type }}'.'{{ app_name }}'.server_port="'{{ web_app_port }}'"' inventory/metadata.yml
+
+- name: get redis database
+  connection: local
+  shell: yq '.'{{ app_type }}'.depends.[] | select(.type=="redis") | .database' ../shell/template/microservice_template.yml
+  register: redis_database_output
+
+- set_fact:
+    redis_database: "{{ redis_database_output.stdout }}"
+    proxy_config: "{{ microservice[app_type][app_name].proxy | default([]) }}"
+
+- name: 输出代理配置信息
+  debug:
+    msg: "proxy_config配置： {{ proxy_config }}"
+
+# copy env template
+- name: configure microservice env
+  template:
+    src: service.env.j2
+    dest: "{{ app_root_dir }}/{{ web_app_dir }}/{{ web_app_name }}.env"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    mode: '0755'
+  when: app_type != 'iot'
+
+- name: 修改物联网配置文件
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ app_root_dir }}/{{ web_app_name }}/{{ item }}"
+    mode: '0755'
+  with_items:
+    - application.properties
+    - application-kafka.properties
+  when: app_type == 'iot'
+
+
+- block:
+
+  - name: copy nginx location conf
+    template: src=service.location.j2 dest=/etc/nginx/conf.d/{{ web_app_name }}-backend.location
+    when: service_count.stdout == '0'  and proxy_config[0].source is not none
+
+  # check if exists
+  - name: check if exists upstream
+    shell: ls /etc/nginx/conf.d/{{ app_type }}.upstream 2>/dev/null | wc -l
+    register: upstream_count
+
+  - name: copy nginx upstream conf
+    template: src=service.upstream.j2 dest=/etc/nginx/conf.d/{{ app_type }}.upstream
+    notify:
+      - reload nginx
+    when: upstream_count.stdout == '0'
+
+  - name: update nginx upstream conf
+    shell: |
+      sed -i '/upstream srvs_{{ app_type }}_backend/a    server {{ hostvars[inventory_hostname]['ansible_ssh_host'] }}:{{ web_app_port }};' /etc/nginx/conf.d/{{ app_type }}.upstream
+    notify:
+    - reload nginx
+    when: upstream_count.stdout | int > 0
+  when: proxy_config | length > 0
+
+# TODO: 多节点部署，需要拷贝配置，端口需根据实际的设置。
+# 多节点部署，需拷贝配置，拷贝使用新的app_name，用于下一步更新对应的配置。
+# 部署成功后，删除原配置，yq -i 'del(.microservice. linglong.linglong_1)' metadata.yml.
+#- set_fact: new_app_name={{ app_name }}_{{ inventory_hostname }}
+- set_fact: new_app_name={{ app_name }}
+
+- name: copy metadata config
+  connection: local
+  shell: |
+    yq eval '.microservice.{{ app_type }} += {"{{ new_app_name }}": (.microservice.{{ app_type }}.{{ app_name }})}' -i inventory/metadata.yml
+
+- name: Update the login_url in metadata.yml
+  connection: local
+  shell: |
+    login_url=$(yq '.microservice."{{ app_type }}"."{{ new_app_name }}".login_url' inventory/metadata.yml)
+    echo "Extracted login_url: $login_url"
+    ip="{{ all.hosts[inventory_hostname].ansible_ssh_host }}"
+    port="{{ web_app_port }}"
+    echo "IP: $ip, Port: $port"
+    updated_url=$(echo "$login_url" | sed "s|ip:port|${ip}:${port}|g")
+    echo "Updated URL: $updated_url"
+    yq -i '.microservice."{{ app_type }}"."{{ new_app_name }}".login_url = "'$updated_url'"' inventory/metadata.yml
+  register: shell_output
+
+# update host/ip/status
+- name: save metadata
+  connection: local
+  shell: |
+    yq -i '.microservice.{{ app_type }}.{{ new_app_name }}.status="success"' inventory/metadata.yml
+    yq -i '.microservice.{{ app_type }}.{{ new_app_name }}.ip="{{ all.hosts[inventory_hostname].ansible_ssh_host }}"' inventory/metadata.yml
+    yq -i '.microservice.{{ app_type }}.{{ new_app_name }}.host="{{ inventory_hostname }}"' inventory/metadata.yml
+    yq -i '.microservice.{{ app_type }}.{{ new_app_name }}.server_port="{{ web_app_port }}"' inventory/metadata.yml
+
+# init service
+- name: 初始化系统服务
+  template: src=system.service.j2 dest={{ system_service_path }}/{{ web_app_name }}.service
+  ignore_errors: yes
+  when: app_type != 'iot'
+
+- name: configure iot.service
+  template:
+    src: iot.service.template.j2
+    dest: "{{ system_service_path }}/{{ web_app_name }}.service"
+  when: app_type == 'iot'
+# chmod
+
+- name: 获取MIS ip
+  connection: local
+  shell: |
+    cat /etc/nginx/conf.d/eUrbanMIS.upstream |grep server| awk -F " " '{print $2}'| sed 's/;\?$//' |head -n 1
+  register: mis_ip
+
+- name: 检查事项清单env是否存在
+  stat:
+    path: /egova/apps/ywtg/{{ web_app_name }}/{{ web_app_name }}.env
+  register: itemlist_env
+  when: app_type == 'itemlist'
+
+- name: 更新事项清单env
+  shell: |
+    sed -i "s/127.0.0.1:8081/{{ mis_ip.stdout }}/g" /egova/apps/ywtg/{{ web_app_name }}/{{ web_app_name }}.env
+  when: app_type == 'itemlist' and mis_ip.rc == 0
+
+
+- name: 启动微服务
+  shell: |
+    chown -R {{ ops_user }}:{{ ops_user }} {{ app_root_dir }}/{{ web_app_dir }}
+    systemctl daemon-reload
+    systemctl enable {{ web_app_name }}
+    systemctl start {{ web_app_name }}
+  ignore_errors: yes

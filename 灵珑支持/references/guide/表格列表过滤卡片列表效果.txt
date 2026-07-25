@@ -1,0 +1,44 @@
+表格列表过滤卡片列表效果
+1 使用场景
+在案卷中一条征求意见可能会对应有多个答复对象的情况，需求需要按照点击列表行展示某一个征求意见的诉求，对应的所有答复信息，这时候需要用到，点击上方的征求意见列表对下方卡片列表进行过滤操作，用此展示某一条征求意见所对应的所有答复人的信息和状态。
+适用于点击列表行取值，并且赋值给对应的组件操作，下方通过修改可以适用于给表单赋值等操作。
+2 效果
+用户点击列表行，下方动态过滤卡片内容。
+3 配置
+在卡片列表里面配置对应的查询条件；
+在页面中点击pc表格列表找到对应的绑定动作，行点击编写脚本；
+pamars的值可以通过打印当前函数名找到所需要的参数值，通过浏览器控制台可以看到打印内容；
+function main(params) {
+    console.log('点击节点', params['72a4f1a5-40b1-4f55-aaf2-cb76dc58ff46'])
+    //console.log('点击节点', params[0].id.value)
+    console.log('点击节点', params)
+    let fId = params['72a4f1a5-40b1-4f55-aaf2-cb76dc58ff46'];
+  //将列表的id值赋给fId
+    const pageRootList = this.$$roots();
+    let rootPageElement = pageRootList[0];
+    // 找到页面中的列表组件元素
+    let cardTableList = rootPageElement.$$element("page_widget_list_94vfsz");
+    // console.log(this.$$element("page_widget_list_94vfsz"))
+    if (cardTableList.dataEngine && cardTableList.dataEngine.state) {
+
+        let cardQueryElement = cardTableList.dataEngine.state.getElement("query_field_wrapper_ertc2c");
+      //找到对应的查询框id
+        if (cardQueryElement && cardQueryElement.data && cardQueryElement.data.members) {
+            const queryProjectIdModel = cardQueryElement.data.members[0];
+            queryProjectIdModel.props.defaultValue.value = fId;
+          //给查询框赋值Fid
+        }
+        // console.log('点击节点', queryProjectIdModel.props.defaultValue.value)
+        let cardCondition = cardTableList.dataEngine.state.getElement("condition_7obbzq");
+      //找到对应的查询组件id
+        if (cardCondition) {
+            setTimeout(function () {
+                cardCondition.onQuery();
+            })
+        }
+    }
+    
+}
+具体的修改参数看代码注释。
+4 常见问题
+可能会在涉及到嵌入旧系统时候拿不到params的值的情况，在灵珑中是不需要进行处理，已这次任务为例我这边结解决方式是增加一个判断语句如下，重新拿到FId的值。

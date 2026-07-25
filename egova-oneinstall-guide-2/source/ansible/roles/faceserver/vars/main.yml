@@ -1,0 +1,8 @@
+---
+# variables for install
+src_path: "{{ src_web_package_path }}/faceserver"
+deploy_path: "{{ web_root_dir }}/faceserver"
+
+log_path: "{{ log_root_dir }}/faceserver"
+port: 8099
+

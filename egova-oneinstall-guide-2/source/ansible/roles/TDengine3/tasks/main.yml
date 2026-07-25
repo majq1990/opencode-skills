@@ -1,0 +1,84 @@
+---
+# TDengine3 Docker 安装任务
+
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 检查目标目录
+  stat:
+    path: "{{ data_dir }}"
+  register: TDengine_dir
+
+- name: Fail if TDengine is not empty
+  fail:
+    msg: |
+      检查到已经安装过TDengine,如需卸载请在{{ hostvars[inventory_hostname]['ansible_ssh_host'] }}服务器上执行 mv {{ data_dir }} {{ data_dir }}_backup
+  ignore_errors: true
+  when: TDengine_dir.stat.exists == True
+
+- name: 准备TDengine3目录
+  file: name={{ item.dir }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='{{ item.mode }}'
+  with_items:
+    - { dir: "{{ data_dir }}", mode: "0775" }
+    - { dir: "{{ log_dir }}", mode: "0775" }
+    - { dir: "{{ deploy_path }}", mode: "0775" }
+    - { dir: "{{ deploy_path }}/init-sql", mode: "0775" }
+    - { dir: "{{ deploy_path }}/config", mode: "0775" }
+
+- name: 复制 tdengine-{{ td_version }}.tar.gz 到 {{ deploy_path }}
+  copy:
+    src: "{{ src_path }}/tdengine-{{ td_version }}.tar.gz"
+    dest: "{{ deploy_path }}/tdengine-{{ td_version }}.tar.gz"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    mode: '0644'
+
+- name: docker加载tdengine镜像
+  shell: |
+    cd {{ deploy_path }}
+    docker load -i tdengine-{{ td_version }}.tar.gz
+
+- name: 设置VNode 值,当前启动需要VNode数量至少为14
+  template:
+    src: taos.cfg.j2
+    dest: "{{ deploy_path }}/config/taos.cfg"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    mode: '0644'
+
+
+- name: 生成Docker Compose配置文件
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ deploy_path }}/docker-compose.yml"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    mode: '0644'
+
+- name: 安装TDengine3 systemd服务文件
+  template:
+    src: tdengine3.service.j2
+    dest: /etc/systemd/system/tdengine3.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: 重新加载systemd配置
+  systemd:
+    daemon_reload: yes
+
+- name: Copy Tdengine sql to init-sql directory
+  copy:
+    src: "{{ playbook_dir }}/roles/TDengine3/templates/TDengine.sql"
+    dest: "{{ deploy_path }}/init-sql/TDengine.sql"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    mode: '0755'
+
+- name: 启动TDengine3服务
+  systemd:
+    name: tdengine3
+    state: started
+    enabled: yes

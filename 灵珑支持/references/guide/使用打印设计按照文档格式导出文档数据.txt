@@ -1,0 +1,63 @@
+使用打印设计按照文档格式导出文档数据
+1 使用场景
+在实际业务使用中存在需要按照特定的文档格式对数据进行导出或打印，对于普通的无关联单表可以使用灵珑中的打印设计按照具体的文档格式进行单条数据导出，但是在较为复杂的表单 + 明细表格的情况中会存在需要在原有表中导出主表和关联子表的内容。
+2 效果
+在第17项【法制机构（执法监督机构）工作人员信息表】中存储的为人员的信息表，存在多条记录，导出文件的时候需要根据实际数量进行表格导出
+子表导出效果：
+3 配置
+3.1 准备视图
+对于需要导出的子表的内容只能通过视图的方式作为打印模板的数据来源
+注意事项：
+对于子表的数据可以通过关联实体或关联视图的形式，如果在实体表中存在下拉、单选只存储了code或value的情况，但是在打印中需要显示对应的文本字段时，可以通过关联视图的方式处理文本字段值；
+子表的信息如果为多条的情况下，需要选择一对多，否则导出的时候只能显示第一条；
+关联关系：子表的关联字段为主表的id或文号字段。
+3.2 设计打印模板
+在应用设置-打印设计里【新增模板】，选择上述准备的视图，选择模板类型，定义模板格式并保存
+点击左侧字段列表中的字段，字段占位符将自动在文档中生成。
+注意事项：
+对于添加子表的信息需要在右侧选择对应的字段信息，按照所需要的格式在对应子表中添加对应的填充字段即可；
+设计好后，在浏览器URL地址栏获取模板id
+3.3 定义打印API
+在数据管理-API管理，新建一个API，建议使用环境变量，端口用内网进程端口。该接口返回打印模板的下载地址。
+接口地址：
+/unity/establish/printing_template/binding-data/document-url?printingTemplateId=1bcea642-43d2-49ee-8587-ad0e83e04d33
+参数说明：printingTemplateId：打印模板id，前面有获取说明；
+Headers参数增加一条，use-web-Authorization: true。作用是透传token。
+Body参数选择json格式，传入SQL条件，该SQL条件应当能够返回打印模板里需要的数据。根据需要定义参数。
+3.4 【打印】动作交互
+在PC列表部件、PC列表页面或移动卡片列表的操作栏配置【打印/导出】按钮，绑定动作里配置自定义动作脚本，调用前面的API，传入条件参数，实现点击下载打印模板文件的功能。
+function main(params) {
+    const self = this;
+    const hideMessage = self.$message.loading('打印中。。。', 0);
+    
+    let jsonParams = JSON.stringify({
+      // id是列表中主键的id, 可以按实际调整为文档等，该参数作为查询数据的条件
+        id: params.id.value
+    });
+
+    api.DATA_SOURCE_EXECUTE("ds_api_6100ff84-e2a9-4eab-a2b1-a0d3e7a72e87", 'api', [], [], jsonParams, new FormData()).then(res => {
+        if (!res.hasError && res.result) {
+            const result = JSON.parse(res.result);
+            console.log(result)
+            if (!result.hasError) {
+                self.$message.success('打印成功！');
+                window.open(result.result, 'download');
+            } else {
+                self.$message.error('打印失败！')
+            }
+        } else {
+            self.$message.error('打印失败！');
+        }
+    }).catch((err) => {
+        console.error(err);
+        self.$message.error('打印失败！');
+    }).finally(() => {
+        hideMessage();
+    });
+
+}
+4 常见问题
+按照配置顺序配置后导出时报错
+对于复杂的合并单元格的列表操作时，如果子表信息不是位于最后行，会因为下方的合并单元格操作导致无法按照子表数据数量进行添加行。（如第18项中存在合并单元格操作）
+此时解决方案为将需要打印的子表放到最后行进行导出或者新建一个工作表单独的对子表内容进行导出或打印。
+参照文档：《列表操作栏【打印】》

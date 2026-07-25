@@ -1,0 +1,11 @@
+---
+# author: fuzhanli
+# 脚本执行后，锁定文件
+
+- name: lock user and group files
+  become: yes
+  shell: |
+    chattr +i /etc/gshadow
+    chattr +i /etc/group
+    chattr +i /etc/shadow
+    chattr +i /etc/passwd

@@ -1,0 +1,44 @@
+---
+- block:
+  - name: 备份文件
+    copy:
+      src: "{{ deploy_web_path }}/{{ app_name }}/view/{{ item }}"
+      dest: "{{ deploy_update_path }}/backup_{{ timestamp }}/{{ app_name }}/view/"
+      remote_src: yes
+    loop: "{{ file_paths.split(' ') }}"
+    loop_control:
+      loop_var: item
+    ignore_errors: yes
+
+  - name: 更新路径下的目录文件
+    copy:
+      src: "{{ item }}"
+      dest: "{{ deploy_web_path }}/{{ app_name }}/view"
+      mode: '0755'
+    loop: "{{ file_paths.split(' ') }}"
+    loop_control:
+      loop_var: item
+    ignore_errors: yes
+  when: file_paths is not undefined
+
+- block:
+  - name: 复制目录，如果存在
+    command: cp -r "{{ deploy_web_path }}/{{ item }}" "{{ deploy_update_path }}/backup_{{ timestamp }}/{{ app_name }}/view"
+    loop: "{{ dir_paths.split(' ') }}"
+    loop_control:
+      loop_var: item
+    ignore_errors: yes
+
+  - name: 更新路径下的目录
+    copy:
+      src: "{{ deploy_update_path }}/{{ item }}"
+      dest: "{{ deploy_web_path }}/{{ app_name }}/view"
+      mode: '0755'
+    loop: "{{ dir_paths.split(' ') }}"
+    loop_control:
+      loop_var: item
+    ignore_errors: yes
+  when: dir_paths is not undefined
+
+
+

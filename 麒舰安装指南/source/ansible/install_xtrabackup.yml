@@ -1,0 +1,13 @@
+---
+- name: 本地源
+  hosts: "{{ host }}"
+  gather_facts: "{{ gather_facts }}"
+  remote_user: root
+  vars_files:
+    - ./group_vars/all.yml
+  roles:
+    #- common
+    - local_repo
+    - common
+    - mysql_client
+    - mysql_backup

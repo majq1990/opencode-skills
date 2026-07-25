@@ -1,0 +1,6 @@
+---
+src_path: "{{ src_web_package_path }}/{{ app_type }}"
+dest_path: "/opt/egova/{{ app_type }}"
+
+media_root_path: "/opt/egova/{{ app_type }}/custom/MediaRoot"
+custom_data_path: "/opt/egova/{{ app_type }}/custom/data"

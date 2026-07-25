@@ -1,0 +1,144 @@
+灵珑API接口配置举例说明
+智能标签中心灵珑回归-大数据分析-高频事件
+1.配置效果：
+1.1列表页面：
+1.2详情页面：
+2.配置说明：
+接口地址参考：http://10.255.18.71:58080/eUrbanMIS/main.htm
+egova/ywtg@2023#
+详细配置步骤参考案件：http://faq.egova.com.cn:7777/issues/354810
+3.配置步骤：
+3.1高频事件请求(浏览器开发者工具或者F12快捷键)：
+请求地址：
+http://10.255.18.71:58080/eUrbanMIS/perceptionserver/unity/perception/bigdata/analysis/hotevents?pageIndex=1&pageSize=10&startTime=2024-01-01+00:00:00&endTime=2024-12-31+23:59:59&recAnalysisTypeCode=label
+接口返回数据预览：
+3.2配置高频事件列表接口api
+由第1步可知：接口地址为：http://10.255.18.71:58080/eUrbanMIS/perceptionserver/unity/label/rec/analysis/hotevents
+接口参数：
+createTime_end
+createTime_start
+pageSize
+pageIndex
+topicName
+topicId
+subjectName
+subjectId
+3.3根据接口返回json对象配置视图字段：
+接口返回json对象：
+{
+"index": null,
+"dutyDeptName": null,
+"id": null,
+"name": null,
+"subjectId": 39214,
+"subjectName": "龙湖物业集团有限公司青岛分公司",
+"topicName": "小区物业管理",
+"topicId": 114795,
+"createTime": null,
+"lastRecCreateTime": null,
+"recCount": 41,
+"status": 1,
+"statusName": null,
+"labelId": null,
+"labelName": null
+}
+视图编写：
+select 1 as recCount,
+"1" as name,
+1 as id,
+"1" as topicName,
+1 as topicId,
+"1" as dutyDeptName,
+1 as dutyDeptId,
+"1" as subjectName,
+1 as subjectId,
+"1" as subjecttopicName,
+"1" as statusName,
+1 as status,
+"1" as labelName,
+1 as labelId,
+1 as workRecID,
+now() as createTime,
+now() as lastRecCreateTime,
+"1" as token,
+'1' as misToken
+3.4获取api接口id(e3f6bdd0-32a1-4903-973d-e9fdc2b05aed)
+3.5配置接口api前后置脚本：
+前置脚本：
+var misTokenRes =  com.egova.api.util.http.HttpUtils.get('http://10.255.18.71:58080/eUrbanMIS/mobile/pub/gettokenbyhumanid?humanID=100433', String.class);
+var misToken = com.egova.json.utils.JsonUtils.deserialize(misTokenRes.getBody(), Map.class).data.token;
+out.println(misToken);
+var hpTokenRes =  com.egova.api.util.http.HttpUtils.get('http://10.255.18.71:58080/eUrbanMIS/perceptionserver/oauth/extras/token/exchange?cas_token='+misToken, String.class);
+var hpToken = com.egova.json.utils.JsonUtils.deserialize(hpTokenRes.getBody(), Map.class).result.access_token
+out.println(hpTokenRes);
+request.setHeader('Authorization', 'Bearer ' + hpToken);
+variables['token'] = hpToken;
+// var hpToken=com.egova.json.utils.JsonUtils.deserialize(hpTokenRes.getBody(), Map.class);
+var params = request.getQueryParams();
+request.setQueryParam('startTime', params.createTime_start);
+request.setQueryParam('endTime', params.createTime_end);
+request.setQueryParam('topicIds', params.topicName);
+request.setQueryParam('subjectIds', params.subjectName);
+request.setQueryParam('pageSize', params.pageSize);
+request.setQueryParam('pageIndex', params.pageIndex);
+后置脚本：
+var res = ["success":false];
+out.println(variables['token']);
+var map = com.egova.json.utils.JsonUtils.deserialize(data, Map.class);
+if(!map.hasError && map.result != null && map.result.page != null
+&& map.result.page.resultList !=null){
+res["success"]=true;
+for (item in map.result.page.resultList) {
+item.token = variables['token']
+}
+var dataMap=[
+"list":map.result.page.resultList,
+"pageInfo":[
+"currentPage":map.result.page.pageIndex,
+"numPerPage":map.result.page.pageSize,
+"totalPage":map.result.page.totalPage,
+"totalRecord":map.result.page.totalCount
+]
+];
+for(def item : dataMap.list){
+item["subjecttopicName"] = item.subjectName + item.topicName
+}
+res['data']=dataMap;
+}
+return com.egova.json.utils.JsonUtils.serialize(res);
+3.6给第3步生成的列表配置接口地址(替换第4步中的api  id)
+function main(pageId, param) {
+return new Promise((resolve, reject) => {
+console.log(param)
+api.API_DATA_EXECUTE("e3f6bdd0-32a1-4903-973d-e9fdc2b05aed", "WIDZOM", param, { lostAbility: "01" })
+.then(res => {
+console.log(res);
+resolve(res);
+}).catch(() => {
+reject();
+})
+})
+}
+3.7配置详情页面js：
+先配置iframe组件：
+然后配置js详情：
+最后别忘了配置didMount(iframe页面的触发效果)
+3.8配置下拉组件动态接口：
+3.9下拉组件配置动态接口数据(详情见文档《数据源》)
+function fit(result) {
+// fit用于成功解析数据源响应后回调
+// result为数据源返回结果，若要配置到select的option上则需要保证返回结构包含label及value属性
+result = JSON.parse(result);
+console.log("---------------------");
+console.log(result);
+console.log("数据是否正常保存");
+let data = result.result.list || [];
+result = data.map(item => {
+return {
+"label": item.name,
+"value": item.id
+}
+});
+return result;
+}
+road_id,road_name,road_type_id,act_property_id,display_style_id,human_id,human_name,role_id,execute_time,action_start_time,action_end_time,inst_num,not_inst_num,accur_inst_num,to_inst_num,intime_inst_num,archive_num,intime_archive_num,to_archive_num,trans_num,cancel_time,rec_disp_num,archive_time,back_num,need_archive_num,overtime_archive_num,overtime_to_archive_num,cancel_num,wrong_inst_num2,wrong_not_inst_num,wrong_inst_num,second_dispatch_wrong_num

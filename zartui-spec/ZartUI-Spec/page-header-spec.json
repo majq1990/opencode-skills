@@ -1,0 +1,167 @@
+{
+  "name": "page-header-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 页头规范，分为一级页头（5 个变体）与二级页头（4 个变体）",
+
+  "common": {
+    "background": "#FFFFFF",
+    "bottom_separator": "1px solid #E9ECF2",
+    "layout": "左侧 flex + 右侧 margin-left: auto",
+    "default_gap": "8px"
+  },
+
+  "buttons": {
+    "pill_primary": {
+      "description": "全圆角主按钮（如新增）",
+      "height": "32px",
+      "padding": "0 16px",
+      "border_radius": "16px",
+      "background": "#FFFFFF",
+      "border": "1px solid #DDE1EB",
+      "color": "#3388FF",
+      "icon_color": "#3388FF",
+      "hover": { "border": "#3388FF" }
+    },
+    "pill_secondary": {
+      "description": "全圆角次要按钮（导出/导入/批量删除/归档/高级搜索/设置/下载模板）",
+      "height": "32px",
+      "padding": "0 16px",
+      "border_radius": "16px",
+      "background": "#FFFFFF",
+      "border": "1px solid #DDE1EB",
+      "color": "#223355",
+      "hover": { "border": "#3388FF", "color": "#3388FF" }
+    },
+    "rect_primary": {
+      "description": "矩形主按钮（确定/保存）",
+      "height": "32px",
+      "padding": "0 16px",
+      "border_radius": "4px",
+      "background": "#3388FF",
+      "color": "#FFFFFF",
+      "hover": { "background": "#2167D9" }
+    },
+    "rect_secondary": {
+      "description": "矩形次要按钮（取消/重置）",
+      "height": "32px",
+      "padding": "0 16px",
+      "border_radius": "4px",
+      "background": "#FFFFFF",
+      "border": "1px solid #DDE1EB",
+      "color": "#223355",
+      "hover": { "border": "#3388FF", "color": "#3388FF" }
+    }
+  },
+
+  "search_box": {
+    "description": "常规搜索框（左输入 + 右搜索按钮）",
+    "height": "32px",
+    "min_width": "280px",
+    "input": {
+      "border": "1px solid #DDE1EB",
+      "border_right": "none",
+      "border_radius": "16px 0 0 16px（左侧全圆角）",
+      "padding": "0 16px",
+      "placeholder": "请输入关键字搜索",
+      "placeholder_color": "#A8B4C8",
+      "focus_border": "#3388FF"
+    },
+    "button": {
+      "width": "40px",
+      "height": "100%",
+      "border": "1px solid #DDE1EB",
+      "border_radius": "0 16px 16px 0（右侧全圆角）",
+      "icon_size": "14×14px",
+      "icon_color": "#A8B4C8",
+      "hover": { "border": "#3388FF", "color": "#3388FF" }
+    }
+  },
+
+  "primary_header": {
+    "description": "一级页头（业务列表页顶部）",
+    "variants": [
+      {
+        "name": "变体一：按钮 + 搜索栏",
+        "left": "新增（pill_primary） + 导出/导入/下载模板/批量删除/归档（pill_secondary），按钮间距 8px",
+        "right": "搜索框 + 高级搜索（pill_secondary） + 设置（pill_secondary，六边形+圆圈图标 + 设置 文字）"
+      },
+      {
+        "name": "变体二：标题 + 搜索栏",
+        "container_height": "56px",
+        "left": "页面标题：18px · 500 · #081126",
+        "right": "搜索框 + 高级搜索 + 设置（同变体一）"
+      },
+      {
+        "name": "变体三：标题 + 操作按钮",
+        "container_height": "56px",
+        "left": "标题（同变体二）",
+        "right": "取消（rect_secondary） + 重置（rect_secondary） + 确定（rect_primary）"
+      },
+      {
+        "name": "变体四：仅标题",
+        "container_height": "56px",
+        "left": "标题（同变体二）",
+        "right": "无"
+      },
+      {
+        "name": "变体五：标题+操作按钮 + 二级标签",
+        "container_height": "96px",
+        "row1_height": "56px",
+        "row1": "左标题 + 右侧 取消/重置/确定 矩形按钮",
+        "row2_height": "40px",
+        "row2": "二级标签（左边距 0），选中态文字 #3388FF + 字重 500 + 底部 2px 蓝色指示线（等宽于文字）"
+      }
+    ]
+  },
+
+  "secondary_header": {
+    "description": "二级页头（详情页/弹窗顶部）",
+    "variants": [
+      {
+        "name": "变体一：返回箭头 + 标题 + 操作按钮",
+        "left": "返回箭头（线状 16×16px，#6B7A99，Hover #3388FF）+ 间距 8px + 标题（14px · 500 · #081126）",
+        "right": "取消 + 重置 + 确定（同一级变体三）"
+      },
+      {
+        "name": "变体二：二级标签 + 说明/关闭",
+        "container_height": "40px",
+        "left": "7 个二级标签，左边距 0",
+        "right_buttons": {
+          "size": "32×32px 按钮，图标 16×16px",
+          "default_color": "#A8B4C8",
+          "explain_hover": { "icon": "#3388FF", "background": "#F5F7FA" },
+          "close_hover":   { "icon": "#FF4433", "background": "#F5F7FA" }
+        }
+      },
+      {
+        "name": "变体三：标题 + 取消/重置/保存",
+        "left": "标题（14px · 500 · #081126）",
+        "right": "取消 + 重置（rect_secondary） + 保存（rect_primary）"
+      },
+      {
+        "name": "变体四：标题 + 搜索/高级搜索/设置",
+        "left": "标题（同变体三）",
+        "right": "搜索框 + 高级搜索 + 设置（同一级变体一右侧）"
+      }
+    ]
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "新增主按钮直接用蓝底白字与设计语言冲突",
+      "fix": "新增按钮用白底 + #DDE1EB 描边 + #3388FF 图标和文字，区别其他次要按钮的方式靠颜色而非填充"
+    },
+    {
+      "issue": "搜索框输入框右边框与按钮左边框重叠形成双线",
+      "fix": "输入框设置 border-right: none，由按钮承担右侧描边"
+    },
+    {
+      "issue": "二级页头变体二底部分隔线被误删",
+      "fix": "所有变体容器底部均保留 1px solid #E9ECF2 分隔线，仅一级变体一可不强制"
+    },
+    {
+      "issue": "二级标签左侧默认有 padding 不与容器对齐",
+      "fix": "ph-stack-tabs 设置 padding: 0，第一个标签紧贴容器左边"
+    }
+  ]
+}

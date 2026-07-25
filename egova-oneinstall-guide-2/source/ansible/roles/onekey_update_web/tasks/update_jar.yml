@@ -1,0 +1,22 @@
+---
+
+- block:
+  - name: 备份文件
+    copy:
+      src: "{{ deploy_web_path }}/{{ app_name }}/WEB-INF/lib/{{ item }}"
+      dest: "{{ deploy_update_path }}/backup_{{ timestamp }}/{{ app_name }}/WEB-INF/lib/"
+      remote_src: yes
+    loop: "{{ jar_files.split(' ') }}"
+    loop_control:
+      loop_var: item
+    ignore_errors: yes
+
+  - name: 更新文件
+    copy:
+      src: "{{ deploy_update_path }}/{{ app_name }}/WEB-INF/lib/"
+      dest: "{{ deploy_web_path }}/{{ app_name }}/WEB-INF/lib/"
+      mode: '0755'
+  when: jar_files is not undefined
+
+
+

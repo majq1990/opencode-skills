@@ -1,0 +1,20 @@
+[Unit]
+Description=micro-service-{{ app_type }}
+
+
+[Service]
+WorkingDirectory={{ app_root_dir }}/{{ web_app_dir }}/
+EnvironmentFile={{ app_root_dir }}/{{ web_app_dir }}/{{ web_app_name }}.env
+Environment="JAVA_HOME=/usr/java/jdk{{ service_jdk_version }}"
+ExecStart=/usr/java/jdk{{ service_jdk_version }}/bin/java $JAVA_SERVER_OPTS
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitInterval=100
+StandardOutput=null
+StandardError=null
+User={{ ops_user }}
+Group={{ ops_user }}
+
+[Install]
+WantedBy=multi-user.target

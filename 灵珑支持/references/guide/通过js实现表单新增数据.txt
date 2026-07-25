@@ -1,0 +1,63 @@
+通过js实现表单新增数据
+1 使用场景
+用户填写一个报告，然后将报告与一些特定的记录关联起来并保存。
+2 效果
+新增报送内容信息时，需要勾选工单记录，再将工单与内容信息存入表中。
+3 配置
+在新增按钮上绑定动作，弹出新增报送内容页面。
+在确认按钮上绑定脚本 ：
+function main() {
+    let self = this;
+    let formPartEle = self.$$element("form_part_9nky1b"); //获取当前页面的表单元素。
+    var currentDate = new Date();
+    let rec_id = "";
+    let create_human_id = "";
+    let create_human_name = "";
+    let flag = 1;
+    if (formPartEle) {   //使用表单保存成功后能够返回参数的脚本，得到res参数。
+        formPartEle.$$getRenderElement().onSave().then((res) => {
+            formPartEle.$$getRenderElement().$$setSuccessTipMessage("");
+            const report_id = res.result.documentNo //获取表单保存成功后返回的主键
+            let pageTableList = self.$$roots()[0].$$element("page_widget_list_8e84gl"); //获取当前列表部件渲染
+            var tableComp = pageTableList.dataEngine.state.getElement("table_1bspuw");//获取列表元素
+            // 获取当前表格选中的行
+            let rows = tableComp.rowSelection.selectedRows || [];
+            console.log("currentDate:");
+            console.log(currentDate);
+            var userInfo = JSON.parse(window.localStorage.getItem("linglong:user"));
+            rows.forEach(row => { //遍历列表数据,获得工单的主键ID
+                console.log(row.rec_id.value);
+                rec_id = row.rec_id.value
+                create_time = currentDate.getFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate() + ' ' + currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds()
+                
+                create_human_id= userInfo.user.id
+                create_human_name = userInfo.user.username
+                //api.EXEC_FORMULA("insert('t_5927b7cb034d429a8c0e377374cd803d',['rec_id','" + rec_id + "','report_id','" + report_id + "','create_time','" + create_time + "','create_human_id','" + create_human_id + "','create_human_name','" + create_human_name + "'])").then((res) => {
+//调用api,使用UPSERT,当列表数据中不存在符合查询条件的数据时，则新增一条数据；当列表数据中存在符合查询条件的数据时，则会更新该条数据。        api.EXEC_FORMULA("UPSERT('t_5927b7cb034d429a8c0e377374cd803d',QUERY_AND(QUERY_EQ('rec_id', '" + rec_id + "'),QUERY_EQ('report_id', '" + report_id + "')),'',['rec_id','" + rec_id + "','report_id','" + report_id + "','create_time','" + create_time + "','create_human_id','" + create_human_id + "','create_human_name','" + create_human_name + "'], ['id', 'rec_id','report_id'],)").then((res) => {
+                    if (!res.hasError) {
+                        tableComp.$$refreshData().then(() => {
+                            tableComp.loading = false; // 将表格置为非loading状态
+                            //self.$message.success("保存成功");
+                            flag = 0; 
+                            //console.log("保存成功")
+                        }); // 调用表格的数据刷新动作
+
+                    } else {
+                        self.$message.error(res); // 显示错误提示信息
+                        tableComp.loading = false; // 将表格置为非loading状态
+                    }
+                }).catch(err => {
+                    self.$message.error(err.message); // 显示错误提示信息
+
+                });
+            });
+        });
+    }
+    if (window.parent) {
+        window.parent.postMessage(JSON.stringify({
+            event: "close-dialog",
+            param: { "XXX": "test" }
+        }), "*");
+    }
+}
+关键代码已注释。

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 评分</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; margin-top: 32px; }
+h2:first-of-type { margin-top: 0; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; display: flex; flex-direction: column; gap: 32px; }
+.demo-label { font-size: 12px; color: #A8B4C8; margin-bottom: 12px; }
+
+/* ===================== 评分基础 ===================== */
+.z-rate {
+  display: inline-flex; align-items: center; gap: 6px;
+  user-select: none;
+}
+.z-rate-item {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: transform .1s;
+}
+.z-rate-item:hover { transform: scale(1.15); }
+.z-rate-item.is-disabled { cursor: not-allowed; pointer-events: none; }
+.z-rate-item svg { width: 24px; height: 24px; transition: fill .15s; }
+
+/* 未激活 */
+.z-rate-item .icon-off { fill: #DDE1EB; }
+.z-rate-item g.icon-off path,
+.z-rate-item g.icon-off rect { fill: #DDE1EB; }
+
+/* 各形状激活色 */
+.z-rate-star   .z-rate-item.is-on .icon-off { fill: #FFAA00; }
+.z-rate-heart  .z-rate-item.is-on .icon-off { fill: #FF4433; }
+.z-rate-fire   .z-rate-item.is-on .icon-off { fill: #FF4433; }
+.z-rate-bolt   .z-rate-item.is-on .icon-off { fill: #3388FF; }
+.z-rate-thumb  .z-rate-item.is-on .icon-off { fill: #FF6600; }
+.z-rate-thumb  .z-rate-item.is-on g.icon-off path,
+.z-rate-thumb  .z-rate-item.is-on g.icon-off rect { fill: #FF6600; }
+
+/* 禁用激活 */
+.z-rate-item.is-disabled.is-on .icon-off { fill: #FFD580; }
+
+/* 文字说明 */
+.z-rate-label {
+  font-size: 13px; color: #223355; margin-left: 4px; min-width: 56px;
+  transition: color .15s;
+}
+
+/* ===================== 表情样式 ===================== */
+.z-rate-emoji .z-rate-item { width: 28px; height: 28px; }
+.z-rate-emoji .z-rate-item svg { width: 28px; height: 28px; }
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 评分</h1>
+<p class="page-desc">支持多种图标形状，默认 5 个评分项，1~5 分依次对应：极差 / 较差 / 中等 / 满意 / 非常满意</p>
+
+<!-- ============================================================ 星星 -->
+<h2>星星形状</h2>
+<div class="section">
+  <div>
+    <div class="demo-label">各分值状态</div>
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="z-rate z-rate-star" data-val="1"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><span class="z-rate-label">极差</span></div>
+      <div class="z-rate z-rate-star" data-val="2"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><span class="z-rate-label">较差</span></div>
+      <div class="z-rate z-rate-star" data-val="3"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><span class="z-rate-label">中等</span></div>
+      <div class="z-rate z-rate-star" data-val="4"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><span class="z-rate-label">满意</span></div>
+      <div class="z-rate z-rate-star" data-val="5"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><span class="z-rate-label">非常满意</span></div>
+      <!-- 禁用 -->
+      <div class="z-rate z-rate-star"><div class="z-rate-item is-on is-disabled"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-on is-disabled"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-on is-disabled"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-disabled"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><div class="z-rate-item is-disabled"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div><span class="z-rate-label" style="color:#A8B4C8;">中等（禁用）</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="demo-label">可交互</div>
+    <div class="z-rate z-rate-star" id="rate-star-interactive">
+      <div class="z-rate-item" data-i="1"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div>
+      <div class="z-rate-item" data-i="2"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div>
+      <div class="z-rate-item" data-i="3"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div>
+      <div class="z-rate-item" data-i="4"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div>
+      <div class="z-rate-item" data-i="5"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 2.5c.4 0 .8.2 1 .6l2.1 4.3 4.7.7c.9.1 1.3 1.2.6 1.9l-3.4 3.3.8 4.7c.2.9-.8 1.6-1.6 1.2L12 16.8l-4.2 2.4c-.8.4-1.8-.3-1.6-1.2l.8-4.7L3.6 10c-.7-.7-.3-1.8.6-1.9l4.7-.7 2.1-4.3c.2-.4.6-.6 1-.6z"/></svg></div>
+      <span class="z-rate-label" id="rate-star-label">请评分</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ 心形 -->
+<h2>❤️ 心形</h2>
+<div class="section">
+  <div>
+    <div class="demo-label">各分值状态</div>
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="z-rate z-rate-heart"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><span class="z-rate-label">极差</span></div>
+      <div class="z-rate z-rate-heart"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><span class="z-rate-label">较差</span></div>
+      <div class="z-rate z-rate-heart"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><span class="z-rate-label">中等</span></div>
+      <div class="z-rate z-rate-heart"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><span class="z-rate-label">满意</span></div>
+      <div class="z-rate z-rate-heart"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div><span class="z-rate-label">非常满意</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="demo-label">可交互</div>
+    <div class="z-rate z-rate-heart" id="rate-heart-interactive">
+      <div class="z-rate-item" data-i="1"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div>
+      <div class="z-rate-item" data-i="2"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div>
+      <div class="z-rate-item" data-i="3"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div>
+      <div class="z-rate-item" data-i="4"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div>
+      <div class="z-rate-item" data-i="5"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 0112 6.1 4.5 4.5 0 0121 8.5C21 14.5 12 21 12 21z"/></svg></div>
+      <span class="z-rate-label" id="rate-heart-label">请评分</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ 火焰 -->
+<h2>🔥 火焰形状</h2>
+<div class="section">
+  <div>
+    <div class="demo-label">各分值状态</div>
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="z-rate z-rate-fire"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><span class="z-rate-label">极差</span></div>
+      <div class="z-rate z-rate-fire"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><span class="z-rate-label">较差</span></div>
+      <div class="z-rate z-rate-fire"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><span class="z-rate-label">中等</span></div>
+      <div class="z-rate z-rate-fire"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><span class="z-rate-label">满意</span></div>
+      <div class="z-rate z-rate-fire"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div><span class="z-rate-label">非常满意</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="demo-label">可交互</div>
+    <div class="z-rate z-rate-fire" id="rate-fire-interactive">
+      <div class="z-rate-item" data-i="1"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div>
+      <div class="z-rate-item" data-i="2"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div>
+      <div class="z-rate-item" data-i="3"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div>
+      <div class="z-rate-item" data-i="4"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div>
+      <div class="z-rate-item" data-i="5"><svg viewBox="0 0 24 24"><path class="icon-off" d="M12 1.5C10.5 4.5 8 7 6.5 10c-1.2 2.2-1.5 4-1 5.8a6.5 6.5 0 0 0 13 0c.5-1.8 0-4-1.5-6.3C16 11 15 12.5 13.5 14 14 11 13.5 7 12 1.5z"/></svg></div>
+      <span class="z-rate-label" id="rate-fire-label">请评分</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ 雷电 -->
+<h2>⚡ 雷电形状</h2>
+<div class="section">
+  <div>
+    <div class="demo-label">各分值状态</div>
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="z-rate z-rate-bolt"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><span class="z-rate-label">极差</span></div>
+      <div class="z-rate z-rate-bolt"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><span class="z-rate-label">较差</span></div>
+      <div class="z-rate z-rate-bolt"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><span class="z-rate-label">中等</span></div>
+      <div class="z-rate z-rate-bolt"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><span class="z-rate-label">满意</span></div>
+      <div class="z-rate z-rate-bolt"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div><span class="z-rate-label">非常满意</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="demo-label">可交互</div>
+    <div class="z-rate z-rate-bolt" id="rate-bolt-interactive">
+      <div class="z-rate-item" data-i="1"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div>
+      <div class="z-rate-item" data-i="2"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div>
+      <div class="z-rate-item" data-i="3"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div>
+      <div class="z-rate-item" data-i="4"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div>
+      <div class="z-rate-item" data-i="5"><svg viewBox="0 0 24 24"><path class="icon-off" d="M13 1.5L4 13.5h6.5L9 22.5l10.5-13H13z"/></svg></div>
+      <span class="z-rate-label" id="rate-bolt-label">请评分</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ 点赞手 -->
+<h2>👍 点赞手形状</h2>
+<div class="section">
+  <div>
+    <div class="demo-label">各分值状态</div>
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="z-rate z-rate-thumb"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><span class="z-rate-label">极差</span></div>
+      <div class="z-rate z-rate-thumb"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><span class="z-rate-label">较差</span></div>
+      <div class="z-rate z-rate-thumb"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><span class="z-rate-label">中等</span></div>
+      <div class="z-rate z-rate-thumb"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><span class="z-rate-label">满意</span></div>
+      <div class="z-rate z-rate-thumb"><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><div class="z-rate-item is-on"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div><span class="z-rate-label">非常满意</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="demo-label">可交互</div>
+    <div class="z-rate z-rate-thumb" id="rate-thumb-interactive">
+      <div class="z-rate-item" data-i="1"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div>
+      <div class="z-rate-item" data-i="2"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div>
+      <div class="z-rate-item" data-i="3"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div>
+      <div class="z-rate-item" data-i="4"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div>
+      <div class="z-rate-item" data-i="5"><svg viewBox="0 0 24 24"><g class="icon-off"><path d="M8.5 21.5V12.5L12 8.5V6a1.5 1.5 0 013 0v5.5h4a2 2 0 012 2l-1.5 6.5a2 2 0 01-2 1.5H8.5z"/><rect x="3.5" y="12" width="3.5" height="10" rx="1.5"/></g></svg></div>
+      <span class="z-rate-label" id="rate-thumb-label">请评分</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ 表情 -->
+<h2>😊 表情样式</h2>
+<div class="section">
+
+  <div>
+    <div class="demo-label">1分·极差（红色发怒 × 1）</div>
+    <div class="z-rate z-rate-emoji" id="demo-emoji-1">
+      <!-- 全5个发怒脸，仅第1个点亮为红色 -->
+    </div>
+  </div>
+
+  <div>
+    <div class="demo-label">2分·较差（黄色伤心 × 2）</div>
+    <div class="z-rate z-rate-emoji" id="demo-emoji-2"></div>
+  </div>
+
+  <div>
+    <div class="demo-label">3分·中等（灰色无表情 × 3）</div>
+    <div class="z-rate z-rate-emoji" id="demo-emoji-3"></div>
+  </div>
+
+  <div>
+    <div class="demo-label">4分·满意（黄色微笑 × 4）</div>
+    <div class="z-rate z-rate-emoji" id="demo-emoji-4"></div>
+  </div>
+
+  <div>
+    <div class="demo-label">5分·非常满意（黄色大笑 × 5）</div>
+    <div class="z-rate z-rate-emoji" id="demo-emoji-5"></div>
+  </div>
+
+  <div>
+    <div class="demo-label">可交互</div>
+    <div class="z-rate z-rate-emoji" id="rate-emoji-interactive">
+      <div class="z-rate-item" data-i="1"></div>
+      <div class="z-rate-item" data-i="2"></div>
+      <div class="z-rate-item" data-i="3"></div>
+      <div class="z-rate-item" data-i="4"></div>
+      <div class="z-rate-item" data-i="5"></div>
+      <span class="z-rate-label" id="rate-emoji-label">请评分</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const LABELS = ['', '极差', '较差', '中等', '满意', '非常满意'];
+
+/* ---- 表情 SVG 定义 ---- */
+function svgAngry(color) {
+  return `<svg viewBox="0 0 24 24" width="28" height="28">
+    <circle cx="12" cy="12" r="10" fill="${color}"/>
+    <!-- 眉毛皱眉 -->
+    <path d="M7.5 8.5 Q9 7 10.5 8" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+    <path d="M13.5 8 Q15 7 16.5 8.5" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+    <!-- 眼睛 -->
+    <circle cx="9" cy="11" r="1.2" fill="#fff"/>
+    <circle cx="15" cy="11" r="1.2" fill="#fff"/>
+    <!-- 嘴（向下弧，愤怒） -->
+    <path d="M8.5 16.5 Q12 14 15.5 16.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
+function svgSad(color) {
+  return `<svg viewBox="0 0 24 24" width="28" height="28">
+    <circle cx="12" cy="12" r="10" fill="${color}"/>
+    <!-- 眼睛（闭 × 哭） -->
+    <path d="M8.5 9.5 Q9 8.5 9.5 9.5" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+    <path d="M14.5 9.5 Q15 8.5 15.5 9.5" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+    <!-- 泪水 -->
+    <path d="M9 10.5 Q8.5 12.5 9.2 13.5" stroke="#fff" stroke-width="1" fill="none" stroke-linecap="round"/>
+    <path d="M15 10.5 Q15.5 12.5 14.8 13.5" stroke="#fff" stroke-width="1" fill="none" stroke-linecap="round"/>
+    <!-- 嘴（向下弧） -->
+    <path d="M8.5 16.5 Q12 14 15.5 16.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
+function svgNeutral(color) {
+  return `<svg viewBox="0 0 24 24" width="28" height="28">
+    <circle cx="12" cy="12" r="10" fill="${color}"/>
+    <circle cx="9" cy="10.5" r="1.2" fill="#fff"/>
+    <circle cx="15" cy="10.5" r="1.2" fill="#fff"/>
+    <line x1="9" y1="15.5" x2="15" y2="15.5" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+  </svg>`;
+}
+function svgSmile(color) {
+  return `<svg viewBox="0 0 24 24" width="28" height="28">
+    <circle cx="12" cy="12" r="10" fill="${color}"/>
+    <circle cx="9" cy="10.5" r="1.2" fill="#fff"/>
+    <circle cx="15" cy="10.5" r="1.2" fill="#fff"/>
+    <path d="M9 14.5 Q12 17 15 14.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
+function svgLaugh(color) {
+  return `<svg viewBox="0 0 24 24" width="28" height="28">
+    <circle cx="12" cy="12" r="10" fill="${color}"/>
+    <path d="M7.5 9.5 Q9 7.5 10.5 9.5" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+    <path d="M13.5 9.5 Q15 7.5 16.5 9.5" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+    <path d="M8 13.5 Q12 18.5 16 13.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    <path d="M8 13.5 Q12 15.8 16 13.5" fill="#fff" opacity="0.35"/>
+  </svg>`;
+}
+
+/* 颜色 */
+const C_INACTIVE = '#DDE1EB';
+const C_RED      = '#FF4433';
+const C_YELLOW   = '#FFAA00';
+
+/*
+  按分值决定：每个位置显示什么表情 + 什么颜色
+  val=1: 1个红发怒 + 4个灰发怒
+  val=2: 2个黄伤心 + 3个灰伤心
+  val=3: 3个黄无表情 + 2个灰无表情
+  val=4: 4个黄微笑 + 1个灰微笑
+  val=5: 5个黄大笑
+*/
+function emojiSvg(pos, val) {
+  const on = pos <= val;
+  if (val === 0) return svgSmile(C_INACTIVE);
+  if (val === 1) return on ? svgAngry(C_RED)     : svgAngry(C_INACTIVE);
+  if (val === 2) return on ? svgSad(C_YELLOW)    : svgSad(C_INACTIVE);
+  if (val === 3) return on ? svgNeutral(C_YELLOW): svgNeutral(C_INACTIVE);
+  if (val === 4) return on ? svgSmile(C_YELLOW)  : svgSmile(C_INACTIVE);
+  if (val === 5) return svgLaugh(C_YELLOW);
+  return svgSmile(C_INACTIVE);
+}
+
+/* 渲染静态demo */
+function renderEmojiDemo(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = '';
+  for (let i = 1; i <= 5; i++) {
+    const div = document.createElement('div');
+    div.className = 'z-rate-item' + (i <= val ? ' is-on' : '');
+    div.innerHTML = emojiSvg(i, val);
+    el.appendChild(div);
+  }
+  const lbl = document.createElement('span');
+  lbl.className = 'z-rate-label';
+  lbl.textContent = LABELS[val];
+  el.appendChild(lbl);
+}
+renderEmojiDemo('demo-emoji-1', 1);
+renderEmojiDemo('demo-emoji-2', 2);
+renderEmojiDemo('demo-emoji-3', 3);
+renderEmojiDemo('demo-emoji-4', 4);
+renderEmojiDemo('demo-emoji-5', 5);
+
+/* 可交互表情 */
+function initEmojiInteractive(containerId, labelId) {
+  const container = document.getElementById(containerId);
+  const labelEl   = document.getElementById(labelId);
+  if (!container) return;
+  const items = container.querySelectorAll('.z-rate-item');
+  let current = 0;
+
+  function render(val) {
+    items.forEach((item, idx) => {
+      item.innerHTML = emojiSvg(idx + 1, val);
+      item.classList.toggle('is-on', idx < val);
+    });
+    if (labelEl) {
+      labelEl.textContent = val ? LABELS[val] : '请评分';
+    }
+  }
+
+  render(0);
+
+  items.forEach((item, idx) => {
+    item.addEventListener('mouseenter', () => render(idx + 1));
+    item.addEventListener('mouseleave', () => render(current));
+    item.addEventListener('click', () => {
+      current = (current === idx + 1) ? 0 : idx + 1;
+      render(current);
+    });
+  });
+}
+initEmojiInteractive('rate-emoji-interactive', 'rate-emoji-label');
+
+/* 通用填充式评分交互 */
+function initRate(containerId, labelId) {
+  const container = document.getElementById(containerId);
+  const labelEl   = document.getElementById(labelId);
+  if (!container) return;
+  const items = container.querySelectorAll('.z-rate-item');
+  let current = 0;
+
+  function render(val) {
+    items.forEach((item, idx) => item.classList.toggle('is-on', idx < val));
+    if (labelEl) {
+      labelEl.textContent = val ? LABELS[val] : '请评分';
+    }
+  }
+
+  items.forEach((item, idx) => {
+    item.addEventListener('mouseenter', () => render(idx + 1));
+    item.addEventListener('mouseleave', () => render(current));
+    item.addEventListener('click', () => {
+      current = (current === idx + 1) ? 0 : idx + 1;
+      render(current);
+    });
+  });
+}
+
+initRate('rate-star-interactive',  'rate-star-label');
+initRate('rate-heart-interactive', 'rate-heart-label');
+initRate('rate-fire-interactive',  'rate-fire-label');
+initRate('rate-bolt-interactive',  'rate-bolt-label');
+initRate('rate-thumb-interactive', 'rate-thumb-label');
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+# 菜单选项配置
+v14_service:
+  name: 智信云框架产品
+  display: 1
+  choice_index: 1
+  sub_options:
+    - name: mysql
+      type: mysql
+    - name: 达梦
+      type: dm
+    - name: 人大金仓
+      type: postgresql
+    - name: 瀚高
+      type: postgresql
+
+app_service:
+  name: 基础平台产品
+  display: 1
+  choice_index: 2
+  sub_options:
+    - name: 灵珑
+      category: linglong
+      sub_options:
+        - name: mysql
+          type: mysql
+        - name: 达梦
+          type: dm
+        - name: 人大金仓
+          type: postgresql
+        - name: 瀚高
+          type: postgresql
+    - name: 星桥
+      category: dex
+      sub_options:
+        - name: mysql
+          type: mysql
+        - name: 达梦
+          type: dm
+        - name: 人大金仓
+          type: postgresql
+        - name: 瀚高
+          type: postgresql
+    - name: 悟空
+      category: wukong
+      sub_options:
+        - name: mysql
+          type: mysql
+        - name: 达梦
+          type: dm
+        - name: 人大金仓
+          type: postgresql
+        - name: 瀚高
+          type: postgresql
+    - name: 用户中心
+      category: usercenter
+      sub_options:
+        - name: mysql
+          type: mysql
+        - name: 达梦
+          type: dm
+        - name: 人大金仓
+          type: postgresql
+        - name: 瀚高
+          type: postgresql

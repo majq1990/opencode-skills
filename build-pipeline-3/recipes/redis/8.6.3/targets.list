@@ -1,0 +1,4 @@
+# Redis 验证目标
+openeuler/openeuler:24.03-lts-pkg
+macrosan/uos:v20-1070-pkg
+macrosan/kylin:v10-sp2-pkg

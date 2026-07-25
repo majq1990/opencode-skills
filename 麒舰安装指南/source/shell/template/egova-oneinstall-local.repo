@@ -1,0 +1,5 @@
+[egova-local]
+name=egova local yum
+baseurl=http://127.0.0.1:EGOVA_LOCAL_PORT/repo/RELEASE_VER
+gpgcheck=0
+priority=1

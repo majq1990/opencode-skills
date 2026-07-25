@@ -1,0 +1,39 @@
+db_types:
+  - name: "mysql"
+    desc: "MySQL"
+    display: true
+  - name: "dm"
+    desc: "达梦"
+    display: true
+  - name: "postgresql"
+    desc: "人大金仓"
+    display: true
+  - name: "highgo"
+    desc: "瀚高"
+    display: true
+
+checks:
+  - name: "cgdb"
+    desc: "网格化核心库"
+    display: true
+  - name: "bisheng"
+    desc: "毕升"
+    display: true
+  - name: "dex"
+    desc: "星桥"
+    display: true
+  - name: "linglong"
+    desc: "灵珑"
+    display: true
+  - name: "smt"
+    desc: "市民通"
+    display: true
+  - name: "wukong"
+    desc: "悟空"
+    display: true
+  - name: "law"
+    desc: "执法"
+    display: true
+  - name: "usercenter"
+    desc: "用户中心"
+    display: true

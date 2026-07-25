@@ -1,0 +1,26 @@
+-- 此文件应该放在usercenter-db.tar中，此处为备份
+{%- set nginx_main_node = ip_nginx_main.hosts.master %}
+{%- set eurbanpro_media_node = ip_web_eurbanpro_media.hosts.master %}
+
+{% for depend in microservice[app_type][app_name].depends %}
+{% if depend.type == 'kafka' %}
+-- 数据对接KAFKA地址修改
+UPDATE sys_config_item SET item_value='{{ kafka[depend.depend_key].ip }}:{{ kafka[depend.depend_key].port }}' WHERE display_name='数据对接KAFKA地址';
+{% endif %}
+{% endfor %}
+
+{% if nginx_main_node is not none %}
+update sys_application set url = 'http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/linglong/index.html', redirect_url = 'http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/linglong/index.html' where code = 'linglong';
+{% else %}
+update sys_application set url = 'http://127.0.0.1:8080/linglong/index.html', redirect_url = 'http://127.0.0.1:8080/linglong/index.html' where code = 'linglong';
+{% endif %}
+
+{% if media_node is not none %}
+-- 多媒体
+update sys_media_config set endpoint = 'http://127.0.0.1:8087/HttpFileServer' where name = 'HttpFileServer';
+{% endif %}
+
+-- 多媒体内网地址
+{% if eurbanpro_media_node is not none %}
+UPDATE sys_media_config set inner_virtual_path = 'http://127.0.0.1:8080/media-api/free/media/get-by-uid?uid='  where name = 'HttpFileServer';
+{% endif %}

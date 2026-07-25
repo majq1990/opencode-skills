@@ -1,0 +1,171 @@
+{
+  "cgdb": {
+    "tableName": "tc_sys_config_item",
+    "valueColumn": "item_value",
+    "configItemNameColumn": "config_item_name",
+    "configItems": {
+      "MIS_REC_ENABLE_HUMAN_CODE": "0",
+      "COMMON_SHOW_SERVER_ERROR_DETAIL": "1",
+      "MIS_LOGIN_REFRESH_SESSION": "1",
+      "MIS_LOGIN_FUZZY_SEARCH": "0",
+      "MIS_LOGIN_AUTO_FILL_USERNAME": "0",
+      "MIS_LOGIN_VALID_WAY": "3",
+      "MEDIA_INFO_SHOW_PASSWORD_FLAG": "0",
+      "MIS_LOGIN_VALID_ERROR_NUM": "5",
+      "MIS_LOGIN_LOCK_TIME": "5",
+      "MIS_LOGIN_VALID_TIME_SEGMENT": "5",
+      "MIS_LOGIN_PASS_MINCHAR": "6",
+      "MIS_LOGIN_PASS_MAXCHAR": "9",
+      "SYS_PASS_ENC_TYPE": "1",
+      "MIS_PASSWORD_CHECK_REGEXP": "[a-z],[A-Z],[0-9],[$@$!%*#?&]",
+      "MIS_BUILDER_HUMAN_DEFAULT_PASSWORD": "Egova@2023",
+      "MIS_LOGIN_ENABLE_CHANGE_PASSWORD_NOTICE_DIALOG": "1",
+      "MIS_CHANGE_PASSWORD_VIEW_URL": "view/bizbase/sysconfig/sysconfig?_$_title=系统配置",
+      "MIS_CHANGE_PASSWORD_NOTICE_CONTENT": "温馨提示：为了您的账号安全，请及时修改密码。",
+      "MIS_FORCE_CHANGE_PASSWORD_NOTICE_CONTENT": "请按照密码规则修改密码!",
+      "MIS_ENABLE_FORCE_CHANGE_PASSWORD": "1",
+      "MIS_LOGIN_REGULAR_CHANGE_PASSWORD_REMIND_CONFIG": "30",
+      "GIS_SYSCONFIGITEMURL_ENCRY": "1",
+      "GIS_OPEN_TOKEN": "1"
+    }
+  },
+  "dex": {
+    "tableName": "com_option",
+    "valueColumn": "value",
+    "configItemNameColumn": "name",
+    "configItems": {
+      "egova.security.referer.enabled": "true",
+      "egova.security.referer.referer": "允许访问的来源，逗号隔开多个，一般设置一个内网地址、一个外网地址",
+      "egova.security.front-end-encrypted": "true",
+      "egova.security.failure.enable": "true",
+      "egova.security.failure.maxRetryTimes": "5",
+      "egova.security.failure.accountLockMinutes": "10",
+      "egova.security.fileupload.whitelist.enabled": "true",
+      "egova.security.xss.enabled": "true",
+      "egova.security.ip-firewall.enabled": "true",
+      "web.commonsetting.isConversionMethod": "true",
+      "web.commonsetting.isShowSignature": "true",
+      "web.commonsetting.encryptType": "aes",
+      "egova.request.body.decode": "aes"
+    }
+  },
+  "law": {
+    "tableName": "tc_sys_config_item",
+    "valueColumn": "item_value",
+    "configItemNameColumn": "config_item_name",
+    "configItems": {
+      "MIS_PASSWORD_CHECK_REGEXP": "[a-z],[A-Z],[0-9],[$@$!%*#?&]",
+      "MIS_BUILDER_HUMAN_PASSWORD_CHECK_REGEXP": "[a-z],[A-Z],[0-9],[$@$!%*#?&]",
+      "MIS_DEFAULT_PASSWORD_FORCE_CHANGE": "1",
+      "MIS_ENABLE_FORCE_CHANGE_PASSWORD": "1",
+      "MIS_FORCE_CHANGE_PASSWORD_PERIOD": "3",
+      "MOBILE_FORM_DATA_ENCRYPT_PARAM": "1",
+      "MIS_LOGIN_VALID_WAY": "3",
+      "MIS_LOGIN_VALID_ERROR_NUM": "5",
+      "MIS_LOGIN_LOCK_TIME": "5",
+      "MIS_LOGIN_VALID_TIME_SEGMENT": "5",
+      "AUTO_COMPLETE_TIP": "5"
+    }
+  },
+  "linglong": {
+    "tableName": "com_option",
+    "valueColumn": "value",
+    "configItemNameColumn": "name",
+    "configItems": {
+       "egova.security.request.encrypt-type": "sm4",
+       "commonSetting.strict": "true",
+       "egova.security.injection.xss-enable": "true",
+       "egova.file-type.check.enabled": "true",
+       "egova.lowcode.backup.application.enable": "true",
+       "com.egova.security.sql.sensitive.columns": "com_user.password|com_user.phone|ddcat_source.password",
+       "com.egova.security.sql.sensitive.schemas": "mysql|information_schema|performance_schema",
+       "com.egova.security.sql.sensitive.tables": "com_user|ddcat_source",
+       "com.egova.security.sql.sensitive.enable": "true",
+       "com.egova.security.sql.select-all.enable": "false",
+       "egova.file-type.check.white-list": "jpeg, jpg, png, gif, bmp, tiff, tif, webp, svg, ico, hdr, doc, docx, xls, xlsx, ppt, pptx, pdf, odt, ods, odp, zip, rar, 7z, tar, gz, bz2, xz, mp4, avi, mov, mkv, wmv, flv, mpeg, mpg, 3gp, txt, xml, json",
+       "egova.file-type.check.strong-verify": "true",
+       "com.egova.lowcode.global-exception.responseCode": "403",
+       "egova.security.referer.enabled": "true"
+       "egova.security.limit.design-permission.enabled": "true"
+    }
+  },
+  "wukong": {
+    "tableName": "com_option",
+    "valueColumn": "value",
+    "configItemNameColumn": "name",
+    "configItems": {
+      "egova.wukong.force.change.P": "true",
+      "encode": "sm4",
+      "encodeWhiteList": "/wfs",
+      "egova.security.password.enable": "true",
+      "login": "true",
+      "egova.security.password.passwordExpireDays": "180",
+      "egova.security.password.strong": "EASY",
+      "egova.security.passwordEncryptType": "sm2",
+      "egova.security.failure.enable": "true",
+      "egova.security.failure.account-lock-minutes": "10",
+      "egova.security.failure.max-retry-times": "5",
+      "egova.wukong.interceptor.freeInterfaceVerifyUrl": "/free/page,/free/project/,/free/card-data/,/free/layer-menu,/free/interaction,/free/image/upload",
+      "egova.wukong.interceptor.imageAllowType": "png,svg,jpg,otf,ttf,gif,jpeg,webm,woff",
+      "egova.wukong.interceptor.imageDisabledType": "html,htm,shtml,shtm,shtml",
+      "egova.xss.enabled": "true",
+      "egova.xss.excludes": "",
+      "egova.xss.urlPatterns": "/*"
+    }
+  },
+  "smt": {
+    "tableName": "tc_pub_city_sys_config",
+    "valueColumn": "config_value",
+    "configItemNameColumn": "Config_Name",
+    "configItems": {
+      "PUB_MIS_LOGIN_FUZZY_SEARCH": "0",
+      "PUB_LOGIN_VALID_WAY": "1",
+      "PUB_LOGIN_VALID_TIME_SEGMENT": "5",
+      "PUB_LOGIN_VALID_ERROR_NUM": "5",
+      "PUB_LOGIN_LOCK_TIME": "5",
+      "PUB_USER_VALIDATE_PASSWORD": "1",
+      "PUB_PASSWORD_CHECK_REGEXP": "[a-z],[A-Z],[0-9],[$@$!%*#?&]",
+      "PUB_LOGIN_PASS_MINCHAR": "6",
+      "PUB_LOGIN_PASS_MAXCHAR": "9",
+      "PUB_LOGIN_ENABLE_CHANGE_PASSWORD_NOTICE_DIALOG": "1",
+      "PUB_CHANGE_PASSWORD_NOTICE_CONTENT": "温馨提示：为了您的账号安全，请及时修改密码。",
+      "PUB_ENABLE_FORCE_CHANGE_PASSWORD": "1",
+      "PUB_FORCE_CHANGE_PASSWORD_NOTICE_CONTENT": "请按照密码规则修改密码!",
+      "PUB_LOGIN_PASSWORD_ALLOW_EMPTY": "0",
+      "PUB_SYS_CONFIG_USER_INFO_MASK": "1",
+      "PUB_REPORT_USER_NAME_MASK": "1",
+      "PUB_SYS_CONFIG_IDCARDNUM_MASK": "1",
+      "UPLOAD_FILE_TYPE_WHITELIST": "jpg,jpeg,png,gif,tif,bmp,dwg,html,rtf,xml,zip,xls,xlsx,doc,docx,csv,zip,rar,txt,pdf,mp3,mp4,wav,avi,amr,rm,mpg,mov,sql,proxy,json,wma,3gp,asf,wmv,thumb",
+      "DOWNLOAD_FILE_TYPE_WHITELIST": "jpg,jpeg,png,gif,tif,bmp,dwg,html,rtf,xml,zip,xls,xlsx,doc,docx,csv,zip,rar,txt,pdf,mp3,mp4,wav,avi,amr,rm,mpg,mov,sql,proxy,json,wma,3gp,asf,wmv,thumb"
+    }
+  },
+  "bisheng": {
+    "tableName": "stat_config_item",
+    "valueColumn": "item_value",
+    "configItemNameColumn": "config_item_name",
+    "configItems": {
+      "REQUEST_BODY_DECODE_TYPE": "1",
+      "UPLOAD_WHITELIST_ENABLED": "1",
+      "UPLOAD_WHITELIST_VALUE": "zip,json",
+      "XSS_ENABLED": "1",
+      "IP_FIREWALL_ENABLED": "1",
+      "IP_FIREWALL_OTHERWISE_TYPE": "1"
+    }
+  },
+  "usercenter": {
+    "tableName": "sys_config_item",
+    "valueColumn": "item_value",
+    "configItemNameColumn": "name",
+    "configItems": {
+      "PASSWORD_COMPLEXITY": "1",
+      "HUMAN_DEFAULT_PASSWORD": "eGova@2024",
+      "LOGIN_FAILURE_MAX_RETRY_TIMES": "5",
+      "LOGIN_FAILURE_ACCOUNT_LOCK_MINUTES": "5",
+      "APP_FIRST_LOGIN_PW": "true",
+      "CHECK_CRYPTOGRAM_STRENGTH": "true",
+      "SECURITY_ENABLED": "true",
+      "LOGIN_MULTI_IP": "true"
+    }
+  }
+   
+}

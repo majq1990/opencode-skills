@@ -1,0 +1,202 @@
+# 菜单选项配置
+dm:
+  name: 达梦
+  display: 1
+  choice_index: 1
+  sub_options:
+    - name: 微服务
+      category: microservice
+      sub_options:
+        - name: 灵珑
+          type: linglong
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?schema=DB_SCHEMA
+          db_custom_config:
+            - --flagwind.mybatis.name-quote=2
+            - --egova.executor.stage.type=dm
+        - name: 星桥
+          type: dex
+          db_custom_config:
+            - --PUMP_STAGE_TYPE=dm
+        - name: 大数据中心(包含星桥)
+          type: bigdata
+          db_custom_config:
+            - --PUMP_STAGE_TYPE=dm
+        - name: 用户中心2.0
+          type: usercenter
+          db_custom_config:
+            - --egova.executor.stage.type=dm
+        - name: 一网统管-热线感知
+          type: hotline-perception
+          db_custom_config:
+            - --flagwind.mybatis.name-quote=2
+            - --egova.executor.stage.type=dm
+        - name: 市政v20
+          type: eUrbanFac
+          db_custom_config:
+            - --HIBERNATE_DIALECT=org.hibernate.dialect.DmDialect
+        - name: 执法-明镜
+          type: mjing
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT/DB_NAME?currentSchema=DB_SCHEMA&clobAsString=true
+          db_custom_config:
+            - --MYBATIS_NAME_QUOTE=2
+    - name: 智信云产品
+      category: service
+      sub_options:
+        - name: 一网统管
+          type: eUrbanMIS
+          db_url:
+
+postgresql:
+  name: 人大金仓
+  display: 1
+  choice_index: 2
+  sub_options:
+    - name: 微服务
+      category: microservice
+      sub_options:
+        - name: 玄藏
+          type: xuanzang
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA&serverTimezone=Asia/Shanghai&allowMultiQueries=true&autoReconnect=true&failOverReadOnly=false&useUnicode=true&characterEncoding=utf8&stringtype=unspecified
+        - name: 用户中心2.0
+          type: usercenter
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA&stringtype=unspecified
+        - name: 星桥
+          type: dex
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA&stringtype=unspecified
+          db_custom_config:
+            - --PUMP_STAGE_TYPE=postgresql
+        - name: 大数据中心(包含星桥)
+          type: bigdata
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA&stringtype=unspecified
+          db_custom_config:
+            - --PUMP_STAGE_TYPE=postgresql
+        - name: 毕升
+          type: evaluation
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA
+          db_custom_config:
+            - --HIBERNATE_DIALECT=cn.com.egova.base.dialect.EgovaKingbase8Dialect
+        - name: 多媒体
+          type: media
+          db_custom_config:
+            - --HIBERNATE_DIALECT=cn.com.egova.base.dialect.EgovaKingbase8Dialect
+        - name: 导出微服务
+          type: export
+          db_custom_config:
+            - --HIBERNATE_DIALECT=cn.com.egova.base.dialect.EgovaKingbase8Dialect
+        - name: dsscp加密服务
+          type: dsscp
+          db_custom_config:
+            - --HIBERNATE_DIALECT=cn.com.egova.base.dialect.EgovaKingbase8Dialect
+        - name: 灵珑
+          type: linglong
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA&serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&autoReconnect=true&failOverReadOnly=false&useUnicode=true&characterEncoding=utf8&nullCatalogMeansCurrent=true
+          db_custom_config:
+            - --flagwind.mybatis.name-quote=2
+            - --spring.quartz.properties.org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+        - name: 市政v20
+          type: eUrbanFac
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?clobAsString=true&allowMultiQueries=true
+          db_custom_config:
+            - --HIBERNATE_DIALECT=cn.com.egova.base.dialect.EgovaKingbase8Dialect
+        - name: 市政v22
+          type: fac
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?clobAsString=true&allowMultiQueries=true
+        - name: 执法-餐饮油烟/法律法规
+          type: egova-law
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT/DB_NAME?currentSchema=DB_SCHEMA
+          db_custom_config:
+            - --MYBATIS_NAME_QUOTE=2
+        - name: 执法-明镜
+          type: mjing
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT/DB_NAME?currentSchema=DB_SCHEMA
+          db_custom_config:
+            - --MYBATIS_NAME_QUOTE=2
+        - name: 麒舰
+          type: eurbanpro
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT/DB_NAME?currentSchema=DB_SCHEMA&stringtype=unspecified
+        - name: 麒舰-流程中心
+          type: workflow
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT/DB_NAME?currentSchema=DB_SCHEMA&stringtype=unspecified
+        - name: 麒舰-短信
+          type: sms
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT/DB_NAME?currentSchema=DB_SCHEMA&stringtype=unspecified
+        - name: 麒舰-多媒体
+          type: eurbanpro_media
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT/DB_NAME?currentSchema=DB_SCHEMA&stringtype=unspecified
+    - name: 智信云产品
+      category: service
+      sub_options:
+        - name: 一网统管
+          type: eUrbanMIS
+          db_url:
+
+highgo:
+  name: 瀚高
+  display: 1
+  choice_index: 3
+  sub_options:
+    - name: 微服务
+      category: microservice
+      sub_options:
+        - name: 玄藏
+          type: xuanzang
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA&serverTimezone=Asia/Shanghai&allowMultiQueries=true&autoReconnect=true&failOverReadOnly=false&useUnicode=true&characterEncoding=utf8&stringtype=unspecified
+        - name: 用户中心2.0
+          type: usercenter
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA&stringtype=unspecified
+        - name: 星桥
+          type: dex
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA&stringtype=unspecified
+          db_custom_config:
+            - --PUMP_STAGE_TYPE=postgresql
+        - name: 大数据中心(包含星桥)
+          type: bigdata
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA&stringtype=unspecified
+          db_custom_config:
+            - --PUMP_STAGE_TYPE=postgresql
+        - name: 毕升
+          type: evaluation
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA
+          db_custom_config:
+            - --HIBERNATE_DIALECT=cn.com.egova.base.dialect.EgovaHgdbDialect
+        - name: 多媒体
+          type: media
+          db_custom_config:
+            - --HIBERNATE_DIALECT=cn.com.egova.base.dialect.EgovaHgdbDialect
+        - name: 导出微服务
+          type: export
+          db_custom_config:
+            - --HIBERNATE_DIALECT=cn.com.egova.base.dialect.EgovaHgdbDialect
+        - name: 灵珑
+          type: linglong
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA&serverTimezone=Asia/Shanghai&useSSL=false&allowMultiQueries=true&autoReconnect=true&failOverReadOnly=false&useUnicode=true&characterEncoding=utf8&nullCatalogMeansCurrent=true
+          db_custom_config:
+            - --flagwind.mybatis.name-quote=2
+            - --spring.quartz.properties.org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+            - --flowable.database-schema-update=false
+        - name: 市政v20
+          type: eUrbanFac
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA,public&useUnicode=true
+          db_custom_config:
+            - --HIBERNATE_DIALECT=cn.com.egova.base.dialect.EgovaKingbase8Dialect
+        - name: 市政v22
+          type: fac
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT?currentSchema=DB_SCHEMA,public&useUnicode=true
+        - name: 麒舰
+          type: eurbanpro
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT/DB_NAME?currentSchema=DB_SCHEMA&stringtype=unspecified
+        - name: 麒舰-流程中心
+          type: workflow
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT/DB_NAME?currentSchema=DB_SCHEMA&stringtype=unspecified
+        - name: 麒舰-短信
+          type: sms
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT/DB_NAME?currentSchema=DB_SCHEMA&stringtype=unspecified
+        - name: 麒舰-多媒体
+          type: eurbanpro_media
+          db_url: --DATASOURCE_URL=jdbc:DB_TYPE://DB_HOST:DB_PORT/DB_NAME?currentSchema=DB_SCHEMA&stringtype=unspecified
+    - name: 智信云产品
+      category: service
+      sub_options:
+        - name: 一网统管
+          type: eUrbanMIS
+          db_url:

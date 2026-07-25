@@ -1,0 +1,138 @@
+地图
+1 使用场景
+需要通过定位显示当前位置信息，通常地图位置组件和地图组件一起配合使用，地图组件支持相对地址和绝对地址配置。
+2 基础功能
+[钉子]配置说明
+组件库中拖入地图组件-需配置服务地址，否则无法保存，提示配置服务地址；
+支持配置兴趣点搜索；
+可设置默认中心点配置；
+可设置地图比例尺；
+支持图层配置；
+地图支持添加图层信息；
+2.1 点图层
+配置样式和数据
+2.2 线图层
+2.3 面图层
+2.4 动态瓦片图层
+2.5 热力图层
+3 位置组件和地图组件联动使用
+[警告]提醒
+地图服务支持配置相对地址和绝对地址；
+1.地图位置组件属性-地图显示-平铺,选择地图组件。
+4 相对地址和绝对地址配置
+4.1相对地址
+如： /eUrbanGIS
+灵珑nginx中配置GIS转发地址
+location /eUrbanGIS{
+    #root   /egova;
+    proxy_pass http://192.168.101.78:8082/eUrbanGIS;
+    proxy_set_header           Host $host;
+    proxy_set_header  X-Real-IP  $remote_addr;
+    proxy_set_header           X-Forwarded-For $proxy_add_x_forwarded_for;
+    client_max_body_size  100m;
+    index  index.html index.htm;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    add_header Cache-Control max-age=0;
+}
+location /linglong-api/eUrbanGIS{
+#root /egova;
+      proxy_pass http://192.168.101.78:8082/eUrbanGIS;
+      proxy_set_header Host $proxy_host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      client_max_body_size 100m;
+      index index.html index.htm;
+      proxy_http_version 1.1;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+      add_header Cache-Control max-age=0;
+}
+4.2 绝对地址
+如：http://192.168.101.38:8081/eUrbanGIS
+5 轨迹播放
+PC端和移动端均可以播放轨迹
+5.1 移动端轨迹播放
+移动端预览时打开地图，当前人员有轨迹信息时自动定位到轨迹位置，下方显示轨迹日期和时间段，显示轨迹播放的进度条和倍速，默认为1.0X，可选0.5X，2.0X，5.0X。
+当切换倍速后轨迹播放停止。可以在进度条上拖动快进查看轨迹，拖动后不改变轨迹的播放状态；
+切换日期和时间，图上实时显示轨迹位置，没有轨迹时不显示，播放按钮置灰。
+5.2 PC端轨迹播放
+PC端预览表单时打开地图，可以设置地图加载完时显示轨迹，也可以通过点击按钮显示轨迹。
+人员轨迹：当前人员有轨迹信息时自动定位到轨迹位置，下方显示轨迹日期和时间段，显示轨迹播放的进度条和倍速，进度条显示的是有轨迹的时间段，倍速默认为1.0X，可选0.5X，1.0X，2.0X，5.0X，10.0X和20.0X。
+当切换倍速后轨迹播放停止。可以在进度条上拖动快进查看轨迹，拖动后不改变轨迹的播放状态；
+在指定的可见图层可以看见轨迹上显示箭头，箭头的宽度和间隔，也可以不显示箭头。
+切换日期和时间，图上实时显示轨迹位置，没有轨迹时不显示，播放按钮置灰。
+5.3 移动端轨迹配置
+步骤主要是给“地图”组件增加“轨迹图层”，添加触发轨迹图层的按钮或动作入口，添加动作脚本，打开移动表单时地图上就会显示轨迹位置和播放轨迹的工具栏。
+图上数据要求：地图服务里包含人员或车辆轨迹数据。数据准备参见：
+在移动表单部件选中“地图”组件，在“图层”配置页点【增加图层】选择“轨迹图层”。
+点击列表里的轨迹图层，可以修改样式属性：
+图层名称：根据需要修改，在列表里便于区分人员或车辆等；
+图层启用：默认开启，即图上显示轨迹工具栏；当关闭时图上不显示轨迹工具栏；
+图层id：在触发轨迹图层的脚本里作为参数传入；
+轨迹类型：人员轨迹和车辆轨迹，选中后分别可以选择人员或车辆的显示图标；
+轨迹样式-箭头间隔：默认50px，值域范围[1-50]，
+人员轨迹
+车辆轨迹
+图标样式：
+（1）人员轨迹可选样式
+（2）车辆轨迹可选样式
+添加触发轨迹图层显示和播放的脚本
+（1）地图组件-高级，增加“地图加载完成”的动作，绑定“动作面板”的动作，或者编写“自定义动作”
+export function map() {
+  this.$$("map_base_4it7xp").$$showLocalObjectTrace("traceLayer_1dp91", 100154, 
+  "2024-06-05 07:00", "2024-06-05 23:00")
+}
+参数说明：
+（2）表单里添加【自定义按钮】，绑定动作，脚本内容同上；
+（3）表单-高级，添加“加载表单后”的动作
+5.4 PC端轨迹配置
+主要配置和移动端一致。
+轨迹图层的属性。
+轨迹宽度：值域范围[]1-20]；
+轨迹箭头：默认开启；
+箭头间隔：默认50px，值域范围[1,50]；
+可见层级：默认6，值域范围[1-19]；
+显示轨迹的配置：
+（1）第一种方式：地图组件“高级”增加“地图加载完成”动作，配置动作脚本
+function main() {
+  this.$$("map_base_d8il2h").$$showLocalObjectTrace("traceLayer_geaguv", 4, "2018-06-20", {}, {
+        traceBreak: false,
+        traceBreakThreshold: 500,
+        showHeatMap: false,
+        nosignalLabel: true,
+        requestType: 1,
+        startHour: "08:00:00",
+        endHour: "22:00:00",
+        tracedig: true
+    })
+}
+参数说明：
+（2）第二种方式：在表单里增加【自定义按钮】点击时触发显示轨迹
+export function mappc() {
+  this.$$("map_base_8ba7xl").$$showLocalObjectTrace("traceLayer_9zz8gj", 100154, "2024-06-05", {}, {
+    traceBreak: false,
+    traceBreakThreshold: 500,
+    showHeatMap: false,
+    nosignalLabel: true,
+    requestType: 1,
+    startHour: "08:00:00",
+    endHour: "22:00:00",
+    tracedig: true
+  })
+}
+
+[表格0]
+参数 | 说明
+map_base_4it7xp | 地图组件唯一标识
+traceLayer_1dp91 | 图层“轨迹图层”的“图层id“
+100154 | 查看轨迹的人员id
+时间 | 轨迹播放的默认日期和时间段
+
+[表格1]
+参数 | 说明
+map_base_8ba7xl | 地图组件唯一标识
+traceLayer_9zz8gj | 图层“轨迹图层”的“图层id“
+100154 | 查看轨迹的人员id
+时间 | 轨迹播放的默认日期和时间段

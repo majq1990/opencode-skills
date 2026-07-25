@@ -1,0 +1,35 @@
+---
+# 配置cetus服务单元
+
+- name: Copy cetus.service file
+  become: true
+  template:
+    src: cetus.service.j2
+    dest: "{{ system_service_file }}"
+    force: yes
+
+- name: Set execute permissions for cetus.service file
+  become: true
+  file:
+    path: "{{ system_service_file }}"
+    mode: '+x'
+
+- name: daemon-reload
+  systemd: daemon_reload=yes
+
+- name: Enable and restart cetus service
+  become: true
+  systemd:
+    name: cetus
+    state: restarted
+    enabled: true
+
+# TODO: 更新一次日志清理脚本
+
+- name: Create lock_file
+  file:
+    path: "{{ lock_file }}"
+    state: touch
+    mode: "0644"
+  become: yes
+

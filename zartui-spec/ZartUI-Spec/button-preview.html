@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZartUI 按钮规范预览</title>
+<style>
+:root {
+  --color-bg-page: #F5F7FA;
+  --color-bg-panel: #FFFFFF;
+  --color-text-primary: #081126;
+  --color-text-body: #223355;
+  --color-text-secondary: #6B7A99;
+  --color-text-disabled: #C3CAD9;
+  --color-border: #E9ECF2;
+  --color-border-strong: #CED4E0;
+  --color-primary: #3388FF;
+  --color-primary-hover: #5CA5FF;
+  --color-primary-soft: #D6EDFF;
+  --color-danger: #FF4433;
+  --color-danger-soft: #FFF4F0;
+  --color-danger-click: #FFDFD6;
+  --radius-s: 4px;
+  --radius-l: 100px;
+  --font-size-body: 14px;
+  --font-size-secondary: 12px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: var(--font-size-body);
+  color: var(--color-text-body);
+  background: var(--color-bg-page);
+  padding: var(--space-xxl);
+}
+
+button, input, select, textarea { font: inherit; }
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-xxl);
+}
+
+h2 {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+h3 {
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.section {
+  background: var(--color-bg-panel);
+  border-radius: 8px;
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-lg);
+}
+
+.row:last-child { margin-bottom: 0; }
+
+.label {
+  font-size: var(--font-size-secondary);
+  color: var(--color-text-secondary);
+  min-width: 80px;
+}
+
+/* ── 全圆角按钮（Pill） ── */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: 32px;
+  padding: 0 var(--space-lg);
+  border-radius: var(--radius-l);
+  border: 1px solid #DDE1EB;
+  background: #FFFFFF;
+  cursor: pointer;
+  font-size: var(--font-size-body);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.btn-pill.sm { height: 24px; font-size: var(--font-size-secondary); }
+
+/* 主按钮 */
+.btn-pill.primary { color: #3388FF; border-color: #DDE1EB; background: #FFFFFF; }
+.btn-pill.primary:hover { background: #F0F9FF; border-color: #3388FF; }
+.btn-pill.primary:active { background: #D6EDFF; border-color: #3388FF; }
+.btn-pill.primary:disabled { color: #ADD8FF; border-color: #F5F7FA; cursor: not-allowed; pointer-events: none; }
+
+/* 次要按钮 */
+.btn-pill.secondary { color: #223355; border-color: #DDE1EB; background: #FFFFFF; }
+.btn-pill.secondary:hover { background: #F0F9FF; border-color: #3388FF; color: #3388FF; }
+.btn-pill.secondary:active { background: #D6EDFF; border-color: #3388FF; color: #3388FF; }
+.btn-pill.secondary:disabled { color: #CED4E0; border-color: #F5F7FA; cursor: not-allowed; pointer-events: none; }
+
+/* 危险状态 */
+.btn-pill.danger { color: #223355; border-color: #DDE1EB; background: #FFFFFF; }
+.btn-pill.danger:hover { background: #FFF4F0; border-color: #FF4433; color: #FF4433; }
+.btn-pill.danger:active { background: #FFDFD6; border-color: #FF4433; color: #FF4433; }
+
+/* 模拟状态类（用于展示） */
+.btn-pill.state-hover.primary { background: #F0F9FF; border-color: #3388FF; color: #3388FF; }
+.btn-pill.state-active.primary { background: #D6EDFF; border-color: #3388FF; color: #3388FF; }
+.btn-pill.state-disabled.primary { color: #ADD8FF; border-color: #F5F7FA; cursor: not-allowed; }
+
+.btn-pill.state-hover.secondary { background: #F0F9FF; border-color: #3388FF; color: #3388FF; }
+.btn-pill.state-active.secondary { background: #D6EDFF; border-color: #3388FF; color: #3388FF; }
+.btn-pill.state-disabled.secondary { color: #CED4E0; border-color: #F5F7FA; cursor: not-allowed; }
+
+.btn-pill.state-hover.danger { background: #FFF4F0; border-color: #FF4433; color: #FF4433; }
+.btn-pill.state-active.danger { background: #FFDFD6; border-color: #FF4433; color: #FF4433; }
+
+/* ── 矩形按钮 ── */
+.btn-rect {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: 32px;
+  padding: 0 var(--space-lg);
+  border-radius: var(--radius-s);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: var(--font-size-body);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.btn-rect.sm { height: 24px; font-size: var(--font-size-secondary); }
+
+/* 面状按钮 */
+.btn-rect.solid { background: #3388FF; color: #FFFFFF; border-color: #3388FF; }
+.btn-rect.solid:hover { background: #5CA5FF; border-color: #5CA5FF; }
+.btn-rect.solid:active { background: #2167D9; border-color: #2167D9; }
+.btn-rect.solid:disabled { background: #ADD8FF; border-color: #ADD8FF; cursor: not-allowed; pointer-events: none; }
+
+/* 线状按钮 */
+.btn-rect.outline { background: #FFFFFF; color: #223355; border-color: #DDE1EB; }
+.btn-rect.outline:hover { background: #F0F9FF; border-color: #3388FF; color: #3388FF; }
+.btn-rect.outline:active { background: #D6EDFF; border-color: #3388FF; color: #3388FF; }
+.btn-rect.outline:disabled { color: #ADD8FF; border-color: #F5F7FA; cursor: not-allowed; pointer-events: none; }
+
+/* 模拟状态类 */
+.btn-rect.state-hover.solid { background: #5CA5FF; border-color: #5CA5FF; }
+.btn-rect.state-active.solid { background: #2167D9; border-color: #2167D9; }
+.btn-rect.state-disabled.solid { background: #ADD8FF; border-color: #ADD8FF; cursor: not-allowed; }
+
+.btn-rect.state-hover.outline { background: #F0F9FF; border-color: #3388FF; color: #3388FF; }
+.btn-rect.state-active.outline { background: #D6EDFF; border-color: #3388FF; color: #3388FF; }
+.btn-rect.state-disabled.outline { color: #ADD8FF; border-color: #F5F7FA; cursor: not-allowed; }
+
+/* ── 图标 SVG ── */
+.icon { width: 14px; height: 14px; display: inline-block; vertical-align: middle; }
+
+/* ── 状态标签 ── */
+.state-tag {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-page);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  padding: 0 4px;
+  line-height: 18px;
+  margin-left: 2px;
+}
+
+/* ── 规范说明表格 ── */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-secondary);
+  margin-top: var(--space-md);
+}
+.spec-table th {
+  background: var(--color-bg-page);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+.spec-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-body);
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.chip {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.chip.blue { background: #EBF4FF; color: #3388FF; }
+.chip.gray { background: var(--color-bg-page); color: var(--color-text-secondary); }
+.chip.red  { background: #FFF0EE; color: #FF4433; }
+</style>
+</head>
+<body>
+
+<h1>ZartUI 按钮规范预览</h1>
+
+<!-- ══════════════════════════════════════
+     一、全圆角按钮（Pill）
+══════════════════════════════════════ -->
+<div class="section">
+  <h2>一、全圆角按钮（Pill）</h2>
+  <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:20px;">border-radius: 100px &nbsp;|&nbsp; padding: 0 16px &nbsp;|&nbsp; 高度 32px / 24px</p>
+
+  <!-- 主按钮 -->
+  <h3>1-1 主按钮（Primary）</h3>
+  <div class="row">
+    <span class="label">Normal</span>
+    <button class="btn-pill primary">新增</button>
+    <button class="btn-pill primary">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      新增
+    </button>
+  </div>
+  <div class="row">
+    <span class="label">Hover</span>
+    <button class="btn-pill primary state-hover">新增</button>
+    <button class="btn-pill primary state-hover">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      新增
+    </button>
+  </div>
+  <div class="row">
+    <span class="label">Click</span>
+    <button class="btn-pill primary state-active">新增</button>
+  </div>
+  <div class="row">
+    <span class="label">Disabled</span>
+    <button class="btn-pill primary state-disabled" disabled>新增</button>
+    <button class="btn-pill primary state-disabled" disabled>
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      新增
+    </button>
+  </div>
+  <div class="row">
+    <span class="label">Small (24px)</span>
+    <button class="btn-pill primary sm">新增</button>
+    <button class="btn-pill primary sm state-hover">新增</button>
+    <button class="btn-pill primary sm state-disabled" disabled>新增</button>
+  </div>
+
+  <!-- 次要按钮 -->
+  <h3 style="margin-top:20px;">1-2 次要按钮（Secondary）</h3>
+  <div class="row">
+    <span class="label">Normal</span>
+    <button class="btn-pill secondary">导出</button>
+    <button class="btn-pill secondary">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M8 3v7m0 0l-3-3m3 3l3-3M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      导出
+    </button>
+    <button class="btn-pill secondary">编辑</button>
+    <button class="btn-pill secondary">设置</button>
+  </div>
+  <div class="row">
+    <span class="label">Hover</span>
+    <button class="btn-pill secondary state-hover">导出</button>
+    <button class="btn-pill secondary state-hover">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M8 3v7m0 0l-3-3m3 3l3-3M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      导出
+    </button>
+  </div>
+  <div class="row">
+    <span class="label">Click</span>
+    <button class="btn-pill secondary state-active">导出</button>
+  </div>
+  <div class="row">
+    <span class="label">Disabled</span>
+    <button class="btn-pill secondary state-disabled" disabled>导出</button>
+    <button class="btn-pill secondary state-disabled" disabled>
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M8 3v7m0 0l-3-3m3 3l3-3M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      导出
+    </button>
+  </div>
+  <div class="row">
+    <span class="label">Small (24px)</span>
+    <button class="btn-pill secondary sm">导出</button>
+    <button class="btn-pill secondary sm state-hover">导出</button>
+    <button class="btn-pill secondary sm state-disabled" disabled>导出</button>
+  </div>
+
+  <!-- 危险状态 -->
+  <h3 style="margin-top:20px;">1-3 危险状态（Danger）</h3>
+  <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:12px;">基于次要按钮，Normal 样式一致，hover/click 变为危险红</p>
+  <div class="row">
+    <span class="label">Normal</span>
+    <button class="btn-pill danger">删除</button>
+    <button class="btn-pill danger">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v8a1 1 0 001 1h4a1 1 0 001-1V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      删除
+    </button>
+    <button class="btn-pill danger">禁用</button>
+  </div>
+  <div class="row">
+    <span class="label">Hover</span>
+    <button class="btn-pill danger state-hover">删除</button>
+    <button class="btn-pill danger state-hover">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v8a1 1 0 001 1h4a1 1 0 001-1V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      删除
+    </button>
+  </div>
+  <div class="row">
+    <span class="label">Click</span>
+    <button class="btn-pill danger state-active">删除</button>
+  </div>
+  <div class="row">
+    <span class="label">Small (24px)</span>
+    <button class="btn-pill danger sm">删除</button>
+    <button class="btn-pill danger sm state-hover">删除</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     二、矩形按钮
+══════════════════════════════════════ -->
+<div class="section">
+  <h2>二、矩形按钮（Rect）</h2>
+  <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:20px;">border-radius: 4px &nbsp;|&nbsp; padding: 0 16px &nbsp;|&nbsp; 高度 32px / 24px</p>
+
+  <!-- 面状按钮 -->
+  <h3>2-1 面状按钮（Solid）</h3>
+  <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:12px;">用于提交、保存、确定等主要提交类操作</p>
+  <div class="row">
+    <span class="label">Normal</span>
+    <button class="btn-rect solid">确定</button>
+    <button class="btn-rect solid">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      保存
+    </button>
+    <button class="btn-rect solid">提交</button>
+  </div>
+  <div class="row">
+    <span class="label">Hover</span>
+    <button class="btn-rect solid state-hover">确定</button>
+    <button class="btn-rect solid state-hover">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      保存
+    </button>
+  </div>
+  <div class="row">
+    <span class="label">Click</span>
+    <button class="btn-rect solid state-active">确定</button>
+  </div>
+  <div class="row">
+    <span class="label">Disabled</span>
+    <button class="btn-rect solid state-disabled" disabled>确定</button>
+    <button class="btn-rect solid state-disabled" disabled>
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      保存
+    </button>
+  </div>
+  <div class="row">
+    <span class="label">Small (24px)</span>
+    <button class="btn-rect solid sm">确定</button>
+    <button class="btn-rect solid sm state-hover">确定</button>
+    <button class="btn-rect solid sm state-disabled" disabled>确定</button>
+  </div>
+
+  <!-- 线状按钮 -->
+  <h3 style="margin-top:20px;">2-2 线状按钮（Outline）</h3>
+  <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:12px;">用于取消、重置、重新编辑等次要操作</p>
+  <div class="row">
+    <span class="label">Normal</span>
+    <button class="btn-rect outline">取消</button>
+    <button class="btn-rect outline">重置</button>
+    <button class="btn-rect outline">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M3 8a5 5 0 1010 0A5 5 0 003 8zm5-2v2l1.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      重新编辑
+    </button>
+  </div>
+  <div class="row">
+    <span class="label">Hover</span>
+    <button class="btn-rect outline state-hover">取消</button>
+    <button class="btn-rect outline state-hover">重置</button>
+  </div>
+  <div class="row">
+    <span class="label">Click</span>
+    <button class="btn-rect outline state-active">取消</button>
+  </div>
+  <div class="row">
+    <span class="label">Disabled</span>
+    <button class="btn-rect outline state-disabled" disabled>取消</button>
+    <button class="btn-rect outline state-disabled" disabled>重置</button>
+  </div>
+  <div class="row">
+    <span class="label">Small (24px)</span>
+    <button class="btn-rect outline sm">取消</button>
+    <button class="btn-rect outline sm state-hover">取消</button>
+    <button class="btn-rect outline sm state-disabled" disabled>取消</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     三、使用场景对照
+══════════════════════════════════════ -->
+<div class="section">
+  <h2>三、使用场景对照</h2>
+  <table class="spec-table">
+    <thead>
+      <tr>
+        <th>场景</th>
+        <th>按钮类型</th>
+        <th>示例</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>新增、创建、添加</td>
+        <td><span class="chip blue">全圆角 · 主按钮</span></td>
+        <td><button class="btn-pill primary" style="pointer-events:none;">新增</button></td>
+      </tr>
+      <tr>
+        <td>导入、导出、编辑、设置</td>
+        <td><span class="chip gray">全圆角 · 次要按钮</span></td>
+        <td>
+          <button class="btn-pill secondary" style="pointer-events:none;">导出</button>
+          &nbsp;
+          <button class="btn-pill secondary" style="pointer-events:none;">编辑</button>
+        </td>
+      </tr>
+      <tr>
+        <td>删除、禁用等不可逆操作</td>
+        <td><span class="chip red">全圆角 · 危险状态</span></td>
+        <td><button class="btn-pill danger" style="pointer-events:none;">删除</button></td>
+      </tr>
+      <tr>
+        <td>表单提交、保存、确定</td>
+        <td><span class="chip blue">矩形 · 面状按钮</span></td>
+        <td><button class="btn-rect solid" style="pointer-events:none;">确定</button></td>
+      </tr>
+      <tr>
+        <td>取消、重置、重新编辑</td>
+        <td><span class="chip gray">矩形 · 线状按钮</span></td>
+        <td><button class="btn-rect outline" style="pointer-events:none;">取消</button></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     四、颜色 Token 速查
+══════════════════════════════════════ -->
+<div class="section">
+  <h2>四、颜色 Token 速查</h2>
+  <table class="spec-table">
+    <thead>
+      <tr><th>类型</th><th>状态</th><th>背景</th><th>描边</th><th>文字/图标</th></tr>
+    </thead>
+    <tbody>
+      <tr><td rowspan="4">全圆角 · 主按钮</td><td>Normal</td><td>#FFFFFF</td><td>#DDE1EB</td><td>#3388FF</td></tr>
+      <tr><td>Hover</td><td>#F0F9FF</td><td>#3388FF</td><td>#3388FF</td></tr>
+      <tr><td>Click</td><td>#D6EDFF</td><td>#3388FF</td><td>#3388FF</td></tr>
+      <tr><td>Disabled</td><td>#FFFFFF</td><td>#F5F7FA</td><td>#ADD8FF</td></tr>
+      <tr><td rowspan="4">全圆角 · 次要按钮</td><td>Normal</td><td>#FFFFFF</td><td>#DDE1EB</td><td>#223355</td></tr>
+      <tr><td>Hover</td><td>#F0F9FF</td><td>#3388FF</td><td>#3388FF</td></tr>
+      <tr><td>Click</td><td>#D6EDFF</td><td>#3388FF</td><td>#3388FF</td></tr>
+      <tr><td>Disabled</td><td>#FFFFFF</td><td>#F5F7FA</td><td>#CED4E0</td></tr>
+      <tr><td rowspan="3">全圆角 · 危险状态</td><td>Normal</td><td>#FFFFFF</td><td>#DDE1EB</td><td>#223355</td></tr>
+      <tr><td>Hover</td><td>#FFF4F0</td><td>#FF4433</td><td>#FF4433</td></tr>
+      <tr><td>Click</td><td>#FFDFD6</td><td>#FF4433</td><td>#FF4433</td></tr>
+      <tr><td rowspan="4">矩形 · 面状按钮</td><td>Normal</td><td>#3388FF</td><td>—</td><td>#FFFFFF</td></tr>
+      <tr><td>Hover</td><td>#5CA5FF</td><td>—</td><td>#FFFFFF</td></tr>
+      <tr><td>Click</td><td>#2167D9</td><td>—</td><td>#FFFFFF</td></tr>
+      <tr><td>Disabled</td><td>#ADD8FF</td><td>—</td><td>#FFFFFF</td></tr>
+      <tr><td rowspan="4">矩形 · 线状按钮</td><td>Normal</td><td>#FFFFFF</td><td>#DDE1EB</td><td>#223355</td></tr>
+      <tr><td>Hover</td><td>#F0F9FF</td><td>#3388FF</td><td>#3388FF</td></tr>
+      <tr><td>Click</td><td>#D6EDFF</td><td>#3388FF</td><td>#3388FF</td></tr>
+      <tr><td>Disabled</td><td>#FFFFFF</td><td>#F5F7FA</td><td>#ADD8FF</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

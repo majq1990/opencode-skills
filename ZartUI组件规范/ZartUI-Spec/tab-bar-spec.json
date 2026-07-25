@@ -1,0 +1,166 @@
+{
+  "name": "tab-spec",
+  "version": "2.1.0",
+  "description": "ZartUI 标签组件规范，包含顶部导航标签栏、横向内容标签、纵向内容标签、胶囊组标签页四种形态",
+
+  "tab_bar": {
+    "description": "一级页签栏（顶部浏览器式导航标签）",
+    "height": "40px",
+    "width": "100%",
+    "background": "linear-gradient(to bottom, #E9ECF2, #FFFFFF)",
+    "padding": "0 8px",
+    "align_items": "flex-end",
+    "gap": "2px",
+    "overflow_x": "auto",
+    "tab": {
+      "width": "154px",
+      "height": "32px",
+      "font_size": "14px",
+      "padding": "0 6px 0 12px",
+      "border_radius": "8px 8px 0 0",
+      "gap": "4px",
+      "states": {
+        "default": {
+          "background": "#E9ECF2",
+          "color": "#6B7A99"
+        },
+        "active": {
+          "background": "linear-gradient(to bottom, #FFFFFF, #F1F6FA)",
+          "color": "#3388FF"
+        },
+        "hover": {
+          "background": "linear-gradient(to bottom, #FFFFFF, #F1F6FA)",
+          "color": "#3388FF"
+        }
+      }
+    },
+    "icon_button": {
+      "size": "24px",
+      "icon_size": "16px",
+      "color": "#A8B4C8",
+      "border_radius": "4px",
+      "background": "transparent",
+      "hover_background": "rgba(168, 180, 200, 0.2)"
+    },
+    "icons": {
+      "close": {
+        "usage": "默认标签和选中标签均显示",
+        "position": "right"
+      },
+      "fullscreen": {
+        "usage": "仅选中标签显示，位于关闭图标左侧",
+        "position": "right"
+      }
+    }
+  },
+
+  "horizontal_tabs": {
+    "description": "横向内容标签，用于页面内不同内容区域的切换",
+    "container": {
+      "display": "flex",
+      "align_items": "flex-end",
+      "separator": {
+        "position": "bottom",
+        "style": "1px solid #E9ECF2"
+      }
+    },
+    "tab_item": {
+      "height": "56px",
+      "padding": "0 20px",
+      "font_size": "14px",
+      "line_height": "22px",
+      "text_align": "center",
+      "states": {
+        "default": {
+          "background": "#FFFFFF",
+          "color": "#223355",
+          "indicator": "transparent"
+        },
+        "hover": {
+          "background": "#F5F7FA",
+          "color": "#223355",
+          "indicator": "transparent"
+        },
+        "active": {
+          "background": "#FFFFFF",
+          "color": "#3388FF",
+          "font_weight": "500",
+          "indicator": "#3388FF"
+        }
+      },
+      "indicator": {
+        "height": "2px",
+        "width": "与文字等宽",
+        "position": "文字正下方，紧贴标签底部",
+        "implementation": "文字 span::after，bottom: -17px（即 (56px - 22px) / 2）"
+      }
+    }
+  },
+
+  "vertical_tabs": {
+    "description": "纵向内容标签，用于侧边列表式内容切换",
+    "container": {
+      "display": "flex",
+      "position": "relative",
+      "separator": {
+        "position": "标签组右侧贯通竖线",
+        "style": "1px solid #E9ECF2",
+        "implementation": "::before 伪元素，position: absolute; left: 154px; top: 0; bottom: 0; width: 1px，不受标签间距影响"
+      }
+    },
+    "tab_list": {
+      "width": "154px",
+      "direction": "column",
+      "gap": "8px"
+    },
+    "tab_item": {
+      "width": "154px",
+      "height": "36px",
+      "padding": "0 12px",
+      "font_size": "14px",
+      "border_radius": "4px",
+      "states": {
+        "default": {
+          "background": "#FFFFFF",
+          "color": "#223355"
+        },
+        "hover": {
+          "background": "#F5F7FA",
+          "color": "#223355"
+        },
+        "active": {
+          "background": "#F0F9FF",
+          "color": "#3388FF",
+          "font_weight": "500"
+        }
+      }
+    }
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "顶部标签栏：选中标签底部未与栏底对齐",
+      "fix": "标签使用 align-items: flex-end 贴底，视觉上形成浮起效果"
+    },
+    {
+      "issue": "顶部标签栏：全屏图标在默认标签中显示",
+      "fix": "全屏图标仅在 active 状态下渲染，默认标签只有关闭图标"
+    },
+    {
+      "issue": "顶部标签栏：标签文字溢出",
+      "fix": "label 区域设置 overflow: hidden; text-overflow: ellipsis; white-space: nowrap"
+    },
+    {
+      "issue": "横向标签：标记线宽度与文字不等宽",
+      "fix": "标记线用文字 span 的 ::after 实现，width:100% 即为文字宽；不可加在 button 上"
+    },
+    {
+      "issue": "纵向标签：右侧分隔线被 gap 截断成多段",
+      "fix": "不在 tab_item 上用 border-right，改为在容器上用 ::before 伪元素绘制贯通竖线"
+    },
+    {
+      "issue": "胶囊组标签：选中描边被相邻标签遮挡",
+      "fix": "选中项设置 z-index: 1，使 1px 描边浮于相邻标签之上"
+    }
+  ]
+}

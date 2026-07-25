@@ -1,0 +1,30 @@
+如何使用ddcat数据模型动态查询列表数据
+背景
+灵珑的列表是基于视图来制作的，其中视图并不会存在动态条件的约定。条件是通过外面传过来的，动态拼接上的。在某些情况下，数据来源并不适合视图来处理，它是需要在SQL视图中预设变量来完成。
+设置视图
+注意视图只是搭建列表的架子，不需要真实存在，可以使用 select '' as a, '' as b from dual  这种方式产生一个空视图
+设置数据模型
+起始时间、结束时间使用参数占位，介于操作参数约定_start和_end
+列表设计
+查询面板拖入date字段，默认设置设置为“介于”，再在表格列表->高级->Hook配置，配置数据查询方法。
+function main(pageId,param){
+    return new Promise((resolve, reject) => {
+        console.log(pageId, param)
+        api.MODEL_DATA_EXCUTE("18f28cef-1752-40eb-a189-b21ec98fc4d8", param)
+            .then(res => {
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+    });
+}
+api.MODEL_DATA_EXCUTE第一个参数是模型id，第二个参数是表格列表参选参数，默认不需要修改。
+模型id查询方法，编辑数据模型的时候，查看接口unity/data-model/18f28cef-1752-40eb-a189-b21ec98fc4d8，其中18f28cef-1752-40eb-a189-b21ec98fc4d8即为模型id。
+效果图
+排序说明
+列表支持对字段设置排序规则，而ddcat中定义sql同样可以写order by 语句进行排序。因此当列表使用ddcat代理的数据时，排序规则如下：
+列表排序字段不包含计算字段：将列表的排序条件转化为order by语句拼到ddcat的sql上执行，且ddcat条件在前，列表条件在后，如图所示
+如果ddcat的条件和列表的条件存在相同字段，则排序会失效
+列表排序字段包含计算字段：ddcat的排序规则不生效，仅列表的排序字段生效
+分页说明
+列表的分页条件会带入到ddcat中实现分页，注意需要在数据模型中开启分页

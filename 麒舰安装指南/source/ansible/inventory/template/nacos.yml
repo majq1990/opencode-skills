@@ -1,0 +1,7 @@
+# minio配置模板
+# 部署场景下，host和ip根据部署节点的host自动生成注入
+# host: node1
+port: "8848"
+access_key: nacos
+secret_key: tsEKh9a82C
+ip: 127.0.0.1

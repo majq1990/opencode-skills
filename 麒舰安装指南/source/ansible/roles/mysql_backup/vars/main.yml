@@ -1,0 +1,45 @@
+---
+# default vars for mysqlbackup
+backup_path: /egova/backup/db
+tools_path: /egova/tools
+
+DB_USER: "{{ common_password }}"
+DB_PWD: "{{ common_password }}"
+DB_PORT: "{{ port}}"
+
+host_file: ../../../ansible/inventory/hosts.yml
+
+mysql_percona_xtrabackup_packages:
+  Ubuntu:
+    - mydumper
+    - nmap
+    - percona-xtrabackup-80
+  kylin_arm:
+    - mydumper
+    - percona-xtrabackup-80
+  CentOS:
+    - mydumper
+    - percona-xtrabackup-80
+  openEuler:
+    - percona-xtrabackup-80
+  kylin_x86:
+    - mydumper
+    - percona-xtrabackup-80
+  UOS:
+    - mydumper
+    - percona-xtrabackup-80
+  uos_x86:
+    - mydumper
+    - percona-xtrabackup-80
+  uos_arm:
+    - mydumper
+    - percona-xtrabackup-80
+  anolis_x86:
+    - mydumper
+    - percona-xtrabackup-80
+  anolis_arm:
+    - mydumper
+    - percona-xtrabackup-80
+  Anolis:
+    - mydumper
+    - percona-xtrabackup-80

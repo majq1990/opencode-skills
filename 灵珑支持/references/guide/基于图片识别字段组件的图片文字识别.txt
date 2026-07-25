@@ -1,0 +1,191 @@
+基于图片识别字段组件的图片文字识别
+1 使用场景
+在移动端中通过拍照或上传照片的方式自动识别车牌、纸质表单或电子图片中的字段内容并可回填至对应的表单字段中。
+2 效果
+点击拍照或者上传文件后对于车牌等信息可以实现自动识别，在识别后可以点击对应的识别信息进行内容填充到指定的字段中进行显示，此处可以根据车牌号来自动识别车辆类型并进行回填。
+3 配置
+在移动端的表单中添加图片文本识别组件，在服务地址中添加OCR识别的服务地址（由研发处理服务地址）
+添加页面的didMount() 处理 该组件的onChange()事件
+export function didMount() {
+  console.log("「页面 JS」：当前页面地址 " + location.href);
+  const self = this;
+  
+  let ocrCardId = self.$$("szyy_form_field_image_ocr_kq5");
+  ocrCardId.$watch("cValue", (list) => {
+
+    if (list === null || list === '') {
+      return
+    }
+
+    // 校验车牌号
+    validCardCode(self, list);
+
+    // 填充车辆类型
+    changeCardType(self, list);
+
+    // 获取违停次数
+    cartime(self, list);
+
+    // // 调用getApiroadValue函数查询上次执法队员登记路段名称
+    // getApiroadValue().then(res => {
+    //   console.log('API响应:', res);
+    //   // 检查 res 是否包含 result 属性，且 result 是一个非空数组
+    //   if (res && Array.isArray(res.result) && res.result.length > 0) {
+    //     // 这里我们假设您要处理数组中的第一个元素
+    //     const firstResult = res.result[0];
+    //     console.log('第一个结果:', firstResult);
+
+    //     // 假设您想要设置某个组件的值为 road_code
+    //     if (self.$$m("single_select_1rt2l2") && self.$$m("single_select_1rt2l2").props) {
+    //       self.$$m("single_select_1rt2l2").props.defaultValue.value = firstResult.road_code;
+    //       console.log('组件single_select_1rt2l2的值已设置为:', firstResult.road_code);
+    //     } else {
+    //       console.error('组件single_select_1rt2l2未找到或结构不正确。');
+    //     }
+    //   } else {
+    //     // 如果结果不是一个非空数组，输出警告
+    //     console.warn('API未找到有效结果或结果不是数组。');
+    //   }
+    // }).catch(err => {
+    //   // 捕获并记录任何错误
+    //   console.error('错误:', err);
+    // });
+  });
+
+}
+
+
+function changeCardType(self, list) {
+  let id = 0;
+  if (list.length === 8) {
+    id = 52;
+  } else if (list.length === 7) {
+    id = 2;
+  } else {
+
+  }
+  self.$$("single_select_exibgz").cValue = id;
+  self.$$("single_select_exibgz").onChange();
+  
+}
+
+
+function validCardCode(self, value) {
+  
+  // 新能源车牌
+  const xreg = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}([A-Za-z][0-9]{5}|[A-Za-z][A-Za-z][0-9]{4})$/i;  // 旧车牌
+  const creg = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}[A-HJ-NP-Z0-9]{4}[A-HJ-NP-Z0-9挂学警港澳]{1}$/;
+  if (value.length === 7) {
+    if (value.search(creg) == -1) {
+      self.$message.warn("车牌号格式不正确");
+    }
+    else {
+      return { success: true }
+    }
+
+  } else if (value.length === 8) {
+    if (value.search(xreg) == -1) {
+      self.$message.warn("车牌号格式不正确");
+    }
+    else {
+      return { success: true }
+    }
+  } else {
+    self.$message.warn("车牌号格式不正确");
+  }
+}
+function cartime(self, value) {
+  return new Promise((resolve, reject) => {
+    const params = [{
+      name: "license_plate_number",
+      valueContent: value
+    }];
+    console.log('请求参数:', params);
+
+    api.DATA_SOURCE_EXECUTE("15e9d9b6-4e18-4efc-b050-899affac47d5", "ddcat", params, [], "").then(res => {
+      console.log('完整数据源响应:', res); // 打印完整响应便于调试
+
+      if (!res || !res.result) {
+        console.error('响应为空或 result 不存在:', res);
+        return reject(new Error('接口返回无效数据'));
+      }
+
+      let resValue;
+      try {
+        // 如果是字符串，尝试解析 JSON
+        if (typeof res.result === 'string') {
+          resValue = JSON.parse(res.result);
+        } else {
+          // 如果已经是数组或对象，直接使用
+          resValue = res.result;
+        }
+      } catch (parseErr) {
+        console.error('JSON 解析失败:', parseErr);
+        return reject(new Error('JSON 解析失败'));
+      }
+
+      console.log('解析后的响应数据:', resValue);
+
+      // 检查结构并提取 total 字段
+      if (Array.isArray(resValue) && resValue.length > 0) {
+        const firstItem = resValue[0];
+
+        if (firstItem && "total" in firstItem) {
+          const count = firstItem.total;
+          console.log('提取的 total 值:', count);
+
+          if (count !== "0") {
+            self.$message.warning({
+              message: "该车辆近20分钟内已提醒",
+              duration: 9000 // 默认就是 3000（3秒），你可以根据需要调整
+            });
+            return reject(new Error("该车辆近20分钟内已提醒"));
+          }
+
+          resolve(count);
+        } else {
+          console.error('未找到 total 字段');
+          reject(new Error('未找到 total 字段'));
+        }
+      } else {
+        console.error('result 不是数组或为空数组');
+        reject(new Error('返回结果结构不正确'));
+      }
+    }).catch(err => {
+      console.error('数据源执行错误:', err);
+      reject(err);
+    });
+  });
+}
+
+function getApiroadValue() {
+  return new Promise((resolve, reject) => {
+    api.EXEC_FORMULA("USER_ID()").then(res => {
+      debugger
+      console.log('用户ID:', res.result);
+      const userName = res.result;
+      const params = [{ name: "human_id", valueContent: userName }];
+      return api.DATA_SOURCE_EXECUTE("8e1260e2-0914-44dd-95bf-4622145de2f0", "api", params, [], "");
+    }).then(res => {
+      console.log('数据源响应:', res);
+      // 确保解析JSON之前res.result是字符串
+      if (typeof res.result === 'string') {
+        try {
+          const resValue = JSON.parse(res.result);
+          resolve(resValue);
+        } catch (parseErr) {
+          console.error('解析错误:', parseErr);
+          reject(parseErr);
+        }
+      } else {
+        console.error('预期响应为字符串，但收到:', typeof res.result);
+        reject(new Error('预期响应为字符串，但收到其他类型的数据。'));
+      }
+    }).catch(err => {
+      console.error('数据源执行错误:', err);
+      reject(err);
+    });
+  });
+}
+4 常见问题
+无

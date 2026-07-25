@@ -1,0 +1,140 @@
+---
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 检查docker版本
+  shell: docker -v 2>&1
+  register: check_rst 
+  ignore_errors: yes
+
+# 新增版本提示的核心修改
+- name: 获取docker主版本号并判断是否终止
+  block:
+    - name: 从版本信息中提取主版本号
+      shell: echo "{{ check_rst.stdout }}" | awk -F '[ .]' '{print $3}'
+      register: docker_major_version
+      changed_when: false
+
+    - name: 显示Docker版本信息
+      debug:
+        msg: 
+          - "当前Docker完整版本信息: {{ check_rst.stdout }}"
+          - "当前Docker主版本号: {{ docker_major_version.stdout }}"
+
+    - name: 当前docker主版本小于20时输出终止提示并终止任务
+      debug:
+        msg: "警告：当前Docker版本号 {{ docker_major_version.stdout }} < 20，将终止后续所有任务！请联系技术支持部处理！"
+      when: docker_major_version.stdout | int < 20
+
+    - name: 当前docker主版本小于20时终止后续任务
+      meta: end_play
+      when: docker_major_version.stdout | int < 20
+  when: check_rst.rc == 0
+
+- block:
+    - name: Define possible runc paths
+      set_fact:
+        runc_paths:
+          - /usr/bin/runc
+          - /usr/local/bin/runc
+          - /sbin/runc
+          - /usr/sbin/runc
+          - /bin/runc
+
+    - name: Check if runc is installed in possible paths
+      stat:
+        path: "{{ item }}"
+      with_items: "{{ runc_paths }}"
+      register: runc_check
+
+    - name: Remove runc if it exists
+      command: rm -f "{{ item.item }}"
+      when: item.stat.exists
+      with_items: "{{ runc_check.results }}"
+
+    - name: Extract docker package
+      unarchive:
+        src: "{{ src_path }}/docker.tar.gz"
+        dest: "{{ deploy_path }}"
+        mode: '0755'
+
+    - name: "解锁重要文件"
+      shell: |
+        chattr -i /etc/gshadow
+        chattr -i /etc/group
+        chattr -i /etc/shadow
+        chattr -i /etc/passwd
+        groupadd docker
+      ignore_errors: yes
+
+    - name: 准备docker目录
+      file: name={{ item.dir }} state=directory mode={{ item.mode }}
+      with_items:
+        - { dir: "/etc/docker/", mode: "0775" }
+        - { dir: "{{ docker_data_path }}", mode: "0775" }
+
+    - name: Copy docker service file
+      template:
+        src: "{{ item.filename }}.j2"
+        dest: "{{ item.destpath }}/{{ item.filename }}"
+      with_items:
+        - { filename: "docker.service", destpath: "/usr/lib/systemd/system" }
+        - { filename: "daemon.json", destpath: "/etc/docker" }
+
+    - name: 启动docker
+      shell: |
+        set -e
+        systemctl daemon-reload
+        systemctl restart docker
+        systemctl enable docker.service
+  when: check_rst.rc > 0
+
+- name: 检查docker服务状态（当docker已存在时）
+  shell: systemctl is-active docker 2>&1
+  register: docker_status_check
+  ignore_errors: yes
+  when: check_rst.rc == 0
+
+- name: 启动docker服务（如果未启动）
+  block:
+    - name: 启动docker
+      shell: |
+        set -e
+        systemctl start docker
+      register: docker_start_result
+
+    - name: 验证docker启动成功
+      shell: docker ps 2>&1
+      register: docker_verify_result
+      failed_when: docker_verify_result.rc != 0
+  when: check_rst.rc == 0 and docker_status_check.rc != 0
+
+- name: 检查docker-compose版本
+  shell: docker-compose -v 2>&1
+  register: docker_compose_check
+  ignore_errors: yes
+
+- name: 安装docker-compose（如果不存在）
+  block:
+    - name: 解压docker-compose包
+      unarchive:
+        src: "{{ src_path }}/docker-compose.tar.gz"
+        dest: "{{ deploy_path }}"
+        mode: '0755'
+      register: docker_compose_install
+      failed_when: docker_compose_install.failed
+
+    - name: 验证docker-compose安装成功
+      shell: docker-compose -v 2>&1
+      register: docker_compose_verify
+      failed_when: docker_compose_verify.rc != 0
+  when: docker_compose_check.rc != 0
+
+- name: 将 egova 用户加入 docker 用户组
+  user:
+    name: "{{ ops_user }}"
+    groups: docker
+    append: yes
+  ignore_errors: yes

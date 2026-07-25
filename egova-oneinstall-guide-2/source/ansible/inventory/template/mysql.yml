@@ -1,0 +1,10 @@
+# mysql配置模板
+# 部署场景下，host和ip根据部署节点的host自动生成注入
+# host: node1
+port: "3306"
+username: root
+password: Wk2uBTeyp6
+data_dir: /egova/db/mysql
+temp_dir: /egova/db/.mysql_temp
+ip: 127.0.0.1
+db_type: biz

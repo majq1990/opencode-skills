@@ -1,0 +1,354 @@
+{
+  "name": "datepicker-spec",
+  "version": "2.0.0",
+  "description": "ZartUI 日期选择器规范，含四种选择模式：单日期、周选择、时间段、带快捷按钮的时间段",
+
+  "trigger": {
+    "width": "257px",
+    "height": "32px",
+    "border_radius": "4px",
+    "padding": "0 8px 0 12px",
+    "font_size": "14px",
+    "states": {
+      "default":  { "border": "1px solid #DDE1EB", "background": "#FFFFFF" },
+      "hover":    { "border_color": "#3388FF" },
+      "focus":    { "border_color": "#3388FF", "box_shadow": "0 0 0 2px #D6EDFF" },
+      "error":    { "border_color": "#FF4433" },
+      "disabled": { "background": "#F5F7FA" }
+    },
+    "text": {
+      "color": "#223355",
+      "font_size": "14px"
+    },
+    "placeholder": {
+      "text_day":    "请选择日期",
+      "text_range":  "请选择时间段",
+      "color": "#A8B4C8"
+    },
+    "icon": {
+      "size": "16×16px",
+      "style": "线状（stroke，无 fill）",
+      "stroke_width": "1.5px",
+      "color": "#A8B4C8"
+    }
+  },
+
+  "panel": {
+    "background": "#FFFFFF",
+    "border": "1px solid #E9ECF2",
+    "border_radius": "8px",
+    "box_shadow": "0 8px 24px rgba(18,74,180,0.12)",
+    "position": "触发框左对齐，距触发框底部 6px",
+    "layout": "内部横向 flex，align-items: stretch"
+  },
+
+  "divider": {
+    "standard": {
+      "description": "第一种、第二种使用",
+      "width": "1px",
+      "background": "#E9ECF2",
+      "align_self": "stretch"
+    },
+    "thin": {
+      "description": "第三种、第四种 Tab 区与内容区之间使用",
+      "width": "0.5px（通过 ::after + scaleX(0.5) 实现）",
+      "background": "#E9ECF2",
+      "align_self": "stretch"
+    }
+  },
+
+  "nav": {
+    "height": "28px",
+    "margin_bottom": "10px",
+    "title": {
+      "format_day":   "YYYY 年 M 月",
+      "format_month": "YYYY 年",
+      "format_year":  "年份",
+      "font_size": "14px",
+      "font_weight": "500",
+      "color": "#223355"
+    },
+    "btn": {
+      "size": "28×28px",
+      "border_radius": "4px",
+      "icon_size": "16×16px",
+      "icon_color": "#6B7A99",
+      "stroke_width": "1.5px",
+      "hover_background": "#F5F7FA"
+    },
+    "btn_types": {
+      "single_arrow": "切换月份",
+      "double_arrow": "切换年份，两个 path 叠加构成双箭头"
+    },
+    "separator_below": {
+      "height": "1px",
+      "background": "#E9ECF2",
+      "margin_bottom": "10px"
+    }
+  },
+
+  "weekdays_row": {
+    "labels": ["日", "一", "二", "三", "四", "五", "六"],
+    "height": "32px",
+    "font_size": "12px",
+    "color": "#223355"
+  },
+
+  "day_cell": {
+    "size": "34×34px",
+    "border_radius": "4px",
+    "font_size": "14px",
+    "states": {
+      "default":     { "color": "#223355", "background": "transparent" },
+      "other_month": { "color": "#A8B4C8" },
+      "today":       { "color": "#3388FF", "font_weight": "500" },
+      "hover":       { "color": "#3388FF", "background": "#F0F9FF" },
+      "selected":    { "color": "#FFFFFF", "background": "#3388FF", "border_radius": "4px" },
+      "disabled":    { "color": "#C3CAD9", "pointer_events": "none" }
+    }
+  },
+
+  "modes": {
+
+    "mode_1_single_day": {
+      "description": "单日期选择",
+      "panel_layout": "左侧快捷区 + 1px 分隔线 + 右侧日历",
+      "shortcuts": {
+        "width": "96px",
+        "padding": "8px",
+        "items": ["昨天", "今天", "明天"],
+        "item": {
+          "height": "40px",
+          "padding": "0 12px",
+          "border_radius": "4px",
+          "font_size": "14px",
+          "states": {
+            "default": { "background": "transparent", "color": "#223355" },
+            "hover":   { "background": "#F0F9FF", "color": "#3388FF" },
+            "active":  { "background": "#F0F9FF", "color": "#3388FF" }
+          }
+        },
+        "sync_rule": "点击快捷项同步日历选中；日历选中后同步快捷项 active 状态"
+      },
+      "calendar": {
+        "width": "280px",
+        "padding": "12px 16px",
+        "nav": "四箭头：« 切年 ‹ 切月 › 切月 » 切年",
+        "grid": "单月，7列，日期格 34×34px"
+      }
+    },
+
+    "mode_2_week": {
+      "description": "周选择",
+      "panel_layout": "左侧快捷区 + 1px 分隔线 + 右侧单月日历（周选模式）",
+      "shortcuts": {
+        "width": "108px",
+        "padding": "8px",
+        "items": "当月各周次，如\"第 20 周\"",
+        "item": {
+          "height": "40px",
+          "padding": "0 12px",
+          "border_radius": "4px",
+          "font_size": "14px",
+          "states": {
+            "default": { "background": "transparent", "color": "#223355" },
+            "hover":   { "background": "#F0F9FF", "color": "#3388FF" },
+            "active":  { "background": "#F0F9FF", "color": "#3388FF" }
+          }
+        },
+        "sync_rule": "快捷区与日历选中周双向同步"
+      },
+      "calendar": {
+        "width": "280px",
+        "padding": "12px 16px",
+        "nav": "四箭头：« 切年 ‹ 切月 › 切月 » 切年",
+        "week_mode": {
+          "gap": "0（格子无间距，连续排列）",
+          "day_width": "100%（撑满格列）",
+          "week_start": { "background": "#3388FF", "color": "#FFFFFF", "border_radius": "4px 0 0 4px" },
+          "week_mid":   { "background": "#F0F9FF", "color": "#223355", "border_radius": "0" },
+          "week_end":   { "background": "#3388FF", "color": "#FFFFFF", "border_radius": "0 4px 4px 0" },
+          "week_single_day": { "border_radius": "4px", "note": "整周只有一天时四角均圆" },
+          "other_month": { "color": "#A8B4C8" }
+        }
+      }
+    },
+
+    "mode_3_range": {
+      "description": "按时间段选择",
+      "panel_layout": "左侧 Tab 区 + 0.5px 分隔线 + 右侧内容区",
+      "tabs": {
+        "width": "80px",
+        "padding": "8px",
+        "border_right": "0.5px solid #E9ECF2",
+        "items": ["按日", "按周", "按月", "按季", "按年"],
+        "item": {
+          "height": "40px",
+          "padding": "0 12px",
+          "border_radius": "4px",
+          "font_size": "14px",
+          "states": {
+            "default": { "background": "transparent", "color": "#223355" },
+            "hover":   { "background": "#F0F9FF", "color": "#3388FF" },
+            "active":  { "background": "#F0F9FF", "color": "#3388FF" }
+          }
+        }
+      },
+      "content_area": {
+        "padding": "12px 16px",
+        "tabs": {
+          "按日": {
+            "width": "280px",
+            "nav": "四箭头切年月，标题格式\"YYYY 年 M 月\"",
+            "grid": "单月日期格，34×34px"
+          },
+          "按周": {
+            "width": "280px",
+            "nav": "四箭头切年月，标题格式\"YYYY 年 M 月\"",
+            "grid": "单月日期格，周选模式（同 mode_2 week_mode）"
+          },
+          "按月": {
+            "width": "272px",
+            "nav": "双箭头切年，标题格式\"YYYY 年\"",
+            "grid": {
+              "columns": 3,
+              "rows": 4,
+              "items": ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"],
+              "cell": {
+                "height": "40px",
+                "border_radius": "4px",
+                "font_size": "14px",
+                "states": {
+                  "default":  { "color": "#223355", "background": "transparent" },
+                  "hover":    { "color": "#3388FF", "background": "#F0F9FF" },
+                  "selected": { "color": "#FFFFFF", "background": "#3388FF" }
+                }
+              },
+              "gap": "6px",
+              "total_width": "240px",
+              "margin_top": "8px"
+            }
+          },
+          "按季": {
+            "width": "232px",
+            "nav": "双箭头切年，标题格式\"YYYY 年\"",
+            "grid": {
+              "columns": 1,
+              "rows": 4,
+              "items": [
+                { "label": "Q1", "sub": "1-3月" },
+                { "label": "Q2", "sub": "4-6月" },
+                { "label": "Q3", "sub": "7-9月" },
+                { "label": "Q4", "sub": "10-12月" }
+              ],
+              "cell": {
+                "height": "48px",
+                "padding": "0 16px",
+                "border_radius": "4px",
+                "font_size": "14px",
+                "layout": "label 左对齐，sub 右对齐（justify-content: space-between）",
+                "sub_font_size": "12px",
+                "sub_opacity": "0.7",
+                "states": {
+                  "default":  { "color": "#223355", "background": "transparent" },
+                  "hover":    { "color": "#3388FF", "background": "#F0F9FF" },
+                  "selected": { "color": "#FFFFFF", "background": "#3388FF" }
+                }
+              },
+              "gap": "6px",
+              "total_width": "200px",
+              "margin_top": "8px"
+            }
+          },
+          "按年": {
+            "width": "232px",
+            "nav": "双箭头，标题固定显示\"年份\"",
+            "grid": {
+              "columns": 3,
+              "range": "2017–2028（可扩展）",
+              "scroll": {
+                "max_height": "200px",
+                "overflow_y": "auto",
+                "scrollbar_width": "4px",
+                "scrollbar_color": "#DDE1EB"
+              },
+              "cell": {
+                "height": "40px",
+                "border_radius": "4px",
+                "font_size": "14px",
+                "states": {
+                  "default":  { "color": "#223355", "background": "transparent" },
+                  "hover":    { "color": "#3388FF", "background": "#F0F9FF" },
+                  "selected": { "color": "#FFFFFF", "background": "#3388FF" }
+                }
+              },
+              "gap": "6px",
+              "total_width": "200px",
+              "margin_top": "8px"
+            }
+          }
+        }
+      }
+    },
+
+    "mode_4_range_with_quick": {
+      "description": "带快捷按钮的时间段选择，在 mode_3 基础上右侧底部增加快捷按钮栏",
+      "panel_layout": "左侧 Tab 区 + 0.5px 分隔线 + 右侧（内容区 + 快捷按钮栏）纵向排列",
+      "tabs": "同 mode_3",
+      "content_area": "同 mode_3，padding 12px 16px",
+      "quick_bar": {
+        "position": "内容区正下方，紧贴底部",
+        "border_top": "1px solid #E9ECF2",
+        "padding": "8px 16px",
+        "layout": "flex，justify-content: center",
+        "items": {
+          "按日": "今日",
+          "按周": "本周",
+          "按月": "本月",
+          "按季": "本季",
+          "按年": "本年"
+        },
+        "button": {
+          "height": "28px",
+          "padding": "0 12px",
+          "border_radius": "4px",
+          "border": "none",
+          "background": "transparent",
+          "font_size": "13px",
+          "color": "#3388FF",
+          "states": {
+            "hover": { "background": "#F0F9FF", "color": "#3388FF" }
+          }
+        },
+        "behavior": "点击后直接选中当前周期对应值并关闭面板"
+      }
+    }
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "快捷选择与日历选中状态不同步",
+      "fix": "选中日期时检测是否等于昨天/今天/明天，同步 active 状态；日历选中时也同步快捷选项"
+    },
+    {
+      "issue": "面板点击外部无法关闭",
+      "fix": "展开时挂载 document click 监听，!wrap.contains(e.target) 时关闭；setTimeout 延迟注册避免当次点击触发"
+    },
+    {
+      "issue": "周模式日期格之间有间隙导致高亮带断裂",
+      "fix": "dp-days.week-mode 设 gap: 0，格子 width: 100%，不用固定 width"
+    },
+    {
+      "issue": "0.5px 分隔线在高清屏显示为 1px",
+      "fix": "用 ::after 伪元素 + transform: scaleX(0.5) 实现真正 0.5px"
+    },
+    {
+      "issue": "第四种右侧内容区边距与第三种不一致",
+      "fix": "右侧外层容器设 flex-direction: column，内容区保持 dp-range-body（padding: 12px 16px），快捷栏作为独立子元素追加在下方"
+    },
+    {
+      "issue": "季度格子选中后 sub 文字（月份范围）颜色不跟随",
+      "fix": "selected 状态 color: #FFFFFF 会通过继承覆盖 sub，配合 opacity: 0.7 保持层次感"
+    }
+  ]
+}

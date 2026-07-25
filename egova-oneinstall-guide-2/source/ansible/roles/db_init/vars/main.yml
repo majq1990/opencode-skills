@@ -1,0 +1,39 @@
+---
+src_path: "../src/web/{{ app_type }}"
+src_common_db_path: "../src/bin/db"
+dest_path: "{{ dest_package_root_path }}/db-init"
+file_path: "{{ playbook_dir }}/roles/db_init/files"
+db_path: "/opt/egova/{{ app_type }}"
+
+mysql_client_packages:
+  Ubuntu:
+    - mysql-client-8.0
+  kylin_arm:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  kylin_x86:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  CentOS:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  openEuler:
+    - mysql
+  UOS:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  uos_x86:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  uos_arm:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  anolis_x86:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  anolis_arm:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  Anolis:
+    - mysql-community-client-plugins
+    - mysql-community-client

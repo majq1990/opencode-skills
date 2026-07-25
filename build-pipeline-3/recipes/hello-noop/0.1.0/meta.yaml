@@ -1,0 +1,10 @@
+name: build-pipeline-hello
+version: 0.1.0
+description: build-pipeline image validation no-op (used by inject_pubkey.py)
+license: MIT
+maintainer: build-pipeline@majq1990
+purpose: image-validation
+notes: |
+  专供 inject_pubkey.py 验证新自定义镜像可用性。
+  零网络依赖、零编译，端到端目标 < 15s。
+  不要拿来上传 repo（fpm 出来的包是 dummy 1 行 sh 脚本）。

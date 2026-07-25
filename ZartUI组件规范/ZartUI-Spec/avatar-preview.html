@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 头像</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; margin-top: 32px; }
+h2:first-of-type { margin-top: 0; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; display: flex; flex-direction: column; gap: 32px; }
+.demo-label { font-size: 12px; color: #A8B4C8; margin-bottom: 16px; }
+.demo-row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+
+/* ===================== 头像基础 ===================== */
+.z-avatar {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  overflow: visible;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* 尺寸 */
+.z-avatar-lg { width: 48px; height: 48px; }
+.z-avatar-md { width: 36px; height: 36px; }
+.z-avatar-sm { width: 28px; height: 28px; }
+
+/* 头像图片 */
+.z-avatar img {
+  width: 100%; height: 100%;
+  border-radius: 50%; object-fit: cover; display: block;
+}
+
+/* 默认人形图标 */
+.z-avatar-default {
+  background: #F0F9FF;
+  border-radius: 50%; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.z-avatar-default svg { width: 75%; height: 75%; }
+
+/* 文字头像 */
+.z-avatar-text {
+  background: #3388FF;
+  border-radius: 50%; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  color: #FFFFFF; font-weight: 600;
+}
+.z-avatar-lg .z-avatar-text { font-size: 20px; }
+.z-avatar-md .z-avatar-text { font-size: 15px; }
+.z-avatar-sm .z-avatar-text { font-size: 12px; }
+
+/* ===================== Tooltip 姓名 ===================== */
+.z-avatar-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: rgba(34,51,85,0.85); color: #FFFFFF;
+  font-size: 12px; padding: 3px 8px; border-radius: 4px;
+  white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity .15s;
+  z-index: 10;
+}
+.z-avatar-tooltip::after {
+  content: '';
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: rgba(34,51,85,0.85);
+}
+.z-avatar:hover .z-avatar-tooltip { opacity: 1; }
+
+/* ===================== 上传头像：删除按钮 ===================== */
+.z-avatar-del {
+  position: absolute; top: -2px; right: -2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #FFFFFF; border: 1px solid #E9ECF2;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; opacity: 0; transition: opacity .15s;
+  z-index: 5;
+}
+.z-avatar-del svg { width: 10px; height: 10px; color: #C3CAD9; transition: color .12s; }
+.z-avatar:hover .z-avatar-del { opacity: 1; }
+.z-avatar-del:hover svg { color: #FF4433; }
+
+/* ===================== 头像组 ===================== */
+.z-avatar-group {
+  display: inline-flex; align-items: center;
+}
+.z-avatar-group .z-avatar {
+  margin-left: -16px;
+  border: 1.5px solid #FFFFFF;
+  position: relative;
+}
+.z-avatar-group .z-avatar:first-child { margin-left: 0; }
+
+/* 更多气泡 */
+.z-avatar-more {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: #F0F9FF;
+  color: #3388FF; font-weight: 600;
+  border: 1.5px solid #FFFFFF;
+  margin-left: -16px;
+  flex-shrink: 0; cursor: default;
+  z-index: 10;
+}
+.z-avatar-more.z-avatar-lg { width: 48px; height: 48px; font-size: 14px; }
+.z-avatar-more.z-avatar-md { width: 36px; height: 36px; font-size: 12px; }
+.z-avatar-more.z-avatar-sm { width: 28px; height: 28px; font-size: 11px; }
+
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 头像</h1>
+<p class="page-desc">三种头像类型（默认图标 / 文字 / 自定义图片），支持三种尺寸，含悬停 tooltip、上传删除及头像组</p>
+
+<!-- ============================================================
+     头像类型
+============================================================ -->
+<h2>头像类型</h2>
+<div class="section">
+
+  <!-- 默认人形图标 -->
+  <div>
+    <div class="demo-label">默认人形图标</div>
+    <div class="demo-row">
+      <!-- 大 -->
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/>
+            <rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/>
+            <rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/>
+            <ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/>
+          </svg>
+        </div>
+        <div class="z-avatar-tooltip">张三</div>
+      </div>
+      <!-- 中 -->
+      <div class="z-avatar z-avatar-md">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/>
+            <rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/>
+            <rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/>
+            <ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/>
+          </svg>
+        </div>
+        <div class="z-avatar-tooltip">张三</div>
+      </div>
+      <!-- 小 -->
+      <div class="z-avatar z-avatar-sm">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/>
+            <rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/>
+            <rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/>
+            <ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/>
+          </svg>
+        </div>
+        <div class="z-avatar-tooltip">张三</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文字头像 -->
+  <div>
+    <div class="demo-label">文字头像（姓名首字，背景 #3388FF）</div>
+    <div class="demo-row">
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-text">张</div>
+        <div class="z-avatar-tooltip">张三</div>
+      </div>
+      <div class="z-avatar z-avatar-md">
+        <div class="z-avatar-text">李</div>
+        <div class="z-avatar-tooltip">李四</div>
+      </div>
+      <div class="z-avatar z-avatar-sm">
+        <div class="z-avatar-text">王</div>
+        <div class="z-avatar-tooltip">王五</div>
+      </div>
+      <!-- 多字姓名示例 -->
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-text">欧</div>
+        <div class="z-avatar-tooltip">欧阳娜娜</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自定义图片头像 -->
+  <div>
+    <div class="demo-label">自定义图片头像</div>
+    <div class="demo-row">
+      <div class="z-avatar z-avatar-lg">
+        <img src="https://picsum.photos/seed/avatar1/48/48" alt="头像">
+        <div class="z-avatar-tooltip">赵六</div>
+      </div>
+      <div class="z-avatar z-avatar-md">
+        <img src="https://picsum.photos/seed/avatar2/36/36" alt="头像">
+        <div class="z-avatar-tooltip">钱七</div>
+      </div>
+      <div class="z-avatar z-avatar-sm">
+        <img src="https://picsum.photos/seed/avatar3/28/28" alt="头像">
+        <div class="z-avatar-tooltip">孙八</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     上传头像（含删除）
+============================================================ -->
+<h2>上传头像（悬停显示删除图标）</h2>
+<div class="section">
+
+  <div>
+    <div class="demo-label">鼠标悬停头像右上角显示删除图标（默认 #C3CAD9，悬停变 #FF4433）</div>
+    <div class="demo-row">
+
+      <!-- 图片头像 + 删除 -->
+      <div class="z-avatar z-avatar-lg">
+        <img src="https://picsum.photos/seed/avatar1/48/48" alt="头像">
+        <div class="z-avatar-tooltip">赵六</div>
+        <div class="z-avatar-del">
+          <svg viewBox="0 0 10 10" fill="none">
+            <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 文字头像 + 删除 -->
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-text">张</div>
+        <div class="z-avatar-tooltip">张三</div>
+        <div class="z-avatar-del">
+          <svg viewBox="0 0 10 10" fill="none">
+            <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 默认图标 + 删除 -->
+      <div class="z-avatar z-avatar-lg">
+        <div class="z-avatar-default">
+          <svg viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/>
+            <rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/>
+            <rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/>
+            <ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/>
+          </svg>
+        </div>
+        <div class="z-avatar-tooltip">张三</div>
+        <div class="z-avatar-del">
+          <svg viewBox="0 0 10 10" fill="none">
+            <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     头像组
+============================================================ -->
+<h2>头像组</h2>
+<div class="section">
+
+  <!-- 大尺寸头像组 -->
+  <div>
+    <div class="demo-label">大（48px）· 间距 -16px · 白色 1.5px 描边</div>
+    <div class="demo-row">
+      <div class="z-avatar-group">
+        <div class="z-avatar z-avatar-lg">
+          <img src="https://picsum.photos/seed/avatar1/48/48" alt="">
+          <div class="z-avatar-tooltip">赵六</div>
+        </div>
+        <div class="z-avatar z-avatar-lg">
+          <div class="z-avatar-text">张</div>
+          <div class="z-avatar-tooltip">张三</div>
+        </div>
+        <div class="z-avatar z-avatar-lg">
+          <img src="https://picsum.photos/seed/avatar2/48/48" alt="">
+          <div class="z-avatar-tooltip">钱七</div>
+        </div>
+        <div class="z-avatar z-avatar-lg">
+          <div class="z-avatar-default">
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/><rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/></svg>
+          </div>
+          <div class="z-avatar-tooltip">孙八</div>
+        </div>
+        <div class="z-avatar-more z-avatar-lg">+8</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 中尺寸头像组 -->
+  <div>
+    <div class="demo-label">中（36px）</div>
+    <div class="demo-row">
+      <div class="z-avatar-group">
+        <div class="z-avatar z-avatar-md">
+          <img src="https://picsum.photos/seed/avatar1/36/36" alt="">
+          <div class="z-avatar-tooltip">赵六</div>
+        </div>
+        <div class="z-avatar z-avatar-md">
+          <div class="z-avatar-text">李</div>
+          <div class="z-avatar-tooltip">李四</div>
+        </div>
+        <div class="z-avatar z-avatar-md">
+          <img src="https://picsum.photos/seed/avatar3/36/36" alt="">
+          <div class="z-avatar-tooltip">钱七</div>
+        </div>
+        <div class="z-avatar-more z-avatar-md">+5</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 小尺寸头像组 -->
+  <div>
+    <div class="demo-label">小（28px）</div>
+    <div class="demo-row">
+      <div class="z-avatar-group">
+        <div class="z-avatar z-avatar-sm">
+          <img src="https://picsum.photos/seed/avatar2/28/28" alt="">
+          <div class="z-avatar-tooltip">钱七</div>
+        </div>
+        <div class="z-avatar z-avatar-sm">
+          <div class="z-avatar-text">王</div>
+          <div class="z-avatar-tooltip">王五</div>
+        </div>
+        <div class="z-avatar z-avatar-sm">
+          <div class="z-avatar-default">
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="4.5" fill="#85C0FF"/><rect x="10.2" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><rect x="12.6" y="7.2" width="1.2" height="2.8" rx="0.6" fill="#F0F9FF"/><ellipse cx="12" cy="19" rx="7" ry="4.5" fill="#85C0FF"/></svg>
+          </div>
+          <div class="z-avatar-tooltip">孙八</div>
+        </div>
+        <div class="z-avatar-more z-avatar-sm">+3</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 纯文字头像组 -->
+  <div>
+    <div class="demo-label">仅文字头像组合</div>
+    <div class="demo-row">
+      <div class="z-avatar-group">
+        <div class="z-avatar z-avatar-md">
+          <div class="z-avatar-text" style="background:#3388FF;">张</div>
+          <div class="z-avatar-tooltip">张三</div>
+        </div>
+        <div class="z-avatar z-avatar-md">
+          <div class="z-avatar-text" style="background:#06A17F;">李</div>
+          <div class="z-avatar-tooltip">李四</div>
+        </div>
+        <div class="z-avatar z-avatar-md">
+          <div class="z-avatar-text" style="background:#FF6600;">王</div>
+          <div class="z-avatar-tooltip">王五</div>
+        </div>
+        <div class="z-avatar z-avatar-md">
+          <div class="z-avatar-text" style="background:#6B7A99;">欧</div>
+          <div class="z-avatar-tooltip">欧阳娜娜</div>
+        </div>
+        <div class="z-avatar-more z-avatar-md">+12</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

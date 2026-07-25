@@ -1,0 +1,46 @@
+{
+  "name": "report-automation",
+  "description": "自动从 NotebookLM 生成日报和周报并提交到钉钉",
+  "version": "1.0.0",
+  "author": "majq1",
+  "triggers": [
+    "生成日报",
+    "生成周报",
+    "日报自动化",
+    "周报自动化",
+    "report automation",
+    "weekly report",
+    "daily report",
+    "notebooklm 日报",
+    "notebooklm 周报",
+    "钉钉日报",
+    "钉钉周报"
+  ],
+  "commands": {
+    "generate-weekly": {
+      "description": "手动生成本周周报",
+      "script": "D:\\opencode\\weekly-report-auto.py"
+    },
+    "generate-daily": {
+      "description": "手动生成昨天日报",
+      "script": "D:\\opencode\\daily-report-auto.py"
+    },
+    "setup-tasks": {
+      "description": "设置 Windows 定时任务",
+      "script": "D:\\opencode\\setup-report-tasks.ps1",
+      "admin": true
+    },
+    "check-tasks": {
+      "description": "查看定时任务状态",
+      "powershell": "Get-ScheduledTask -TaskName '*Report*' | Select-Object TaskName, State, NextRunTime"
+    },
+    "disable-tasks": {
+      "description": "禁用所有定时任务",
+      "powershell": "Disable-ScheduledTask -TaskName 'WeeklyReport-Auto'; Disable-ScheduledTask -TaskName 'DailyReport-Auto'"
+    },
+    "enable-tasks": {
+      "description": "启用所有定时任务",
+      "powershell": "Enable-ScheduledTask -TaskName 'WeeklyReport-Auto'; Enable-ScheduledTask -TaskName 'DailyReport-Auto'"
+    }
+  }
+}

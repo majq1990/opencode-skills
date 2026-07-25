@@ -1,0 +1,706 @@
+如何配置地图底图的工作台
+业务场景说明：
+珠海项目需要配置地图为地图且包含交互的工作台。悟空配置情况下字体会压扁并且卡顿，同时交互不好配置
+故采用全灵珑配置方式
+地图置底配置网格布局:
+地图拖入页面，开启网格，配置比例，如5-80:7:7:5-80
+左右2个网格项拖入容器
+统计类卡片配置
+统计类卡片配置一般使用详情部件，配置不同网格容器的背景色、字段、交互等
+动态统计数据或列表类配置
+如果数量不确定，需采用卡片列表的方式配置，根据不同的数据展示不同的背景色或图片。
+容器颜色自定义。卡片数据加载完成时触发js动作(预览时会失效，页面内正常)
+export function didMount() {
+  // 打印日志：输出当前页面的网址地址，方便调试
+  console.log("「页面 JS」：当前页面地址 " + location.href);
+  
+  // 打印日志：输出当前 this 指向，方便查看作用域
+  console.log("this " + this);
+  
+  // 定义颜色数组，存放3种背景色（淡蓝、淡红、淡绿）
+  let collorArr = ['#ebf7ff', '#fff1ee', '#ebf9f7'];
+  
+  // 获取页面上所有 class 为 u-card-body-wrapper 的元素集合（卡片内容区）
+  var contains = document.getElementsByClassName('u-card-body-wrapper');
+  
+  // 循环遍历获取到的所有卡片元素
+  for (index in contains) {
+    // 给每一个卡片设置背景色：按顺序使用颜色数组里的颜色
+    contains[index].style.backgroundColor = collorArr[index]
+  }
+}
+图表类配置
+图表类配置可直接引入echarts。例如一个柱状图：
+配置一个容器，并在一个容器内拖入一个文本(空容器可能会加载不出东西，导致图形也无法展示)
+获取到容器的dom，container_1ba6ni为容器的标识，该容器需要设置一个宽高，提供展示位置
+var chartDom = document.getElementById('container_1ba6ni_csshandler_generate');
+调用api（提前写好api）
+设置options等echarts属性，可在echats官网copy脚本（https://echarts.apache.org/）
+图形的点击事件绑定myChart.on('click', function (params)调用灵珑弹窗方法即可
+完整的js脚本：
+function initleft3(self) {
+  var chartDom = document.getElementById('container_f3r5gg_csshandler_generate');
+  var myChart = echarts.init(chartDom);
+  var option;
+  api.DATA_SOURCE_EXECUTE("cf143076-d722-4e39-a64f-a8b223cacef7", "api", [], [], "").then(res => {
+    console.log(res);
+    var result = JSON.parse(res['result']);
+    if (result && !result.hasError) {
+      //将列表当前页数据赋予list
+      var obj = result.result
+      const dat = [];
+  const ove = [];
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          dat.push(obj[key].eff_count)
+  ove.push(obj[key].over_count)
+        }
+      }
+      option = {
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'shadow'
+          }
+        },
+        legend: {},
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          containLabel: true
+        },
+        xAxis: {
+          type: 'value',
+          boundaryGap: [0, 0.01]
+        },
+        yAxis: {
+          type: 'category',
+          data: ['排放', '受纳', '运输']
+        },
+        series: [
+          {
+            name: '有效证件数',
+            type: 'bar',
+            data: dat
+          },
+  {
+            name: '到期证件数',
+            type: 'bar',
+            data: ove
+          }
+        ]
+      };
+
+      option && myChart.setOption(option);
+  myChart.on('click', function (params) {
+// 在这里处理点击事件，params 包含了点击事件的相关信息
+var pageId='a472fbaa-46cf-44a5-adf9-0f1a2610b933';
+if(params && params.name){
+if(params.name == '排放'){
+}else if(params.name == '受纳'){
+pageId = '0e535647-fba9-4df0-9229-99e8e1e48063';
+}else if(params.name == '运输'){
+pageId = '0eeac6a9-a1ea-486d-9a43-04e3b8c31cb2';
+}
+api.WIDGET_DIALOG(this, "LIST", pageId, {
+linkAction: {
+// 弹窗标题
+moduleModalTitle: "详情",
+// 弹窗位置 left right middle top bottom
+moduleModalPosition: "middle",
+// 弹窗尺寸 fullscreen 全屏 custom 自定义（可设置宽高）
+moduleModalSize: "custom",
+// 弹窗宽度
+moduleModalWidth: 1200,
+// 弹窗高度
+moduleModalHeight: 760,
+// 是否启用遮罩
+moduleOpenMask: true,
+// 模式 对表单部件有效（true 详情；false 编辑）
+isDetail: false
+},
+// 部件弹窗的回调（对表单部件有效）
+callback: (actionType, params) => {
+},
+}
+}
+});
+    } else {
+      self.$message.error(result.message);
+    }
+  }).catch(err => {
+    console.error(err);
+  });
+
+
+}
+效果:
+pc系统页面也可按相同方式配置，效果如下：
+以上几种场景基本能满足大部分常用的工作台组件配置。部分难配的样式可从工作台模板组件内copy出列表详情等修改
+页面加载完成时调用全部的初始化脚本。如果包含定时刷新动作，也可注册js定时任务
+珠海完整的脚本：
+// 导出页面生命周期函数：页面加载完成后自动执行
+export function didMount() {
+  // 控制台打印：当前页面的网址地址，用于调试
+  console.log("「页面 JS」：当前页面地址 " + location.href);
+  // 将当前页面this对象赋值给self，解决函数内部this指向丢失问题
+  let self = this;
+
+  // 调用函数：初始化左侧第二个图表
+  initleft2(self)
+  // 调用函数：初始化左侧第三个图表
+  initleft3(self)
+  // 调用函数：初始化右侧第二个图表
+  initRgt2(self)
+  // 调用函数：初始化右侧第三个图表
+  initRgt3(self)
+  // 调用函数：渲染地图点位数据
+  showMap(self);
+}
+
+
+// 函数功能：初始化左侧第二个ECharts图表（分组柱状图：金湾/斗门/香洲区 三类单位数量）
+function initleft2(self) {
+  // 获取图表容器DOM元素
+  var chartDom = document.getElementById('container_1ba6ni_csshandler_generate');
+  // 初始化ECharts图表实例
+  var myChart = echarts.init(chartDom);
+  // 定义图表配置项变量
+  var option;
+
+  // 调用平台数据源API，获取图表数据
+  api.DATA_SOURCE_EXECUTE("01a60a37-f0e7-44e7-bc49-50911dc85480", "api", [], [], "").then(res => {
+    // 控制台打印接口返回原始数据
+    console.log(res);
+    // 解析接口返回的JSON字符串，转为JS对象
+    var result = JSON.parse(res['result']);
+
+    // 判断：数据存在且无错误
+    if (result && !result.hasError) {
+      // 获取接口返回的业务数据
+      var obj = result.result
+
+      // 初始化变量：金湾区 排放单位数量
+      const ys1 = 0;
+      // 初始化变量：金湾区 受纳单位数量
+      const sn1 = 0;
+      // 初始化变量：金湾区 运输企业数量
+      const pf1 = 0;
+
+      // 初始化变量：斗门区 排放单位数量
+      const ys2 = 0;
+      // 初始化变量：斗门区 受纳单位数量
+      const sn2 = 0;
+      // 初始化变量：斗门区 运输企业数量
+      const pf2 = 0;
+
+      // 初始化变量：香洲区 排放单位数量
+      const ys3 = 0;
+      // 初始化变量：香洲区 受纳单位数量
+      const sn3 = 0;
+      // 初始化变量：香洲区 运输企业数量
+      const pf3 = 0;
+
+      // 循环遍历接口返回的数据对象
+      for (const key in obj) {
+        // 过滤：只遍历对象自身属性，排除继承属性
+        if (obj.hasOwnProperty(key)) {
+          // 判断数据类型：排放单位(site)
+          if (obj[key].type == 'site') {
+            // 判断区域：金湾区 → 赋值排放单位数量
+            if (obj[key].name == '金湾区') {
+              pf1 = obj[key].value
+            }
+            // 判断区域：斗门区 → 赋值排放单位数量
+            if (obj[key].name == '斗门区') {
+              pf2 = obj[key].value
+            }
+            // 判断区域：香洲区 → 赋值排放单位数量
+            if (obj[key].name == '香洲区') {
+              pf3 = obj[key].value
+            }
+          }
+
+          // 判断数据类型：受纳单位(consumptive)
+          if (obj[key].type == 'consumptive') {
+            // 判断区域：金湾区 → 赋值受纳单位数量
+            if (obj[key].name == '金湾区') {
+              sn1 = obj[key].value
+            }
+            // 判断区域：斗门区 → 赋值受纳单位数量
+            if (obj[key].name == '斗门区') {
+              sn2 = obj[key].value
+            }
+            // 判断区域：香洲区 → 赋值受纳单位数量
+            if (obj[key].name == '香洲区') {
+              sn3 = obj[key].value
+            }
+          }
+
+          // 判断数据类型：运输企业(unit)
+          if (obj[key].type == 'unit') {
+            // 判断区域：金湾区 → 赋值运输企业数量
+            if (obj[key].name == '金湾区') {
+              ys1 = obj[key].value
+            }
+            // 判断区域：斗门区 → 赋值运输企业数量
+            if (obj[key].name == '斗门区') {
+              ys2 = obj[key].value
+            }
+            // 判断区域：香洲区 → 赋值运输企业数量
+            if (obj[key].name == '香洲区') {
+              ys3 = obj[key].value
+            }
+          }
+        }
+      }
+
+      // ECharts图表配置项
+      option = {
+        // 图例配置
+        legend: {},
+        // 悬浮提示框配置
+        tooltip: {},
+        // 图表网格边距配置
+        grid: {
+          left: '3%',      // 左边距
+          right: '4%',     // 右边距
+          bottom: '3%',    // 下边距
+          containLabel: true // 包含标签计算间距
+        },
+        // 数据集：统一管理图表数据
+        dataset: {
+          // 维度定义：分类 + 三个指标
+          dimensions: ['product', '排放单位', '受纳单位', '运输企业'],
+          // 数据源：三个区域 + 对应数量
+          source: [
+            { product: '金湾区', 排放单位: pf1, 受纳单位: sn1, 运输企业: ys1 },
+            { product: '斗门区', 排放单位: pf2, 受纳单位: sn2, 运输企业: ys2 },
+            { product: '香洲区', 排放单位: pf3, 受纳单位: sn3, 运输企业: ys3 },
+          ]
+        },
+        // X轴：类目轴（文字）
+        xAxis: { type: 'category' },
+        // Y轴：数值轴（自动计算）
+        yAxis: {},
+        // 系列：3个柱状图
+        series: [{ type: 'bar' }, { type: 'bar' }, { type: 'bar' }]
+      };
+
+      // 将配置项应用到图表，渲染显示
+      option && myChart.setOption(option);
+    } else {
+      // 数据异常：页面弹出错误提示
+      self.$message.error(result.message);
+    }
+  }).catch(err => {
+    // 接口请求失败：控制台打印错误
+    console.error(err);
+  });
+}
+
+// 函数功能：初始化左侧第三个图表（横向柱状图：有效/到期证件数）
+function initleft3(self) {
+  // 获取图表容器DOM
+  var chartDom = document.getElementById('container_f3r5gg_csshandler_generate');
+  // 初始化ECharts实例
+  var myChart = echarts.init(chartDom);
+  // 图表配置变量
+  var option;
+
+  // 调用API获取证件统计数据
+  api.DATA_SOURCE_EXECUTE("cf143076-d722-4e39-a64f-a8b223cacef7", "api", [], [], "").then(res => {
+    // 打印原始数据
+    console.log(res);
+    // 解析JSON数据
+    var result = JSON.parse(res['result']);
+
+    // 判断数据正常
+    if (result && !result.hasError) {
+      // 获取业务数据
+      var obj = result.result
+      // 数组：存储有效证件数量
+      const dat = [];
+      // 数组：存储到期证件数量
+      const ove = [];
+
+      // 遍历数据
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          // 追加有效证件数到数组
+          dat.push(obj[key].eff_count)
+          // 追受到期证件数到数组
+          ove.push(obj[key].over_count)
+        }
+      }
+
+      // 图表配置
+      option = {
+        // 悬浮提示：坐标轴触发
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'shadow' // 指示器：阴影
+          }
+        },
+        // 图例
+        legend: {},
+        // 网格边距
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          containLabel: true
+        },
+        // X轴：数值
+        xAxis: {
+          type: 'value',
+          boundaryGap: [0, 0.01]
+        },
+        // Y轴：类目（排放/受纳/运输）
+        yAxis: {
+          type: 'category',
+          data: ['排放', '受纳', '运输']
+        },
+        // 系列：双柱状图
+        series: [
+          {
+            name: '有效证件数',
+            type: 'bar',
+            data: dat
+          },
+          {
+            name: '到期证件数',
+            type: 'bar',
+            data: ove
+          }
+        ]
+      };
+
+      // 渲染图表
+      option && myChart.setOption(option);
+
+      // 绑定图表点击事件
+      myChart.on('click', function (params) {
+        // 默认详情页面ID
+        var pageId = '1848648874102702080';
+        // 调试断点（开发用）
+        debugger
+
+        // 判断点击项存在
+        if (params && params.name) {
+          // 点击排放：使用默认ID
+          if (params.name == '排放') {
+          } 
+          // 点击受纳：切换受纳页面ID
+          else if (params.name == '受纳') {
+            pageId = '1848621170057887744';
+          } 
+          // 点击运输：切换运输页面ID
+          else if (params.name == '运输') {
+            pageId = '1848650671764619264';
+          }
+
+          // 调用平台API：打开详情弹窗
+          api.MODULE_DIALOG(self, "PAGE", pageId, {
+            linkAction: {
+              moduleModalTitle: "详情",           // 弹窗标题
+              moduleModalPosition: "middle",     // 弹窗居中
+              moduleModalSize: "custom",         // 自定义尺寸
+              moduleModalWidth: 1200,            // 宽度
+              moduleModalHeight: 760,            // 高度
+              moduleOpenMask: true,              // 显示遮罩
+            },
+            // 弹窗回调函数（空）
+            callback: (actionType, params) => {
+            }, 
+            // 传递参数（空）
+            params: {
+            }
+          });
+        }
+      });
+    } else {
+      // 数据异常提示
+      self.$message.error(result.message);
+    }
+  }).catch(err => {
+    // 请求失败打印错误
+    console.error(err);
+  });
+}
+
+// 函数功能：初始化右侧第二个图表（面积折线图：本月/上月数据对比）
+function initRgt2(self) {
+  // 获取图表容器
+  var chartDom = document.getElementById('container_bcdey_csshandler_generate');
+  // 初始化图表
+  var myChart = echarts.init(chartDom);
+  // 配置项
+  var option;
+
+  // 数组：存储上月数据
+  const tArr = [];
+  // 数组：存储本月数据
+  const pArr = [];
+
+  // 请求对比数据
+  api.DATA_SOURCE_EXECUTE("77ca678a-e90a-4a7b-98ae-b7ae4f34d042", "api", [], [], "").then(res => {
+    console.log(res);
+    var result = JSON.parse(res['result']);
+
+    if (result && !result.hasError) {
+      // 业务数据
+      var data = result.result
+
+      // 循环：提取上月数据
+      for (i in data.tMonth) {
+        tArr.push(data.pMonth[i])
+      }
+      // 循环：提取本月数据
+      for (i in data.tMonth) {
+        pArr.push(data.tMonth[i])
+      }
+
+      // 图表配置
+      option = {
+        // 提示框
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'cross',        // 十字指针
+            label: {
+              backgroundColor: '#6a7985'
+            }
+          }
+        },
+        // 图例：上月、本月
+        legend: {
+          data: ['上月', '本月']
+        },
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          containLabel: true
+        },
+        // X轴：固定日期节点
+        xAxis: [
+          {
+            type: 'category',
+            boundaryGap: false,
+            data: ['1', '4', '7', '10', '13', '16', '19', '22']
+          }
+        ],
+        // Y轴：数值
+        yAxis: [
+          {
+            type: 'value'
+          }
+        ],
+        // 系列：面积折线图
+        series: [
+          {
+            name: '上月',
+            type: 'line',        // 折线
+            stack: 'Total',      // 堆叠
+            areaStyle: {},       // 填充面积
+            emphasis: {
+              focus: 'series'
+            },
+            data: tArr
+          },
+          {
+            name: '本月',
+            type: 'line',
+            stack: 'Total',
+            areaStyle: {},
+            emphasis: {
+              focus: 'series'
+            },
+            data: pArr
+          }
+        ]
+      };
+
+      option && myChart.setOption(option);
+    } else {
+      self.$message.error(result.message);
+    }
+  }).catch(err => {
+    console.error(err);
+  });
+}
+
+// 函数功能：初始化右侧第三个图表（柱状图：单位个数 + 核准个数）
+function initRgt3(self) {
+  var chartDom = document.getElementById('container_a9jnl8_csshandler_generate');
+  var myChart = echarts.init(chartDom);
+  var option;
+
+  // 请求单位核准数据
+  api.DATA_SOURCE_EXECUTE("452b86df-44ee-4696-b18d-a713543df4f3", "api", [], [], "").then(res => {
+    console.log(res);
+    var result = JSON.parse(res['result']);
+
+    if (result && !result.hasError) {
+      var obj = result.result
+      // 数组：单位总数量
+      const base = [];
+      // 数组：核准数量
+      const cert = [];
+
+      // 遍历数据
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          base.push(obj[key].base_count)
+          cert.push(obj[key].cert_count)
+        }
+      }
+
+      // 图表配置
+      option = {
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'cross',
+            crossStyle: {
+              color: '#999'
+            }
+          }
+        },
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          containLabel: true
+        },
+        // 工具栏（空）
+        toolbox: {
+        },
+        // 图例
+        legend: {
+          data: ['单位个数', '核准个数']
+        },
+        // X轴：三类单位
+        xAxis: [
+          {
+            type: 'category',
+            data: ['排放单位', '运输单位', '受纳单位'],
+            axisPointer: {
+              type: 'shadow'
+            }
+          }
+        ],
+        // Y轴：数值
+        yAxis: [
+          {
+            type: 'value',
+            name: '',
+          }
+        ],
+        // 双柱状图
+        series: [
+          {
+            name: '单位个数',
+            type: 'bar',
+            // 提示格式化：添加单位
+            tooltip: {
+              valueFormatter: function (value) {
+                return value + ' 个';
+              }
+            },
+            data: base
+          },
+          {
+            name: '核准个数',
+            type: 'bar',
+            tooltip: {
+              valueFormatter: function (value) {
+                return value + ' 个';
+              }
+            },
+            data: cert
+          }
+        ]
+      };
+
+      option && myChart.setOption(option);
+    } else {
+      self.$message.error(result.message);
+    }
+  }).catch(err => {
+    console.error(err);
+  });
+}
+
+// 函数功能：统一加载地图所有点位
+function showMap(self) {
+  // 加载：场地点位
+  showSite(self);
+  // 加载：受纳点位
+  showCon(self);
+}
+
+// 函数功能：加载地图【场地/排放】点位数据
+function showSite(self) {
+  // 请求点位接口
+  api.DATA_SOURCE_EXECUTE("57dd2a8c-8793-4ce9-b1d9-cdad946b13d9", "api", [], [], "").then(res => {
+    console.log(res);
+    var result = JSON.parse(res['result']);
+
+    if (result && !result.hasError) {
+      // 数据格式化：处理经纬度、名称、区域
+      var list = result.result.map(row => {
+        return {
+          id: row.id,               // 点位ID
+          y: row.y_coord,           // 纬度
+          x: row.x_coord,           // 经度
+          '名称': row.name,         // 点位名称
+          '所属区域': row.region_name, // 区域
+        }
+      });
+
+      // 获取地图组件模型
+      let mapData = self.$$model("map_base_c1c0mi");
+      // 赋值给地图第一个图层
+      mapData.members[0].props.defaultValue.value = list;
+    } else {
+      self.$message.error(result.message);
+    }
+  }).catch(err => {
+    console.error(err);
+  });
+}
+
+// 函数功能：加载地图【受纳】点位数据
+function showCon(self) {
+  api.DATA_SOURCE_EXECUTE("c5f9d937-b461-431b-9e3f-174857941d15", "api", [], [], "").then(res => {
+    console.log(res);
+    var result = JSON.parse(res['result']);
+
+    if (result && !result.hasError) {
+      // 格式化受纳点位数据
+      var list = result.result.map(row => {
+        return {
+          id: row.id,
+          y: row.y_coord,
+          x: row.x_coord,
+          '名称': row.name,
+          '所属区域': row.region_name,
+        }
+      });
+
+      // 获取地图模型
+      let mapData = self.$$model("map_base_c1c0mi");
+      // 赋值给地图第二个图层
+      mapData.members[1].props.defaultValue.value = list;
+    } else {
+      self.$message.error(result.message);
+    }
+  }).catch(err => {
+    console.error(err);
+  });
+}
+最后的效果

@@ -1,0 +1,141 @@
+{
+  "systemName": "Camunda工作流引擎平台",
+  "description": "基于BPMN 2.0标准的开源工作流和业务流程管理平台",
+  "version": "v1.0",
+  "author": "开发团队",
+  "systemUrl": "http://47.110.57.11:8080/camunda",
+  "testAccount": {
+    "username": "demo",
+    "password": "demo"
+  },
+  "systemGoals": [
+    "提供完整的业务流程自动化解决方案",
+    "支持可视化的流程建模、执行和监控",
+    "实现流程、任务、决策的统一管理"
+  ],
+  "features": [
+    "流程设计与管理",
+    "流程执行与监控",
+    "任务分配与处理",
+    "决策管理(DMN)",
+    "历史数据查询",
+    "用户权限管理",
+    "系统监控与分析"
+  ],
+  "techStack": {
+    "语言": "Java (JDK 11+)",
+    "流程引擎": "Camunda BPM Platform 7.x",
+    "持久层": "MyBatis",
+    "数据库": "MySQL / Oracle / PostgreSQL",
+    "Web服务器": "Tomcat / Jetty / Undertow",
+    "框架": "Spring Boot"
+  },
+  "databaseType": "MySQL",
+  "tables": [
+    {
+      "name": "ACT_RE_PROCDEF",
+      "description": "流程定义表,存储BPMN流程定义"
+    },
+    {
+      "name": "ACT_RU_EXECUTION",
+      "description": "运行时执行表,存储流程实例运行时数据"
+    },
+    {
+      "name": "ACT_RU_TASK",
+      "description": "运行时任务表,存储当前待处理的任务"
+    },
+    {
+      "name": "ACT_RU_VARIABLE",
+      "description": "流程变量表,存储流程变量"
+    },
+    {
+      "name": "ACT_HI_PROCINST",
+      "description": "流程实例历史表,存储流程实例历史数据"
+    },
+    {
+      "name": "ACT_HI_TASKINST",
+      "description": "任务历史表,存储任务执行历史"
+    },
+    {
+      "name": "ACT_ID_USER",
+      "description": "用户表,存储系统用户信息"
+    },
+    {
+      "name": "ACT_ID_GROUP",
+      "description": "组表,存储用户组信息"
+    }
+  ],
+  "baseUrl": "http://47.110.57.11:8080/camunda/engine-rest",
+  "apiDocs": [
+    {
+      "name": "查询流程定义",
+      "method": "GET",
+      "path": "/process-definition",
+      "description": "查询系统中的流程定义列表"
+    },
+    {
+      "name": "启动流程实例",
+      "method": "POST",
+      "path": "/process-instance",
+      "description": "根据流程定义启动新的流程实例"
+    },
+    {
+      "name": "查询任务",
+      "method": "GET",
+      "path": "/task",
+      "description": "查询用户的待办任务列表"
+    },
+    {
+      "name": "完成任务",
+      "method": "POST",
+      "path": "/task/{id}/complete",
+      "description": "完成指定的任务"
+    },
+    {
+      "name": "查询历史流程实例",
+      "method": "GET",
+      "path": "/history/process-instance",
+      "description": "查询历史流程实例数据"
+    }
+  ],
+  "userRoles": [
+    {
+      "name": "管理员",
+      "description": "系统管理员,负责系统配置和流程部署"
+    },
+    {
+      "name": "流程设计师",
+      "description": "负责流程模型的设计和维护"
+    },
+    {
+      "name": "普通用户",
+      "description": "使用系统处理业务任务"
+    }
+  ],
+  "testResults": [
+    {
+      "id": "TC001",
+      "name": "用户登录测试",
+      "result": "通过",
+      "remark": "使用demo/demo账号登录成功"
+    },
+    {
+      "id": "TC002",
+      "name": "流程部署测试",
+      "result": "通过",
+      "remark": "成功部署BPMN流程定义"
+    },
+    {
+      "id": "TC003",
+      "name": "流程启动测试",
+      "result": "通过",
+      "remark": "成功启动流程实例"
+    },
+    {
+      "id": "TC004",
+      "name": "任务处理测试",
+      "result": "通过",
+      "remark": "成功查询并完成任务"
+    }
+  ]
+}

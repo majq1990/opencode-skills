@@ -1,0 +1,198 @@
+{
+  "name": "upload-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 上传组件规范，含基础上传、图片上传（缩略图网格/行式列表）、拖拽上传",
+
+  "title": {
+    "font_size": "14px",
+    "color": "#223355",
+    "colon": "::after { content: '：'; color: #223355 }"
+  },
+
+  "upload_button": {
+    "ref": "button-spec.json#outline",
+    "height": "32px",
+    "padding_horizontal": "16px",
+    "border_radius": "4px",
+    "icon_size": "14px",
+    "icon_color": "currentColor",
+    "states": {
+      "normal":   { "border": "1px solid #DDE1EB", "background": "#FFFFFF", "color": "#223355" },
+      "hover":    { "border": "1px solid #3388FF", "background": "#F0F9FF", "color": "#3388FF" },
+      "click":    { "border": "1px solid #3388FF", "background": "#D6EDFF", "color": "#3388FF" },
+      "disabled": { "border": "1px solid #F5F7FA", "background": "#FFFFFF", "color": "#CED4E0", "cursor": "not-allowed", "pointer_events": "none" }
+    }
+  },
+
+  "hint": {
+    "position": "右侧，与上传按钮同行，间距 12px",
+    "icon": { "size": "12px", "color": "#A8B4C8", "gap_to_text": "4px" },
+    "font_size": "12px",
+    "color": "#A8B4C8"
+  },
+
+  "file_list": {
+    "margin_top": "8px",
+    "gap": "6px",
+    "direction": "column"
+  },
+
+  "file_item": {
+    "width": "378px",
+    "height": "40px",
+    "padding": "0 12px",
+    "background": "#F5F7FA",
+    "border_radius": "4px",
+    "gap": "8px",
+
+    "file_icon": {
+      "size": "16px",
+      "style": "彩色面状，右上角白色半透明折角",
+      "types": {
+        "doc":  { "background": "#3388FF", "label": "W",   "label_font_size": "5.5px" },
+        "docx": { "background": "#3388FF", "label": "W",   "label_font_size": "5.5px" },
+        "xls":  { "background": "#11C79B", "label": "X",   "label_font_size": "5.5px" },
+        "xlsx": { "background": "#11C79B", "label": "X",   "label_font_size": "5.5px" },
+        "pdf":  { "background": "#FF4433", "label": "PDF", "label_font_size": "4px" },
+        "ppt":  { "background": "#FF6600", "label": "P",   "label_font_size": "5.5px" },
+        "pptx": { "background": "#FF6600", "label": "P",   "label_font_size": "5.5px" },
+        "zip":  { "background": "#6B7A99", "label": "Z",   "label_font_size": "5.5px" },
+        "rar":  { "background": "#6B7A99", "label": "R",   "label_font_size": "5.5px" },
+        "unknown": { "background": "#A8B4C8", "label": "首字母大写", "label_font_size": "5.5px" }
+      },
+      "label_color": "#FFFFFF"
+    },
+
+    "file_name": {
+      "font_size": "14px",
+      "color": "#223355",
+      "flex": "1",
+      "overflow": "ellipsis"
+    },
+
+    "states": {
+      "uploading": {
+        "progress_text": { "font_size": "12px", "color": "#6B7A99" },
+        "progress_bar": { "position": "absolute bottom 0 left 0", "height": "2px", "background": "#3388FF", "border_radius": "0 0 0 4px" },
+        "action": "× 取消按钮"
+      },
+      "done": {
+        "progress_text": "不显示",
+        "actions": ["预览", "删除"]
+      },
+      "error": {
+        "background": "#FFF5F5",
+        "file_name_color": "#FF4433",
+        "progress_text": { "text": "上传失败", "color": "#FF4433" },
+        "actions": ["重试（颜色 #3388FF）", "删除"]
+      }
+    },
+
+    "action_icon": {
+      "size": "20px",
+      "border_radius": "4px",
+      "default_color": "#A8B4C8",
+      "hover": { "background": "#F0F9FF", "color": "#3388FF" },
+      "hover_delete": { "background": "#FFE8E6", "color": "#FF4433" }
+    }
+  },
+
+  "image_upload_type1": {
+    "description": "缩略图网格",
+    "add_button": {
+      "size": "60px",
+      "border": "1px solid #DDE1EB",
+      "background": "#F5F7FA",
+      "border_radius": "4px",
+      "icon": "16px + 图标，颜色 #A8B4C8",
+      "hover": { "border_color": "#3388FF", "background": "#F0F9FF", "icon_color": "#3388FF" }
+    },
+    "thumbnail": {
+      "size": "60px",
+      "border_radius": "4px",
+      "object_fit": "cover",
+      "border": "1px solid #E9ECF2",
+      "hover_overlay": {
+        "background": "rgba(34,51,85,0.55)",
+        "file_name": { "font_size": "9px", "color": "#FFFFFF", "max_width": "54px", "overflow": "ellipsis" },
+        "preview_icon": { "size": "16px", "color": "#FFFFFF" }
+      }
+    },
+    "hint_position": "缩略图网格下方，margin-top 6px"
+  },
+
+  "image_upload_type2": {
+    "description": "行式列表",
+    "item": {
+      "width": "378px",
+      "height": "60px",
+      "padding": "0 12px",
+      "background": "#F5F7FA",
+      "border_radius": "4px",
+      "gap": "10px"
+    },
+    "thumbnail": {
+      "size": "40px",
+      "border_radius": "4px",
+      "object_fit": "cover",
+      "border": "1px solid #E9ECF2"
+    },
+    "file_name": { "font_size": "14px", "color": "#223355", "flex": "1", "overflow": "ellipsis" },
+    "states": {
+      "uploading": {
+        "progress_text": { "font_size": "12px", "color": "#6B7A99" },
+        "progress_bar": { "height": "2px", "background": "#3388FF" },
+        "action": "× 取消"
+      },
+      "done": { "actions": ["下载", "预览", "删除"] }
+    }
+  },
+
+  "drag_upload": {
+    "width": "400px",
+    "height": "84px",
+    "border_radius": "4px",
+    "states": {
+      "default":  { "background": "#F5F7FA", "border": "1px solid #DDE1EB" },
+      "dragover": { "background": "#D6EDFF", "border": "1px dashed #3388FF" },
+      "disabled": { "background": "#FAFAFA", "border": "1px solid #F5F7FA", "cursor": "not-allowed", "pointer_events": "none" }
+    },
+    "content": {
+      "row1": {
+        "icon": { "size": "16px", "color": "#223355" },
+        "text": { "content": "点击或拖拽文件至此上传", "font_size": "14px", "color": "#223355" },
+        "gap": "6px"
+      },
+      "row2": {
+        "text": { "content": "最多上传 N 个文件，单个文件不超过 NM", "font_size": "12px", "color": "#A8B4C8" }
+      },
+      "row3": {
+        "description": "可选，仅当支持下载模板时显示",
+        "text": { "content": "下载模板", "font_size": "12px", "color": "#3388FF" },
+        "style": "无边框无背景文字按钮",
+        "hover": { "color": "#5CA5FF", "text_decoration": "underline" },
+        "disabled_color": "#CED4E0"
+      }
+    },
+    "file_list": {
+      "position": "拖拽区域下方",
+      "margin_top": "8px",
+      "style_ref": "file_item（与基础上传完全一致）"
+    }
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "上传成功后仍显示 100%",
+      "fix": "done 状态隐藏进度文字，仅显示操作图标"
+    },
+    {
+      "issue": "禁用按钮仍可点击",
+      "fix": "同时设置 cursor: not-allowed 和 pointer-events: none"
+    },
+    {
+      "issue": "拖拽上传 dragover 边框未切换为虚线",
+      "fix": "is-dragover 类需同时覆盖 border-style: dashed 和 border-color: #3388FF"
+    }
+  ]
+}

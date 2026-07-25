@@ -1,0 +1,798 @@
+灵珑平台公式清单
+公式统计
+公式列表
+公式支持的场景：
+表单字段默认值公式
+表单业务规则公式
+列表字段公式
+4.   视图计算字段公式（导航属性）
+5.   打印设计
+数据库公式
+1、SQL_QUERY_AND  可将多个条件进行拼接
+表达式：SQL_QUERY_AND([condition1, condition2...])
+入参：List<String> conditions  SQL条件列表
+返回值：
+类型：String 文本
+返回值规则：多个SQL条件用AND拼接成多个条件语句
+示例：
+SQL_QUERY_AND(["'name='小华'", "'age'=12"])
+返回结果：'name'='小华'  AND  'age'=12
+2、SQL_QUERY_EQ  过滤某个组件的值等于指定值的数据
+表达式：SQL_QUERY_EQ(String pageId, String version, String columnId, Object value)
+入参：
+pageId：必须。表单id
+version ：必须。 表单版本
+columnId：必须。实体表字段的id
+value 必须。字段的值
+返回值：
+类型：String 文本
+返回值规则：根据传入的columnId获取数据库字段名，用value实际值，拼接陈SQL的一个等于条件语句
+示例：
+SQL_QUERY_EQ(String pageId, String version, String columnId, Object value)
+返回结果：'column'='value'
+3、SQL_QUERY_GT  过滤某个数字组件的值大于指定值的数据
+表达式：SQL_QUERY_GT(String pageId, String version, String columnId, Object value)
+入参：
+pageId：必须。表单id
+version ：必须。 表单版本
+columnId：必须。实体表字段的id
+value 必须。字段的值
+返回值：
+类型：文本
+返回值规则：根据传入的columnId获取数据库字段名，用value实际值，拼接陈SQL的一个大于条件语句
+示例：   ’column‘>12
+4、SQL_QUERY_GTE 过滤某个数字组件的值大于等于指定值的数据
+表达式：SQL_QUERY_GTE( pageId,  version,  columnId,  value)
+入参：
+pageId：必须。表单id
+version ：必须。 表单版本
+columnId：必须。实体表字段的id
+value 必须。字段的值
+返回值：
+示例：’column‘ >= 12
+5、SQL_QUERY_LT 过滤某个数字组件的值小于等于指定值的数据
+表达式：SQL_QUERY_LT(pageId, version, columnId, value)
+入参：
+pageId：必须。表单id
+version ：必须。 表单版本
+columnId：必须。实体表字段的id
+value 必须。字段的值
+返回值：
+示例：’column‘ < 12
+6、SQL_QUERY_LTE 过滤某个数字组件的值小于等于指定值的数据
+表达式：SQL_QUERY_LTE(pageId, version, columnId, value)
+入参：
+pageId：必须。表单id
+version ：必须。 表单版本
+columnId：必须。实体表字段的id
+value 必须。字段的值
+返回值：过滤某个数字组件的值小于等于指定值的数据
+示例：’column‘ <= 12
+7、SQL_QUERY_OR 将多个条件按或逻辑进行拼接
+表达式：SQL_QUERY_OR(List<String> conditions)
+入参：
+conditions  必须。SQL条件语句列表
+返回值：
+类型：文本
+返回值规则：用OR将多个条件进行拼接
+示例：
+SQL_QUERY_OR(["'name='小华'", "'age'=12"])
+返回结果：'name'='小华'  OR  'age'=12
+8、SQL_SELECT_ONE 单条数据联动
+表达式：SQL_SELECT_ONE(String pageId, String version, String columnId, String condition)
+入参：
+pageId：必须。表单id
+version ：必须。 表单版本
+columnId：必须。实体表字段的id
+condition 必须。SQL条件语句
+返回值：
+返回值类型：文本
+返回值规则：当前表单字段 「产品名称」的值等于被关联表的字段 「产品名称」的值时，当前表单字段「数量」的值显示为被关联表字段 「库存数量」的值
+示例：
+9、SQL_SELECT_MANY 多条数据联动
+表达式：SQL_SELECT_ONE(String pageId, String version, String columnId, String condition)
+入参：
+pageId：必须。表单id
+version ：必须。 表单版本
+columnId：必须。实体表字段的id
+condition 必须。SQL条件语句
+返回值：
+类型：文本列表 List<String>
+返回值规则：同上条公式SQL_SELECT_ONE类似
+示例：
+暂时没有使用
+10、SQL_COUNT 统计公式
+表达式：SQL_COUNT(String tableId, , String conditions)
+入参：
+tableId：必须。数据库实体id
+conditions  SQL条件语句
+返回值：
+类型：统计数 Long
+返回值规则：通过传入实体ID和where条件语句，统计数据条数
+示例：
+SQL_COUNT('t_5c20f29945dd472a883b94fdf9590b2b', QUERY_AND(QUERY_EQ('level', 4),QUERY_EQ('location', '美国')))
+转义成统计查询SQL为：select count(1) from XXX where level=4 and location='美国'，将根据条       件获取统计数量。
+11、SQL_MIN 最小值
+表达式：SQL_MIN(tableId, columnId, conditions) ，SQL函数MIN()
+入参：
+tableId：必须。数据库实体id
+columnId  字段id
+conditions  SQL条件语句
+返回值：
+类型：数值
+返回值规则：通过传入实体ID和where条件语句，返回某字段的最小值
+示例：
+SQL_MIN('t_5c20f29945dd472a883b94fdf9590b2b', 'f_83358f79a5f94c17af2a05f213eb67eb', ENTITY_QUERY_EQ('b49a7f25-3a70-41e1-9539-bf6487df6e26',15))，
+转义成查询SQL为：select min(1) from XXX where level=4 and location='美国'
+12、SQL_MAX 最大值
+表达式：SQL_MAX(tableId, columnId, conditions)，SQL函数MAX()
+入参：
+tableId：必须。数据库实体id
+columnId  字段id
+conditions  SQL条件语句
+返回值：
+类型：数值
+返回值规则：通过传入实体ID和where条件语句，获取某字段的最大值
+示例：
+SQL_MAX('t_5c20f29945dd472a883b94fdf9590b2b', 'f_83358f79a5f94c17af2a05f213eb67eb', ENTITY_QUERY_EQ('b49a7f25-3a70-41e1-9539-bf6487df6e26',15))，
+转义成查询SQL为：select max(level) from XXX where a=15。
+​
+时间公式
+1、DATE  转换日期对象
+表达式：DATE(Long... params)
+入参：
+params：整数数组
+返回值：
+类型：文本 String
+返回值规则：DATE(timestamp) 或 DATE(year, month, day) 或 DATE(year, month, day, hour, minute, second) 返回时间为 yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
+示例：
+. DATE(1582180320545),返回2020-02-20T14:32:00.545Z。
+. DATE(2020, 2, 20)，返回2020-02-20T00:00:00.000Z。
+. DATE(2020, 2, 20, 14, 32, 0)，返回2020-02-20T14:32:00.000Z
+2、DATECALCULATE 日期计算，增减某日期的天数
+表达式：DATECALCULATE(date,deltaDays,isWork)
+DATECALCULATE(date,deltaDays,isWork),将⽇期加/减指定天数 是否工作日,
+入参：(String date, int deltaDays, boolean isWorkDay)
+date: 日期文本
+deltaDays:  加/减天数
+isWorkDay:  是否工作日
+返回值：
+类型：文本
+返回值规则：
+示例：
+DATECALCULATE('2020-03-20T01:17:35.000Z',1,false)
+返回 Sat Mar 21 09:17:35 CST 2020
+3、DATE_FORMAT  时间格式化
+表达式：DATE_FORMAT(Object date, String fmt)
+Date对象(或时间字符串)转时间字符串
+DATE_FORMAT(date, )
+入参：(Object date, String fmt)
+date ：Timestamp对象/Date对象/日期字符串
+fmt：时间格式，如'yyyy-MM-dd HH:mm:ss'
+返回值：
+类型：String 文本
+返回值规则：被格式化后的日期
+示例：
+DATE_FORMAT(date, 'yyyy-MM-dd HH:mm:ss')
+4、DATE_TIMESTAMP  日期转时间戳
+表达式：DATE_TIMESTAMP(date)
+入参：
+date 必须。日期对象
+返回值：长整数类型的时间戳
+示例：
+DATE_TIMESTAMP('2020-03-20T01:17:35.000Z')，返回值：1584667055000L
+5、DAY 返回某日期的天数
+表达式：DAY(date)
+入参：
+date 日期的字符串
+返回值：
+类型：整数
+返回值规则： 返回某⽇期的天数。天数是 1 ~ 31 之间的整数
+示例：
+DAY('2020-03-20T01:17:35.000Z')，返回20
+6、DAYS  两个时间的天数差值
+表达式：DAYS(end,start)
+入参：
+end：字符串，结束日期
+start：字符串。开始日期
+返回值：
+类型：整数
+返回值规则：两日期之间的天数差值
+示例：
+DAYS('2020-03-21T01:17:35.000Z', '2020-03-20T01:17:35.000Z')，返回1
+7、HOUR 某日期的小时数
+表达式：HOUR(date)
+入参：date 日期字符串
+返回值：整数，返回某日期的小时数
+示例：
+HOUR('2020-03-20T01:17:35.000Z'),返回9
+8、MINUTE 某日期的分钟数
+表达式：MINUTE(date)
+MINUTE(date),返回某日期的分钟数,
+示例:
+入参：date 日期字符串
+返回值：整数，返回某时间的小分钟数
+示例：
+MINUTE('2020-03-20T01:17:35.000Z'),返回17
+9、MONTH 某⽇期的月份
+表达式：MONTH(date)
+入参：date 日期字符串
+返回值：返回某⽇期的月份整数，月份是 1 ~ 12 之间的整数
+示例：
+MONTH('2020-03-20T01:17:35.000Z'),返回3
+10、MONTHS 两日期之间的月份数
+表达式：MONTHS(end,start)
+入参：
+end 字符串，结束日期
+start，字符串，开始日期
+返回值：两日期之间的月份数（绝对值）
+示例：
+MONTHS('2020-03-21T01:17:35.000Z', '2020-03-20T01:17:35.000Z')，返回0
+11、NOW 当前时间字符串
+表达式：NOW()
+入参：
+返回值：返回当前ISO时间字符串
+示例：
+NOW(),结果：2020-07-02T19:48:09.074Z
+12、SECOND 某日期的秒数
+表达式：SECOND(date)
+入参：指定日期。字符串
+返回值：时间的秒数
+示例：
+SECOND('2020-03-20T01:17:35.000Z'),返回35
+13、TIME 特定时间的⼗进制数字
+表达式：TIME(hour,minute,second)
+,。
+时间值为日期值的一部分，并⽤用十进制表示,示例:
+入参：
+hour 小时
+minute  分钟
+second  秒数
+返回值：返回特定时间的⼗进制数字
+示例：
+TIME(12, 0, 0)，结果：0.5
+14、TIMESTAMP 将⽇期对象转换为时间戳
+表达式：TIMESTAMP(date)
+入参：
+date 字符串，日期时间
+返回值：整数，时间戳
+示例：
+TIMESTAMP('2020-03-20T01:17:35.000Z')，结果：1584667055000L
+15、TODAY  当前ISO时间字符串
+表达式：TODAY()
+入参：
+返回值：返回当前ISO时间字符串
+示例：
+TODAY(),结果：2020-07-02T19:46:25.791Z
+16、WEEKNUM  特定⽇期的周数
+表达式：WEEKNUM(date)
+WEEKNUM(date),,
+示例:例如，。WEEKNUM('2020-03-20T01:17:35.000Z')，返回12)
+入参：
+date 日期字符串
+返回值：返回特定日期的周数，包含 1 月 1 日的周为该年的第一周， 返回 1
+示例：
+WEEKNUM('2020-03-20T01:17:35.000Z')，返回12
+17、YEAR 返回某日期的年份
+表达式：YEAR(date)
+入参：
+返回值：返回某⽇期的年份
+示例：
+YEAR('2020-03-20T01:17:35.000Z'),返回2020
+逻辑公式
+1、AND 且
+表达式：AND(logical1,logical12,...)
+入参：多个字段，布尔值
+返回值：当所有逻辑表达式为真，才返回 true
+示例：
+AND(2>1, 3<4, null),返回false
+2、CONTAINS  是否包含字符串
+表达式：CONTAINS(value,str)
+入参：
+value 原字符串
+str     某字符串
+返回值：boolean
+示例：
+CONTAINS((1,2),2)), 返回true
+3、EQ  判断相等
+表达式：EQ(value1,value2)
+入参：支持数字，日期
+返回值：两个值相等返回 true
+示例：
+NUMBERCOMPARE(2, 3)，返回false
+4、FALSE  布尔假
+表达式：FALSE()
+返回值：返回逻辑值 false
+示例：FALSE(),返回false
+5、FM  校验正则
+表达式：FM(value1,value2)
+入参：
+value1 待验证字符串
+value2 正则表达式
+返回值：
+示例：FM(1,2),返回true
+6、GE  大于等于
+表达式：GE(value1,value2)
+入参：两个整数 BigDecimal
+返回值：value1 大于等于 value2 返回 true
+示例：GE(1,2),返回false
+7、GT  大于
+表达式：GT(value1,value2)
+入参：两个整数 BigDecimal
+返回值：value1 大于 value2 返回 true
+示例： GT(2,1),返回true
+8、IF  条件判断
+表达式：IF(A,B,C)
+入参：
+A  布尔类型
+B 参数
+C 参数
+返回值： IF(A,B,C),A必须是逻辑值，如果满足条件 A，则返回 B，否则返回 C
+示例：IF(2>1,2,1)，返回2
+IF函数可以嵌套
+IN   包含
+表达式：GE(value,str)
+入参：
+value  字符串子集
+str 全字符串，前后带括号，如“ (str)”
+返回值：GE(value,str),value in (str) 返回 true
+示例：
+GE(1,(1,2)),返回true
+9、LE 小于等于
+表达式："LE(value1,value2)
+LE(value1,value2)，value1 小于等于 value2 返回 true,
+示例:LE(2,1),返回falsexxxxxxxxxx LE(value1,value2)，value1 小于等于 value2 返回 true,示例:LE(2,1),返回falseYEAR(date),返回某⽇期的年份,示例:YEAR('2020-03-20T01:17:35.000Z'),返回2020
+入参：2个值做比较
+返回值：value1 小于等于 value2 返回 true，支持数字，日期
+示例：
+10、LT  小于
+表达式： LT(value1,value2)
+入参：2个值做比较
+返回值：布尔值，value1 小于 value2 返回 true，支持数字，日期
+示例：
+LT(1,2),返回true
+11、NE  判断不等
+表达式： NE(value1,value2)
+NE(value1,value2),两个值不相等返回 true,
+示例:NE(1,2),返回true
+入参：2个值做比较
+返回值：布尔值， 两个值不相等返回 true，支持数字，日期
+示例：NE(1,2),返回true
+12、NOT   非
+表达式：NOT(logical)
+入参：对某个字段值逻辑求反
+返回值：对逻辑值取反
+示例：NOT(false),返回true
+13、NUMBERCOMPARE
+表达式：NUMBERCOMPARE(number1,number2)
+入参：比较两个数字大小
+返回值：若 number1 ⼤于 number2 则返回 true
+示例：NUMBERCOMPARE(2, 3),返回false
+14、OR   或
+表达式：OR(logical1,logical2,...)
+入参：多个布尔值参数
+返回值：只要有一个逻辑表达式为真，就返回 true
+示例：OR(2>1, 3<4, null)，返回true
+15、TIMECOMPARE
+表达式：TIMECOMPARE(time1,time2)
+,若 time1 大于 time2 则返回 true,
+示例:TIMECOMPARE('2020-03-21T01:17:35.000Z','2020-03-20T01:17:35.000Z')，返回true
+入参：两个时间字符串
+返回值：若 time1 大于 time2 则返回 true
+示例：
+TIMECOMPARE('2020-03-21T01:17:35.000Z','2020-03-20T01:17:35.000Z')，返回true
+16、TRUE  布尔真
+表达式：TRUE()
+返回值：返回逻辑值 true
+示例：TRUE(),返回true
+17、XOR  异或
+表达式：XOR(logical1,logical2,...)
+入参：多个字段值比较，参数是布尔值
+返回值：布尔值，返回所有参数的异或值
+示例：XOR(false,false)，返回false
+聚合公式
+1、AVG  平均值
+表达式：AVG([number1,number2,number3,...])
+入参：多个数字
+返回值：返回参数的算数平均值
+示例：AVERAGE([1,2,3]),返回2.000000
+2、COUNT  计数
+表达式：COUNT([number1,number2,number3,...])
+入参：一组数字
+返回值：返回数组中元素个数
+示例：COUNT([1,2,3]),返回3
+3、MAX  最大值
+表达式：MAX([number1,number2,number3,...])
+入参：一组数字
+返回值：返回一组数字中的最大值
+示例：MAX([10, 5, 2, 3, 6, 7.9]),返回10
+4、MIN 最小值
+表达式：MIN([number1,number2,number3,...])
+入参：一组数字
+返回值：返回一组数字中的最小值
+示例：MIN(10, 5, 2, 3, 6, 7.9),返回2
+5、PRODUCT  所有数字的乘积
+表达式：PRODUCT([number1,number2,number3,...])
+入参：一组数字
+返回值：一组数字的乘积
+示例：PRODUCT(2,3,4)，返回24
+SUM  返回所有数字相加的和
+表达式：SUM([number1,number2,number3,...])
+入参：一组数字
+返回值：一组数字的和
+示例：SUM([1,2,3]),返回6
+用户公式
+1、DEPARTMENT_ID  当前用户部门ID
+表达式：DEPARTMENT_ID()
+返回值：部门ID
+示例：DEPARTMENT_ID()，返回当前登录用户的部门ID
+2、DEPARTMENT_NAME  获取当前用户部门名称
+表达式：DEPARTMENT_NAME()
+返回值：返回当前登录用户的部门名称
+示例：比如'研究院'
+3、USERNAME  当前用户账户
+表达式：USERNAME()
+返回值：返回当前登录用户的账户username。com_user表里name是登录的用户名，username是登录的用户账号。
+示例：
+4、USER_ID  当前用户ID
+表达式：USER_ID()
+返回值：返回当前登录用户的id
+示例：
+5、USER_SIGN  当前用户签字
+表达式：USER_SIGN()
+返回值：获取当前用户的签字
+示例：
+比如'http://www.egova.top/free/images/xxx.jpg'
+数组公式
+1、ARRAY_FIRST  获取数组第一条数据
+表达式：ARRAY_FIRST(value)
+入参：一组数据
+返回值：获取数组第一条数据
+示例：[1, 2]中返回1
+模板打印公式
+1、DATE_BREAK  解析日期
+表达式：DATE_BREAK(data, index)
+入参：data表示日期,index表示索引
+date：日期
+index：0为年,1为月,2为日,3为年月,4为年月日,5为年月日时分秒,6为带年月日的组合
+返回值：
+示例：
+2、EXCEL_IMG  表格中插入图片
+表达式：EXCEL_IMG(value,height,width)
+入参：value表示图片地址,height与width分别表示图片高度和宽度（单元格数）
+返回值：在Excel表格中插入图片
+示例：
+3、EXPIRY_DATE  计算有效期止
+表达式：EXPIRY_DATE(data, term)
+入参：data表示有效期起,term表示有效期限
+返回值：字符串，有效时间起增加有效期限，得出有效时间至
+示例：
+4、HTML_BREAK  HTML文本换行
+表达式：HTML_BREAK(data, length)
+入参：data表示文本,length表示换行长度
+返回值：增加换行符<br>的文本
+示例：
+5、HTML_IMG   html插入图片
+表达式：HTML_IMG(value, 'height', 'width')
+入参：value表示图片地址,height与width分别表示图片高度和宽度
+返回值：插入图片的html元素字符串，如<img src=...>
+示例：
+6、LINE_BREAK    WORD、EXCEL文本换行
+表达式：LINE_BREAK(data, length)
+入参：data表示文本,length表示换行长度
+返回值：增加换行符“\n”后的文本
+示例：
+7、RESOLVE_DEPARTMENT  解析部门ID
+表达式： RESOLVE_DEPARTMENT(data)
+入参：data  文本，是部门id
+返回值：返回部门名称
+示例：
+8、RESOLVE_PERSON   解析人员的id
+表达式：RESOLVE_PERSON(data)
+入参：data  文本，是人员的id
+返回值：获取id对应的Person人员名称
+示例：
+9、RESOLVE_WORD_IMG   解析word中渲染签字图片
+表达式：RESOLVE_WORD_IMG(data, height, width)
+入参：data表示图片地址, height 图片长度,width 图片宽度
+返回值：单个图片对象
+示例：
+10、RESOLVE_WORD_IMGS  word中渲染签字图片
+表达式：RESOLVE_WORD_IMGS(data, height, width)
+入参：data表示一组图片地址,height 图片长度,width 图片宽度
+返回值：一组图片对象
+示例：
+11、WORD_IMG   word模板中插入图片
+表达式：WORD_IMG(value,height,width)
+入参：value表示图片地址，height与width分别表示图片高度和宽度
+返回值：图片对象
+示例：
+会签公式
+1、COUNTERSIGN 调用会签
+表达式：COUNTERSIGN(nodeId,opinion,instanceId)
+入参：
+nodeId  选填，流程节点id
+opinion  意见
+certificateGrade  证书级别
+instanceId  流程实体id
+返回值：布尔类型
+示例：
+业务实体公式
+1、ENTITY_QUERY_AND  多条件拼接
+表达式：ENTITY_QUERY_AND([condition1, condition2...])
+入参：List<String> conditions  SQL条件列表
+返回值：
+类型：String 文本
+返回值规则：多个SQL条件用AND拼接成多个条件语句
+示例：
+SQL_QUERY_AND(["'name='小华'", "'age'=12"])
+返回结果：'name'='小华'  AND  'age'=12
+2、ENTITY_QUERY_EQ  过滤某个组件的值等于指定值的数据
+表达式：ENTITY_QUERY_EQ( String columnId, Object value)
+入参：
+columnId：必须。实体表字段的id
+value 必须。字段的值
+返回值：
+类型：String 文本
+返回值规则：根据传入的columnId获取数据库字段名，用value实际值，拼接陈SQL的一个等于条件语句
+示例：
+SQL_QUERY_EQ(String columnId, Object value)
+返回结果：'column'='value'
+3、ENTITY_QUERY_GT  过滤某个数字组件的值大于指定值的数据
+表达式：ENTITY_QUERY_GT( String columnId, Object value)
+入参
+columnId：必须。实体表字段的id
+value 必须。字段的值
+返回值：
+类型：文本
+返回值规则：根据传入的columnId获取数据库字段名，用value实际值，拼接陈SQL的一个大于条件语句
+示例：   ’column‘>12
+4、ENTITY_QUERY_GTE  过滤某个数字组件的值大于等于指定值的数据
+表达式：ENTITY_QUERY_GTE(tableId,  columnId, value)
+入参
+columnId：必须。实体表字段的id
+value 必须。字段的值
+返回值：大于等于的SQL条件语句
+示例：’column‘ >= 12
+5、ENTITY_QUERY_LT  过滤某个数字组件的值小于等于指定值的数据
+表达式：ENTITY_QUERY_LT(tableId, columnId, value)
+入参：
+columnId：必须。实体表字段的id
+value 必须。字段的值
+返回值：小于的SQL条件公式
+示例：’column‘ < 12
+6、ENTITY_QUERY_LTE   过滤某个数字组件的值小于等于指定值的数据
+表达式：ENTITY_QUERY_LTE(tableId, columnId, value)
+入参：
+columnId：必须。实体表字段的id
+value 必须。字段的值
+返回值：
+示例：’column‘ <= 12
+7、ENTITY_QUERY_OR  将多个条件按或逻辑进行拼接
+表达式：ENTITY_QUERY_OR(conditions)
+入参：一组条件语句
+返回值：用OR将多个条件进行拼接
+示例：
+8、ENTITY_SELECT_MANY  多条数据联动
+表达式：ENTITY_SELECT_MANY(tableId, columnId, condition)
+入参：
+tableId：业务实体ID
+columnId：业务实体字段ID
+condition：条件
+返回值：联动的字段值数组
+示例：
+9、ENTITY_SELECT_ONE  单条数据联动
+表达式：ENTITY_SELECT_ONE(tableId, columnId, condition)
+入参：
+tableId：业务实体ID
+columnId：业务实体字段ID
+condition：条件
+返回值：联动的字段值
+示例：
+HTTP公式
+1、POST 调用post请求
+表达式：POST(url,data)
+入参：
+url：接口路径
+data：请求参数
+返回值：执行成功 true,失败 false
+示例：
+文本公式
+1、CONCATENATE  拼接函数
+表达式：CONCATENATE(a,b,...)
+入参：将多个字符串拼接合成一个文本字符串
+返回值：拼接多个字符串，如果是 null 则当作空字符串并过滤掉
+示例： CONCATENATE(a,b,...)
+2、SUB_STRING  截取字段
+表达式：SUB_STRING(str, start, end)，截取字符串，str为原字符串，start为截取的开始索引值，end为截取结尾的索引值
+入参：原字符串，开始索引，结束索引
+返回值：COPY(value),返回value
+示例：SUB_STRING('12345',0,2),返回'12'
+3、COPY  复制
+表达式：示例:COPY(value),返回value
+入参：复制字符串、数字类型
+返回值：COPY(value),返回value
+示例：
+4、EXACT  精确比较值
+表达式：EXACT(value1,value2)
+入参： 两文本比较
+返回值：布尔值，精确比较值，区分大小写
+示例：EXACT(11, [aa])，返回false
+5、ISEMPTY 判空
+表达式：ISEMPTY(value)
+入参：文本或集合
+返回值：布尔类型，判断值是否为空字符串、空对象、空数组
+示例：
+6、JOIN  拼接多个字符串
+表达式：JOIN(delimiter,prefix,suffix,value1,value2,...)
+入参：
+delimiter  分隔符号
+prefix 前缀
+suffix 后缀
+返回值：拼接多个字符串，如果是 null 则当作空字符串并过滤掉，支持分隔符、前缀、后缀
+示例：JOIN(', ', '[', ']', 1, 2, null, abc)，返回[1, 2, abc]
+7、LEFT  截取
+表达式：LEFT(value,k)
+入参：
+value：待处理的文本
+k：索引
+返回值：从第 1 个字符开始，返回 k 个字符组成的文本
+示例：LEFT(abcdefg, 5)，返回abcde
+8、LEN   字符个数
+表达式：LEN(text)
+入参：文本
+返回值：文本的字符个数
+示例：LEN(中国)，返回2
+9、LOWER  转换字母小写
+表达式：LOWER(text)
+入参：文本
+返回值：文本转小写
+示例：LOWER(ABC)，返回abc
+10、REPLACE  替换文本
+表达式：REPLACE(oldtext, startnum, numchars, newtext)
+入参：
+oldtext：待处理文本
+startnum：开始替换的索引
+numchars:  被替换的字符个数
+返回值：根据指定的字符数，将部分⽂文本替换
+示例：REPLACE(abcdeft123456, 5, 2, 你好中国)，返回abcde你好中国123456
+11、REPT 重复文本
+表达式：REPT(text, times)
+入参：
+text：文本
+times：重复次数
+返回值：将⽂文本重复一定次数
+示例：REPT(中国123, 2)，返回：中国123中国123
+12、RIGHT
+表达式：RIGHT(value,k)
+入参：value文本，k右侧的字符个数
+返回值：返回⽂本值中最右边的k个字符
+示例：RIGHT(中国123, 3),返回123
+13、RMBFORMAT  数值转人民币大写金额
+表达式：RMBFORMAT(number)
+入参：数字
+返回值：数值转人民币大写，精确到厘
+示例：RMBFORMAT(120.5212)，返回:壹佰贰拾元伍角贰分壹厘
+14、SEARCH  查找文本位置
+表达式：EARCH(value1,value2)
+入参：两个字符串文本
+返回值：在第⼆个字符串中查找第一个字符串，返回第一个字符串的起始位置编号，返回 0 则表示未找到
+示例：SEARCH(123, 中国123),返回3
+15、SPLIT  切割字符
+表达式：SPLIT(value,separator)
+入参：value待处理文本，separator切割符
+返回值：将⽂本按照指定分隔符分割成数组
+示例：SPLIT(中11国1123, 1),返回[中, , 国, , 23]
+16、UPPER   转大写
+表达式：UPPER(value)
+入参：文本
+返回值：转大写后的文本
+示例：UPPER(abc)，返回ABC
+17、UUID   唯一键
+表达式：UUID()
+返回值：生成 uuid
+示例：UUID()，返回c3488912-2d17-45c2-b3f4-1235b53652a2
+数学公式
+1、ABS  绝对值
+表达式：ABS(value)
+入参：数字
+返回值：返回数值的绝对值
+示例：ABS(-10),返回10
+2、ADD  求和
+表达式：ADD(value1, value2, ...)
+入参：一组数字
+返回值：返回所有数相加的和
+示例：
+ADD(1, 2, 3)，返回6
+3、CEILING   向上舍入倍数
+表达式：CEILING(value)
+入参：
+返回值：将数值 number 向上取整
+示例：
+CEILING(100.31)，返回101
+4、DIVIDE  除法
+表达式：DIVIDE(value1, value2, ...)
+入参：一组数字
+返回值：返回第一个数除以后面所有数的商
+示例：返回第一个数除以后面所有数的商
+5、FLOOR  向下取整
+表达式：FLOOR(value)
+入参：数字
+返回值：将数值 number 向下取整
+示例：FLOOR(100.31)，返回100L
+6、MULTIPLY  数值相乘
+表达式：MULTIPLY(value1, value2, ...)
+入参：一组数字
+返回值：乘积
+示例：MULTIPLY(1, 2, 3)，返回6
+7、POWER  数值乘幂
+表达式：POWER(value,power)
+入参：value底数，power次幂数
+返回值：返回数值乘幂的结果
+示例：POWER(2,3),返回8.0
+ROUND  四舍五⼊到指定的位
+表达式：ROUND(number, num_digits)
+入参：
+number: 必需。 要四舍五入的数字
+num_digits: 必需。 要进行四舍五入运算的位数
+返回值：将数字四舍五⼊到指定的位数
+示例：ROUND(100.531, 2)，返回100.53
+8、SQRT  正的平方根
+表达式：SQRT(number)
+SQRT(value),返回正的平方根,示例:SQRT(16),返回4.0
+入参：数字或其字符串
+返回值：返回正的平方根
+示例：SQRT(16),返回4.0
+9、SUBTRACT   数值相减
+表达式：SUBTRACT(value1, value2, ...)
+入参：一组数字
+返回值：返回第一个数减去后面所有数的差
+示例：SUBTRACT(100, 10, 10)，返回80
+工作流公式
+1、FLOW_START  启动工作流流程
+表达式：FLOW_START( pageId,  documentNo)
+入参：
+pageId: 字符串，必需。 流程表单ID
+documentNo: 字符串必需。 文号
+返回值：将以流程表单某文号的某条数据，启动一个工作流流程
+示例：FLOW_START('123456', 'document_123')，根据该流程表单的ID，启动某文号对应某条数据的一个流程。
+在表单业务规则中配置
+2、FLOW_START_CONDITION按条件启动工作流流程
+工具函数
+身份证解析相关公式，1.6.1.0版本支持
+
+[表格0]
+统计日期 | 总数 | 备注
+2023-09-16 | 180+ | 
+2025-12-01 | 10+ | 身份证提取公式#472352
+
+[表格1]
+公式 | 支持的场景
+数据库公式 | 1、2
+时间公式 | 1、2、3
+逻辑公式 | 1、2、3
+聚合公式 | 3、4
+用户公式 | 1、2
+数组公式 | 1、2、3  、4
+模板打印公式 | 
+会签公式 | 1、2
+业务实体公式 | 1、2
+HTTP公式 | 1、2
+文本公式 | 1、2、3
+数学公式 | 1、2、3
+流程公式 | 
+
+[表格2]
+公式 | 用途 | 截图
+ID_CARD_HIDE | 身份证脱敏 | 
+ID_CARD_PROVINCE | 省份 | 
+ID_CARD_PROVINCE_CODE | 省份编码 | 
+ID_CARD_CITY_CODE | 地市编码 | 
+ID_CARD_DISTRICT_CODE | 区划编码 | 
+ID_CARD_IS_VALID | 是否有效 | 
+ID_CARD_GENDER | 性别 | 
+ID_CARD_BIRTH | 生日字符 | 
+ID_CARD_BIRTH_DATE | 生日日期 | 
+ID_CARD_MONTH | 生日月 | 
+ID_CARD_DAY | 生日天 | 
+ID_CARD_AGE | 年龄 | 

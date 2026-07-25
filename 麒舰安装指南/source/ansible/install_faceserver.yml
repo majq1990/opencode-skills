@@ -1,0 +1,17 @@
+---
+# This playbook deploys the tomcat application
+- name: configure and deploy the service
+  hosts: "{{ host }}"
+  gather_facts: "yes"
+  remote_user: root
+  # 优先级小于role/vars下定义的变量
+  vars_files:
+    - ./group_vars/all.yml
+    - ./inventory/hosts.yml
+  roles:
+    - local_repo
+    - common
+    - role: db_init
+      vars:
+        prefix: service
+    - faceserver

@@ -1,0 +1,17 @@
+---
+# variables for install
+src_path: "{{ src_env_package_path }}/TDengine"
+data_dir:  "{{ data_root_dir }}/TDengine"
+temp_dir: "/egova/temp/TDengine"
+log_dir: "{{ log_root_dir }}/TDengine"
+
+conf_file: "/etc/taos/taos.cfg"
+
+# 版本配置
+td_version: "2.6.0.34"
+
+# 初始化配置
+init_password: eGova@td2023
+
+# 部署路径
+deploy_path: "/egova/deploy/TDengine"

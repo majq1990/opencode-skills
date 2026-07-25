@@ -1,0 +1,9 @@
+---
+- name: restart mysql
+  service: name=mysql state=restarted
+
+#- name: restart iptables
+#  service: name=iptables state=restarted
+
+- name: reload apparmor
+  command: apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld

@@ -1,0 +1,66 @@
+[
+  {
+    "query": "action=REPORT，给我最小请求示例",
+    "should_trigger": true
+  },
+  {
+    "query": "只知道 GET_NOTICE_INFO，帮我列最小字段",
+    "should_trigger": true
+  },
+  {
+    "query": "egova_openapi_token 是放 query 还是 header",
+    "should_trigger": true
+  },
+  {
+    "query": "上传多媒体接口的最小参数是什么",
+    "should_trigger": true
+  },
+  {
+    "query": "DISPOSE_FEEDBACK 最小请求 JSON 给一个",
+    "should_trigger": true
+  },
+  {
+    "query": "SIGN 和 NOTICE_SIGNING 区别是什么",
+    "should_trigger": true
+  },
+  {
+    "query": "帮我把 action 和接口名做个速查",
+    "should_trigger": true
+  },
+  {
+    "query": "REPORT 完整参数表在哪个 reference",
+    "should_trigger": true
+  },
+  {
+    "query": "联调前账号、公钥、材料准备清单怎么做",
+    "should_trigger": false
+  },
+  {
+    "query": "第三方直连和星桥拉取哪个模式更适合",
+    "should_trigger": false
+  },
+  {
+    "query": "token 接口报用户名密码错误怎么排查",
+    "should_trigger": false
+  },
+  {
+    "query": "公钥接口 404，先查什么",
+    "should_trigger": false
+  },
+  {
+    "query": "api_message_send 没记录，流程上该查哪张表",
+    "should_trigger": false
+  },
+  {
+    "query": "给我一份实施计划和现场割接步骤",
+    "should_trigger": false
+  },
+  {
+    "query": "帮我梳理培训第三方的上线流程",
+    "should_trigger": false
+  },
+  {
+    "query": "接口慢、超时、报错的根因如何定位",
+    "should_trigger": false
+  }
+]

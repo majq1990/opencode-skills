@@ -1,0 +1,45 @@
+---
+# variables for install
+src_path: "{{ src_web_package_path }}/statgather"
+deploy_path: "{{ web_root_dir }}/statgather"
+log_path: "{{ log_root_dir }}/statgather"
+src_pip_path: "{{ src_env_package_path }}/python"
+
+pip_packages:
+  Ubuntu:
+#    - build-essential
+    - python-pip-whl
+    - python3-wheel
+    - python3-pip
+  kylin_arm:
+    - python3-wheel
+    - python3-pip
+  kylin_x86:
+    - python3-wheel
+    - python3-pip
+  CentOS:
+    - python3-wheel
+    - python3-pip
+  openEuler:
+    - python3-wheel
+    - python3-pip
+  UOS:
+    - python3-wheel
+    - python3-pip
+  uos_x86:
+    - python3-wheel
+    - python3-pip
+  uos_arm:
+    - python3-wheel
+    - python3-pip
+  anolis_x86:
+    - python3-wheel
+    - python3-pip
+  anolis_arm:
+    - python3-wheel
+    - python3-pip
+  Anolis:
+    - python2-wheel
+    - python3-pip
+
+

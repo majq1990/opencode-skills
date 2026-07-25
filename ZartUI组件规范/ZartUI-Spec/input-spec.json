@@ -1,0 +1,259 @@
+{
+  "name": "input-spec",
+  "version": "2.0.0",
+  "description": "ZartUI 输入框规范，含单行五态、多行字数统计、前缀图标+后缀、前置选择、后置选择、前置+后置组合",
+
+  "base": {
+    "height": "32px",
+    "border_radius": "4px",
+    "font_size": "14px",
+    "padding": "0 12px 0 8px"
+  },
+
+  "single_line": {
+    "description": "单行输入框",
+    "states": {
+      "default": {
+        "background": "#FFFFFF",
+        "border": "1px solid #DDE1EB",
+        "color": "#223355",
+        "placeholder": "请输入",
+        "placeholder_color": "#A8B4C8"
+      },
+      "hover": {
+        "border": "1px solid #3388FF",
+        "note": "无内容时仅改描边；有内容时右侧显示清除图标"
+      },
+      "active": {
+        "background": "#FFFFFF",
+        "border": "1px solid #3388FF",
+        "box_shadow": "0 0 0 2px #D6EDFF",
+        "note": "有内容时右侧显示清除图标"
+      },
+      "disabled": {
+        "background": "#F5F7FA",
+        "border": "1px solid #E9ECF2",
+        "color": "#A8B4C8",
+        "placeholder_color": "#A8B4C8",
+        "cursor": "not-allowed",
+        "pointer_events": "none"
+      },
+      "error": {
+        "background": "#FFFFFF",
+        "border": "1px solid #FF4433",
+        "color": "#223355",
+        "error_message": {
+          "position": "输入框下方",
+          "margin_top": "4px",
+          "font_size": "12px",
+          "font_weight": "400",
+          "color": "#FF4433"
+        }
+      }
+    }
+  },
+
+  "clear_icon": {
+    "description": "清除图标",
+    "trigger_conditions": ["hover 且有内容", "focus 且有内容"],
+    "style": "面状：灰色实心圆 + 白色 × 描边",
+    "size": "16×16px",
+    "fill": "#A8B4C8",
+    "cross_stroke": "#FFFFFF",
+    "hover_opacity": "0.75",
+    "behavior": "点击清空输入内容并重新聚焦",
+    "with_suffix": "清除图标排在后缀内容左侧，两者同在 flex 容器中，不绝对定位"
+  },
+
+  "multi_line": {
+    "description": "多行输入框（Textarea），在单行基础上扩展",
+    "base": {
+      "min_height": "84px",
+      "note": "单行 32px + 增量 52px",
+      "border_radius": "4px",
+      "font_size": "14px",
+      "padding": "4px 12px 24px 8px",
+      "resize": "vertical（可纵向拖拽，不可横向拉伸）"
+    },
+    "states": {
+      "default":  "同单行 default",
+      "hover":    "同单行 hover",
+      "active":   "同单行 active",
+      "disabled": "同单行 disabled；resize: none",
+      "error":    "同单行 error"
+    },
+    "char_count": {
+      "position": "输入框右下角内部，绝对定位",
+      "format": "已输入字数 / 最大字数，如 \"0 / 200\"",
+      "font_size": "12px",
+      "color_normal": "#A8B4C8",
+      "color_near_limit": "#FF6600",
+      "color_over_limit": "#FF4433",
+      "near_limit_threshold": "≥ 最大字数 × 80%"
+    }
+  },
+
+  "prefix_suffix": {
+    "description": "前缀图标 + 后缀内容",
+    "prefix_icon": {
+      "style": "线状账号图标（人形轮廓）",
+      "size": "16×16px",
+      "stroke": "#A8B4C8",
+      "position": "绝对定位，left: 8px，垂直居中",
+      "input_padding_left": "32px"
+    },
+    "suffix": {
+      "text_color": "#223355",
+      "text_color_disabled": "#A8B4C8",
+      "hint_icon": {
+        "style": "线状 info 圆形图标",
+        "size": "16×16px",
+        "stroke": "#A8B4C8"
+      },
+      "position": "绝对定位，right: 8px，flex 容器排列（清除图标在左，后缀文字/图标在右）",
+      "input_padding_right_with_suffix": "72px",
+      "input_padding_right_with_suffix_and_clear": "100px"
+    }
+  },
+
+  "prepend": {
+    "description": "前置选择",
+    "background_default": "#F5F7FA",
+    "background_active": "#FFFFFF",
+    "color": "#223355",
+    "border": "1px solid #DDE1EB（四边完整）",
+    "border_radius": "4px 0 0 4px",
+    "height": "32px",
+    "padding": "0 8px",
+    "font_size": "14px",
+    "chevron_icon": {
+      "style": "线状下拉箭头",
+      "size": "12×12px",
+      "stroke": "#A8B4C8",
+      "rotate_when_open": "180deg"
+    },
+    "join_with_input": "margin-left: -1px 消除双线，input border-radius 右侧为 0",
+    "border_sync": {
+      "hover":    "前置 + 输入框描边同步变 #3388FF",
+      "active":   "前置背景变 #FFFFFF，描边 #3388FF；输入框加外发光 0 0 0 2px #D6EDFF",
+      "error":    "前置 + 输入框描边同步变 #FF4433",
+      "disabled": "前置 + 输入框描边同步变 #E9ECF2；文字变 #A8B4C8"
+    },
+    "dropdown": {
+      "offset_top": "4px",
+      "background": "#FFFFFF",
+      "border": "1px solid #E9ECF2",
+      "border_radius": "4px",
+      "box_shadow": "0 4px 12px rgba(34,51,85,0.1)",
+      "item_height": "36px",
+      "item_padding": "0 12px",
+      "item_color": "#223355",
+      "item_hover_background": "#F5F7FA",
+      "item_selected_color": "#3388FF",
+      "item_selected_background": "#F0F9FF"
+    }
+  },
+
+  "append": {
+    "description": "后置选择",
+    "background": "#F5F7FA（始终不变，激活时不变为白色）",
+    "color": "#223355",
+    "border": "1px solid #DDE1EB（四边完整）",
+    "border_radius": "0 4px 4px 4px",
+    "height": "32px",
+    "padding": "0 8px",
+    "font_size": "14px",
+    "chevron_icon": {
+      "style": "线状下拉箭头",
+      "size": "12×12px",
+      "stroke": "#A8B4C8"
+    },
+    "join_with_input": "margin-left: -1px 消除双线，input border-radius 左侧为 0",
+    "border_sync": "与前置选择联动规则一致"
+  },
+
+  "prepend_and_append": {
+    "description": "前置 + 后置同时存在",
+    "input_border_radius": "0（两侧均无圆角）",
+    "prepend_background_active": "#FFFFFF",
+    "append_background": "#F5F7FA（始终不变）",
+    "border_sync": "悬停 / 激活 / 错误 / 禁用时，前置、输入框、后置描边三者同步变色"
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "激活态 border 描述中出现两条 border 属性",
+      "fix": "以 border: 1px solid #3388FF 为准，外发光用 box-shadow: 0 0 0 2px #D6EDFF 叠加"
+    },
+    {
+      "issue": "清除图标在 hover 离开后仍残留",
+      "fix": "仅在 hover 且有内容 / focus 且有内容时显示，其他状态隐藏"
+    },
+    {
+      "issue": "清除图标与后缀重叠",
+      "fix": "有后缀时将清除图标移入 suffix flex 容器作为第一个子元素，不再绝对定位"
+    },
+    {
+      "issue": "多行框字数统计与 resize 手柄重叠",
+      "fix": "字数统计绝对定位于框内右下角，padding-bottom 不小于 24px"
+    },
+    {
+      "issue": "前置/后置与输入框拼接出现双线",
+      "fix": "使用 margin-left: -1px 叠压消除，配合 z-index 确保聚焦时描边在上层"
+    },
+    {
+      "issue": "后置选择激活时背景变白",
+      "fix": "后置背景始终为 #F5F7FA，只有前置在激活时变为 #FFFFFF"
+    }
+  ],
+
+  "search_variants": {
+    "description": "两种搜索框形态，均为全圆角，按场景选用",
+
+    "instant_search": {
+      "label": "即时搜索框",
+      "usage": "输入即触发搜索，无需点击按钮，适用于下拉面板内过滤等轻量场景",
+      "height": "32px",
+      "border_radius": "16px",
+      "border": "1px solid #DDE1EB",
+      "padding": "0 12px",
+      "gap": "6px",
+      "placeholder": "请输入关键字搜索",
+      "placeholder_color": "#A8B4C8",
+      "icon": {
+        "position": "左侧",
+        "size": "14×14px",
+        "color": "#A8B4C8"
+      },
+      "focus": {
+        "border_color": "#3388FF"
+      }
+    },
+
+    "normal_search": {
+      "label": "常规搜索框",
+      "usage": "需点击搜索图标触发查询，适用于表格工具栏等需要明确提交的场景",
+      "height": "32px",
+      "border_radius": "16px",
+      "border": "1px solid #DDE1EB",
+      "padding_left": "12px",
+      "placeholder": "请输入关键字搜索",
+      "placeholder_color": "#A8B4C8",
+      "icon": {
+        "position": "右侧，距右边框 44px 区域内居中",
+        "size": "14×14px",
+        "color": "#A8B4C8"
+      },
+      "divider": {
+        "position": "图标左侧，距右边框 44px 处",
+        "width": "1px",
+        "height": "撑满输入框高度（align-self: stretch）",
+        "color": "#DDE1EB"
+      },
+      "focus": {
+        "border_color": "#3388FF"
+      },
+      "note": "搜索图标右侧区域宽 44px，分隔线顶头顶尾"
+    }
+  }
+}

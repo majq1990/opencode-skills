@@ -1,0 +1,55 @@
+---
+# 配置文件
+- name: Set JVM Xmx for default 1G
+  set_fact:
+    jvm_xmx: "1024M"
+
+- name: Set JVM Xmx for MIS 3G
+  set_fact:
+    jvm_xmx: "3072M"
+  when: app_type_suffix == "" or app_type_suffix == "-MIS"
+
+- name: Set JVM Xmx for other MIS 2G
+  set_fact:
+    jvm_xmx: "2048M"
+  when: app_type_suffix == "-UMA" or app_type_suffix == "-MF" or app_type_suffix == "-SG"
+
+- name: 输出计算后的JVM Xmx值
+  debug:
+    msg: "计算后的Xmx: {{ jvm_xmx }}"
+
+- name: 设置shutdown_port
+  set_fact:
+    shutdown_port: "{{ app_port|int - 8081 + 8005 }}"
+
+- name: 输出关闭端口
+  debug:
+    msg: "shutdown_port: {{ shutdown_port }}"
+
+- name: 修改配置
+  template:
+    src: "{{ item.filename }}.j2"
+    dest: "{{ item.destpath }}/{{ item.filename }}"
+    mode: '0644'
+  with_items:
+    - { filename: "server.xml",destpath: "{{ link_path }}/conf/" }
+    - { filename: "context.xml",destpath: "{{ link_path }}/conf/" }
+    - { filename: "web.xml",destpath: "{{ link_path }}/conf/" }
+    - { filename: "error.jsp",destpath: "{{ link_path }}/webapps/" }
+    - { filename: "tomcat-users.xml",destpath: "{{ link_path }}/conf/" }
+    - { filename: "catalina.properties",destpath: "{{ link_path }}/conf/" }
+    - { filename: "catalina.sh",destpath: "{{ link_path }}/bin/" }
+    - { filename: "startup.sh",destpath: "{{ link_path }}/bin/" }
+    - { filename: "catalina.policy",destpath: "{{ link_path }}/conf/" }
+
+- name: 修改配置
+  template:
+    src: "catalina-arm.sh.j2"
+    dest: "{{ link_path }}/bin/catalina.sh"
+    mode: '0644'
+  when: ansible_pkg_mgr !=  'apt'
+
+
+
+
+

@@ -1,0 +1,28 @@
+---
+# 配置tomcat服务单元
+
+- name: Set execute permissions
+  file:
+    path: "{{ dest_path }}/apache-tomcat-{{ tomcat_suffix }}"
+    mode: "a+x"
+    recurse: yes
+
+- name: Copy tomcat.service
+  template:
+    src: tomcat.service.j2
+    dest: "{{ system_service_path }}/tomcat{{ app_type_suffix }}.service"
+    mode: '0644'
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Enable and restart tomcat service
+  systemd:
+    name: tomcat{{ app_type_suffix }}
+    state: restarted
+    enabled: yes
+
+
+
+

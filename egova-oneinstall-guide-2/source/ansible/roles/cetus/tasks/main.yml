@@ -1,0 +1,10 @@
+---
+- name: 检查是否已安装数据库代理
+  stat: path={{ lock_file }}
+  register: file_exists
+
+- block:
+    - include: install.yml
+    - include: config.yml
+    - include: service.yml
+  when: not file_exists.stat.exists

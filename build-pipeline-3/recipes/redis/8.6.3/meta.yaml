@@ -1,0 +1,7 @@
+name: redis
+version: 8.6.3
+description: "Redis - in-memory data store"
+license: "RSALv2 / SSPLv1"
+maintainer: "build-pipeline@majq1990"
+url: "https://redis.io/"
+upstream_tarball: "https://download.redis.io/releases/redis-8.6.3.tar.gz"

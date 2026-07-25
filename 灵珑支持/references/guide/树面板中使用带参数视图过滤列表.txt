@@ -1,0 +1,112 @@
+树面板中使用带参数视图过滤列表
+1 使用场景
+在进行查询大量的列表数据，并且需要使用树面板点击节点对列表数据进行过滤时，使用一般视图进行数据过滤会导致数据加载过慢，数据体量较大等情况，如法律法规下的法律条款等。使用带参数的视图进行过滤数据会极大的减少数据加载量，从而优化性能。
+2 效果
+树面板+列表的页面中，点击树节点时，右侧的列表显示该节点下的对应的数据，且列表查询数据时只会查询该节点下的法律条款，不会查询其他数据。
+3 配置
+效果图
+配置：
+编写带参数的视图
+SELECT
+law_id,
+id,
+paragraph_sequence_code,
+detail_code,
+paragraph_title,
+paragraph_name,
+paragraph_info,
+type_code 
+FROM
+(
+SELECT
+law_id,
+id,
+paragraph,
+paragraph_sequence_code,
+detail_code,
+paragraph_title,
+paragraph_name,
+paragraph_info,
+type_code 
+FROM
+( SELECT law_id, id, 'paragraph', paragraph_sequence_code, detail_code, paragraph_title, paragraph_name, paragraph_info, 6 AS type_code FROM law_paragraph_info ) t 
+WHERE
+law_id = ${law_base_info_law_id} UNION ALL
+SELECT
+law_id,
+id,
+item,
+item_sequence_code,
+detail_code,
+item_title,
+item_name,
+paragraph_info,
+type_code 
+FROM
+( SELECT law_id, id, 'item', item_sequence_code, detail_code, '' AS item_title, item_name, item_info AS paragraph_info, 7 AS type_code FROM law_item_info ) t 
+WHERE
+law_id = ${law_base_info_law_id} UNION ALL
+SELECT
+law_id,
+id,
+subItem,
+sub_item_sequence_code,
+detail_code,
+sub_title,
+sub_item_name,
+paragraph_info,
+type_code 
+FROM
+( SELECT law_id, id, 'subItem', sub_item_sequence_code, detail_code, '' AS sub_title, sub_item_name, sub_item_info AS paragraph_info, 8 AS type_code FROM law_sub_item_info ) t 
+WHERE
+law_id = ${law_base_info_law_id} 
+) t 
+ORDER BY
+detail_code
+配置列表页面并将带参数的字段作为隐含字段进行传递
+树面板的点击事件中配置传参
+function main(params) {
+
+    console.log(params);
+    console.log(this);
+    const pageRootList = this.$$roots();
+    let rootPageElement = pageRootList[0];
+    var pageTableList = rootPageElement.$$element("page_widget_list_9yukwb");
+
+    // 获取页面树实例
+    var pageTreeEle = this.$$element("page_tree_2euu84");
+    // 获取树渲染实例
+    var treeRenderEle = pageTreeEle.$$getRenderElement();
+    // 获取当前被选
+    var selectedRows = this.$$("tree_panel_9q5efl").$$getSelection();
+    // 获取当前树实例
+    var treePanelEle = treeRenderEle.$$getTreeElement();
+
+    const nodeList = treePanelEle.smoothTree(treePanelEle.renderTreeData);
+    var lawId = null
+    // 获取被选中的节点
+    // treePanelEle.
+    if (selectedRows === nodeList[0]) {
+        lawId = null;
+    } else {
+        lawId = params.id;
+    }
+    console.log("law_base_info_law_id", lawId);
+    pageTableList.loading = true;
+    if (pageTableList) {
+        if (pageTableList.dataEngine && pageTableList.dataEngine.state) {
+            // 找到列表部件中的表格组件元素
+            let tableComp = pageTableList.dataEngine.state.getElement("table_8u68lu");
+            tableComp.params.law_base_info_law_id = lawId;
+            debugger
+            if (tableComp) {
+                //执行列表刷新
+                tableComp.$$refreshData();
+                pageTableList.loading = false;
+
+            }
+        }
+    }
+}
+4 常见问题
+无。

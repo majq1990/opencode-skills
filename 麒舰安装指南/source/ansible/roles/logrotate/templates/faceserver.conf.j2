@@ -1,0 +1,13 @@
+/egova/web/faceserver/log/ZTITServer.*.egova.log.INFO.* {
+    su root root
+    olddir /egova/log/faceserver
+    daily
+    rotate 15
+    dateext
+    dateformat .%Y-%m-%d
+    nocompress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

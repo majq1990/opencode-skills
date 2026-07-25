@@ -55,16 +55,20 @@ description: |
 - 用法：按索引定位 1-3 份文档 → 读取 → 提取配置步骤/脚本模板/注意事项。
 - 图片型文档（明细表格/数据视图）的原图在 `guide/_images/`。
 
-## ② JS 脚本规范（references/scripting/，6 份文档）
+## ② JS 脚本规范（references/scripting/，7 份文档）
 
 | 文档 | 场景 |
 |---|---|
+| `灵珑前端JS-API.md` | 官方 JS-API 完整参考：全局路由/表单render/列表render/全局API/移动端/高级功能/废弃API对照 |
 | `components-api-reference.md` | 全局 API 速查：组件查找/消息/对话框/表单操作/看板赋值/路由参数 |
 | `form-scripts-guide.md` | 表单脚本：API调用、组件操作、提交、AES加密、弹窗、麒舰刷新菜单 |
 | `list-scripts-guide.md` | 列表脚本：Hook 查询与分页规范、刷新、字段样式、行高亮 |
 | `page-interaction-guide.md` | 页面跳转/传参/生命周期/移动端特殊交互（附件/拨号/WebView） |
 | `tree-component-guide.md` | 树组件 6 种联动场景 + 常用方法 |
 | `best-practices.md` | 命名/结构/错误处理/防抖节流/移动端适配/调试 |
+| `动作脚本实战踩坑.md` | 动作脚本高频踩坑与根治方案（重复实例/空容器隐藏/setValue同步/onChange时序/echarts渲染等） |
+| `动作脚本实战踩坑.md` | 动作脚本高频踩坑与根治方案（重复实例/空容器隐藏/setValue同步/onChange时序/echarts渲染等） |
+| `动作脚本实战踩坑.md` | 动作脚本高频踩坑与根治方案（重复实例/空容器隐藏/setValue同步/onChange时序/echarts渲染等） |
 
 **核心约束（写任何灵珑脚本前先过一遍）**：
 1. 函数第一行 `const self = this;`，后续用 self（function 回调里 this 会变）
@@ -125,7 +129,7 @@ linglong-support/
 ├── SKILL.md                  # 本文件（总路由）
 └── references/               # skill 只存「能力资产」，成果物不进 skill
     ├── guide/                # ① 112 份配置场景文档（_索引.md 为分类目录，_images/ 为图片）
-    ├── scripting/            # ② 6 份 JS 脚本规范（_原SKILL说明.md 为原始工作流）
+    ├── scripting/            # ② 7 份 JS 脚本规范（含灵珑前端JS-API官方参考）
     ├── 手册生成-工作流.md     # ③ 五类方法论要点+骨架(附录A1~A5) + 场景→手册成果物流程
     ├── 知识库索引.md          # ④ 钉钉知识库 901 篇 nodeId 索引
     └── 需求交付-工作流.md     # ⑤ 需求 → 实施方案报告的标准流程与报告模板
@@ -140,3 +144,6 @@ linglong-support/
 - 2026-07-08：linglong-guide（桌面 .skill 包，112 文档）+ linglong-cert-exam（考题手册+索引）落地
 - 2026-07-10：合并 egova-agent-skills 仓库的 egova-config-linglong-js（JS 脚本规范），三合一为本 skill
 - 旧的 linglong-guide / linglong-cert-exam 两个独立 skill 已移除（git 历史可找回）
+- 2026-07-25：新增 `references/scripting/动作脚本实战踩坑.md`，收录动作脚本 12 类高频坑（重复实例/空容器/时序/提交同步等）
+- 2026-07-25：新增 `references/scripting/动作脚本实战踩坑.md`，收录动作脚本 12 类高频坑（重复实例/空容器/时序/提交同步等）
+- 2026-07-25：新增 `references/scripting/动作脚本实战踩坑.md`，收录动作脚本 12 类高频坑（重复实例/空容器/时序/提交同步等）

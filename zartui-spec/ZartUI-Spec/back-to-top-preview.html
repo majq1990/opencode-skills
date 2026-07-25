@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZartUI · 回到顶部 规范预览</title>
+<style>
+:root {
+  --color-bg-page:      #F5F7FA;
+  --color-bg-panel:     #FFFFFF;
+  --color-text-primary: #081126;
+  --color-text-body:    #223355;
+  --color-text-muted:   #6B7A99;
+  --color-primary:      #3388FF;
+  --color-border:       #E9ECF2;
+  --font-family:        'PingFang SC','Microsoft YaHei',sans-serif;
+  --radius-m: 8px;
+  --radius-s: 4px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-body);
+  background: var(--color-bg-page);
+  padding: 40px;
+  min-height: 100vh;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  margin-bottom: 32px;
+}
+
+.spec-section {
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-m);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.spec-section-title {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 24px;
+}
+
+.spec-block-title {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.demo-block { margin-bottom: 32px; }
+.demo-row { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+.demo-col { display: flex; flex-direction: column; gap: 8px; }
+.demo-label { font-size: 12px; color: var(--color-text-muted); }
+
+/* 规格参数表 */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.spec-table th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: #F5F7FA;
+}
+.spec-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td code {
+  font-family: 'SF Mono','Consolas',monospace;
+  font-size: 12px;
+  background: #F5F7FA;
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  color: var(--color-primary);
+}
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 14px; height: 14px; border-radius: var(--radius-s); border: 1px solid var(--color-border); flex-shrink: 0; }
+
+/* ══════════════════════════════════════
+   回到顶部
+   ══════════════════════════════════════ */
+.back-to-top {
+  position: fixed;
+  right: 40px;
+  bottom: 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 4px 12px 1px #00000014;
+  filter: blur(0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.back-to-top.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.back-to-top svg {
+  width: 16px;
+  height: 16px;
+  color: #223355;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: color 0.15s;
+}
+.back-to-top:hover svg {
+  color: #3388FF;
+}
+
+/* 静态演示用（不用 fixed） */
+.back-to-top-demo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 4px 12px 1px #00000014;
+  filter: blur(0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.back-to-top-demo svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.back-to-top-demo.default { color: #223355; }
+.back-to-top-demo.hover   { color: #3388FF; }
+
+/* 气泡提示 */
+.btt-tooltip {
+  position: absolute;
+  right: 50px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.8);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  padding: 5px 10px;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.btt-tooltip::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-left-color: rgba(0,0,0,0.8);
+}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · 回到顶部 规范预览</h1>
+
+<div class="spec-section">
+  <h2 class="spec-section-title">组件演示</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">向下滚动容器内容可触发回到顶部按钮</div>
+    <div style="position:relative; width:600px; height:600px; background:#FFFFFF; border-radius:var(--radius-m); border:1px solid var(--color-border); overflow:hidden;">
+
+      <!-- 可滚动内容区 -->
+      <div id="scrollBox" style="height:100%; overflow-y:auto; padding:24px;">
+        <p style="color:#6B7A99; font-size:12px; margin-bottom:16px;">↓ 向下滚动触发回到顶部按钮</p>
+        <div style="height:1800px; background:linear-gradient(180deg,#F5F7FA 0%,#EEF2F8 100%); border-radius:var(--radius-s);"></div>
+      </div>
+
+      <!-- 回到顶部按钮（定位在容器内右下角） -->
+      <div id="boxBackToTop"
+        style="position:absolute; right:20px; bottom:20px; width:40px; height:40px; border-radius:50%; background:#FFFFFF; box-shadow:0 4px 12px 1px #00000014; filter:blur(0); display:flex; align-items:center; justify-content:center; cursor:pointer; opacity:0; pointer-events:none; transition:opacity 0.25s;"
+        onclick="document.getElementById('scrollBox').scrollTo({top:0,behavior:'smooth'})">
+        <div class="btt-tooltip" id="bttTooltip">回到顶部</div>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#223355" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="boxBtnIcon">
+          <path d="M3 8L8 3l5 5"/>
+          <line x1="8" y1="3" x2="8" y2="16" stroke-width="2"/>
+        </svg>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 状态对比 -->
+  <div class="demo-block">
+    <div class="spec-block-title">状态对比</div>
+    <div class="demo-row">
+      <div class="demo-col">
+        <div class="demo-label">默认（隐藏）</div>
+        <div style="width:40px;height:40px;border-radius:50%;background:#FFFFFF;box-shadow:0 4px 12px 1px #00000014;display:flex;align-items:center;justify-content:center;opacity:0.25;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#223355" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 8L8 3l5 5"/>
+          <line x1="8" y1="3" x2="8" y2="16" stroke-width="2"/>
+          </svg>
+        </div>
+      </div>
+      <div class="demo-col">
+        <div class="demo-label">显示（默认）</div>
+        <div class="back-to-top-demo default">
+          <svg viewBox="0 0 16 16">
+            <path d="M3 8L8 3l5 5"/>
+          <line x1="8" y1="3" x2="8" y2="16" stroke-width="2"/>
+          </svg>
+        </div>
+      </div>
+      <div class="demo-col">
+        <div class="demo-label">悬停 (Hover)</div>
+        <div class="back-to-top-demo hover">
+          <svg viewBox="0 0 16 16">
+            <path d="M3 8L8 3l5 5"/>
+          <line x1="8" y1="3" x2="8" y2="16" stroke-width="2"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">属性</th><th style="width:220px;">规格值</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>尺寸</td>
+        <td><code>40×40px</code>，圆形</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>背景</td>
+        <td><code>#FFFFFF</code></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>阴影</td>
+        <td><code>0 4px 12px 1px #00000014</code></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>filter</td>
+        <td><code>blur(0)</code></td>
+        <td>无模糊</td>
+      </tr>
+      <tr>
+        <td>位置</td>
+        <td><code>fixed · right: 40px · bottom: 40px</code></td>
+        <td>固定于页面右下角</td>
+      </tr>
+      <tr>
+        <td>默认状态</td>
+        <td><code>opacity: 0 · pointer-events: none</code></td>
+        <td>不显示、不可点击</td>
+      </tr>
+      <tr>
+        <td>触发显示</td>
+        <td><code>opacity: 1 · pointer-events: auto</code></td>
+        <td>页面滚动时显示，过渡 <code>0.25s</code></td>
+      </tr>
+      <tr>
+        <td>图标</td>
+        <td><code>16×16px</code>，向上箭头，线状</td>
+        <td>居中显示</td>
+      </tr>
+      <tr>
+        <td>图标颜色（默认）</td>
+        <td><span class="chip"><span class="swatch" style="background:#223355;"></span><code>#223355</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>图标颜色（Hover）</td>
+        <td><span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td>
+        <td>颜色过渡 <code>0.15s</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 容器内滚动监听 -->
+<script>
+document.getElementById('scrollBox').addEventListener('scroll', function() {
+  const btn = document.getElementById('boxBackToTop');
+  if (this.scrollTop > 100) {
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+  } else {
+    btn.style.opacity = '0';
+    btn.style.pointerEvents = 'none';
+  }
+});
+
+document.getElementById('boxBackToTop').addEventListener('mouseenter', function() {
+  document.getElementById('boxBtnIcon').setAttribute('stroke', '#3388FF');
+  document.getElementById('bttTooltip').style.opacity = '1';
+});
+document.getElementById('boxBackToTop').addEventListener('mouseleave', function() {
+  document.getElementById('boxBtnIcon').setAttribute('stroke', '#223355');
+  document.getElementById('bttTooltip').style.opacity = '0';
+});
+</script>
+</body>
+</html>

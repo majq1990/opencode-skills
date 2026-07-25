@@ -1,0 +1,16 @@
+[Unit]
+Description=minio
+
+[Service]
+Environment="MINIO_ROOT_PASSWORD={{ secret_key }}" "MINIO_ROOT_USER={{ access_key }}" "MINIO_KMS_SECRET_KEY=minio:{{ encryption_key }}"
+ExecStart={{ deploy_path }}/minio server -address :{{ port }} {{ deploy_path }}/data
+StandardOutput=append:{{ deploy_path }}/output.log
+StandardError=append:{{ deploy_path }}/error.log
+SyslogIdentifier=minio
+Restart=on-failure
+RestartSec=5
+User=egova
+Group=egova
+
+[Install]
+WantedBy=multi-user.target

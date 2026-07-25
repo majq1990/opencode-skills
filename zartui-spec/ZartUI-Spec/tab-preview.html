@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZartUI · Tabs 标签页 规范预览</title>
+<style>
+:root {
+  --color-bg-page:        #F5F7FA;
+  --color-bg-panel:       #FFFFFF;
+  --color-text-primary:   #081126;
+  --color-text-body:      #223355;
+  --color-text-secondary: #6B7A99;
+  --color-primary:        #3388FF;
+  --color-border:         #E9ECF2;
+  --font-family-base:     'PingFang SC','Microsoft YaHei',sans-serif;
+  --font-size-h4:         16px;
+  --font-size-body:       14px;
+  --font-size-secondary:  12px;
+  --radius-m:  8px;
+  --radius-s:  4px;
+  --space-sm:  8px;
+  --space-md:  12px;
+  --space-lg:  16px;
+  --space-xl:  24px;
+  --space-xxl: 32px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+button, input, select, textarea { font: inherit; }
+
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body);
+  line-height: 22px;
+  color: var(--color-text-body);
+  background: var(--color-bg-page);
+  padding: 40px;
+}
+
+/* ── 页面框架 ── */
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 32px;
+}
+
+.spec-section {
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-m);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
+}
+
+.spec-section-title {
+  font-size: var(--font-size-h4);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-xl);
+}
+
+.spec-block-title {
+  font-size: var(--font-size-secondary);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-md);
+}
+
+.states-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xxl);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-xxl);
+}
+
+.state-demo { display: flex; flex-direction: column; align-items: flex-start; }
+.state-label {
+  font-size: var(--font-size-secondary);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+/* ── 规格参数表 ── */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-body);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.spec-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-secondary);
+  padding: var(--space-sm) var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+  background: #F5F7FA;
+}
+.spec-table td {
+  padding: 10px var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-body);
+  vertical-align: middle;
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td code {
+  font-family: 'SF Mono','Consolas',monospace;
+  font-size: 12px;
+  background: #F5F7FA;
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  color: var(--color-primary);
+}
+
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.swatch {
+  width: 14px; height: 14px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════
+   横向标签
+   ══════════════════════════════════════ */
+
+/* 标签组容器：底部 1px 分隔线 */
+.tab-bar-h {
+  display: flex;
+  align-items: flex-end;
+  border-bottom: 1px solid #E9ECF2;
+}
+
+/* 单个标签 */
+.tab-item-h {
+  display: inline-flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 20px;
+  border: none;
+  background: #FFFFFF;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.tab-item-h:hover {
+  background: #F5F7FA;
+}
+
+/* span 宽度 = 文字宽度，::after width:100% 即与文字等宽 */
+.tab-label-h {
+  font-size: 14px;
+  color: #223355;
+  line-height: 22px;
+  white-space: nowrap;
+  position: relative;
+  transition: color 0.2s;
+}
+
+/* 标记线：文字正下方，距标签底部 = (56-22)/2 = 17px */
+.tab-label-h::after {
+  content: '';
+  position: absolute;
+  bottom: -17px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.tab-item-h.is-active .tab-label-h {
+  color: #3388FF;
+  font-weight: 500;
+}
+.tab-item-h.is-active .tab-label-h::after {
+  background: #3388FF;
+}
+
+.tab-content-demo {
+  padding: var(--space-xl) 0 var(--space-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+}
+
+/* ══════════════════════════════════════
+   纵向标签
+   ══════════════════════════════════════ */
+
+.tab-layout-v {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+}
+
+/* 贯通竖线：紧贴标签列右侧，高度撑满整个布局 */
+.tab-layout-v::before {
+  content: '';
+  position: absolute;
+  left: 154px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #E9ECF2;
+}
+
+.tab-bar-v {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 154px;
+  flex-shrink: 0;
+}
+
+.tab-item-v {
+  width: 154px;
+  height: 36px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  border: none;
+  background: #FFFFFF;
+  cursor: pointer;
+  border-radius: var(--radius-s);
+  transition: background 0.15s;
+  text-align: left;
+}
+
+.tab-item-v:hover { background: #F5F7FA; }
+
+.tab-label-v {
+  font-size: 14px;
+  color: #223355;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.tab-item-v.is-active { background: #F0F9FF; }
+.tab-item-v.is-active .tab-label-v {
+  color: #3388FF;
+  font-weight: 500;
+}
+
+.tab-content-v {
+  flex: 1;
+  padding: var(--space-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  min-height: 220px;
+  margin-left: var(--space-xl);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+}
+
+/* ══════════════════════════════════════
+   胶囊组标签页
+   ══════════════════════════════════════ */
+
+/* 容器：背景 + 4px 圆角，内部无间距 */
+.tab-group-capsule {
+  display: inline-flex;
+  background: #F5F7FA;
+  border-radius: 4px;
+  padding: 0;
+  gap: 0;
+}
+
+/* 单个标签项 */
+.tab-item-capsule {
+  height: 32px;
+  padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 4px;
+  color: #223355;
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  gap: 6px;
+}
+
+.tab-item-capsule:hover {
+  background: #E9ECF2;
+}
+
+/* 选中态：描边浮在相邻标签上方 */
+.tab-item-capsule.is-active {
+  background: #F0F9FF;
+  border-color: #3388FF;
+  color: #3388FF;
+  z-index: 1;
+}
+
+/* 图标尺寸 */
+.tab-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · Tabs 标签页 规范预览</h1>
+
+<!-- ══════════════════════════════════════ 横向标签 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">横向标签（Horizontal Tabs）</h2>
+
+  <!-- 完整演示 -->
+  <div style="margin-bottom: var(--space-xxl);">
+    <div class="spec-block-title">组件演示</div>
+    <div class="tab-bar-h">
+      <button class="tab-item-h is-active"><span class="tab-label-h">基本信息</span></button>
+      <button class="tab-item-h"><span class="tab-label-h">关联记录</span></button>
+      <button class="tab-item-h"><span class="tab-label-h">操作日志</span></button>
+      <button class="tab-item-h"><span class="tab-label-h">附件材料</span></button>
+    </div>
+    <div class="tab-content-demo">基本信息面板内容区域</div>
+  </div>
+
+  <!-- 状态对比 -->
+  <div style="margin-bottom: var(--space-xxl);">
+    <div class="spec-block-title">状态对比</div>
+    <div class="states-row">
+      <div class="state-demo">
+        <div class="state-label">默认</div>
+        <div class="tab-bar-h" style="width: fit-content;">
+          <button class="tab-item-h"><span class="tab-label-h">标签文字</span></button>
+        </div>
+      </div>
+      <div class="state-demo">
+        <div class="state-label">悬停 (Hover)</div>
+        <div class="tab-bar-h" style="width: fit-content;">
+          <button class="tab-item-h" style="background:#F5F7FA;"><span class="tab-label-h">标签文字</span></button>
+        </div>
+      </div>
+      <div class="state-demo">
+        <div class="state-label">选中 (Active)</div>
+        <div class="tab-bar-h" style="width: fit-content;">
+          <button class="tab-item-h is-active"><span class="tab-label-h">标签文字</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 规格参数 -->
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:140px;">属性</th><th style="width:240px;">规格值</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>高度</td><td><code>56px</code></td><td>标签行固定高度，文字垂直居中</td></tr>
+      <tr><td>左右内边距</td><td><code>20px</code></td><td>单侧 padding，两侧对称</td></tr>
+      <tr><td>字号</td><td><code>14px</code> · 行高 <code>22px</code></td><td></td></tr>
+      <tr>
+        <td>默认文字色</td>
+        <td><span class="chip"><span class="swatch" style="background:#223355;"></span><code>#223355</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>默认背景色</td>
+        <td><span class="chip"><span class="swatch" style="background:#FFFFFF;border-color:#ccc;"></span><code>#FFFFFF</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Hover 背景色</td>
+        <td><span class="chip"><span class="swatch" style="background:#F5F7FA;border-color:#ccc;"></span><code>#F5F7FA</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>选中文字色</td>
+        <td><span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>标记线</td>
+        <td><code>高 2px</code> · 宽度同文字</td>
+        <td>文字正下方；默认 transparent，选中 <code>#3388FF</code></td>
+      </tr>
+      <tr>
+        <td>底部分隔线</td>
+        <td><span class="chip"><span class="swatch" style="background:#E9ECF2;border-color:#ccc;"></span><code>1px solid #E9ECF2</code></span></td>
+        <td>标签组下方</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════ 纵向标签 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">纵向标签（Vertical Tabs）</h2>
+
+  <!-- 完整演示 -->
+  <div style="margin-bottom: var(--space-xxl);">
+    <div class="spec-block-title">组件演示</div>
+    <div class="tab-layout-v">
+      <div class="tab-bar-v">
+        <button class="tab-item-v is-active"><span class="tab-label-v">基本信息</span></button>
+        <button class="tab-item-v"><span class="tab-label-v">关联记录</span></button>
+        <button class="tab-item-v"><span class="tab-label-v">操作日志</span></button>
+        <button class="tab-item-v"><span class="tab-label-v">附件材料</span></button>
+        <button class="tab-item-v"><span class="tab-label-v">审批意见</span></button>
+      </div>
+      <div class="tab-content-v">基本信息面板内容区域</div>
+    </div>
+  </div>
+
+  <!-- 状态对比 -->
+  <div style="margin-bottom: var(--space-xxl);">
+    <div class="spec-block-title">状态对比</div>
+    <div class="states-row">
+      <div class="state-demo">
+        <div class="state-label">默认</div>
+        <button class="tab-item-v"><span class="tab-label-v">标签文字</span></button>
+      </div>
+      <div class="state-demo">
+        <div class="state-label">悬停 (Hover)</div>
+        <button class="tab-item-v" style="background:#F5F7FA;"><span class="tab-label-v">标签文字</span></button>
+      </div>
+      <div class="state-demo">
+        <div class="state-label">选中 (Active)</div>
+        <button class="tab-item-v is-active"><span class="tab-label-v">标签文字</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 规格参数 -->
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:140px;">属性</th><th style="width:240px;">规格值</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>宽度</td><td><code>154px</code></td><td>固定宽度</td></tr>
+      <tr><td>高度</td><td><code>36px</code></td><td>单项固定高度</td></tr>
+      <tr><td>标签间距</td><td><code>8px</code></td><td>相邻标签之间的 gap</td></tr>
+      <tr><td>字号</td><td><code>14px</code></td><td></td></tr>
+      <tr>
+        <td>默认文字色</td>
+        <td><span class="chip"><span class="swatch" style="background:#223355;"></span><code>#223355</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>默认背景色</td>
+        <td><span class="chip"><span class="swatch" style="background:#FFFFFF;border-color:#ccc;"></span><code>#FFFFFF</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Hover 背景色</td>
+        <td><span class="chip"><span class="swatch" style="background:#F5F7FA;border-color:#ccc;"></span><code>#F5F7FA</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>选中背景色</td>
+        <td><span class="chip"><span class="swatch" style="background:#F0F9FF;border-color:#ccc;"></span><code>#F0F9FF</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>选中文字色</td>
+        <td><span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>右侧分隔线</td>
+        <td><span class="chip"><span class="swatch" style="background:#E9ECF2;border-color:#ccc;"></span><code>1px solid #E9ECF2</code></span></td>
+        <td>标签列右侧紧贴</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════ 胶囊组标签页 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">胶囊组标签页（Capsule Tabs）</h2>
+
+  <!-- 演示：不带图标 -->
+  <div style="margin-bottom: var(--space-xxl);">
+    <div class="spec-block-title">变体一 · 纯文字</div>
+    <div class="tab-group-capsule">
+      <button class="tab-item-capsule is-active">全部</button>
+      <button class="tab-item-capsule">待处理</button>
+      <button class="tab-item-capsule">进行中</button>
+      <button class="tab-item-capsule">已完成</button>
+      <button class="tab-item-capsule">已关闭</button>
+    </div>
+  </div>
+
+  <!-- 演示：带图标 -->
+  <div style="margin-bottom: var(--space-xxl);">
+    <div class="spec-block-title">变体二 · 图标 + 文字</div>
+    <div class="tab-group-capsule">
+      <button class="tab-item-capsule is-active">
+        <svg class="tab-icon" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" fill="currentColor"/><rect x="8" y="1" width="5" height="5" rx="1" fill="currentColor"/><rect x="1" y="8" width="5" height="5" rx="1" fill="currentColor"/><rect x="8" y="8" width="5" height="5" rx="1" fill="currentColor"/></svg>
+        全部
+      </button>
+      <button class="tab-item-capsule">
+        <svg class="tab-icon" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3.5l2 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        待处理
+      </button>
+      <button class="tab-item-capsule">
+        <svg class="tab-icon" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 7l2 2 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        进行中
+      </button>
+      <button class="tab-item-capsule">
+        <svg class="tab-icon" viewBox="0 0 14 14" fill="none"><path d="M2 7.5l3.5 3.5 6.5-6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        已完成
+      </button>
+      <button class="tab-item-capsule">
+        <svg class="tab-icon" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 5l4 4M9 5l-4 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        已关闭
+      </button>
+    </div>
+  </div>
+
+  <!-- 状态对比 -->
+  <div style="margin-bottom: var(--space-xxl);">
+    <div class="spec-block-title">状态对比</div>
+    <div class="states-row">
+      <div class="state-demo">
+        <div class="state-label">默认</div>
+        <div class="tab-group-capsule">
+          <button class="tab-item-capsule">标签文字</button>
+        </div>
+      </div>
+      <div class="state-demo">
+        <div class="state-label">悬停 (Hover)</div>
+        <div class="tab-group-capsule">
+          <button class="tab-item-capsule" style="background:#E9ECF2;">标签文字</button>
+        </div>
+      </div>
+      <div class="state-demo">
+        <div class="state-label">选中 (Active)</div>
+        <div class="tab-group-capsule">
+          <button class="tab-item-capsule is-active">标签文字</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 规格参数 -->
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:140px;">属性</th><th style="width:240px;">规格值</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>标签变体</td><td>纯文字 / 图标 + 文字</td><td></td></tr>
+      <tr><td>常规数量</td><td><code>5</code> 个</td><td></td></tr>
+      <tr><td>高度</td><td><code>32px</code></td><td>单个标签项高度</td></tr>
+      <tr><td>圆角</td><td><code>4px</code></td><td>容器与标签项圆角相同</td></tr>
+      <tr><td>标签间距</td><td><code>0px</code></td><td>相邻标签紧贴，无间距</td></tr>
+      <tr><td>左右内边距</td><td><code>20px</code></td><td>单侧 padding，两侧对称</td></tr>
+      <tr><td>字号</td><td><code>14px</code></td><td>图标 <code>14×14px</code>，图标与文字间距 <code>6px</code></td></tr>
+      <tr>
+        <td>容器背景</td>
+        <td><span class="chip"><span class="swatch" style="background:#F5F7FA;border-color:#ccc;"></span><code>#F5F7FA</code></span></td>
+        <td>border-radius: 4px</td>
+      </tr>
+      <tr>
+        <td>默认颜色</td>
+        <td><span class="chip"><span class="swatch" style="background:#223355;"></span><code>#223355</code></span></td>
+        <td>图标与文字同色</td>
+      </tr>
+      <tr>
+        <td>Hover 背景</td>
+        <td><span class="chip"><span class="swatch" style="background:#E9ECF2;border-color:#ccc;"></span><code>#E9ECF2</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>选中背景</td>
+        <td><span class="chip"><span class="swatch" style="background:#F0F9FF;border-color:#ccc;"></span><code>#F0F9FF</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>选中描边</td>
+        <td><span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>1px solid #3388FF</code></span></td>
+        <td>z-index: 1 浮于相邻标签之上</td>
+      </tr>
+      <tr>
+        <td>选中颜色</td>
+        <td><span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td>
+        <td>图标与文字同色</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

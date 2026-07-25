@@ -1,0 +1,298 @@
+{
+  "name": "formitem-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 表单控件规范，含两种布局（标题在左/标题在上）× 10种控件类型",
+
+  "layout": {
+    "horizontal": {
+      "description": "标题在左，控件在右",
+      "display": "flex",
+      "align_items": "flex-start",
+      "item_gap": "20px",
+      "label": {
+        "height": "32px",
+        "align_items": "center",
+        "margin_right": "8px",
+        "flex_shrink": 0
+      },
+      "control": {
+        "flex": 1
+      },
+      "note": "label 固定高度 32px 内部居中，与控件顶部对齐；错误提示在控件下方，不影响 label 对齐"
+    },
+    "vertical": {
+      "description": "标题在上，控件在下",
+      "display": "grid",
+      "grid_template_columns": "14px 1fr",
+      "item_gap": "20px",
+      "label": {
+        "grid_column": "1 / 3",
+        "display": "flex",
+        "align_items": "center",
+        "line_height": 1,
+        "margin_bottom": "8px"
+      },
+      "control": {
+        "grid_column": "2 / 3",
+        "note": "控件从第二列起始，与标题文字左对齐"
+      }
+    }
+  },
+
+  "label_structure": {
+    "description": "三列结构：* 号列（固定宽）+ 标题文字列 + 冒号（::after）",
+    "required_mark": {
+      "width": "14px",
+      "flex_shrink": 0,
+      "color": "#FF4433",
+      "font_size": "14px"
+    },
+    "required_placeholder": {
+      "width": "14px",
+      "flex_shrink": 0,
+      "description": "非必填时占位，保持与必填项对齐"
+    },
+    "label_text": {
+      "font_size": "14px",
+      "color": "#223355",
+      "white_space": "nowrap",
+      "text_align": "left",
+      "colon": "::after { content: '：'; color: #223355 }，两种布局均显示"
+    },
+    "width_presets": {
+      "4_char":  { "label_text_width": "56px" },
+      "6_char":  { "label_text_width": "84px" },
+      "8_char":  { "label_text_width": "112px" },
+      "auto":    { "label_text_width": "max-content", "note": "用 CSS Grid 三列（14px max-content 1fr）保证整组对齐" }
+    }
+  },
+
+  "error_message": {
+    "ref": "global-spec.json",
+    "margin_top": "4px",
+    "font_size": "12px",
+    "color": "#FF4433",
+    "note": "包裹在控件同一 wrapper 内，不暴露在外部 flex/grid gap 环境"
+  },
+
+  "controls": {
+    "input": {
+      "description": "单行输入框",
+      "height": "32px",
+      "max_width": "280px",
+      "padding": "0 8px",
+      "border_radius": "4px",
+      "font_size": "14px",
+      "color": "#223355",
+      "placeholder_color": "#A8B4C8",
+      "states": {
+        "default":  { "border": "1px solid #DDE1EB", "background": "#FFFFFF" },
+        "hover":    { "border": "1px solid #3388FF" },
+        "focus":    { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF" },
+        "error":    { "border": "1px solid #FF4433" },
+        "disabled": { "border": "1px solid #DDE1EB", "background": "#F5F7FA", "color": "#A8B4C8" }
+      }
+    },
+
+    "select": {
+      "description": "下拉选择框",
+      "height": "32px",
+      "max_width": "280px",
+      "padding": "0 32px 0 8px",
+      "border_radius": "4px",
+      "font_size": "14px",
+      "color": "#223355",
+      "placeholder_color": "#A8B4C8",
+      "icon": {
+        "type": "下箭头",
+        "size": "16×16px",
+        "color": "#A8B4C8",
+        "position": "absolute right: 8px，垂直居中"
+      },
+      "states": {
+        "default":  { "border": "1px solid #DDE1EB", "background": "#FFFFFF" },
+        "hover":    { "border": "1px solid #3388FF" },
+        "active":   { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF" },
+        "error":    { "border": "1px solid #FF4433" },
+        "disabled": { "border": "1px solid #DDE1EB", "background": "#F5F7FA", "color": "#A8B4C8" }
+      }
+    },
+
+    "datepicker": {
+      "description": "日期选择框",
+      "height": "32px",
+      "max_width": "280px",
+      "padding": "0 32px 0 8px",
+      "border_radius": "4px",
+      "font_size": "14px",
+      "color": "#223355",
+      "placeholder_color": "#A8B4C8",
+      "icon": {
+        "type": "日历",
+        "size": "16×16px",
+        "color": "#A8B4C8",
+        "position": "absolute right: 8px，垂直居中"
+      },
+      "states": {
+        "default":  { "border": "1px solid #DDE1EB", "background": "#FFFFFF" },
+        "hover":    { "border": "1px solid #3388FF" },
+        "active":   { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF" },
+        "error":    { "border": "1px solid #FF4433" },
+        "disabled": { "border": "1px solid #DDE1EB", "background": "#F5F7FA", "color": "#A8B4C8" }
+      }
+    },
+
+    "radio": {
+      "description": "单选框",
+      "ref": "radio-spec.json",
+      "option_gap": "20px",
+      "height": "32px",
+      "dot": {
+        "size": "16×16px",
+        "border_radius": "50%",
+        "border_default": "1px solid #A8B4C8",
+        "background_default": "#FFFFFF",
+        "border_checked": "5px solid #3388FF",
+        "background_checked": "#FFFFFF",
+        "note": "选中态用 5px 加粗描边表达，无内圆点"
+      },
+      "label_text": {
+        "font_size": "14px",
+        "color": "#223355",
+        "gap": "6px"
+      }
+    },
+
+    "checkbox": {
+      "description": "复选框",
+      "ref": "checkbox-spec.json",
+      "option_gap": "20px",
+      "height": "32px",
+      "box": {
+        "size": "16×16px",
+        "border_radius": "4px",
+        "border_default": "1px solid #A8B4C8",
+        "background_default": "#FFFFFF",
+        "border_checked": "1px solid #3388FF",
+        "background_checked": "#3388FF",
+        "checkmark": {
+          "type": "SVG",
+          "path": "M1.5 4L4 6.5L8.5 1.5",
+          "stroke": "#FFFFFF",
+          "stroke_width": 2,
+          "stroke_linecap": "round",
+          "stroke_linejoin": "round",
+          "size": "10×8px（16×16 框内居中）"
+        }
+      },
+      "label_text": {
+        "font_size": "14px",
+        "color": "#223355",
+        "gap": "8px"
+      }
+    },
+
+    "number_input": {
+      "description": "数字输入框（加减按钮型，对应 number-input-spec.json Type3）",
+      "ref": "number-input-spec.json#type3",
+      "height": "32px",
+      "max_width": "280px",
+      "border_radius": "4px",
+      "layout": "减号按钮（32px）| 1px #E9ECF2 分隔线 | 输入区（flex:1，min-width:48px）| 1px #E9ECF2 分隔线 | 加号按钮（32px）",
+      "button": {
+        "width": "32px",
+        "icon_size": "14×14px",
+        "icon_stroke": "#6B7A99",
+        "icon_stroke_width": "1.5",
+        "background_default": "transparent",
+        "background_hover": "#F5F7FA"
+      },
+      "states": {
+        "default": { "border": "1px solid #DDE1EB", "background": "#FFFFFF" },
+        "hover":   { "border": "1px solid #3388FF" },
+        "active":  { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF" },
+        "error":   { "border": "1px solid #FF4433", "box_shadow": "0 0 0 2px rgba(255,68,51,0.15)" },
+        "disabled":{ "border": "1px solid #DDE1EB", "background": "#F5F7FA", "color": "#A8B4C8" }
+      }
+    },
+
+    "textarea": {
+      "description": "长文本框",
+      "max_width": "280px",
+      "min_height": "80px",
+      "padding": "6px 8px",
+      "border_radius": "4px",
+      "font_size": "14px",
+      "line_height": 1.5,
+      "color": "#223355",
+      "placeholder_color": "#A8B4C8",
+      "resize": "vertical",
+      "states": {
+        "default": { "border": "1px solid #DDE1EB", "background": "#FFFFFF" },
+        "hover":   { "border": "1px solid #3388FF" },
+        "focus":   { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF" },
+        "error":   { "border": "1px solid #FF4433" },
+        "disabled":{ "border": "1px solid #DDE1EB", "background": "#F5F7FA", "color": "#A8B4C8" }
+      },
+      "horizontal_layout_note": "标题使用 align-top，padding-top: 9px，与多行文本顶部对齐"
+    },
+
+    "upload": {
+      "description": "上传附件，使用线状按钮（outline）样式",
+      "ref": "button-spec.json#outline",
+      "height": "32px",
+      "padding": "0 16px",
+      "border_radius": "4px",
+      "font_size": "14px",
+      "icon_size": "14×14px",
+      "icon_gap": "6px",
+      "width": "由内容决定（align-self: flex-start）",
+      "states": {
+        "default": { "border": "1px solid #DDE1EB", "background": "#FFFFFF", "color": "#223355", "icon_color": "#223355" },
+        "hover":   { "border": "1px solid #3388FF", "background": "#F0F9FF", "color": "#3388FF", "icon_color": "#3388FF" },
+        "error":   { "border": "1px solid #DDE1EB", "background": "#FFFFFF", "color": "#223355", "note": "按钮保持默认样式，仅下方显示错误提示文字" }
+      },
+      "file_list": {
+        "margin_top": "8px",
+        "gap": "6px",
+        "item": {
+          "file_icon_size": "14×14px",
+          "name_overflow": "ellipsis",
+          "delete_icon_color": "#A8B4C8",
+          "delete_icon_hover_color": "#FF4433"
+        }
+      }
+    },
+
+    "switch": {
+      "description": "开关",
+      "ref": "switch-spec.json",
+      "width": "36px",
+      "height": "20px",
+      "border_radius": "10px",
+      "thumb": {
+        "size": "16×16px",
+        "color": "#FFFFFF",
+        "border_radius": "50%",
+        "offset": "2px"
+      },
+      "states": {
+        "on":  { "background": "#3388FF" },
+        "off": { "background": "#A8B4C8" }
+      }
+    },
+
+    "rate": {
+      "description": "评分（五星）",
+      "star_count": 5,
+      "star_size": "20×20px",
+      "gap": "4px",
+      "height": "32px",
+      "star_style": "圆润饱满路径，fill 填充 + 同色细描边（stroke-width: 0.5）",
+      "states": {
+        "selected":   { "fill": "#FFAA00", "stroke": "#FFAA00", "stroke_width": "0.5" },
+        "unselected": { "fill": "#DDE1EB", "stroke": "#DDE1EB", "stroke_width": "0.5" }
+      }
+    }
+  }
+}

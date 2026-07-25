@@ -1,0 +1,52 @@
+---
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 检查{{ deploy_path }}是否存在
+  stat:
+    path: "{{ deploy_path }}"
+  register: deploy_path_result
+
+- name: 备份目录（如果存在）
+  command: mv "{{ deploy_path }}" "{{ deploy_path }}_backup_{{ ansible_date_time.iso8601_basic }}"
+  when: deploy_path_result.stat.exists
+
+- name: 准备minio目录
+  file: name={{ item.dir }} state=directory owner=egova group=egova mode='{{ item.mode }}'
+  with_items:
+    - { dir: "{{ deploy_path }}",mode: "0775" }
+    - { dir: "{{ data_dir }}",mode: "0775" }
+
+- name: 解压二进制
+  unarchive:
+    src: "{{ src_path }}/minio.tar.gz"
+    dest: "{{ deploy_path }}"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    mode: '0755'
+
+- name: 解压miniodata
+  unarchive:
+    src: "{{ src_path }}/miniodata.tar.gz"
+    dest: "/egova"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    mode: '0755'
+
+- name: 拷贝minio客户端
+  shell: |
+    cp {{ deploy_path }}/mc /usr/bin
+    chmod 755 /usr/bin/mc
+
+# config system service
+- name: config system service
+  template: src=minio.service.template.j2 dest=/etc/systemd/system/minio.service
+  notify: restart minio
+
+- name: config nginx upstream
+  template: src=minio.upstream.template.j2 dest=/etc/nginx/conf.d/minio.upstream
+  notify: reload nginx
+
+

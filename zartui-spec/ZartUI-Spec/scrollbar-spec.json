@@ -1,0 +1,262 @@
+{
+  "name": "scrollbar-design-spec",
+  "version": "1.0.0",
+  "description": "滚动条设计规范知识库，包含 Inside / Outside 两种定位模式，垂直 / 水平两个方向的完整样式与交互规则",
+  "variants": [
+    {
+      "id": "inside-vertical",
+      "label": "内嵌滚动条 · 垂直",
+      "alias": ["Inside", "Overlay", "内嵌", "悬浮滚动条"],
+      "direction": "vertical",
+      "positioning": {
+        "type": "overlay",
+        "description": "悬浮于内容区之上，不占用容器宽度",
+        "css_overflow": "overflow-y: auto; overflow-x: hidden;"
+      },
+      "track": {
+        "width": "10px",
+        "background": "transparent",
+        "border_radius": "100px"
+      },
+      "thumb": {
+        "visual_width": "6px",
+        "border_radius": "100%",
+        "color_default": "transparent",
+        "color_hover": "#A8B4C8",
+        "color_active": "#6B7A99",
+        "gap_to_edge": "2px",
+        "gap_implementation": "border: 2px solid transparent; background-clip: padding-box;",
+        "shadow": "none"
+      },
+      "interaction": {
+        "default": "hidden",
+        "on_container_hover": {
+          "thumb_visible": true,
+          "thumb_color": "#A8B4C8",
+          "thumb_visual_width": "6px"
+        },
+        "on_thumb_drag": {
+          "thumb_color": "#6B7A99",
+          "thumb_visual_width": "8px",
+          "border_implementation": "border: 1px solid transparent; background-clip: padding-box;"
+        }
+      },
+      "css_implementation": {
+        "container": ".sb-v-inside { overflow-y: auto; overflow-x: hidden; }",
+        "scrollbar_size": ".sb-v-inside::-webkit-scrollbar { width: 10px; }",
+        "track": ".sb-v-inside::-webkit-scrollbar-track { background: transparent; }",
+        "thumb_default": ".sb-v-inside::-webkit-scrollbar-thumb { background: transparent; border-radius: 100px; border: 2px solid transparent; background-clip: padding-box; transition: background-color 0.18s; }",
+        "thumb_hover": ".sb-v-inside:hover::-webkit-scrollbar-thumb { background-color: #A8B4C8; }",
+        "thumb_drag": ".sb-v-inside.dragging::-webkit-scrollbar-thumb { border-width: 1px; background-color: #6B7A99; }",
+        "drag_trigger_js": "el.addEventListener('mousedown', e => { if (e.offsetX >= el.clientWidth) { el.classList.add('dragging'); ... } })"
+      }
+    },
+    {
+      "id": "outside-vertical",
+      "label": "外置滚动条 · 垂直",
+      "alias": ["Outside", "Offset", "外置", "外侧滚动条"],
+      "direction": "vertical",
+      "positioning": {
+        "type": "offset",
+        "description": "紧贴内容区外侧，占用容器边缘宽度空间",
+        "css_overflow": "overflow-y: auto; overflow-x: hidden;"
+      },
+      "track": {
+        "width": "10px",
+        "background": "transparent",
+        "border_radius": "100px"
+      },
+      "thumb": {
+        "visual_width": "6px",
+        "border_radius": "100%",
+        "color_default": "transparent",
+        "color_hover": "#A8B4C8",
+        "color_active": "#6B7A99",
+        "gap_to_content": "2px",
+        "gap_implementation": "border: 2px solid transparent; background-clip: padding-box;",
+        "shadow": "none"
+      },
+      "interaction": {
+        "default": "hidden",
+        "on_container_hover": {
+          "thumb_visible": true,
+          "thumb_color": "#A8B4C8",
+          "thumb_visual_width": "6px"
+        },
+        "on_thumb_drag": {
+          "thumb_color": "#6B7A99",
+          "thumb_visual_width": "8px",
+          "border_implementation": "border: 1px solid transparent; background-clip: padding-box;"
+        }
+      },
+      "css_implementation": {
+        "container": ".sb-v-outside { overflow-y: auto; overflow-x: hidden; }",
+        "scrollbar_size": ".sb-v-outside::-webkit-scrollbar { width: 10px; }",
+        "track": ".sb-v-outside::-webkit-scrollbar-track { background: transparent; }",
+        "thumb_default": ".sb-v-outside::-webkit-scrollbar-thumb { background: transparent; border-radius: 100px; border: 2px solid transparent; background-clip: padding-box; transition: background-color 0.18s; }",
+        "thumb_hover": ".sb-v-outside:hover::-webkit-scrollbar-thumb { background-color: #A8B4C8; }",
+        "thumb_drag": ".sb-v-outside.dragging::-webkit-scrollbar-thumb { border-width: 1px; background-color: #6B7A99; }",
+        "drag_trigger_js": "el.addEventListener('mousedown', e => { if (e.offsetX >= el.clientWidth) { el.classList.add('dragging'); ... } })"
+      }
+    },
+    {
+      "id": "inside-horizontal",
+      "label": "内嵌滚动条 · 水平",
+      "alias": ["Inside Horizontal", "内嵌水平"],
+      "direction": "horizontal",
+      "positioning": {
+        "type": "overlay",
+        "description": "悬浮于内容区之上，不占用容器高度",
+        "css_overflow": "overflow-x: auto; overflow-y: hidden;"
+      },
+      "track": {
+        "height": "10px",
+        "background": "transparent",
+        "border_radius": "100px"
+      },
+      "thumb": {
+        "visual_height": "6px",
+        "border_radius": "100%",
+        "color_default": "transparent",
+        "color_hover": "#A8B4C8",
+        "color_active": "#6B7A99",
+        "gap_to_edge": "2px",
+        "gap_implementation": "border: 2px solid transparent; background-clip: padding-box;",
+        "shadow": "none"
+      },
+      "interaction": {
+        "default": "hidden",
+        "on_container_hover": {
+          "thumb_visible": true,
+          "thumb_color": "#A8B4C8",
+          "thumb_visual_height": "6px"
+        },
+        "on_thumb_drag": {
+          "thumb_color": "#6B7A99",
+          "thumb_visual_height": "8px",
+          "border_implementation": "border: 1px solid transparent; background-clip: padding-box;"
+        }
+      },
+      "layout_notes": [
+        "容器必须有明确宽度限制（或为 grid/flex 子元素且设置 min-width:0），使内容能触发横向溢出",
+        "内容元素需设置 width: max-content 或 white-space: nowrap，保证宽度超出容器",
+        "padding-bottom 建议 20px，为悬浮滚动条留出可见空间",
+        "overflow-y 必须为 hidden，不能为 visible（Chrome 会强制将 visible 改为 auto，干扰横向滚动条渲染）",
+        "父级不能有 overflow: hidden，否则滚动条会被裁切"
+      ],
+      "css_implementation": {
+        "container": ".sb-h-inside { overflow-x: auto; overflow-y: hidden; padding-bottom: 20px; white-space: nowrap; min-width: 0; }",
+        "scrollbar_size": ".sb-h-inside::-webkit-scrollbar { height: 10px; }",
+        "track": ".sb-h-inside::-webkit-scrollbar-track { background: transparent; }",
+        "thumb_default": ".sb-h-inside::-webkit-scrollbar-thumb { background: transparent; border-radius: 100px; border: 2px solid transparent; background-clip: padding-box; transition: background-color 0.18s; }",
+        "thumb_hover": ".sb-h-inside:hover::-webkit-scrollbar-thumb { background-color: #A8B4C8; }",
+        "thumb_drag": ".sb-h-inside.dragging::-webkit-scrollbar-thumb { border-width: 1px; background-color: #6B7A99; }",
+        "drag_trigger_js": "el.addEventListener('mousedown', e => { if (e.offsetY >= el.clientHeight) { el.classList.add('dragging'); ... } })"
+      }
+    },
+    {
+      "id": "outside-horizontal",
+      "label": "外置滚动条 · 水平",
+      "alias": ["Outside Horizontal", "外置水平"],
+      "direction": "horizontal",
+      "positioning": {
+        "type": "offset",
+        "description": "紧贴内容区外侧，占用容器底部高度空间",
+        "css_overflow": "overflow-x: auto; overflow-y: hidden;"
+      },
+      "track": {
+        "height": "10px",
+        "background": "transparent",
+        "border_radius": "100px"
+      },
+      "thumb": {
+        "visual_height": "6px",
+        "border_radius": "100%",
+        "color_default": "transparent",
+        "color_hover": "#A8B4C8",
+        "color_active": "#6B7A99",
+        "gap_to_content": "2px",
+        "gap_implementation": "border: 2px solid transparent; background-clip: padding-box;",
+        "shadow": "none"
+      },
+      "interaction": {
+        "default": "hidden",
+        "on_container_hover": {
+          "thumb_visible": true,
+          "thumb_color": "#A8B4C8",
+          "thumb_visual_height": "6px"
+        },
+        "on_thumb_drag": {
+          "thumb_color": "#6B7A99",
+          "thumb_visual_height": "8px",
+          "border_implementation": "border: 1px solid transparent; background-clip: padding-box;"
+        }
+      },
+      "layout_notes": [
+        "容器必须有明确宽度限制（或为 grid/flex 子元素且设置 min-width:0），使内容能触发横向溢出",
+        "内容元素需设置 width: max-content 或 white-space: nowrap",
+        "padding-bottom 建议 6px，给轨道留出呼吸感",
+        "overflow-y 必须为 hidden，不能为 visible",
+        "父级不能有 overflow: hidden，否则滚动条会被裁切"
+      ],
+      "css_implementation": {
+        "container": ".sb-h-outside { overflow-x: auto; overflow-y: hidden; padding-bottom: 6px; white-space: nowrap; min-width: 0; }",
+        "scrollbar_size": ".sb-h-outside::-webkit-scrollbar { height: 10px; }",
+        "track": ".sb-h-outside::-webkit-scrollbar-track { background: transparent; }",
+        "thumb_default": ".sb-h-outside::-webkit-scrollbar-thumb { background: transparent; border-radius: 100px; border: 2px solid transparent; background-clip: padding-box; transition: background-color 0.18s; }",
+        "thumb_hover": ".sb-h-outside:hover::-webkit-scrollbar-thumb { background-color: #A8B4C8; }",
+        "thumb_drag": ".sb-h-outside.dragging::-webkit-scrollbar-thumb { border-width: 1px; background-color: #6B7A99; }",
+        "drag_trigger_js": "el.addEventListener('mousedown', e => { if (e.offsetY >= el.clientHeight) { el.classList.add('dragging'); ... } })"
+      }
+    }
+  ],
+  "shared_tokens": {
+    "thumb_color_default": "transparent",
+    "thumb_color_hover": "#A8B4C8",
+    "thumb_color_drag": "#6B7A99",
+    "thumb_size_default": "6px",
+    "thumb_size_drag": "8px",
+    "thumb_border_radius": "100%",
+    "thumb_gap": "2px",
+    "thumb_gap_css_default": "border: 2px solid transparent",
+    "thumb_gap_css_drag": "border: 1px solid transparent",
+    "track_size": "10px",
+    "track_background": "transparent",
+    "track_border_radius": "100px",
+    "shadow": "none",
+    "transition": "background-color 0.18s ease"
+  },
+  "drag_detection_js": {
+    "description": "CSS :active 伪类对 webkit scrollbar 不稳定，用 JS 监听 mousedown 区域判断是否点在滚动条上，动态切换 .dragging class",
+    "vertical_condition": "e.offsetX >= el.clientWidth",
+    "horizontal_condition": "e.offsetY >= el.clientHeight",
+    "snippet": "document.querySelectorAll('[class*=\"sb-\"]').forEach(el => { el.addEventListener('mousedown', e => { const onV = e.offsetX >= el.clientWidth; const onH = e.offsetY >= el.clientHeight; if (onV || onH) { el.classList.add('dragging'); const up = () => { el.classList.remove('dragging'); window.removeEventListener('mouseup', up); }; window.addEventListener('mouseup', up); } }); });"
+  },
+  "known_pitfalls": [
+    {
+      "issue": "overflow-y: visible 与 overflow-x: auto 同时设置",
+      "cause": "Chrome 规范：一个轴为 auto，另一个轴的 visible 会被强制改为 auto，导致竖向也出现滚动条并干扰横向渲染",
+      "fix": "水平容器始终设置 overflow-y: hidden"
+    },
+    {
+      "issue": "Grid/Flex 子元素中横向滚动条不出现",
+      "cause": "Grid 子元素默认 min-width: auto，会随内容撑宽，容器宽度始终 >= 内容宽度，永远不触发溢出",
+      "fix": "容器加 min-width: 0"
+    },
+    {
+      "issue": "父级 overflow: hidden 裁掉滚动条",
+      "cause": "水平滚动条渲染在容器底部边缘，父级 overflow: hidden 会将其裁切",
+      "fix": "水平滚动容器不能有 overflow: hidden 的父元素"
+    },
+    {
+      "issue": "overflow: overlay 在新版 Chrome 失效",
+      "cause": "Chrome 119+ 已移除 overflow: overlay",
+      "fix": "统一使用 overflow: auto，通过 padding-bottom 为横向滚动条留出空间"
+    },
+    {
+      "issue": "CSS :active 拖动加粗不稳定",
+      "cause": "webkit scrollbar thumb:active 在部分浏览器版本中触发不稳定",
+      "fix": "用 JS 监听 mousedown 位置，切换 .dragging class 实现拖动态样式"
+    }
+  ]
+}

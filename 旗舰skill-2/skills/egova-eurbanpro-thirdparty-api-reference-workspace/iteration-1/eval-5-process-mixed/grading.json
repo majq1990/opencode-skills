@@ -1,0 +1,40 @@
+{
+  "with_skill": {
+    "expectations": [
+      {
+        "text": "命中流程动作接口",
+        "passed": true,
+        "evidence": "命中 DISPOSE_FEEDBACK 接口，明确用途为'第三方对已签收工单提交处置结果'"
+      },
+      {
+        "text": "给最小字段和最小请求示例",
+        "passed": true,
+        "evidence": "列出了顶层4个必传字段和data中2个必传字段（caseId/disposeOpinion），第3节提供了简洁的JSON最小请求示例"
+      },
+      {
+        "text": "失败原因分流而非展开",
+        "passed": true,
+        "evidence": "对失败原因部分明确写'这部分属于现象排障，建议切换到 troubleshooting skill'，仅从接口约束角度简要列出4条常见技术原因，未展开排障诊断流程"
+      }
+    ]
+  },
+  "old_skill": {
+    "expectations": [
+      {
+        "text": "命中流程动作接口",
+        "passed": true,
+        "evidence": "命中 DISPOSE_FEEDBACK 接口，明确用途为'第三方对已签收工单提交处置结果'"
+      },
+      {
+        "text": "给最小字段和最小请求示例",
+        "passed": true,
+        "evidence": "列出了顶层4个必传字段和data中2个必传字段（caseId/disposeOpinion），第3节提供了JSON最小请求示例"
+      },
+      {
+        "text": "失败原因分流而非展开",
+        "passed": true,
+        "evidence": "对失败原因部分明确写'这部分属于现象排障，不在本 skill 的职责范围内'，建议切换troubleshooting，仅简要列出常见技术原因"
+      }
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+-- 此文件应该放在 evaluation-db.tar 中，此处为备份
+{% macro get_ip(host_info) %}
+{%- set master = host_info.hosts.master if host_info is defined and host_info.hosts is defined else None %}
+{%- set ip = hostvars[master]['ansible_ssh_host'] if master and master in hostvars and 'ansible_ssh_host' in hostvars[master] else '127.0.0.1'  %}
+{{ ip }}
+{%- endmacro -%}
+
+{%- set usercenter_ip = get_ip(ip_web_usercenter) %}
+{%- set kafka_ip = get_ip(ip_web_kafka) %}
+{%- set biz_db_ip = get_ip(ip_db_biz) %}
+{%- set eurbanpro_ip = get_ip(ip_web_eurbanpro) %}
+{%- set eurbanpro_media_ip = get_ip(ip_web_eurbanpro_media) %}
+
+
+-- 修改用户中心内网地址ip端口
+UPDATE stat_config_item SET item_value = '{{ usercenter_ip }}:10050/usercenter-api' WHERE config_item_name = 'AUTH_END_POINT';
+-- 修改kafka地址ip端口
+UPDATE stat_config_item SET item_value = '{{ kafka_ip }}:9093' WHERE config_item_name = 'USERCENTER_KAFKA_SERVER';
+-- 更新毕升数据源ip端口
+UPDATE sys_datasource SET ds_url = 'jdbc:mysql://{{ biz_db_ip }}:3306/becensus?serverTimezone=Asia/Shanghai&allowMultiQueries=true&autoReconnect=true&failOverReadOnly=false&useUnicode=true&characterEncoding=utf8&useSSL=false&connectTimeout=60000&socketTimeout=3600000&allowPublicKeyRetrieval=true' WHERE ds_name = 'becensus';
+UPDATE stat_source SET url = 'jdbc:mysql://{{ biz_db_ip }}:3306/becensus?serverTimezone=Asia/Shanghai&allowMultiQueries=true&autoReconnect=true&failOverReadOnly=false&useUnicode=true&characterEncoding=utf8&useSSL=false&connectTimeout=60000&socketTimeout=3600000&allowPublicKeyRetrieval=true' WHERE name = 'becensus';
+-- 更新麒舰数据源ip端口
+UPDATE sys_datasource SET  ds_url = 'jdbc:mysql://{{ biz_db_ip }}:3306/eurbanpro?serverTimezone=Asia/Shanghai&allowMultiQueries=true&autoReconnect=true&failOverReadOnly=false&useUnicode=true&characterEncoding=utf8&useSSL=false&connectTimeout=60000&socketTimeout=3600000&allowPublicKeyRetrieval=true' WHERE ds_name = 'eurbanpro';
+UPDATE stat_source SET url = 'jdbc:mysql://{{ biz_db_ip }}:3306/eurbanpro?serverTimezone=Asia/Shanghai&allowMultiQueries=true&autoReconnect=true&failOverReadOnly=false&useUnicode=true&characterEncoding=utf8&useSSL=false&connectTimeout=60000&socketTimeout=3600000&allowPublicKeyRetrieval=true' WHERE name = 'eurbanpro';
+-- 更新麒舰多媒体地址
+UPDATE stat_config_item SET item_value = 'http://{{ eurbanpro_media_ip }}:8080/media-api/free/media/getdata/HttpFileServer' WHERE config_item_name = 'EXPORT_MEDIA_SERVER_URL';
+
+
+-- 修改数据库密码
+update stat_source set db_pas='101a9ea02d88aea080cfe032dd1845951486b779de0dceb416265d4b82330180' where name in ('becensus','eurbanpro');
+update sys_datasource set ds_password='101a9ea02d88aea080cfe032dd1845951486b779de0dceb416265d4b82330180' where ds_name in ('becensus','eurbanpro');

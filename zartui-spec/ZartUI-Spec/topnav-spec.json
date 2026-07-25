@@ -1,0 +1,182 @@
+{
+  "name": "topnav-spec",
+  "version": "1.1.0",
+  "description": "ZartUI 顶部导航规范，覆盖导航栏容器、Logo、一级菜单、右侧工具区、用户信息及下拉菜单",
+  "container": {
+    "height": "60px",
+    "background": "linear-gradient(to right, #2167D9, #3388FF)",
+    "padding": "0 20px",
+    "display": "flex",
+    "align_items": "center"
+  },
+  "logo": {
+    "position": "left: 20px（容器左侧内边距）",
+    "size": "40×40px",
+    "border_radius": "8px"
+  },
+  "title": {
+    "font_size": "18px",
+    "font_weight": "400",
+    "color": "#FFFFFF",
+    "margin_left": "10px（Logo 右侧间距）"
+  },
+  "menu": {
+    "description": "一级菜单，紧跟标题右侧",
+    "margin_left_from_title": "80px",
+    "item": {
+      "height": "60px",
+      "padding": "0 20px",
+      "font_size": "16px",
+      "states": {
+        "default": {
+          "color": "#FFFFFF",
+          "background": "transparent"
+        },
+        "hover": {
+          "color": "#FFFFFF",
+          "background": "rgba(0,0,0,0.08)"
+        },
+        "active": {
+          "color": "#FFFFFF",
+          "font_weight": "400",
+          "background": "rgba(0,0,0,0.10)"
+        }
+      }
+    }
+  },
+  "toolbar": {
+    "description": "右侧工具图标区，margin-left: auto 推到最右侧",
+    "gap": "4px",
+    "icons": [
+      {
+        "name": "更多",
+        "style": "面状",
+        "size": "24×24px",
+        "color": "#FFFFFF"
+      },
+      {
+        "name": "帮助",
+        "style": "面状",
+        "size": "24×24px",
+        "color": "#FFFFFF"
+      },
+      {
+        "name": "通知",
+        "style": "面状",
+        "size": "24×24px",
+        "color": "#FFFFFF",
+        "badge": {
+          "size": "8×8px",
+          "color": "#FF4433",
+          "position": "右上角"
+        }
+      }
+    ],
+    "icon_btn": {
+      "size": "36×36px",
+      "border_radius": "6px",
+      "hover_background": "rgba(255,255,255,0.15)"
+    },
+    "divider": {
+      "width": "1px",
+      "height": "20px",
+      "color": "rgba(255,255,255,0.25)",
+      "margin": "0 8px",
+      "position": "通知图标与用户信息之间"
+    }
+  },
+  "user_info": {
+    "description": "分隔线右侧，头像 + 姓名 + 部门 + 更多图标",
+    "padding": "0 8px",
+    "height": "60px",
+    "gap": "8px",
+    "hover_background": "rgba(255,255,255,0.12)",
+    "avatar": {
+      "size": "32×32px",
+      "shape": "circle",
+      "background": "rgba(255,255,255,0.25)",
+      "color": "#FFFFFF",
+      "font_size": "13px",
+      "font_weight": "400"
+    },
+    "name": {
+      "font_size": "14px",
+      "font_weight": "400",
+      "color": "#FFFFFF"
+    },
+    "department": {
+      "font_size": "12px",
+      "color": "rgba(255,255,255,0.7)"
+    },
+    "more_icon": {
+      "size": "24×24px",
+      "style": "左侧三个实心圆点（纵向排列）+ 右侧三条横线，静态图标不旋转",
+      "dot_radius": "1.5px",
+      "dot_color": "rgba(255,255,255,0.7)",
+      "line_stroke_width": "1.5px",
+      "line_color": "rgba(255,255,255,0.7)",
+      "stroke_linecap": "round",
+      "note": "此图标为静态，不需要 open_transform 旋转动画"
+    }
+  },
+  "dropdown": {
+    "description": "个人中心下拉菜单",
+    "width": "168px",
+    "position": "右对齐，距导航底部 4px",
+    "background": "#FFFFFF",
+    "border": "1px solid #E9ECF2",
+    "border_radius": "8px",
+    "box_shadow": "0 8px 24px rgba(18,74,180,0.16)",
+    "padding": "8px",
+    "item": {
+      "height": "36px",
+      "padding": "0 8px",
+      "font_size": "14px",
+      "border_radius": "4px",
+      "icon_style": "线状（stroke，无 fill）",
+      "icon_size": "16×16px",
+      "icon_color": "#6B7A99",
+      "gap": "8px",
+      "states": {
+        "default": {
+          "color": "#223355",
+          "background": "transparent"
+        },
+        "hover": {
+          "color": "#223355",
+          "background": "#F5F7FA"
+        }
+      }
+    },
+    "divider": {
+      "height": "1px",
+      "color": "#E9ECF2",
+      "margin": "4px 0"
+    },
+    "entries": [
+      { "label": "个人中心", "icon": "user-outline" },
+      { "label": "编辑资料", "icon": "edit-outline" },
+      { "label": "系统设置", "icon": "settings-outline" },
+      { "label": "关于我们", "icon": "info-circle-outline" },
+      { "label": "退出登录", "icon": "logout-outline", "color": "#FF4433", "separated": true }
+    ]
+  },
+  "known_pitfalls": [
+    {
+      "issue": "菜单选中态直接改背景色导致渐变消失",
+      "fix": "选中态用 rgba(0,0,0,0.10) 叠加在渐变背景上，而非替换背景色"
+    },
+    {
+      "issue": "下拉菜单点击外部无法关闭",
+      "fix": "展开时挂载一次性 document click 监听，判断 !el.contains(e.target) 时移除 is-open，并用 setTimeout 延迟注册避免当次点击触发"
+    },
+    {
+      "issue": "下拉菜单图标用面状图标导致与规范不符",
+      "fix": "dropdown-item svg 统一设置 fill:none; stroke:currentColor，使用线状路径"
+    },
+    {
+      "issue": "用户更多图标误用下拉箭头并添加旋转动画",
+      "fix": "更多图标为静态图标（三竖点+三横线），不需要 transform 旋转，去掉 is-open 旋转样式"
+    }
+  ]
+}

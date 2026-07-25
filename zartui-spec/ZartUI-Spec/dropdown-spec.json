@@ -1,0 +1,137 @@
+{
+  "name": "dropdown-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 常规下拉菜单规范，覆盖 6 种变体：基础、带图标、带子菜单、带搜索、带新增（输入框+按钮）、带新增（弹出气泡）",
+
+  "container": {
+    "min_width": "140px",
+    "width": "max-content（根据内容自适应）",
+    "background": "#FFFFFF",
+    "box_shadow": "0 4px 20px 0 #0043ca12",
+    "border_radius": "4px",
+    "filter": "blur(0)",
+    "padding": "8px"
+  },
+
+  "menu_item": {
+    "height": "32px",
+    "padding": "0 8px",
+    "border_radius": "4px",
+    "font_size": "14px",
+    "font_weight": "400",
+    "gap_between_items": "8px",
+    "states": {
+      "default": { "background": "#FFFFFF", "color": "#223355" },
+      "hover":   { "background": "#F5F7FA", "color": "#223355" },
+      "active":  { "background": "#F0F9FF", "color": "#3388FF" }
+    }
+  },
+
+  "with_icon": {
+    "description": "带图标下拉菜单",
+    "icon": {
+      "size": "16×16px",
+      "style": "线状（stroke，无 fill）",
+      "color_same_as_text": true,
+      "gap_to_text": "8px"
+    }
+  },
+
+  "with_submenu": {
+    "description": "带下级分组菜单",
+    "trigger_arrow": {
+      "size": "16×16px",
+      "color": "#A8B4C8",
+      "position": "菜单项右侧",
+      "direction": "朝右"
+    },
+    "submenu_position": "右侧偏移 4px，与父菜单顶部对齐（top: -8px）",
+    "trigger": "hover 展开"
+  },
+
+  "with_search": {
+    "description": "带搜索的下拉菜单（选项 > 10 个时启用）",
+    "trigger_condition": "options > 10",
+    "search_box": {
+      "position": "菜单顶部",
+      "height": "32px",
+      "border_radius": "16px（全圆角）",
+      "border": "1px solid #DDE1EB",
+      "padding": "0 12px",
+      "icon_size": "14×14px",
+      "icon_color": "#A8B4C8",
+      "placeholder": "请输入关键字",
+      "placeholder_color": "#A8B4C8"
+    },
+    "list": {
+      "max_height": "192px（约 6 项），超出滚动",
+      "margin_top": "8px"
+    }
+  },
+
+  "with_add_input": {
+    "description": "带新增选项 1：底部输入框 + 新增按钮（同行）",
+    "footer": {
+      "position": "菜单底部",
+      "border_top": "1px solid #E9ECF2",
+      "padding_top": "8px"
+    },
+    "input": {
+      "height": "32px",
+      "border_radius": "4px",
+      "border": "1px solid #DDE1EB",
+      "padding": "0 8px",
+      "focus_border": "#3388FF"
+    },
+    "add_button": {
+      "label": "新增",
+      "color": "#3388FF",
+      "type": "文字按钮"
+    }
+  },
+
+  "with_add_popover": {
+    "description": "带新增选项 2：底部 + 新增按钮，悬停弹出输入气泡",
+    "footer_trigger": {
+      "icon": "+",
+      "icon_size": "16×16px",
+      "label": "新增",
+      "color": "#3388FF",
+      "hover_background": "#F5F7FA"
+    },
+    "popover": {
+      "position": "菜单底部下方，间距 6px",
+      "background": "#FFFFFF",
+      "border": "1px solid #E9ECF2",
+      "border_radius": "4px",
+      "box_shadow": "0 4px 20px 0 #0043ca12",
+      "padding": "12px",
+      "input": {
+        "height": "32px",
+        "border_radius": "4px",
+        "border": "1px solid #DDE1EB",
+        "focus_border": "#3388FF"
+      },
+      "actions": ["取消（次要矩形按钮）", "确定（主矩形按钮，背景 #3388FF）"]
+    }
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "下拉宽度写死会与不同长度文字冲突",
+      "fix": "min-width: 140px + width: max-content，按内容自适应"
+    },
+    {
+      "issue": "用 flex gap 控制菜单项间距，遇到搜索框/底部新增时会失效",
+      "fix": "用相邻兄弟选择器 .dd-item + .dd-item { margin-top: 8px }，并对 search/footer 类型分别声明"
+    },
+    {
+      "issue": "搜索框列表高度未限制导致下拉无限增高",
+      "fix": "list 设 max-height: 192px + overflow-y: auto"
+    },
+    {
+      "issue": "下拉菜单点击外部无法关闭",
+      "fix": "展开时挂载一次性 document click 监听，判断 !el.contains(e.target) 时关闭"
+    }
+  ]
+}

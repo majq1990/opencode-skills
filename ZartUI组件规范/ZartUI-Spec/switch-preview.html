@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI Switch 开关</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; }
+h3 { font-size: 12px; font-weight: 600; color: #A8B4C8; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 16px; }
+
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px; margin-bottom: 24px; }
+.row { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; margin-bottom: 24px; }
+.row:last-child { margin-bottom: 0; }
+.demo-item { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.demo-label { font-size: 12px; color: #6B7A99; }
+
+/* =====================================================
+   SWITCH BASE
+   ===================================================== */
+.sw {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 100px;
+  cursor: pointer;
+  user-select: none;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+
+/* thumb */
+.sw-thumb {
+  position: absolute;
+  background: #FFFFFF;
+  border-radius: 50%;
+  transition: left .2s, transform .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* inner label */
+.sw-label {
+  font-weight: 500;
+  line-height: 1;
+  pointer-events: none;
+  transition: opacity .15s;
+}
+
+/* =====================================================
+   SIZE: 20px
+   ===================================================== */
+.sw-20 {
+  height: 20px;
+  border-radius: 10px;
+}
+/* 带文字 & 带图标：宽度稍宽 */
+.sw-20.sw-text  { width: 44px; }
+.sw-20.sw-icon  { width: 36px; }
+.sw-20.sw-plain { width: 36px; }
+
+.sw-20 .sw-thumb {
+  width: 16px;
+  height: 16px;
+  top: 2px;
+}
+/* ON: thumb 靠右 */
+.sw-20.is-on .sw-thumb  { left: calc(100% - 18px); }
+/* OFF: thumb 靠左 */
+.sw-20.is-off .sw-thumb { left: 2px; }
+
+.sw-20 .sw-label { font-size: 11px; }
+
+/* text label position */
+.sw-20.sw-text.is-on  .sw-label { position: absolute; left: 15px; transform: translate(-50%, -50%); top: 50%; color: #FFFFFF; }
+.sw-20.sw-text.is-off .sw-label { position: absolute; right: 15px; transform: translate(50%, -50%); top: 50%; color: #FFFFFF; }
+
+/* =====================================================
+   SIZE: 16px
+   ===================================================== */
+.sw-16 {
+  height: 16px;
+  border-radius: 8px;
+}
+.sw-16.sw-text  { width: 36px; }
+.sw-16.sw-icon  { width: 28px; }
+.sw-16.sw-plain { width: 28px; }
+
+.sw-16 .sw-thumb {
+  width: 12px;
+  height: 12px;
+  top: 2px;
+}
+.sw-16.is-on .sw-thumb  { left: calc(100% - 14px); }
+.sw-16.is-off .sw-thumb { left: 2px; }
+
+.sw-16 .sw-label { font-size: 9px; }
+.sw-16.sw-text.is-on  .sw-label { position: absolute; left: 12px; transform: translate(-50%, -50%); top: 50%; color: #FFFFFF; }
+.sw-16.sw-text.is-off .sw-label { position: absolute; right: 12px; transform: translate(50%, -50%); top: 50%; color: #FFFFFF; }
+
+/* =====================================================
+   COLOR STATES
+   ===================================================== */
+
+/* ON */
+.is-on  { background: #3388FF; }
+/* OFF */
+.is-off { background: #A8B4C8; }
+
+/* HOVER ON */
+.is-on.is-hover  { background: #5CA5FF; }
+/* HOVER OFF */
+.is-off.is-hover { background: #CED4E0; }
+
+/* DISABLED ON */
+.is-on.is-disabled  { background: #ADD8FF; cursor: not-allowed; pointer-events: none; }
+/* DISABLED OFF */
+.is-off.is-disabled { background: #DDE1EB; cursor: not-allowed; pointer-events: none; }
+
+/* disabled thumb */
+.is-disabled .sw-thumb { background: #FFFFFF; opacity: .9; }
+
+/* icon on track */
+.sw-icon-el {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+/* 20px: icon 在对侧中心 */
+.sw-20.is-on  .sw-icon-el { left: 4px;  top: 50%; transform: translateY(-50%); }
+.sw-20.is-off .sw-icon-el { right: 4px; top: 50%; transform: translateY(-50%); }
+/* 16px: icon 在对侧中心 */
+.sw-16.is-on  .sw-icon-el { left: 3px;  top: 50%; transform: translateY(-50%); }
+.sw-16.is-off .sw-icon-el { right: 3px; top: 50%; transform: translateY(-50%); }
+.sw-thumb svg { display: none; }
+</style>
+</head>
+<body>
+
+<h1>ZartUI — Switch 开关</h1>
+<p class="page-desc">两种尺寸：20px / 16px × 三种变体：带文字 / 带图标 / 无文字</p>
+
+<!-- ============================================================
+     20px
+============================================================ -->
+<h2>20px</h2>
+
+<!-- 带文字 -->
+<div class="section">
+  <h3>带文字</h3>
+
+  <div class="row">
+    <div class="demo-item">
+      <div class="demo-label">开启（默认）</div>
+      <div class="sw sw-20 sw-text is-on">
+        <span class="sw-label">开</span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（默认）</div>
+      <div class="sw sw-20 sw-text is-off">
+        <span class="sw-label">关</span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">开启（悬停）</div>
+      <div class="sw sw-20 sw-text is-on is-hover">
+        <span class="sw-label">开</span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（悬停）</div>
+      <div class="sw sw-20 sw-text is-off is-hover">
+        <span class="sw-label">关</span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">开启（禁用）</div>
+      <div class="sw sw-20 sw-text is-on is-disabled">
+        <span class="sw-label">开</span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（禁用）</div>
+      <div class="sw sw-20 sw-text is-off is-disabled">
+        <span class="sw-label">关</span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 带图标 -->
+<div class="section">
+  <h3>带图标</h3>
+  <div class="row">
+    <div class="demo-item">
+      <div class="demo-label">开启（默认）</div>
+      <div class="sw sw-20 sw-icon is-on">
+        <span class="sw-icon-el"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5L4 7L8 3" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（默认）</div>
+      <div class="sw sw-20 sw-icon is-off">
+        <span class="sw-icon-el"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">开启（悬停）</div>
+      <div class="sw sw-20 sw-icon is-on is-hover">
+        <span class="sw-icon-el"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5L4 7L8 3" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（悬停）</div>
+      <div class="sw sw-20 sw-icon is-off is-hover">
+        <span class="sw-icon-el"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">开启（禁用）</div>
+      <div class="sw sw-20 sw-icon is-on is-disabled">
+        <span class="sw-icon-el"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5L4 7L8 3" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（禁用）</div>
+      <div class="sw sw-20 sw-icon is-off is-disabled">
+        <span class="sw-icon-el"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 无文字 -->
+<div class="section">
+  <h3>无文字</h3>
+  <div class="row">
+    <div class="demo-item">
+      <div class="demo-label">开启（默认）</div>
+      <div class="sw sw-20 sw-plain is-on">
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（默认）</div>
+      <div class="sw sw-20 sw-plain is-off">
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">开启（悬停）</div>
+      <div class="sw sw-20 sw-plain is-on is-hover">
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（悬停）</div>
+      <div class="sw sw-20 sw-plain is-off is-hover">
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">开启（禁用）</div>
+      <div class="sw sw-20 sw-plain is-on is-disabled">
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（禁用）</div>
+      <div class="sw sw-20 sw-plain is-off is-disabled">
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     16px
+============================================================ -->
+<h2 style="margin-top:8px;">16px</h2>
+
+<!-- 带文字 -->
+<div class="section">
+  <h3>带文字</h3>
+  <div class="row">
+    <div class="demo-item">
+      <div class="demo-label">开启（默认）</div>
+      <div class="sw sw-16 sw-text is-on">
+        <span class="sw-label">开</span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（默认）</div>
+      <div class="sw sw-16 sw-text is-off">
+        <span class="sw-label">关</span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">开启（悬停）</div>
+      <div class="sw sw-16 sw-text is-on is-hover">
+        <span class="sw-label">开</span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（悬停）</div>
+      <div class="sw sw-16 sw-text is-off is-hover">
+        <span class="sw-label">关</span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">开启（禁用）</div>
+      <div class="sw sw-16 sw-text is-on is-disabled">
+        <span class="sw-label">开</span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（禁用）</div>
+      <div class="sw sw-16 sw-text is-off is-disabled">
+        <span class="sw-label">关</span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 带图标 -->
+<div class="section">
+  <h3>带图标</h3>
+  <div class="row">
+    <div class="demo-item">
+      <div class="demo-label">开启（默认）</div>
+      <div class="sw sw-16 sw-icon is-on">
+        <span class="sw-icon-el"><svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M2 5L4 7L8 3" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（默认）</div>
+      <div class="sw sw-16 sw-icon is-off">
+        <span class="sw-icon-el"><svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">开启（悬停）</div>
+      <div class="sw sw-16 sw-icon is-on is-hover">
+        <span class="sw-icon-el"><svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M2 5L4 7L8 3" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（悬停）</div>
+      <div class="sw sw-16 sw-icon is-off is-hover">
+        <span class="sw-icon-el"><svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">开启（禁用）</div>
+      <div class="sw sw-16 sw-icon is-on is-disabled">
+        <span class="sw-icon-el"><svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M2 5L4 7L8 3" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（禁用）</div>
+      <div class="sw sw-16 sw-icon is-off is-disabled">
+        <span class="sw-icon-el"><svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 无文字 -->
+<div class="section">
+  <h3>无文字</h3>
+  <div class="row">
+    <div class="demo-item">
+      <div class="demo-label">开启（默认）</div>
+      <div class="sw sw-16 sw-plain is-on">
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（默认）</div>
+      <div class="sw sw-16 sw-plain is-off">
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">开启（悬停）</div>
+      <div class="sw sw-16 sw-plain is-on is-hover">
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（悬停）</div>
+      <div class="sw sw-16 sw-plain is-off is-hover">
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">开启（禁用）</div>
+      <div class="sw sw-16 sw-plain is-on is-disabled">
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">关闭（禁用）</div>
+      <div class="sw sw-16 sw-plain is-off is-disabled">
+        <span class="sw-thumb"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

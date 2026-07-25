@@ -1,0 +1,12 @@
+---
+- name: 检查tomcat是否已安装
+  stat:
+    path: "{{ dest_path }}/apache-tomcat-{{ tomcat_suffix }}"
+  register: tomcat_dir
+
+- block:
+    - include: install.yml
+    - include: config.yml
+    - include: patch.yml
+    - include: service.yml
+  when: tomcat_dir.stat.exists == false

@@ -1,0 +1,6 @@
+---
+# default variable for logrotate
+service_name: linglong
+log_out_path: /egova/log/
+app_root_dir: /egova/apps
+web_app_dir: basic/linglong

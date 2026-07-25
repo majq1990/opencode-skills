@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZartUI · 常规下拉菜单 规范预览</title>
+<style>
+:root {
+  --color-bg-page:      #F5F7FA;
+  --color-bg-panel:     #FFFFFF;
+  --color-text-primary: #081126;
+  --color-text-body:    #223355;
+  --color-text-muted:   #6B7A99;
+  --color-text-light:   #A8B4C8;
+  --color-primary:      #3388FF;
+  --color-primary-soft: #F0F9FF;
+  --color-bg-hover:     #F5F7FA;
+  --color-border:       #DDE1EB;
+  --color-border-soft:  #E9ECF2;
+  --font-family:        'PingFang SC','Microsoft YaHei',sans-serif;
+  --radius-m: 8px;
+  --radius-s: 4px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+button { font: inherit; border: none; background: none; cursor: pointer; }
+input { font: inherit; outline: none; }
+body {
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-body);
+  background: var(--color-bg-page);
+  padding: 40px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  margin-bottom: 32px;
+}
+
+.spec-section {
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-m);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.spec-section-title {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-soft);
+  margin-bottom: 24px;
+}
+
+.spec-block-title {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.demo-row { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+.demo-block { margin-bottom: 32px; }
+
+/* 规格参数表 */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.spec-table th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border-soft);
+  background: #F5F7FA;
+}
+.spec-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border-soft);
+  vertical-align: middle;
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td code {
+  font-family: 'SF Mono','Consolas',monospace;
+  font-size: 12px;
+  background: #F5F7FA;
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  color: var(--color-primary);
+}
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 14px; height: 14px; border-radius: var(--radius-s); border: 1px solid var(--color-border-soft); flex-shrink: 0; }
+
+/* ══════════════════════════════════════
+   下拉菜单容器
+   ══════════════════════════════════════ */
+.dd-menu {
+  min-width: 140px;
+  width: max-content;
+  background: #FFFFFF;
+  box-shadow: 0 4px 20px 0 #0043ca12;
+  border-radius: var(--radius-s);
+  filter: blur(0);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 菜单项 */
+.dd-item {
+  height: 32px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  background: #FFFFFF;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  user-select: none;
+  flex-shrink: 0;
+}
+.dd-item + .dd-item,
+.dd-item + .dd-search,
+.dd-search + .dd-item,
+.dd-item + .dd-footer,
+.dd-footer + .dd-item {
+  margin-top: 8px;
+}
+.dd-item:hover {
+  background: #F5F7FA;
+}
+.dd-item:active,
+.dd-item.is-active {
+  background: #F0F9FF;
+  color: #3388FF;
+}
+
+/* 图标 */
+.dd-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dd-arrow {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-left: auto;
+  color: #A8B4C8;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dd-text { flex: 1; }
+
+/* 子菜单 */
+.dd-sub {
+  position: relative;
+}
+.dd-submenu {
+  position: absolute;
+  top: -8px;
+  left: calc(100% + 4px);
+  display: none;
+  z-index: 10;
+}
+.dd-sub:hover > .dd-submenu { display: block; }
+
+/* 搜索框 */
+.dd-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  border: 1px solid #DDE1EB;
+  border-radius: 16px;
+  padding: 0 12px;
+  flex-shrink: 0;
+  background: #FFFFFF;
+}
+.dd-search svg {
+  width: 14px;
+  height: 14px;
+  color: #A8B4C8;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  flex-shrink: 0;
+}
+.dd-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  width: 0;
+  min-width: 0;
+}
+.dd-search input::placeholder {
+  color: #A8B4C8;
+}
+.dd-search input:focus { outline: none; }
+
+/* 列表区可滚动 */
+.dd-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 192px;
+  overflow-y: auto;
+  margin-top: 8px;
+  margin-right: -4px;
+  padding-right: 4px;
+}
+.dd-list .dd-item:first-child { margin-top: 0; }
+.dd-list .dd-item + .dd-item { margin-top: 8px; }
+
+/* 底部新增 */
+.dd-footer {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #E9ECF2;
+  flex-shrink: 0;
+}
+.dd-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dd-add-input {
+  flex: 1;
+  height: 32px;
+  border: 1px solid #DDE1EB;
+  border-radius: 4px;
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  background: #FFFFFF;
+}
+.dd-add-input::placeholder { color: #A8B4C8; }
+.dd-add-input:focus { border-color: #3388FF; }
+.dd-add-btn {
+  font-size: 14px;
+  font-weight: 400;
+  color: #3388FF;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+.dd-add-btn:hover { opacity: 0.85; }
+
+/* 底部 + 新增（整行） */
+.dd-add-trigger {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #3388FF;
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+.dd-add-trigger:hover { background: #F5F7FA; }
+.dd-add-trigger svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  flex-shrink: 0;
+}
+
+/* 新增气泡（弹出） */
+.dd-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 6px;
+  background: #FFFFFF;
+  border: 1px solid #E9ECF2;
+  box-shadow: 0 4px 20px 0 #0043ca12;
+  border-radius: 4px;
+  padding: 12px;
+  z-index: 20;
+  display: none;
+}
+.dd-popover.is-open { display: block; }
+.dd-popover input {
+  width: 100%;
+  height: 32px;
+  border: 1px solid #DDE1EB;
+  border-radius: 4px;
+  padding: 0 8px;
+  font-size: 14px;
+  color: #223355;
+  margin-bottom: 8px;
+}
+.dd-popover input::placeholder { color: #A8B4C8; }
+.dd-popover input:focus { border-color: #3388FF; }
+.dd-popover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.dd-btn-cancel,
+.dd-btn-confirm {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.dd-btn-cancel {
+  background: #FFFFFF;
+  border: 1px solid #DDE1EB;
+  color: #223355;
+}
+.dd-btn-cancel:hover { border-color: #3388FF; color: #3388FF; }
+.dd-btn-confirm {
+  background: #3388FF;
+  border: 1px solid #3388FF;
+  color: #FFFFFF;
+}
+.dd-btn-confirm:hover { background: #2167D9; border-color: #2167D9; }
+
+/* 包裹 */
+.dd-wrap {
+  position: relative;
+  display: inline-block;
+}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · 常规下拉菜单 规范预览</h1>
+
+<!-- 1. 常规下拉菜单 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">1. 常规下拉菜单</h2>
+
+  <div class="demo-row">
+    <div>
+      <div class="spec-block-title">默认 / Hover / 点击三态</div>
+      <div class="dd-menu" style="height:auto;">
+        <div class="dd-item"><span class="dd-text">菜单选项一</span></div>
+        <div class="dd-item" style="background:#F5F7FA;"><span class="dd-text">菜单选项二（Hover）</span></div>
+        <div class="dd-item is-active"><span class="dd-text">菜单选项三（点击）</span></div>
+        <div class="dd-item"><span class="dd-text">菜单选项四</span></div>
+        <div class="dd-item"><span class="dd-text">菜单选项五</span></div>
+      </div>
+    </div>
+
+    <div style="flex:1; min-width:300px;">
+      <div class="spec-block-title">规格参数</div>
+      <table class="spec-table">
+        <tbody>
+          <tr><td style="width:120px;">容器宽度</td><td><code>min-width: 140px</code>，根据内容自适应</td></tr>
+          <tr><td>容器背景</td><td><code>#FFFFFF</code></td></tr>
+          <tr><td>容器圆角</td><td><code>4px</code></td></tr>
+          <tr><td>容器阴影</td><td><code>0 4px 20px 0 #0043ca12</code></td></tr>
+          <tr><td>filter</td><td><code>blur(0)</code></td></tr>
+          <tr><td>菜单项高度</td><td><code>32px</code></td></tr>
+          <tr><td>菜单项圆角</td><td><code>4px</code></td></tr>
+          <tr><td>菜单项间距</td><td><code>8px</code></td></tr>
+          <tr><td>默认文字</td><td><span class="chip"><span class="swatch" style="background:#223355;"></span><code>#223355</code></span></td></tr>
+          <tr><td>Hover 背景</td><td><span class="chip"><span class="swatch" style="background:#F5F7FA;border-color:#ccc;"></span><code>#F5F7FA</code></span></td></tr>
+          <tr><td>点击背景 / 文字</td><td><span class="chip"><span class="swatch" style="background:#F0F9FF;border-color:#ccc;"></span><code>#F0F9FF</code></span> / <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 2. 带图标下拉菜单 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">2. 带图标下拉菜单</h2>
+
+  <div class="demo-row">
+    <div>
+      <div class="spec-block-title">线状图标 + 文字</div>
+      <div class="dd-menu" style="height:auto;">
+        <div class="dd-item">
+          <svg class="dd-icon" viewBox="0 0 16 16"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/></svg>
+          <span class="dd-text">个人中心</span>
+        </div>
+        <div class="dd-item">
+          <svg class="dd-icon" viewBox="0 0 16 16"><path d="M11 2l3 3-8 8H3v-3L11 2z"/></svg>
+          <span class="dd-text">编辑资料</span>
+        </div>
+        <div class="dd-item is-active">
+          <svg class="dd-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.4 3.4l.85.85M11.75 11.75l.85.85M3.4 12.6l.85-.85M11.75 4.25l.85-.85"/></svg>
+          <span class="dd-text">系统设置</span>
+        </div>
+        <div class="dd-item">
+          <svg class="dd-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>
+          <span class="dd-text">关于我们</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1; min-width:300px;">
+      <div class="spec-block-title">规格参数</div>
+      <table class="spec-table">
+        <tbody>
+          <tr><td style="width:120px;">图标尺寸</td><td><code>16×16px</code></td></tr>
+          <tr><td>图标样式</td><td>线状（stroke，无 fill）</td></tr>
+          <tr><td>图标颜色</td><td>与文字同色，默认 <code>#223355</code>，点击 <code>#3388FF</code></td></tr>
+          <tr><td>图标与文字间距</td><td><code>8px</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 3. 带下级分组菜单 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">3. 带下级分组菜单</h2>
+
+  <div class="demo-row">
+    <div>
+      <div class="spec-block-title">右侧朝右箭头 → 悬停展开二级</div>
+      <div class="dd-menu" style="height:auto; overflow:visible;">
+        <div class="dd-item"><span class="dd-text">普通选项</span></div>
+        <div class="dd-item dd-sub">
+          <span class="dd-text">分组一</span>
+          <svg class="dd-arrow" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></svg>
+          <div class="dd-submenu">
+            <div class="dd-menu" style="height:auto; width:140px;">
+              <div class="dd-item"><span class="dd-text">子选项 A</span></div>
+              <div class="dd-item"><span class="dd-text">子选项 B</span></div>
+              <div class="dd-item"><span class="dd-text">子选项 C</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="dd-item dd-sub">
+          <span class="dd-text">分组二</span>
+          <svg class="dd-arrow" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4"/></svg>
+          <div class="dd-submenu">
+            <div class="dd-menu" style="height:auto; width:140px;">
+              <div class="dd-item"><span class="dd-text">子选项 D</span></div>
+              <div class="dd-item"><span class="dd-text">子选项 E</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1; min-width:300px;">
+      <div class="spec-block-title">规格参数</div>
+      <table class="spec-table">
+        <tbody>
+          <tr><td style="width:120px;">右侧箭头</td><td><code>16×16px</code>，朝右</td></tr>
+          <tr><td>箭头颜色</td><td><span class="chip"><span class="swatch" style="background:#A8B4C8;"></span><code>#A8B4C8</code></span></td></tr>
+          <tr><td>触发方式</td><td>悬停展开二级菜单，右侧偏移 <code>4px</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 4. 带搜索的下拉菜单 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">4. 带搜索的下拉菜单</h2>
+
+  <div class="demo-row">
+    <div>
+      <div class="spec-block-title">选项超过 10 个时启用搜索</div>
+      <div class="dd-menu" style="height:288px;">
+        <div class="dd-search">
+          <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
+          <input type="text" placeholder="请输入关键字"/>
+        </div>
+        <div class="dd-list">
+          <div class="dd-item"><span class="dd-text">选项 1</span></div>
+          <div class="dd-item"><span class="dd-text">选项 2</span></div>
+          <div class="dd-item"><span class="dd-text">选项 3</span></div>
+          <div class="dd-item"><span class="dd-text">选项 4</span></div>
+          <div class="dd-item"><span class="dd-text">选项 5</span></div>
+          <div class="dd-item"><span class="dd-text">选项 6</span></div>
+          <div class="dd-item"><span class="dd-text">选项 7</span></div>
+          <div class="dd-item"><span class="dd-text">选项 8</span></div>
+          <div class="dd-item"><span class="dd-text">选项 9</span></div>
+          <div class="dd-item"><span class="dd-text">选项 10</span></div>
+          <div class="dd-item"><span class="dd-text">选项 11</span></div>
+          <div class="dd-item"><span class="dd-text">选项 12</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1; min-width:300px;">
+      <div class="spec-block-title">规格参数</div>
+      <table class="spec-table">
+        <tbody>
+          <tr><td style="width:120px;">触发条件</td><td>选项数量 &gt; 10</td></tr>
+          <tr><td>搜索框位置</td><td>菜单顶部</td></tr>
+          <tr><td>搜索框高度</td><td><code>32px</code></td></tr>
+          <tr><td>搜索框圆角</td><td>全圆角 <code>16px</code></td></tr>
+          <tr><td>搜索框边框</td><td><span class="chip"><span class="swatch" style="background:#DDE1EB;"></span><code>#DDE1EB</code></span></td></tr>
+          <tr><td>搜索图标 / 提示文字</td><td>颜色 <span class="chip"><span class="swatch" style="background:#A8B4C8;"></span><code>#A8B4C8</code></span></td></tr>
+          <tr><td>提示文字</td><td>"请输入关键字"</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 5. 带新增选项操作的下拉菜单 1 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">5. 带新增选项的下拉菜单（输入框 + 新增按钮）</h2>
+
+  <div class="demo-row">
+    <div>
+      <div class="spec-block-title">底部输入框 + 新增文字按钮</div>
+      <div class="dd-menu" style="height:auto;">
+        <div class="dd-item"><span class="dd-text">已有选项一</span></div>
+        <div class="dd-item"><span class="dd-text">已有选项二</span></div>
+        <div class="dd-item"><span class="dd-text">已有选项三</span></div>
+        <div class="dd-footer">
+          <div class="dd-add-row">
+            <input class="dd-add-input" type="text" placeholder="请输入"/>
+            <span class="dd-add-btn">新增</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1; min-width:300px;">
+      <div class="spec-block-title">规格参数</div>
+      <table class="spec-table">
+        <tbody>
+          <tr><td style="width:120px;">输入框高度</td><td><code>32px</code></td></tr>
+          <tr><td>输入框圆角</td><td><code>4px</code></td></tr>
+          <tr><td>输入框边框</td><td><span class="chip"><span class="swatch" style="background:#DDE1EB;"></span><code>#DDE1EB</code></span></td></tr>
+          <tr><td>新增按钮</td><td>文字色 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td></tr>
+          <tr><td>底部分隔</td><td><code>1px solid #E9ECF2</code>，与上方菜单间距 <code>8px</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 6. 带新增选项操作的下拉菜单 2 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">6. 带新增选项的下拉菜单（图标按钮 + 弹出输入气泡）</h2>
+
+  <div class="demo-row">
+    <div>
+      <div class="spec-block-title">底部"+ 新增"按钮，悬停弹出输入气泡（点击演示）</div>
+      <div class="dd-wrap">
+        <div class="dd-menu" style="height:auto;">
+          <div class="dd-item"><span class="dd-text">已有选项一</span></div>
+          <div class="dd-item"><span class="dd-text">已有选项二</span></div>
+          <div class="dd-item"><span class="dd-text">已有选项三</span></div>
+          <div class="dd-footer" style="border-top:1px solid #E9ECF2; padding-top:8px;">
+            <div class="dd-add-trigger" id="dd6Trigger" onclick="dd6Toggle()">
+              <svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>
+              新增
+            </div>
+          </div>
+        </div>
+        <div class="dd-popover" id="dd6Pop">
+          <input type="text" placeholder="请输入新增内容"/>
+          <div class="dd-popover-actions">
+            <button class="dd-btn-cancel" onclick="dd6Toggle()">取消</button>
+            <button class="dd-btn-confirm" onclick="dd6Toggle()">确定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1; min-width:300px;">
+      <div class="spec-block-title">规格参数</div>
+      <table class="spec-table">
+        <tbody>
+          <tr><td style="width:120px;">触发按钮</td><td>"+" 图标 <code>16×16px</code> + "新增"文字 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td></tr>
+          <tr><td>气泡弹出位置</td><td>菜单底部，间距 <code>6px</code></td></tr>
+          <tr><td>气泡背景 / 阴影</td><td><code>#FFFFFF</code>，<code>0 4px 20px 0 #0043ca12</code></td></tr>
+          <tr><td>气泡内边距</td><td><code>12px</code></td></tr>
+          <tr><td>输入框</td><td>高 <code>32px</code>，圆角 <code>4px</code>，边框 <code>#DDE1EB</code></td></tr>
+          <tr><td>操作按钮</td><td>取消（次要） + 确定（主，<code>#3388FF</code> 背景）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function dd6Toggle() {
+  const pop = document.getElementById('dd6Pop');
+  pop.classList.toggle('is-open');
+}
+</script>
+</body>
+</html>

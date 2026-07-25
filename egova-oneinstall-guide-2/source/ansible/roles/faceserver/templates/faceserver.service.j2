@@ -1,0 +1,15 @@
+[Unit]
+Description=faceserver
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ deploy_path }}
+Environment=LD_LIBRARY_PATH={{ deploy_path }}/:${LD_LIBRARY_PATH}
+ExecStart={{ deploy_path }}/ZTITServer 0.0.0.0 {{ port }}
+ExecStop={{ deploy_path }}/stop-server.sh
+Restart=on-failure
+User={{ ops_user }}
+
+[Install]
+WantedBy=multi-user.target

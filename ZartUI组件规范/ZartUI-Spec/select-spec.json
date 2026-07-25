@@ -1,0 +1,574 @@
+{
+  "name": "select-spec",
+  "version": "2.0.0",
+  "description": "ZartUI 下拉选择框规范，含单选、多选、弹窗选择三种类型",
+
+  "single": {
+    "description": "单选下拉框",
+
+    "trigger": {
+      "height": "32px",
+      "border_radius": "4px",
+      "padding": "0 32px 0 8px",
+      "font_size": "14px",
+      "color": "#223355",
+      "placeholder_color": "#A8B4C8",
+      "background": "#FFFFFF",
+      "cursor": "pointer",
+      "user_select": "none",
+
+      "chevron": {
+        "size": "16×16px",
+        "viewbox": "0 0 16 16",
+        "stroke": "#A8B4C8",
+        "stroke_width": "1.5",
+        "position": "absolute right: 8px，垂直居中",
+        "rotate_when_open": "180deg，transition: transform 0.2s",
+        "color_when_open": "#3388FF"
+      },
+
+      "clear_icon": {
+        "description": "有已选值 + hover 时替换箭头显示，点击清空选值",
+        "size": "16×16px",
+        "style": "面状灰色实心圆 + 白色 × 描边",
+        "fill": "#A8B4C8",
+        "cross_stroke": "#FFFFFF",
+        "hover_opacity": "0.75",
+        "position": "absolute right: 8px，垂直居中",
+        "show_condition": "容器有 .has-value 类 + :hover 时显示，同时隐藏 chevron",
+        "implementation": ".z-sel.has-value:hover .z-sel-clear { display: flex } / .z-sel.has-value:hover .z-sel-chevron { display: none }",
+        "behavior": "点击清空选值，触发框恢复占位色和'请选择'文字，容器移除 .has-value"
+      },
+
+      "states": {
+        "default":  { "border": "1px solid #DDE1EB", "background": "#FFFFFF" },
+        "disabled": { "border": "1px solid #E9ECF2", "background": "#F5F7FA", "color": "#A8B4C8", "cursor": "not-allowed", "pointer_events": "none" },
+        "error":    { "border": "1px solid #FF4433", "background": "#FFFFFF" },
+        "hover":    { "border": "1px solid #3388FF" },
+        "active_open":     { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF", "chevron_color": "#3388FF", "chevron_rotate": "180deg" },
+        "active_loading":  { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF", "panel": "spinner + 加载中文字" },
+        "active_disabled_options": { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF", "note": "禁用选项 color: #A8B4C8，pointer-events: none" },
+        "rehover":  { "border": "1px solid #3388FF", "note": "有已选值时 hover，箭头替换为清除图标" },
+        "reopen":   { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF", "chevron_color": "#3388FF", "chevron_rotate": "180deg", "note": "已选项在面板中高亮" },
+        "completed": { "border": "1px solid #DDE1EB", "background": "#FFFFFF", "color": "#223355", "chevron_color": "#A8B4C8", "note": "显示已选值，箭头恢复朝下" }
+      }
+    },
+
+    "panel": {
+      "position": "fixed（JS getBoundingClientRect 定位，绕过父元素 overflow:hidden 裁剪）",
+      "offset_top": "4px（触发框底部下方）",
+      "min_width": "触发框宽度",
+      "background": "#FFFFFF",
+      "border": "none",
+      "border_radius": "8px",
+      "box_shadow": "0 2px 20px 0 rgba(34,51,85,0.16)",
+      "padding": "8px",
+      "z_index": 3000,
+      "note": "面板 padding:8px 已提供选项两端 8px 间距，选项本身不需要额外 margin",
+
+      "option": {
+        "height": "40px",
+        "padding": "0 8px",
+        "border_radius": "4px",
+        "font_size": "14px",
+        "states": {
+          "default":  { "background": "#FFFFFF",  "color": "#223355" },
+          "hover":    { "background": "#F5F7FA",  "color": "#223355" },
+          "selected": { "background": "#F0F9FF",  "color": "#223355" },
+          "disabled": { "color": "#A8B4C8", "cursor": "not-allowed", "pointer_events": "none" }
+        }
+      },
+
+      "loading": {
+        "height": "40px",
+        "padding": "0 12px",
+        "display": "flex，align-items: center，justify-content: space-between",
+        "text": "加载中…",
+        "text_color": "#A8B4C8",
+        "text_size": "13px",
+        "text_position": "左侧",
+        "spinner": {
+          "size": "16×16px",
+          "border": "2px solid #E9ECF2",
+          "border_top": "#3388FF",
+          "border_radius": "50%",
+          "animation": "spin 0.7s linear infinite",
+          "position": "右侧"
+        }
+      }
+    },
+
+    "error_message": {
+      "ref": "global-spec.json",
+      "margin_top": "4px",
+      "font_size": "12px",
+      "font_weight": "400",
+      "color": "#FF4433",
+      "layout_note": "触发框与错误提示须包裹在同一独立 wrapper 内，不得暴露于外部 flex/grid gap 中"
+    }
+  },
+
+  "multi": {
+    "description": "多选下拉框",
+
+    "trigger": {
+      "min_height": "32px",
+      "border_radius": "4px",
+      "padding": "4px 32px 4px 6px",
+      "gap": "4px",
+      "overflow": "hidden（单行截断）",
+      "cursor": "pointer",
+
+      "states": {
+        "default":   { "border": "1px solid #DDE1EB", "background": "#FFFFFF" },
+        "hover":     { "border": "1px solid #3388FF" },
+        "open":      { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF" },
+        "error":     { "border": "1px solid #FF4433" },
+        "disabled":  { "border": "1px solid #E9ECF2", "background": "#F5F7FA", "cursor": "not-allowed", "pointer_events": "none" },
+        "completed": { "border": "1px solid #DDE1EB", "note": "显示已选标签，面板关闭" }
+      },
+
+      "chevron": {
+        "size": "16×16px",
+        "stroke": "#A8B4C8",
+        "stroke_width": "1.5",
+        "position": "absolute right: 8px，垂直居中",
+        "rotate_when_open": "180deg，color: #3388FF"
+      }
+    },
+
+    "tag": {
+      "description": "已选标签",
+      "height": "22px",
+      "padding": "0 6px",
+      "gap": "4px",
+      "border_radius": "3px",
+      "font_size": "12px",
+      "background": "#F5F7FA",
+      "color": "#223355",
+      "close_icon_color": "#223355",
+      "close_icon_size": "10×10px",
+      "close_icon_hover_bg": "rgba(255,68,51,0.10)",
+      "close_icon_hover_color": "#FF4433",
+      "disabled": { "background": "#F5F7FA", "color": "#A8B4C8", "close_icon_color": "#A8B4C8", "pointer_events": "none" }
+    },
+
+    "overflow_badge": {
+      "description": "标签放不下时显示已选数量",
+      "height": "22px",
+      "padding": "0 6px",
+      "border_radius": "3px",
+      "font_size": "12px",
+      "background": "#F0F9FF",
+      "color": "#3388FF"
+    },
+
+    "inline_search_input": {
+      "description": "方案二：框内输入搜索",
+      "flex": "1",
+      "min_width": "50px",
+      "border": "none",
+      "font_size": "14px",
+      "color": "#223355",
+      "placeholder_color": "#A8B4C8",
+      "background": "transparent"
+    },
+
+    "panel": {
+      "offset_top": "4px",
+      "min_width": "触发框宽度",
+      "background": "#FFFFFF",
+      "border": "none",
+      "border_radius": "8px",
+      "box_shadow": "0 2px 20px 0 rgba(34,51,85,0.16)",
+      "overflow": "hidden",
+
+      "search_bar": {
+        "description": "方案一：选项较多时在面板顶部显示",
+        "trigger_condition": "选项数量较多",
+        "padding": "8px 8px 0",
+        "height": "32px",
+        "border_radius": "16px",
+        "border": "1px solid #DDE1EB",
+        "search_icon_size": "14×14px",
+        "search_icon_color": "#A8B4C8",
+        "placeholder": "请输入关键字",
+        "placeholder_color": "#A8B4C8",
+        "focus_border": "#3388FF",
+        "focus_shadow": "0 0 0 2px #D6EDFF"
+      },
+
+      "option_list": {
+        "padding": "8px",
+        "max_height": "192px",
+        "overflow_y": "auto",
+        "scrollbar_width": "4px",
+        "scrollbar_color": "#DDE1EB",
+
+        "option": {
+          "height": "40px",
+          "padding": "0 8px",
+          "margin": "0 8px",
+          "border_radius": "4px",
+          "font_size": "14px",
+          "gap": "8px",
+          "states": {
+            "default":      { "background": "#FFFFFF", "color": "#223355" },
+            "hover":        { "background": "#F5F7FA", "color": "#223355" },
+            "selected":     { "background": "#FFFFFF", "color": "#223355", "note": "文字不变蓝，仅复选框变色" },
+            "disabled":     { "color": "#A8B4C8", "cursor": "not-allowed", "pointer_events": "none" }
+          }
+        },
+
+        "checkbox": {
+          "size": "14×14px",
+          "border_radius": "3px",
+          "border_default": "1px solid #DDE1EB",
+          "background_default": "#FFFFFF",
+          "checked": { "background": "#3388FF", "border": "1px solid #3388FF", "icon": "白色勾" },
+          "indeterminate": { "background": "#3388FF", "border": "1px solid #3388FF", "icon": "白色横线" }
+        }
+      },
+
+      "divider": { "height": "1px", "background": "#E9ECF2", "margin": "0 8px" },
+
+      "select_all": {
+        "description": "选项较多时显示，选项较少时不显示",
+        "padding": "6px 8px",
+        "font_size": "13px",
+        "color": "#223355",
+        "hover_color": "#3388FF",
+        "all_selected_color": "#223355",
+        "checkbox": "同 option checkbox 规则"
+      },
+
+      "add_row": {
+        "description": "仅在一个面板示例中展示",
+        "border_top": "1px solid #E9ECF2",
+        "padding": "6px 8px 8px",
+        "input": {
+          "height": "28px",
+          "border_radius": "4px",
+          "border": "1px solid #DDE1EB",
+          "padding": "0 8px",
+          "font_size": "13px",
+          "focus_border": "#3388FF",
+          "focus_shadow": "0 0 0 2px #D6EDFF",
+          "placeholder_color": "#A8B4C8"
+        },
+        "button": {
+          "label": "新增",
+          "font_size": "13px",
+          "color": "#3388FF",
+          "hover_color": "#2167D9"
+        }
+      }
+    },
+
+    "search_schemes": {
+      "scheme1": "面板顶部独立搜索框，触发框仍显示已选标签",
+      "scheme2": "触发框内直接输入，已选标签与输入光标共存于框内，面板无搜索框"
+    },
+
+    "error_message": {
+      "ref": "global-spec.json",
+      "margin_top": "4px",
+      "font_size": "12px",
+      "font_weight": "400",
+      "color": "#FF4433",
+      "layout_note": "触发框与错误提示须包裹在同一独立 wrapper 内"
+    }
+  },
+
+  "tree_select": {
+    "description": "下拉树选择（单选），点击触发框后展开树形下拉面板",
+
+    "trigger": {
+      "ref": "select-spec.json#single.trigger",
+      "note": "触发框样式与普通单选下拉框完全一致"
+    },
+
+    "panel": {
+      "offset_top": "4px",
+      "min_width": "触发框宽度",
+      "background": "#FFFFFF",
+      "border": "none",
+      "border_radius": "8px",
+      "box_shadow": "0 2px 20px 0 rgba(34,51,85,0.16)",
+      "padding": "4px 0"
+    },
+
+    "tree_row": {
+      "height": "40px",
+      "padding": "0 8px",
+      "margin": "0 8px",
+      "border_radius": "4px",
+      "display": "flex，align-items: center，gap: 4px",
+      "font_size": "14px",
+      "color": "#223355",
+      "states": {
+        "default":  { "background": "transparent" },
+        "hover":    { "background": "#F5F7FA" },
+        "selected": { "background": "#F0F9FF", "color": "#223355" }
+      }
+    },
+
+    "node_icon": {
+      "size": "14×14px",
+      "color": "#3388FF",
+      "note": "所有节点均显示蓝色图标，选中态图标同步变为 #3388FF"
+    },
+
+    "toggle_icon": {
+      "size": "12×12px",
+      "color": "#A8B4C8",
+      "open": "旋转 90deg，transition: transform .15s",
+      "leaf": "visibility: hidden（占位，保持对齐）"
+    },
+
+    "indent": "子节点 padding-left: 20px",
+
+    "loading": {
+      "height": "40px",
+      "padding": "0 12px",
+      "display": "flex，align-items: center，justify-content: space-between，gap: 8px",
+      "text": "数据加载中...",
+      "text_color": "#A8B4C8",
+      "text_size": "13px",
+      "text_position": "左侧",
+      "spinner": {
+        "size": "16×16px",
+        "border": "2px solid #E9ECF2",
+        "border_top": "#3388FF",
+        "border_radius": "50%",
+        "animation": "spin 0.7s linear infinite",
+        "position": "右侧（文字右边）"
+      }
+    }
+  },
+
+  "tree_multi_select": {
+    "description": "下拉树多选，触发框显示已选标签，树节点含复选框（支持父节点半选）",
+
+    "trigger": {
+      "ref": "select-spec.json#multi.trigger",
+      "note": "触发框样式与普通多选下拉框完全一致"
+    },
+
+    "panel": {
+      "ref": "select-spec.json#tree_select.panel",
+      "note": "面板样式与树单选一致"
+    },
+
+    "tree_row": {
+      "ref": "select-spec.json#tree_select.tree_row",
+      "checkbox": {
+        "size": "14×14px",
+        "border_radius": "3px",
+        "border_default": "1px solid #A8B4C8",
+        "background_default": "#FFFFFF",
+        "checked": { "background": "#3388FF", "border": "1px solid #3388FF", "icon": "白色勾" },
+        "indeterminate": { "background": "#3388FF", "border": "1px solid #3388FF", "icon": "白色横线" }
+      },
+      "note": "复选框位于展开箭头与节点图标之间"
+    }
+  },
+
+  "tree_select_with_search": {
+    "description": "下拉树带搜索，面板顶部含胶囊搜索框，支持单选和多选两种形态",
+
+    "search": {
+      "ref": "dropdown-spec.json#search",
+      "margin": "8px 8px 4px",
+      "border_radius": "16px",
+      "height": "32px"
+    },
+
+    "highlight": {
+      "matched_text_color": "#3388FF",
+      "note": "搜索关键字命中部分文字变为 #3388FF"
+    },
+
+    "empty": {
+      "text": "暂无匹配数据",
+      "font_size": "14px",
+      "color": "#A8B4C8",
+      "height": "80px",
+      "display": "flex，居中"
+    },
+
+    "tree_list": {
+      "max_height": "200px",
+      "overflow_y": "auto",
+      "scrollbar_width": "4px",
+      "scrollbar_thumb": "#E9ECF2"
+    }
+  },
+
+  "modal_select": {
+    "description": "弹窗选择，触发框类似下拉框，点击后打开弹窗而非下拉面板",
+
+    "trigger": {
+      "height": "32px",
+      "border_radius": "4px",
+      "padding": "0 8px",
+      "font_size": "14px",
+      "color": "#223355",
+      "placeholder_color": "#A8B4C8",
+      "background": "#FFFFFF",
+      "note": "右侧为操作区，无箭头图标",
+
+      "states": {
+        "default":   { "border": "1px solid #DDE1EB" },
+        "hover":     { "border": "1px solid #3388FF" },
+        "active":    { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF" },
+        "completed": { "border": "1px solid #DDE1EB", "color": "#223355" },
+        "error":     { "border": "1px solid #FF4433" },
+        "disabled":  { "border": "1px solid #E9ECF2", "background": "#F5F7FA", "color": "#A8B4C8", "cursor": "not-allowed", "pointer_events": "none" }
+      }
+    },
+
+    "action_icon_btn": {
+      "size": "28×28px",
+      "border_radius": "4px",
+      "hover_bg": "#F5F7FA"
+    },
+
+    "scheme1": {
+      "description": "图标 + 文字按钮，右侧始终显示",
+      "icon": {
+        "description": "列表线条图标：两长横（全宽）+ 两短横（左半）+ 右下角加号，无外框",
+        "size": "14×14px",
+        "viewbox": "0 0 16 16",
+        "stroke_width": "1.5",
+        "color": "#3388FF"
+      },
+      "label": "选择",
+      "font_size": "13px",
+      "color": "#3388FF",
+      "hover_color": "#2167D9",
+      "disabled_color": "#A8B4C8"
+    },
+
+    "scheme2": {
+      "description": "纯图标，默认只显示选择图标；完成态后显示清空+撤回+选择三图标",
+
+      "select_icon": {
+        "description": "圆角外框右下角缺口 + 左侧两短横 + 右下角加号（加号偏右下，尺寸较大）",
+        "size": "16×16px",
+        "viewbox": "0 0 16 16",
+        "stroke_width": "1.5",
+        "color_default": "#223355",
+        "color_active": "#3388FF",
+        "color_disabled": "#A8B4C8"
+      },
+
+      "completed_actions": {
+        "description": "完成态右侧三图标 + 分隔线",
+        "separator": { "width": "1px", "height": "16px", "background": "#E9ECF2", "margin": "0 2px" },
+        "clear_icon": {
+          "description": "红色垃圾桶",
+          "color": "#FF4433",
+          "hover_bg": "rgba(255,68,51,0.08)",
+          "hover_color": "#FF4433"
+        },
+        "undo_icon": {
+          "description": "向左弯曲环形箭头",
+          "color": "#223355",
+          "hover_bg": "#F5F7FA",
+          "hover_color": "#3388FF"
+        },
+        "select_icon": {
+          "description": "同上述带缺口外框图标",
+          "color": "#223355",
+          "hover_bg": "#F5F7FA"
+        }
+      }
+    },
+
+    "error_message": {
+      "ref": "global-spec.json",
+      "margin_top": "4px",
+      "font_size": "12px",
+      "font_weight": "400",
+      "color": "#FF4433"
+    }
+  },
+
+  "custom_dropdown_implementation": {
+    "description": "自定义下拉组件的 HTML/CSS/JS 实现规范，替代原生 <select>，用于需要精确控制面板样式的场景",
+
+    "html_structure": {
+      "note": "每个下拉组件为一个 .z-sel 容器，内含触发框、清除图标、箭头、面板四个子元素",
+      "template": "<div class='z-sel' id='sel-xxx'><div class='z-sel-trigger' onclick='toggleSel(\"sel-xxx\")'>请选择</div><svg class='z-sel-clear' onclick='clearSel(\"sel-xxx\", callback)'><!-- 实心圆×图标 --></svg><svg class='z-sel-chevron'><!-- 下箭头 --></svg><div class='z-sel-panel'><div class='z-sel-option' onclick='selectOpt(\"sel-xxx\",\"选项值\",callback)'>选项文字</div></div></div>"
+    },
+
+    "css_classes": {
+      ".z-sel": {
+        "position": "relative",
+        "user_select": "none",
+        "flex_shrink": 0
+      },
+      ".z-sel-trigger": {
+        "height": "32px",
+        "padding": "0 32px 0 8px",
+        "border_radius": "4px",
+        "border": "1px solid #DDE1EB",
+        "background": "#FFFFFF",
+        "font_size": "14px",
+        "color": "#A8B4C8（无值占位色）",
+        "cursor": "pointer",
+        "transition": "border-color .15s, box-shadow .15s"
+      },
+      ".z-sel-trigger.has-value": { "color": "#223355" },
+      ".z-sel-trigger:hover": { "border_color": "#3388FF" },
+      ".z-sel.is-open .z-sel-trigger": { "border_color": "#3388FF", "box_shadow": "0 0 0 2px #D6EDFF" },
+      ".z-sel-chevron": {
+        "position": "absolute right:8px，垂直居中",
+        "pointer_events": "none",
+        "color": "#A8B4C8",
+        "transition": "transform .2s, color .15s"
+      },
+      ".z-sel.is-open .z-sel-chevron": { "transform": "rotate(180deg)", "color": "#3388FF" },
+      ".z-sel-clear": {
+        "position": "absolute right:8px，垂直居中",
+        "display": "none（默认隐藏）",
+        "width": "16px", "height": "16px",
+        "cursor": "pointer",
+        "color": "#A8B4C8"
+      },
+      ".z-sel.has-value:hover .z-sel-clear": { "display": "flex（显示清除图标）" },
+      ".z-sel.has-value:hover .z-sel-chevron": { "display": "none（隐藏箭头）" },
+      ".z-sel-panel": {
+        "display": "none（默认隐藏）",
+        "position": "fixed（getBoundingClientRect 定位）",
+        "background": "#FFFFFF",
+        "border_radius": "8px",
+        "box_shadow": "0 2px 20px 0 rgba(34,51,85,0.16)",
+        "padding": "8px",
+        "z_index": 3000
+      },
+      ".z-sel.is-open .z-sel-panel": { "display": "block" },
+      ".z-sel-option": {
+        "height": "40px",
+        "padding": "0 8px",
+        "border_radius": "4px",
+        "font_size": "14px",
+        "color": "#223355",
+        "cursor": "pointer",
+        "note": "无需额外 margin，面板 padding:8px 已提供两端间距"
+      },
+      ".z-sel-option:hover": { "background": "#F5F7FA" },
+      ".z-sel-option.selected": { "background": "#F0F9FF" }
+    },
+
+    "js_functions": {
+      "selValues": "全局对象，key 为组件 id，value 为当前已选值字符串",
+      "getSelValue(id)": "返回 selValues[id] || ''",
+      "toggleSel(id)": "关闭其他所有已打开的下拉，再打开目标下拉；用 getBoundingClientRect 重新定位面板 top/left/minWidth",
+      "selectOpt(id, value, callback)": "写入 selValues[id]；更新触发框文字和 has-value 类；更新容器 has-value 类；标记 .selected 选项；关闭面板；执行 callback()",
+      "clearSel(id, callback)": "调用 selectOpt(id, '', callback) 清空选值",
+      "document click 外部关闭": "document.addEventListener('click', e => { if (!e.target.closest('.z-sel')) 关闭所有 .z-sel.is-open })"
+    }
+  }
+}

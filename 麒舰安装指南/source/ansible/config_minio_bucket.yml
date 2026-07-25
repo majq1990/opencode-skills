@@ -1,0 +1,11 @@
+---
+# This playbook deploys the minio
+- name: config minio bucket
+  hosts: "{{ host }}"
+  gather_facts: "{{ gather_facts }}"
+  remote_user: root
+  # 优先级小于role/vars下定义的变量
+  vars_files:
+    - ./group_vars/all.yml
+  roles:
+    - config_minio_bucket

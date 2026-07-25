@@ -1,0 +1,175 @@
+{
+  "name": "toolbar-search-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 表格搜索规范，含操作按钮右侧内联筛选、高级查询抽屉、搜索条件平铺三种形态",
+
+  "form1_inline": {
+    "description": "形态一：操作按钮右侧内联筛选",
+    "usage": "操作按钮 ≤ 6 个且按钮文字较短，筛选项 ≤ 2 个",
+    "layout": "筛选控件放在工具栏右侧，与操作按钮同行",
+
+    "form_item": {
+      "layout": "左右结构，标题在左，控件在右",
+      "label_margin_right": "8px",
+      "label_colon": "标题后加冒号（::after { content: '：' }）",
+      "item_gap": "20px"
+    },
+
+    "variant1_realtime": {
+      "label": "变体 1：纯选择类 — 实时筛选",
+      "condition": "筛选项均为下拉选择框",
+      "behavior": "选值后实时过滤表格行，无需查询/重置按钮"
+    },
+
+    "variant2_with_input": {
+      "label": "变体 2：含输入类 — 需查询/重置",
+      "condition": "包含文本输入框时",
+      "actions": {
+        "layout": "重置和查询按钮紧跟筛选项右侧",
+        "gap": "8px",
+        "reset_btn": { "ref": "button-spec.json#rect", "label": "重置", "style": "线框矩形按钮" },
+        "query_btn": { "ref": "button-spec.json#rect_primary", "label": "查询", "style": "蓝色主色背景矩形按钮" }
+      }
+    }
+  },
+
+  "form2_drawer": {
+    "description": "形态二：高级查询抽屉",
+    "usage": "筛选项较多或有复杂条件组合",
+
+    "trigger_btn": {
+      "label": "高级查询",
+      "style": "全圆角按钮",
+      "active_state": "确定后按钮高亮：background #F0F9FF，border #3388FF，color #3388FF"
+    },
+
+    "drawer": {
+      "position": "右侧滑入",
+      "width": "400px",
+      "animation": "transform: translateX(100%) → translateX(0)，transition 0.25s ease",
+      "header": { "height": "56px", "title_font_size": "14px", "title_font_weight": "500", "title_color": "#081126" },
+      "body": { "padding": "20px", "overflow_y": "auto" },
+      "footer": {
+        "height": "64px",
+        "padding": "0 20px",
+        "layout": "右对齐，justify-content: flex-end",
+        "button_gap": "8px",
+        "button_order": "取消 → 重置 → 确定",
+        "cancel_btn": "线框矩形按钮",
+        "reset_btn": "线框矩形按钮",
+        "confirm_btn": "蓝色主色背景矩形按钮"
+      }
+    },
+
+    "form_item": {
+      "layout": "上下结构，标题在上，控件在下",
+      "label_colon": "标题后加冒号（::after { content: '：' }）",
+      "label_font_size": "14px",
+      "label_color": "#223355",
+      "gap_inner": "8px（标题与控件之间）",
+      "gap_between": "20px（表单项之间）"
+    },
+
+    "condition_bar": {
+      "description": "确定后表格上方显示已选条件标签栏",
+      "height": "32px",
+      "padding": "8px 20px",
+      "background": "transparent",
+      "gap": "8px",
+      "tag": {
+        "height": "32px",
+        "padding": "0 10px",
+        "background": "#F5F7FA",
+        "border_radius": "4px",
+        "label_color": "#6B7A99",
+        "value_color": "#223355",
+        "delete_icon": {
+          "size": "14×14px",
+          "color_default": "#A8B4C8",
+          "color_hover": "#FF4433"
+        }
+      },
+      "clear_all": {
+        "label": "清空条件",
+        "font_size": "13px",
+        "color": "#3388FF",
+        "hover_color": "#2167D9"
+      }
+    }
+  },
+
+  "form3_flat": {
+    "description": "形态三：搜索条件平铺在表格上方",
+    "usage": "不使用抽屉，条件直接展示在操作按钮上方",
+
+    "layout_structure": {
+      "order": ["搜索条件区", "贯穿间隔线", "操作按钮工具栏", "表格"],
+      "divider": {
+        "color": "#E9ECF2",
+        "height": "1px",
+        "margin": "12px 20px（上下各 12px，距搜索条件区和操作按钮区各 12px）"
+      }
+    },
+
+    "search_area": {
+      "padding": "16px 20px 0",
+      "layout": "flex，条件行 flex:1，按钮组 flex-shrink:0，两者间距 12px"
+    },
+
+    "condition_row": {
+      "display": "flex",
+      "column_gap": "40px",
+      "row_gap": "20px（换行后行间距）",
+      "default_wrap": "nowrap（默认单行，overflow:hidden 隐藏超出条件）",
+      "expanded_wrap": "wrap（展开后换行显示）"
+    },
+
+    "condition_item": {
+      "width": "300px（固定）",
+      "layout": "flex，左右结构",
+      "label": {
+        "width": "100px（固定，含冒号，保证各条件标题对齐）",
+        "font_size": "14px",
+        "color": "#223355",
+        "colon": "::after { content: '：' }"
+      },
+      "control": {
+        "flex": 1,
+        "min_width": "0",
+        "note": "控件填满标签右侧剩余空间"
+      }
+    },
+
+    "date_field": {
+      "note": "日期类字段使用单个输入框，不拆分为开始/结束两框",
+      "placeholder": "请选择日期范围",
+      "ref": "input-spec.json#single_line"
+    },
+
+    "collapse": {
+      "default_visible": "最多显示 5 个条件（第 6 个及以后折叠隐藏）",
+      "extra_class": ".z-flat-extra（折叠时 display:none，展开后 display:flex）"
+    },
+
+    "actions": {
+      "description": "展开图标、重置、查询按钮固定显示在条件区右侧，不随条件行折叠",
+      "layout": "flex，align-items: center，gap: 8px",
+      "expand_btn": {
+        "icon_size": "12×12px",
+        "hit_area": "32×32px",
+        "color_default": "#6B7A99",
+        "color_hover": "#223355",
+        "rotate_when_expanded": "180deg，transition: transform 0.2s",
+        "text": "仅显示图标，不显示文字"
+      },
+      "reset_btn": { "label": "重置", "ref": "button-spec.json#rect" },
+      "query_btn": { "label": "查询", "ref": "button-spec.json#rect_primary" }
+    }
+  },
+
+  "shared": {
+    "select": { "ref": "select-spec.json#custom_dropdown_implementation" },
+    "input": { "ref": "input-spec.json#single_line" },
+    "rect_btn": { "ref": "button-spec.json#rect" }
+  }
+}

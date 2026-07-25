@@ -1,0 +1,145 @@
+{
+  "name": "popover-spec",
+  "version": "1.1.0",
+  "description": "ZartUI 气泡卡片规范，作为容器承载文本、图片、表单、数据等复杂内容，支持点击或 Hover 触发，可承载可操作元素",
+
+  "container": {
+    "width": "242px",
+    "height": "随内容自适应",
+    "background": "#FFFFFF",
+    "border_radius": "4px",
+    "box_shadow": "0 2px 50px 0 rgba(0, 67, 202, 0.16)",
+    "padding": "12px 16px",
+    "z_index": 1000
+  },
+
+  "arrow": {
+    "shape": "三角形",
+    "color": "#FFFFFF",
+    "note": "随弹出方向自动旋转，指向触发元素"
+  },
+
+  "typography": {
+    "title": {
+      "font_size": "14px",
+      "font_weight": "500",
+      "color": "#081126"
+    },
+    "content": {
+      "font_size": "14px",
+      "font_weight": "400",
+      "color": "#223355",
+      "line_height": "1.6"
+    },
+    "link": {
+      "font_size": "13px",
+      "font_weight": "400",
+      "color": "#3388FF"
+    }
+  },
+
+  "content_variants": [
+    {
+      "id": "title-only",
+      "label": "仅标题",
+      "description": "只展示标题文字"
+    },
+    {
+      "id": "content-only",
+      "label": "仅内容（多行）",
+      "description": "无标题，正文多行，高度随内容自适应"
+    },
+    {
+      "id": "title-content",
+      "label": "标题 + 内容",
+      "description": "标题与正文组合"
+    },
+    {
+      "id": "with-link",
+      "label": "含链接",
+      "description": "标题 + 内容 + 蓝色文字链接（#3388FF，13px）"
+    },
+    {
+      "id": "with-actions",
+      "label": "含操作按钮",
+      "description": "标题 + 内容 + 右对齐按钮行，顺序：取消在左，确定在右"
+    },
+    {
+      "id": "danger",
+      "label": "危险提示",
+      "description": "标题左侧带红色感叹号图标（#FF4433，16px），按钮顺序：确定在左，取消在右",
+      "title_icon": {
+        "shape": "圆形感叹号",
+        "size": "16px",
+        "color": "#FF4433"
+      },
+      "button_order": "确定（左）/ 取消（右）"
+    }
+  ],
+
+  "buttons": {
+    "common": {
+      "height": "28px",
+      "padding": "0 12px",
+      "border_radius": "4px",
+      "font_size": "13px",
+      "transition": "border-color 0.15s, background 0.15s, color 0.15s"
+    },
+    "types": [
+      {
+        "id": "default",
+        "label": "默认（取消）",
+        "background": "#FFFFFF",
+        "border": "1px solid #DDE1EB",
+        "color": "#223355",
+        "hover_border": "#3388FF",
+        "hover_background": "#F0F9FF",
+        "hover_color": "#3388FF"
+      },
+      {
+        "id": "primary",
+        "label": "主要（确定）",
+        "background": "#3388FF",
+        "border": "1px solid #3388FF",
+        "color": "#FFFFFF",
+        "hover_background": "#2167D9",
+        "hover_border": "#2167D9"
+      },
+      {
+        "id": "danger",
+        "label": "危险（确定）",
+        "background": "#FF4433",
+        "border": "1px solid #FF4433",
+        "color": "#FFFFFF",
+        "hover_background": "#D93020",
+        "hover_border": "#D93020"
+      }
+    ],
+    "alignment": "右对齐（justify-content: flex-end）",
+    "gap": "8px",
+    "margin_top": "10px",
+    "danger_order_note": "危险提示场景确定按钮在左，取消按钮在右，与普通场景相反"
+  },
+
+  "placements": [
+    { "id": "top-start",    "label": "左上",     "arrow_position": "卡片顶部左侧" },
+    { "id": "top",          "label": "上",       "arrow_position": "卡片顶部居中" },
+    { "id": "top-end",      "label": "右上",     "arrow_position": "卡片顶部右侧" },
+    { "id": "bottom-start", "label": "左下",     "arrow_position": "卡片底部左侧" },
+    { "id": "bottom",       "label": "下",       "arrow_position": "卡片底部居中" },
+    { "id": "bottom-end",   "label": "右下",     "arrow_position": "卡片底部右侧" },
+    { "id": "left-start",   "label": "左上对齐", "arrow_position": "卡片右侧上方" },
+    { "id": "left",         "label": "左",       "arrow_position": "卡片右侧居中" },
+    { "id": "left-end",     "label": "左下对齐", "arrow_position": "卡片右侧下方" },
+    { "id": "right-start",  "label": "右上对齐", "arrow_position": "卡片左侧上方" },
+    { "id": "right",        "label": "右",       "arrow_position": "卡片左侧居中" },
+    { "id": "right-end",    "label": "右下对齐", "arrow_position": "卡片左侧下方" }
+  ],
+
+  "triggers": [
+    { "id": "hover", "label": "Hover 触发", "description": "鼠标移入显示，移出自动关闭" },
+    { "id": "click", "label": "点击触发",   "description": "点击打开，再次点击或点击卡片外部关闭" }
+  ],
+
+  "difference_from_tooltip": "Tooltip 仅展示纯文字提示，用户不可交互；Popover 可承载链接、按钮等可操作元素，适用于需要用户进行操作的补充说明场景"
+}

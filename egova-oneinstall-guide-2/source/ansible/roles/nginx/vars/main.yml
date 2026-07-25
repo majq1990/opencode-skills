@@ -1,0 +1,36 @@
+---
+# variable for nginx
+env_package_path: /egova/src
+web_package_path: /egova/web
+# TODO: 实际目录为openresty
+src_path: "{{ src_env_package_path }}/openresty"
+dest_path: "{{ dest_package_root_path }}/nginx"
+
+# 默认监听端口
+port: 8080
+src_tools_path: "{{ src_env_package_path }}/tools"
+log_path: /egova/log/nginx
+nginx_path: /etc/nginx/conf.d
+openresty_path: /usr/local/openresty
+conf_file: "{{ openresty_path }}/nginx/conf/nginx.conf"
+default_conf: "{{ nginx_path }}/default.conf"
+
+nginx_packages:
+  CentOS:
+    - openresty
+  kylin_x86:
+    - openresty
+  openEuler:
+    - openresty
+  UOS:
+    - openresty
+  uos_x86:
+    - openresty
+  uos_arm:
+    - openresty
+  anolis_x86:
+    - openresty
+  anolis_arm:
+    - openresty
+  Anolis:
+    - openresty

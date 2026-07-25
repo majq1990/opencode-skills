@@ -1,0 +1,40 @@
+{
+  "with_skill": {
+    "expectations": [
+      {
+        "text": "明确命中 REPORT 或上报接口",
+        "passed": true,
+        "evidence": "标题为'REPORT -- 最小请求示例与必填字段'，明确列出 action: REPORT"
+      },
+      {
+        "text": "包含最小请求示例",
+        "passed": true,
+        "evidence": "第3节提供了完整的JSON最小请求示例，包含 uid/data/action/senderCode"
+      },
+      {
+        "text": "不展开完整参数表",
+        "passed": true,
+        "evidence": "仅列出了顶层必传4个字段和data中高频必传6个字段，未展开所有可选字段、medias等"
+      }
+    ]
+  },
+  "old_skill": {
+    "expectations": [
+      {
+        "text": "明确命中 REPORT 或上报接口",
+        "passed": true,
+        "evidence": "标题为'REPORT（工单上报）最小请求示例与必填字段'，明确列出 action: REPORT"
+      },
+      {
+        "text": "包含最小请求示例",
+        "passed": true,
+        "evidence": "第3节提供了完整的JSON请求示例"
+      },
+      {
+        "text": "不展开完整参数表",
+        "passed": false,
+        "evidence": "展开了medias附件字段（mediaName/mediaUsage/mediaTypeId/mediaPath/content），并在示例中包含了eventSrcId/eventSrcName/title/districtName/streetName/contact等过多字段，超出了最小必要范围"
+      }
+    ]
+  }
+}

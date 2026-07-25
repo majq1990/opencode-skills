@@ -1,0 +1,4 @@
+---
+# handlers file for microservice
+- name: reload nginx
+  shell: nginx -s reload

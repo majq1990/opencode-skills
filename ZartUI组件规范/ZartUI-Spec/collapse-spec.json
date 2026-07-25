@@ -1,0 +1,76 @@
+{
+  "name": "collapse-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 折叠面板规范，含基础/禁用/无边框三种形态，支持多项同时展开",
+
+  "container": {
+    "border": "1px solid #E9ECF2",
+    "border_radius": "4px",
+    "item_divider": "border-top: 1px solid #E9ECF2"
+  },
+
+  "header": {
+    "height": "48px",
+    "padding": "0 16px",
+    "layout": "标题左对齐，箭头右对齐（justify-content: space-between）",
+    "background_default": "#FFFFFF",
+    "background_hover": "#F5F7FA",
+    "transition": "background 0.15s",
+    "cursor": "pointer",
+    "user_select": "none",
+    "title": {
+      "font_size": "14px",
+      "font_weight": "500",
+      "color": "#081126"
+    },
+    "arrow": {
+      "icon_size": "14px",
+      "container_size": "16px",
+      "color": "#C3CAD9",
+      "collapsed": "朝右（默认）",
+      "expanded": "朝下，rotate(90deg)",
+      "transition": "transform 0.2s ease"
+    }
+  },
+
+  "content": {
+    "border_top": "1px solid #E9ECF2",
+    "padding": "12px 16px 16px",
+    "font_size": "14px",
+    "color": "#223355",
+    "line_height": "1.8",
+    "animation": "max-height 过渡，0.25s ease"
+  },
+
+  "states": {
+    "disabled": {
+      "header_background": "#FAFAFA",
+      "header_background_hover": "#FAFAFA",
+      "title_color": "#A8B4C8",
+      "arrow_color": "#DDE1EB",
+      "cursor": "not-allowed",
+      "click": "无响应"
+    }
+  },
+
+  "variants": [
+    {
+      "id": "default",
+      "label": "基础（有边框）",
+      "description": "整体外边框 1px solid #E9ECF2，圆角 4px"
+    },
+    {
+      "id": "borderless",
+      "label": "无边框",
+      "description": "去掉整体外边框，保留各项之间分隔线，标题行与内容区左右内边距为 0",
+      "usage": "适用于嵌入卡片或页面内容区"
+    }
+  ],
+
+  "interaction_rules": [
+    "点击标题行切换展开/折叠状态",
+    "多个面板项可同时展开，互不影响",
+    "支持默认展开（初始状态添加 is-open 类）",
+    "禁用项不响应点击"
+  ]
+}

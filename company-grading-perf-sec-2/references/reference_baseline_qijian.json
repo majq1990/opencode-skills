@@ -1,0 +1,571 @@
+{
+  "total_score": 100,
+  "grading_note": "所有涉及业务系统的截图，都必须将系统URL截入图中，未截入URL的，默认扣掉一半分数。",
+  "sections": [
+    {
+      "id": "S1",
+      "name": "麒舰系统一键部署和授权",
+      "score": 10,
+      "items": [
+        {
+          "id": "S1-1",
+          "name": "部署配置截图（oneinstall_v2 服务IP分配清单）",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "oneinstall_v2 服务器IP配置清单（含A/B节点各服务IP赋值）或部署完成汇总回显",
+          "need_url": false,
+          "key_check": "能看到各服务IP分配列表，或部署完成 success 汇总"
+        },
+        {
+          "id": "S1-2",
+          "name": "服务器密钥（免密）登录验证截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "SSH 免密/密钥登录成功截图（终端显示登录成功）",
+          "need_url": false,
+          "key_check": "能看到 SSH 连接成功或 authorized_keys 配置截图"
+        },
+        {
+          "id": "S1-3",
+          "name": "License 授权截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "License 申请/授权成功页面截图",
+          "need_url": false,
+          "key_check": "能看到授权成功状态或 license init 接口响应"
+        },
+        {
+          "id": "S1-4",
+          "name": "智信云（eUrbanUMA）登录后页面截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "智信云运管服主页截图，含 URL",
+          "need_url": true,
+          "key_check": "URL 含 eUrbanUMA，页面为登录后主界面"
+        },
+        {
+          "id": "S1-5",
+          "name": "麒舰平台登录后页面截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "麒舰 eurbanpro 登录后首页截图，含 URL",
+          "need_url": true,
+          "key_check": "URL 含 eurbanpro，页面为麒舰首页"
+        },
+        {
+          "id": "S1-6",
+          "name": "统一用户中心登录后页面截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "用户中心 usercenter 登录后页面截图，含 URL",
+          "need_url": true,
+          "key_check": "URL 含 usercenter，页面为用户中心首页"
+        },
+        {
+          "id": "S1-7",
+          "name": "玄藏登录后页面截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "玄藏 xuanzang 登录后地图页面截图，含 URL",
+          "need_url": true,
+          "key_check": "URL 含 xuanzang，页面为玄藏首页"
+        },
+        {
+          "id": "S1-8",
+          "name": "灵珑登录后页面截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "灵珑 linglong 登录后首页截图，含 URL",
+          "need_url": true,
+          "key_check": "URL 含 linglong，页面为灵珑首页"
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "name": "地理数据替换",
+      "score": 20,
+      "items": [
+        {
+          "id": "S2-1",
+          "name": "region 表生成截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "GIS 小工具生成 tc_region 表的日志截图（含地市/区县/街镇/社区/单元网格插入成功条数）",
+          "need_url": false,
+          "key_check": "能看到 tc_region 各级数据生成成功日志"
+        },
+        {
+          "id": "S2-2",
+          "name": "地理编码数据处理截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "地理编码数据入库完成截图（工具运行结果或数据库验证截图）",
+          "need_url": false,
+          "key_check": "能看到地理编码入库成功提示"
+        },
+        {
+          "id": "S2-3",
+          "name": "网格索引生成截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "单元网格索引生成完成截图（小工具输出或 CellIndex 目录截图）",
+          "need_url": false,
+          "key_check": "能看到索引文件生成或复制成功"
+        },
+        {
+          "id": "S2-4",
+          "name": "矢量服务发布截图（通图）",
+          "score": 2,
+          "std_min_imgs": 2,
+          "std_desc": "通途客户端删除旧数据、上传 shp 文件（已删 prj）、服务发布成功截图",
+          "need_url": false,
+          "key_check": "能看到通图服务发布成功，服务列表中存在新发布服务"
+        },
+        {
+          "id": "S2-5",
+          "name": "地图构建向导配置截图（智信云）",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "智信云 GIS 构建向导完成地图配置截图",
+          "need_url": true,
+          "key_check": "URL 含 eUrbanUMA/eUrbanGIS，能看到地图构建向导界面"
+        },
+        {
+          "id": "S2-6",
+          "name": "智信云地图截图（含图层控制，勾选水井盖/街道）",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "智信云地图展示页面截图，需展开图层控制面板并勾选水井盖、街道图层",
+          "need_url": true,
+          "key_check": "能看到地图正常渲染，图层控制面板中水井盖和街道图层被勾选"
+        },
+        {
+          "id": "S2-7",
+          "name": "玄藏项目配置截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "玄藏-项目配置页面截图（含项目 ID 或底图配置），含 URL",
+          "need_url": true,
+          "key_check": "URL 含 xuanzang，能看到玄藏项目配置界面"
+        },
+        {
+          "id": "S2-8",
+          "name": "玄藏场景配置截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "玄藏-场景配置页面截图（含场景标识/组件配置），含 URL",
+          "need_url": true,
+          "key_check": "URL 含 xuanzang，能看到玄藏场景配置界面"
+        },
+        {
+          "id": "S2-9",
+          "name": "玄藏网格索引配置截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "玄藏索引目录截图或索引配置结果截图（CellIndex 目录已有文件）",
+          "need_url": false,
+          "key_check": "能看到 CellIndex 目录存在索引文件，或玄藏索引配置完成提示"
+        },
+        {
+          "id": "S2-10",
+          "name": "玄藏地图预览截图（含图层控制，勾选水井盖/街道）",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "玄藏地图预览页面截图，需展开图层控制面板并勾选水井盖、街道图层",
+          "need_url": true,
+          "key_check": "能看到玄藏地图正常渲染，图层控制面板中水井盖和街道图层被勾选"
+        },
+        {
+          "id": "S2-11",
+          "name": "星桥数据同步试跑截图（region 表 + 地理编码同步玄藏）",
+          "score": 2,
+          "std_min_imgs": 2,
+          "std_desc": "星桥同步任务试跑截图（region/区划同步到玄藏 + 地理编码/兴趣点同步结果）",
+          "need_url": false,
+          "key_check": "能看到星桥同步任务执行成功日志或结果统计"
+        }
+      ]
+    },
+    {
+      "id": "S3",
+      "name": "组织机构维护",
+      "score": 15,
+      "items": [
+        {
+          "id": "S3-1",
+          "name": "智信云部门人员导入构建截图",
+          "score": 2,
+          "std_min_imgs": 2,
+          "std_desc": "智信云部门导入完成截图 + 人员导入完成截图（含导入结果数量）",
+          "need_url": true,
+          "key_check": "能看到部门和人员导入成功，含结果数量或列表"
+        },
+        {
+          "id": "S3-2",
+          "name": "星桥同步试跑结果截图（迁移数据到用户中心）",
+          "score": 5,
+          "std_min_imgs": 4,
+          "std_desc": "星桥同步任务试跑截图：区划/部门/岗位/人员/岗位人员各维度同步成功结果截图",
+          "need_url": false,
+          "key_check": "能看到区划、部门、岗位、人员等各维度同步成功日志或统计"
+        },
+        {
+          "id": "S3-3",
+          "name": "用户中心查看同步数据截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "统一用户中心中查看同步过来的部门/岗位/人员数据截图，含 URL",
+          "need_url": true,
+          "key_check": "URL 含 usercenter，能看到用户中心中的部门/人员/岗位数据"
+        },
+        {
+          "id": "S3-4",
+          "name": "岗位权限配置截图（市受理员/值班长/派遣员/专业部门）",
+          "score": 4,
+          "std_min_imgs": 2,
+          "std_desc": "用户中心岗位权限配置截图，含市受理员、市值班长、市派遣员、专业部门等岗位的权限绑定",
+          "need_url": true,
+          "key_check": "能看到各岗位配置了麒舰核心平台/构建平台等权限，URL 含 usercenter"
+        },
+        {
+          "id": "S3-5",
+          "name": "新导入账号麒舰 PC 端登录截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "使用新导入账号登录麒舰 PC 端成功截图，含 URL",
+          "need_url": true,
+          "key_check": "URL 含 eurbanpro，能看到新账号登录成功的麒舰首页"
+        }
+      ]
+    },
+    {
+      "id": "S4",
+      "name": "监督员和网格配置",
+      "score": 5,
+      "items": [
+        {
+          "id": "S4-1",
+          "name": "责任网格配置截图（嘎洒镇/允景洪街办）",
+          "score": 2,
+          "std_min_imgs": 2,
+          "std_desc": "麒舰-网格管理中两个责任网格配置截图（嘎洒镇责任网格、允景洪街办责任网格）",
+          "need_url": true,
+          "key_check": "能看到两个责任网格已配置，分别对应嘎洒镇和允景洪街办"
+        },
+        {
+          "id": "S4-2",
+          "name": "网格员责任网格关联配置截图（市容四/一支队/渣土中队）",
+          "score": 3,
+          "std_min_imgs": 2,
+          "std_desc": "市容四支队监督员关联嘎洒镇网格截图 + 市容一（或渣土中队）监督员关联允景洪街办网格截图",
+          "need_url": true,
+          "key_check": "能看到市容四支队和市容一支队/渣土中队的网格员与对应责任网格关联"
+        }
+      ]
+    },
+    {
+      "id": "S5",
+      "name": "事项配置更新",
+      "score": 5,
+      "items": [
+        {
+          "id": "S5-1",
+          "name": "新增小类助手页面截图（其他事件-其他事件小类 code:99）",
+          "score": 5,
+          "std_min_imgs": 2,
+          "std_desc": "麒舰-事项助手页面截图，显示其他事件-其他事件小类（code:99），含立案/结案条件、处置时限配置",
+          "need_url": true,
+          "key_check": "能看到事项助手页面中存在 code:99 的小类，含立案条件、结案条件和处置时限配置"
+        }
+      ]
+    },
+    {
+      "id": "S6",
+      "name": "栏目简单配置",
+      "score": 10,
+      "items": [
+        {
+          "id": "S6-1",
+          "name": "灵珑栏目视图脚本截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "灵珑中栏目数据集/视图SQL脚本配置截图（含 act_property_id=104 等关键条件）",
+          "need_url": true,
+          "key_check": "能看到灵珑视图配置界面，SQL含待审核案件过滤条件"
+        },
+        {
+          "id": "S6-2",
+          "name": "新增栏目配置截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "麒舰新增【协同平台-待审核栏】栏目配置截图",
+          "need_url": true,
+          "key_check": "能看到麒舰中新增的待审核栏目配置，URL 含 eurbanpro"
+        },
+        {
+          "id": "S6-3",
+          "name": "栏目菜单配置截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "麒舰栏目菜单配置截图（待审核栏绑定菜单）",
+          "need_url": true,
+          "key_check": "能看到待审核栏的菜单绑定配置"
+        },
+        {
+          "id": "S6-4",
+          "name": "市派遣员岗位栏目权限配置截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "用户中心给市派遣员岗位配置【协同平台-待审核栏】权限截图，含 URL",
+          "need_url": true,
+          "key_check": "能看到市派遣员岗位已配置待审核栏权限"
+        },
+        {
+          "id": "S6-5",
+          "name": "市派遣员账号登录后打开待审核栏截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "市派遣员账号登录麒舰后看到【协同平台-待审核栏】菜单截图，含 URL",
+          "need_url": true,
+          "key_check": "能看到派遣员账号登录后菜单中存在待审核栏，URL 含 eurbanpro"
+        }
+      ]
+    },
+    {
+      "id": "S7",
+      "name": "导航配置",
+      "score": 5,
+      "items": [
+        {
+          "id": "S7-1",
+          "name": "应用导入和数据库创建截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "灵珑应用导入截图 + 数据库（yuanlin）创建 SQL 执行截图",
+          "need_url": false,
+          "key_check": "能看到灵珑应用导入成功，或数据库创建命令执行结果"
+        },
+        {
+          "id": "S7-2",
+          "name": "导航栏配置截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "麒舰-导航栏配置截图（园林管理导航项配置），含 URL",
+          "need_url": true,
+          "key_check": "能看到麒舰导航栏配置中已添加园林管理导航"
+        },
+        {
+          "id": "S7-3",
+          "name": "岗位导航权限配置截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "用户中心给市派遣员岗位配置园林管理导航权限截图，含 URL",
+          "need_url": true,
+          "key_check": "能看到派遣员岗位的导航权限配置"
+        },
+        {
+          "id": "S7-4",
+          "name": "应用权限配置截图",
+          "score": 0.5,
+          "std_min_imgs": 1,
+          "std_desc": "麒舰-应用管理中园林应用权限配置截图（应用绑定岗位权限）",
+          "need_url": true,
+          "key_check": "能看到园林应用已配置权限"
+        },
+        {
+          "id": "S7-5",
+          "name": "市派遣员登录后导航页面截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "市派遣员账号登录麒舰后看到园林管理导航入口截图，含 URL",
+          "need_url": true,
+          "key_check": "能看到派遣员账号登录后菜单/首页中有园林管理导航"
+        },
+        {
+          "id": "S7-6",
+          "name": "点击导航打开园林应用页面截图",
+          "score": 0.5,
+          "std_min_imgs": 1,
+          "std_desc": "点击园林管理导航后成功打开应用页面截图，含 URL",
+          "need_url": true,
+          "key_check": "能看到园林应用页面正常加载，URL 有变化"
+        }
+      ]
+    },
+    {
+      "id": "S8",
+      "name": "移动端配置",
+      "score": 10,
+      "items": [
+        {
+          "id": "S8-1",
+          "name": "模板配置截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "麒舰-移动端插件模板配置截图（复制或创建插件模板，绑定灵珑视图/待审核栏）",
+          "need_url": true,
+          "key_check": "能看到插件模板配置界面，含灵珑应用/视图绑定"
+        },
+        {
+          "id": "S8-2",
+          "name": "移动端新增插件配置截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "麒舰-构建中心-移动端配置：新增自定义插件截图",
+          "need_url": true,
+          "key_check": "能看到新增的移动端插件配置"
+        },
+        {
+          "id": "S8-3",
+          "name": "工作台新增插件截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "麒舰工作台配置中新增插件截图（工作台布局含待审核栏插件）",
+          "need_url": true,
+          "key_check": "能看到工作台配置中已添加插件"
+        },
+        {
+          "id": "S8-4",
+          "name": "插件权限配置截图（核心平台+构建平台）",
+          "score": 4,
+          "std_min_imgs": 2,
+          "std_desc": "用户中心-应用管理中，核心平台和构建平台分别配置网格员/相关岗位的插件权限截图",
+          "need_url": true,
+          "key_check": "能看到核心平台和构建平台中均已配置相关岗位的移动端插件权限"
+        },
+        {
+          "id": "S8-5",
+          "name": "移动端登录后工作台界面截图（手机截图）",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "监督员账号登录移动端（麒舰 APP）后工作台界面截图，能看到待审核栏插件",
+          "need_url": false,
+          "key_check": "移动端工作台界面中能看到待审核栏插件"
+        }
+      ]
+    },
+    {
+      "id": "S9",
+      "name": "工作流简单配置",
+      "score": 10,
+      "items": [
+        {
+          "id": "S9-1",
+          "name": "专业部门节点参与者增加过程截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "工作流配置中，一级专业部门节点添加参与者（专业部门岗位）的过程截图",
+          "need_url": true,
+          "key_check": "能看到流程节点参与者配置，含专业部门岗位被选入"
+        },
+        {
+          "id": "S9-2",
+          "name": "工作流程图配置后截图",
+          "score": 2,
+          "std_min_imgs": 1,
+          "std_desc": "工作流流程图完整截图（含一级专业部门节点和新增的二级专业部门节点）",
+          "need_url": true,
+          "key_check": "能看到流程图中同时存在一级专业部门节点和二级专业部门节点"
+        },
+        {
+          "id": "S9-3",
+          "name": "一级/二级专业部门参与者配置截图",
+          "score": 2,
+          "std_min_imgs": 2,
+          "std_desc": "一级专业部门节点参与者截图 + 二级专业部门节点参与者截图（分别含岗位配置）",
+          "need_url": true,
+          "key_check": "能看到一级和二级专业部门节点各自配置的参与者岗位"
+        },
+        {
+          "id": "S9-4",
+          "name": "节点属性配置截图（一级/二级专业部门）",
+          "score": 2,
+          "std_min_imgs": 2,
+          "std_desc": "一级专业部门节点属性配置截图（节点属性=一级专业部门）+ 二级节点属性配置截图",
+          "need_url": true,
+          "key_check": "能看到节点属性分别设置为一级专业部门和二级专业部门"
+        },
+        {
+          "id": "S9-5",
+          "name": "二级专业部门授权配置截图（申请延期授权）",
+          "score": 2,
+          "std_min_imgs": 2,
+          "std_desc": "申请授权基本配置截图（含授权属性配置、授权流程图配置，答复授权为一级专业部门）",
+          "need_url": true,
+          "key_check": "能看到申请延期授权配置，答复节点关联一级专业部门"
+        }
+      ]
+    },
+    {
+      "id": "S10",
+      "name": "全业务流转",
+      "score": 10,
+      "items": [
+        {
+          "id": "S10-1",
+          "name": "手机端上报案件截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "移动端（麒舰 APP）上报案件成功截图",
+          "need_url": false,
+          "key_check": "能看到移动端上报案件成功的界面（含上报成功提示或案件编号）"
+        },
+        {
+          "id": "S10-2",
+          "name": "手机端全流程流转截图",
+          "score": 3,
+          "std_min_imgs": 2,
+          "std_desc": "从上报到结案完整流程流转截图（含流程状态变化或流转记录）",
+          "need_url": false,
+          "key_check": "能看到案件经历核实→立案→派遣→专业部门处理→核查→结案的完整流程"
+        },
+        {
+          "id": "S10-3",
+          "name": "受理平台登记案件截图（其他事件-其他事件）",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "智信云/麒舰 PC 端受理平台登记案件页面截图（选择大小类：其他事件-其他事件），含 URL",
+          "need_url": true,
+          "key_check": "能看到登记页面中选择了其他事件-其他事件小类"
+        },
+        {
+          "id": "S10-4",
+          "name": "核实/核查反馈截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "案件核实反馈截图和/或核查反馈截图",
+          "need_url": true,
+          "key_check": "能看到核实或核查反馈操作界面，含 URL"
+        },
+        {
+          "id": "S10-5",
+          "name": "二级部门申请延期2小时截图",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "二级专业部门申请延期2小时过程截图（含申请延期操作界面）",
+          "need_url": true,
+          "key_check": "能看到申请延期操作界面，延期时间为2小时"
+        },
+        {
+          "id": "S10-6",
+          "name": "案件主页截图（流程流转记录）",
+          "score": 1,
+          "std_min_imgs": 1,
+          "std_desc": "案件详情/流程流转记录截图（含完整流转节点记录）",
+          "need_url": true,
+          "key_check": "能看到案件的完整流转记录，包含申请延期步骤"
+        },
+        {
+          "id": "S10-7",
+          "name": "全流程办理完结截图",
+          "score": 2,
+          "std_min_imgs": 2,
+          "std_desc": "受理平台全流程完整流转截图（含最终结案状态）",
+          "need_url": true,
+          "key_check": "能看到案件状态为已结案，流转记录包含各关键节点"
+        }
+      ]
+    }
+  ]
+}

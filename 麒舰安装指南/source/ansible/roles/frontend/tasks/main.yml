@@ -1,0 +1,55 @@
+---
+# check if frontend exist
+- block:
+    - name: check if nginx exist
+      shell: nginx -v
+      register: nginx_version_output
+      ignore_errors: true
+
+    - set_fact:
+        app_root_dir: "/{{ microservice[app_type][app_name].base_path.split('/')[1] }}/{{ microservice[app_type][app_name].base_path.split('/')[2]  }}/{{ microservice[app_type][app_name].base_path.split('/')[3]  }}"
+
+    - name: create dest dir
+      file: path={{ item }} state=directory mode='0755'
+      with_items:
+        - "{{ dest_path }}"
+        - "{{ app_root_dir }}"
+        - "{{ microservice[app_type][app_name].base_path }}"
+
+    - name: check if already deployed
+      shell: test -e {{ microservice[app_type][app_name].base_path }}/webApps && echo true || echo false
+      register: check_frontend
+
+    - name: 检查 {{ app_type }}-frontend.tar 是否存在
+      connection: local
+      stat:
+        path: "../src/web/{{ app_type }}/{{ app_type }}-frontend.tar"
+      register: app_type_tar
+
+    - name: Fail if {{ app_type }}-frontend.tar is  empty
+      fail:
+        msg: |
+          待安装的{{ app_type }}服务，web包不存在,如需安装服务{{ ansible_master_ip }}服务器上执行 dl_v2.sh 下載待安裝的服务!!!
+          若ll /egova/onekey_install/oneinstall_v2/src/web |grep {{ app_type }}|wc -l 大于0 则表示待安装的服务已存在
+      when: app_type_tar.stat.exists == False
+
+    # copy packages， 包含两个package, 对于linglong, linglong-backend.tar和linglong-frontend.tar。
+    - name: copy package
+      copy: src={{ src_path }}/{{ app_type }}-frontend.tar dest={{ dest_path }}/
+      when: check_frontend.stdout == 'false' and app_type_tar.stat.exists == True
+
+    # untar frontend tar
+    - name: untar package
+      shell: |
+        tar xf {{ dest_path }}/{{ app_type }}-frontend.tar -C {{ app_root_dir }}
+        chown -R {{ ops_user }}:{{ ops_user }} {{ microservice[app_type][app_name].base_path }}/webApps
+        chmod -R 755 {{ microservice[app_type][app_name].base_path }}/webApps
+      when: check_frontend.stdout == 'false'
+
+    # copy location config
+    - name: init nginx frontend location config
+      template: src=frontend.location.j2 dest=/etc/nginx/conf.d/{{ app_type }}-frontend.location
+      notify:
+        - reload nginx
+      when: "'nginx version' in nginx_version_output.stderr and app_type not in ['iot','evalreport','video']"
+  when: "microservice[app_type][app_name].frontend_path is defined and microservice[app_type][app_name].frontend_path is not none"

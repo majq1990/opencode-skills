@@ -1,0 +1,93 @@
+---
+- set_fact:
+    biz_db_key: "{{ item.depend_key }}"
+    db_prefix: "{{ 'cetus' if 'cetus' in item.depend_key else 'mysql' }}"
+    sql_path: "{{ '/opt/egova/db/' + item.database if prefix == 'service' else db_path }}"
+  when: item.depend_key is not none
+
+- name: 打印mysql依赖key
+  debug:
+    msg:
+      - "biz_db_key: {{ biz_db_key }}"
+      - "db_prefix: {{ db_prefix }}"
+      - "sql_path: {{ sql_path }}"
+      
+# 从metadata.yml中获取数据库连接配置
+- set_fact:
+    db_ip: "{{ vars[db_prefix][biz_db_key].ip }}"
+    db_username: "{{ vars[db_prefix][biz_db_key].username }}"
+    db_password: "{{ vars[db_prefix][biz_db_key].password }}"
+    db_database: "{{ item.database }}"
+    db_dir: "{{ sql_path }}"
+  when: item.depend_key is not none
+
+- set_fact:
+    db_port: "{{ 3306 if db_username == 'cetus' else vars[db_prefix][biz_db_key].port }}"
+  when: item.depend_key is not none
+
+- name: 检查数据库连接
+  connection: local
+  shell: mysql -h {{ db_ip }} -P {{ db_port }} -u {{ db_username }} -p{{ db_password }} -e "show databases;"
+  ignore_errors: true
+  register: connect_db_output
+
+- name: 输出数据库连接信息
+  fail:
+    msg: "数据库连接失败，连接命令：mysql -h {{ db_ip }} -P {{ db_port }} -u {{ db_username }} -p{{ db_password }}"
+  when: connect_db_output.rc > 0
+
+- name: 检查数据库是否存在
+  connection: local
+  shell: "mysql -h {{ db_ip }} -P {{ db_port }} -u root -p{{ db_password }} -e 'use {{ db_database }};'"
+  register: check_db_result
+  ignore_errors: true
+
+- name: 执行{{ app_type }}数据库初始化
+  connection: local
+  run_once: true
+  command: "bash {{ file_path }}/db_init.sh --host={{ db_ip }} --port={{ db_port }} --user=root --password={{ db_password }} --database={{db_database}} --dir={{ db_dir }}"
+  when: connect_db_output.rc == 0 and check_db_result.rc != 0
+
+- block:
+    - name: 检查更新sql是否存在
+      connection: local
+      stat:
+        path: "{{ db_dir }}/{{ app_type }}_init_update.sql.j2"
+      register: update_sql_exists
+
+    - name: 复制update sql
+      connection: local
+      run_once: true
+      template: src={{ db_dir }}/{{ app_type }}_init_update.sql.j2 dest={{ db_dir }}/{{ app_type }}_init_update.sql
+      when: update_sql_exists.stat.exists
+
+  when: app_type not in ['eUrbanMIS','eUrbanUMA','eUrbanMF','eUrbanSG']
+
+- block:
+    - name: 检查更新sql是否存在
+      connection: local
+      stat:
+        path: "{{ db_dir }}/common_init_update.sql.j2"
+      register: common_update_sql_exists
+
+    - name: 复制update sql
+      connection: local
+      run_once: true
+      template: src={{ db_dir }}/common_init_update.sql.j2 dest={{ db_dir }}/{{ app_type }}_init_update.sql
+      when: common_update_sql_exists.stat.exists
+
+  when: app_type in ['eUrbanMIS','eUrbanUMA','eUrbanMF','eUrbanSG']
+
+- name: 更新数据库配置
+  connection: local
+  run_once: true
+  command: "bash {{ file_path }}/db_init.sh --host={{ db_ip }} --port={{ db_port }} --user=root --password={{ db_password }} --database={{db_database}} --dir={{ db_dir }}"
+  ignore_errors: true
+  when: app_type not in ['eUrbanMIS','eUrbanUMA','eUrbanMF','eUrbanSG'] and update_sql_exists.stat.exists
+
+- name: 更新数据库配置
+  connection: local
+  run_once: true
+  command: "bash {{ file_path }}/db_init.sh --host={{ db_ip }} --port={{ db_port }} --user=root --password={{ db_password }} --database={{db_database}} --dir={{ db_dir }}"
+  ignore_errors: true
+  when:  app_type  in ['eUrbanMIS','eUrbanUMA','eUrbanMF','eUrbanSG'] and common_update_sql_exists.stat.exists

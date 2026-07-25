@@ -1,0 +1,105 @@
+{
+  "name": "pagination-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 分页规范，包含基础分页、高级分页（每页条数 + 跳转）、迷你分页",
+
+  "basic": {
+    "description": "基础分页 = 总条目 + 页码按钮 + 左右箭头",
+    "total": {
+      "format": "共 N 条",
+      "font_size": "14px",
+      "color": "#6B7A99",
+      "margin_right_to_pagination": "8px"
+    },
+    "page_button": {
+      "size": "32×32px",
+      "border_radius": "4px",
+      "border": "1px solid #DDE1EB",
+      "font_size": "14px",
+      "color_default": "#223355",
+      "states": {
+        "hover":   { "border": "#3388FF", "color": "#3388FF" },
+        "active":  { "border": "#3388FF", "color": "#3388FF" },
+        "disabled":{ "border": "#E9ECF2", "color": "#C0C7D6", "cursor": "not-allowed" }
+      }
+    },
+    "arrow_icon": {
+      "size": "14×14px",
+      "style": "线状",
+      "color": "随按钮文字"
+    },
+    "ellipsis": {
+      "symbol": "···",
+      "color": "#6B7A99",
+      "clickable": false
+    },
+    "gap_between_buttons": "6px"
+  },
+
+  "advanced": {
+    "description": "高级分页 = 基础分页 + 每页条数下拉 + 跳至页输入框",
+    "size_select": {
+      "height": "32px",
+      "border_radius": "4px",
+      "border": "1px solid #DDE1EB",
+      "options": ["10 条/页", "20 条/页", "50 条/页", "100 条/页"],
+      "focus_border": "#3388FF",
+      "arrow_style": "右侧 10×6px 下拉箭头，颜色 #6B7A99，使用伪元素绘制（避免与原生 select 样式冲突）"
+    },
+    "jumper": {
+      "format": "跳至 [输入框] 页",
+      "input": {
+        "size": "52×32px",
+        "border_radius": "4px",
+        "border": "1px solid #DDE1EB",
+        "text_align": "center",
+        "focus_border": "#3388FF"
+      },
+      "label_color": "#6B7A99"
+    }
+  },
+
+  "mini": {
+    "description": "迷你分页 = 左箭头 + 当前页输入框 + / + 总页数 + 右箭头",
+    "arrow": {
+      "size": "28×28px（无边框）",
+      "icon_size": "12×12px",
+      "icon_color": "#223355",
+      "states": {
+        "hover":    { "color": "#3388FF" },
+        "disabled": { "color": "#C0C7D6", "cursor": "not-allowed" }
+      }
+    },
+    "current_input": {
+      "size": "28×28px（正方形）",
+      "border": "1px solid #DDE1EB",
+      "border_radius": "4px",
+      "color": "#3388FF",
+      "text_align": "center",
+      "focus_border": "#3388FF"
+    },
+    "separator": {
+      "symbol": "/",
+      "color": "#6B7A99"
+    },
+    "total_page": {
+      "color": "#223355"
+    },
+    "gap": "8px"
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "原生 <select> 的下拉箭头无法用纯 CSS 修改，导致与设计稿不符",
+      "fix": "select 设置 appearance: none，外层包 .pg-size-wrap，使用 ::after 伪元素绘制自定义箭头"
+    },
+    {
+      "issue": "迷你分页箭头若加边框会与紧凑布局视觉冲突",
+      "fix": "迷你分页箭头按钮无边框，仅用图标颜色变化表达交互态"
+    },
+    {
+      "issue": "迷你分页当前页输入框做成长方形会与单数字时不协调",
+      "fix": "当前页输入框为 28×28px 正方形，居中显示数字"
+    }
+  ]
+}

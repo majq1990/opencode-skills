@@ -1,0 +1,114 @@
+  # backend
+  {% for config in proxy_config %}
+  location {{ config.source }} {
+    {% if 'http://' in config.destination or 'https://' in config.destination %}
+      proxy_pass {{ config.destination }};
+    {% else %}
+      proxy_pass http://srvs_{{ app_type }}_backend{{ config.destination }};
+    {% endif %}
+    proxy_redirect default;
+    proxy_connect_timeout 5;
+    send_timeout 10;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $http_host;
+    proxy_set_header Cookie $new_cookie;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Real-IP  $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_hide_header X-Powered-By;
+    proxy_hide_header Server;
+    gzip on;
+    gzip_min_length 1k;
+    gzip_comp_level 4;
+    gzip_types application/json;
+    gzip_vary off;
+    {% if 'linglong-api' in config.destination %}
+       proxy_set_header Range $http_range;
+       proxy_set_header If-Range $http_if_range;
+    {% endif %}
+    {% if 'media-api' in config.destination %}
+    proxy_set_header Range $http_range;
+    proxy_set_header If-Range $http_if_range;
+    add_header Accept-Ranges bytes;
+    {% endif %}
+    {% if 'xuanzang/files' in config.destination %}
+       proxy_hide_header Content-Type;
+       proxy_hide_header X-Content-Type-Options;
+    {% endif %}
+    add_header Cache-Control max-age=0;
+   }
+
+{% if 'linglong-api' in config.destination %}
+    location ^~ /linglong-api/stomp-websocket {
+    proxy_pass http://srvs_{{ app_type }}_backend{{ config.destination }}/stomp-websocket;
+    proxy_redirect default;
+    proxy_connect_timeout 5;
+    send_timeout 20;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Real-IP  $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_hide_header X-Powered-By;
+    proxy_hide_header Server;
+    # 移动端视频预览
+    proxy_set_header Range $http_range;
+    proxy_set_header If-Range $http_if_range;
+    client_max_body_size   500m;
+    gzip on;
+    gzip_min_length 1k;
+    gzip_comp_level 4;
+    gzip_types application/json;
+    gzip_vary off;
+
+  }
+  location ~ ^/linglong-api/unity/establish/file/(.*)/(preview-thumbnail|preview-video|download) {
+         proxy_pass http://srvs_{{ app_type }}_backend{{ config.destination }}/unity/establish/file/$1/$2?$args;
+         proxy_connect_timeout 5;
+         send_timeout 10;
+         proxy_http_version 1.1;
+         proxy_set_header Upgrade $http_upgrade;
+         proxy_set_header Connection "upgrade";
+         proxy_set_header Host $http_host;
+         proxy_set_header Cookie $new_cookie;
+         proxy_set_header X-Forwarded-Proto $scheme;
+         proxy_set_header X-Real-IP $remote_addr;
+         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+         proxy_hide_header X-Powered-By;
+         proxy_hide_header Server;
+         proxy_hide_header Pragma;
+         proxy_hide_header Expires;
+         proxy_hide_header Cache-Control;
+         add_header Cache-Control max-age=36000;  # 设置缓存时间为10小时
+         proxy_cookie_path /sso /linglong-api;
+         proxy_cookie_flags ~ nosecure samesite=strict;
+  }
+
+  location ~ ^/linglong-api/free/login/(.*)/preview {
+           proxy_pass http://srvs_{{ app_type }}_backend{{ config.destination }}/free/login/$1/preview?$args;
+           proxy_connect_timeout 5;
+           send_timeout 10;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection "upgrade";
+           proxy_set_header Host $http_host;
+           proxy_set_header Cookie $new_cookie;
+           proxy_set_header X-Forwarded-Proto $scheme;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_hide_header X-Powered-By;
+           proxy_hide_header Server;
+           proxy_hide_header Pragma;
+           proxy_hide_header Expires;
+           proxy_hide_header Cache-Control;
+           add_header Cache-Control max-age=36000;
+           proxy_cookie_path /sso /linglong-api;
+           proxy_cookie_flags ~ nosecure samesite=strict;
+  }
+  {% endif %}
+
+  {% endfor %}

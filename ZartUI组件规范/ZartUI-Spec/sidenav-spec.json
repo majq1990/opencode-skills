@@ -1,0 +1,116 @@
+{
+  "name": "sidenav-spec",
+  "version": "1.2.0",
+  "description": "ZartUI 侧边导航规范（页面内 SideNav，三级菜单），用于业务页面左侧导航",
+
+  "container": {
+    "width": "200px",
+    "background": "#FFFFFF",
+    "border_right": "1px solid #E9ECF2",
+    "display": "flex",
+    "flex_direction": "column",
+    "padding": "12px 8px",
+    "overflow_y": "auto"
+  },
+
+  "menu_item_common": {
+    "height": "36px",
+    "padding": "0 8px",
+    "border_radius": "4px",
+    "font_size": "14px",
+    "icon_text_gap": "8px",
+    "white_space": "nowrap",
+    "transition": "background 0.15s",
+    "states": {
+      "default": { "background": "transparent" },
+      "hover":   { "background": "#F5F7FA" },
+      "active":  { "background": "#F0F9FF", "text_color": "#3388FF", "icon_color": "#3388FF" }
+    }
+  },
+
+  "level_1": {
+    "description": "一级菜单：左侧线状图标 + 文字 + 可选下拉箭头。展开子菜单时一级项本身不显示选中态，选中态仅加在实际激活的子菜单项上",
+    "active_rule": "一级菜单有子菜单时，自身永远不进入 active 状态；无子菜单时（叶子节点）才使用 active 态",
+    "icon": {
+      "size": "16×16px",
+      "style": "线状（fill: none, stroke: currentColor）",
+      "stroke_width": "1.5px",
+      "stroke_linecap": "round",
+      "stroke_linejoin": "round",
+      "color_default": "#223355",
+      "color_active": "#3388FF"
+    },
+    "text": {
+      "color_default": "#223355",
+      "color_active": "#3388FF"
+    },
+    "padding_left": "8px",
+    "text_start_x": "32px（= padding 8 + icon 16 + gap 8）"
+  },
+
+  "level_2": {
+    "description": "二级菜单：无图标，文字相对一级再缩进 8px。选中态由此级承载",
+    "padding_left": "40px（= 32 + 8）",
+    "text": {
+      "color_default": "#6B7A99",
+      "color_hover": "#223355",
+      "color_active": "#3388FF"
+    }
+  },
+
+  "level_3": {
+    "description": "三级菜单：无图标，相对二级再缩进 8px",
+    "padding_left": "48px（= 40 + 8）",
+    "text": {
+      "color_default": "#6B7A99",
+      "color_active": "#3388FF"
+    }
+  },
+
+  "expand_arrow": {
+    "description": "可展开节点右侧显示下拉箭头，margin-left: auto 推到最右",
+    "size": "16×16px",
+    "color": "#6B7A99",
+    "stroke_width": "1.5px",
+    "open_transform": "rotate(180deg)",
+    "transition": "0.2s"
+  },
+
+  "spacing": {
+    "description": "菜单组之间 8px，子菜单展开时与一级项之间 8px",
+    "group_gap": "相邻兄弟选择器 .nav-group + .nav-group { margin-top: 8px }",
+    "submenu_gap": "展开时 .nav-group.is-open > .nav-submenu { margin-top: 8px }，收起时 margin-top: 0",
+    "level2_gap": ".nav-item-l2 + .nav-item-l2 { margin-top: 8px }",
+    "note": "不使用 flex gap，避免子菜单折叠时父子之间出现空白"
+  },
+
+  "submenu_animation": {
+    "description": "子菜单展开/收起动画",
+    "method": "max-height 过渡（0 → 600px），overflow: hidden",
+    "transition": "max-height 0.25s ease",
+    "open_margin_top": "8px（展开时生效，收起时为 0）"
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "用 flex gap 控制菜单项间距，子菜单收起时父子之间会留出空白",
+      "fix": "改用相邻兄弟选择器 + margin-top，子菜单的 margin-top 仅在 is-open 状态下设置"
+    },
+    {
+      "issue": "二三级菜单缩进直接用 margin-left 会导致 hover 背景不延伸到左侧",
+      "fix": "用 padding-left 实现缩进，让背景色覆盖整行"
+    },
+    {
+      "issue": "选中态只改文字色未改图标色",
+      "fix": "选中态同时设置图标 stroke 为 #3388FF"
+    },
+    {
+      "issue": "一级菜单与展开的二级菜单之间没有间距",
+      "fix": ".nav-group.is-open > .nav-submenu { margin-top: 8px }，收起时 margin-top: 0 避免动画抖动"
+    },
+    {
+      "issue": "有子菜单的一级项被误加 active 选中态",
+      "fix": "有子菜单的一级项仅控制展开/收起，不添加 active class；active 只加在实际选中的子菜单项上"
+    }
+  ]
+}

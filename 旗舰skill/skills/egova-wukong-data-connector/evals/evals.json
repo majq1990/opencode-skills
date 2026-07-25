@@ -1,0 +1,35 @@
+{
+  "skill_name": "egova-screen-data-connector",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "展示近7天每个区的案件上报数",
+      "expected_output": "应先检索悟能索引；当前索引未命中案件接口时，说明只是当前索引未找到可确认接口，不暗示只支持车辆；推荐柱状图或排行 result 格式 [{\"name\":\"某区\",\"value\":35}]；不要把‘近7天’和‘每个区’重复列为需求待确认；按已有接口/有表查询逻辑/无明确数据源分支输出接口联调补充。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "悟空大屏要做车辆类型分布，组件静态数据是 [{\"name\":\"垃圾车\",\"value\":1055}]，帮我对接悟能接口并给过滤脚本",
+      "expected_output": "应命中车辆类型分组接口，输出接口名称、POST、接口地址 /api/cgdb/vehicle/group、星桥接口路径地址、字段映射和 ES5 function filter(data)；脚本默认处理 result 本体，不访问 data.result、data.totalCount 或 data.hasError。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "已有接口返回：{\"hasError\":false,\"result\":[{\"areaName\":\"鹿城区\",\"reportCount\":12},{\"areaName\":\"龙湾区\",\"reportCount\":8}],\"message\":null,\"tag\":null,\"totalCount\":2}。悟空柱状图需要 [{\"name\":\"鹿城区\",\"value\":12}]，帮我写映射和过滤脚本。",
+      "expected_output": "可跳过悟能接口初筛；字段映射 areaName -> name、reportCount -> value；说明 filter(data) 默认接收外层 result 数组；生成 ES5 脚本且不访问 data.result、data.totalCount 或 data.hasError。",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "查询当天的案件上报数，处置数，办结数",
+      "expected_output": "应先检索悟能索引并读取案件指标统计接口详情；命中 REC_INDEX_SUMMARY 时，用 knowledge/record_index_metrics.md 确认 report=上报数、dispose=处置数、archive=办结数/结案数；推荐多指标卡 result 格式；请求 groupList 包含 report、dispose、archive，并按当天 00:00:00 到 23:59:59 设置 startTimestamp/endTimestamp；输出字段映射和 ES5 function filter(data)，不得假设 reportCount、disposeCount、finishCount 等不存在的返回字段。",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "过滤查询某个部门、某个车辆类型的车辆分页怎么对接",
+      "expected_output": "应命中车辆分页查询接口并读取 `knowledge/api_details/VEHICLE_PAGE.md`；详细文档已提供 `condition.unitId`、`condition.unitExtendFlag`、`condition.vehicleTypeId`、`condition.vehicleTypeIds`、`paging.pageIndex`、`paging.pageSize` 和外层 `totalCount`，但用户未确认部门是否包含下级、车辆类型单选/多选、分页组件是否需要完整响应包绑定 `totalCount`，这些会改变请求体或过滤脚本返回形态，应停在 Gate 0 的“需求待确认”；不得输出完整结论方案、映射或过滤脚本；不得把这些关键业务选择放到最终“需要核对的内容”。",
+      "files": []
+    }
+  ]
+}

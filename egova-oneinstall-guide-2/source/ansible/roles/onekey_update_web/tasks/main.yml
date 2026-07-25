@@ -1,0 +1,35 @@
+- name: 确认应用类型目录存在
+  connection: local
+  stat:
+    path: "{{ deploy_update_path }}/{{ app_name }}"
+  register: app_type_dir
+
+- name: 跳过更新，如果应用类型目录不存在
+  debug:
+    msg: "{{ app_name }} 未找到，跳过"
+  when: not app_type_dir.stat.exists
+
+- name: 检查备份目录是否存在
+  stat:
+    path: "{{ deploy_update_path }}/backup_{{ timestamp }}/{{ app_name }}"
+  register: dir_backup_stat
+
+- name: 创建备份目录
+  file: name={{ item.dir }} state=directory
+  with_items:
+    - { dir: "{{ deploy_update_path }}/backup_{{ timestamp }}/{{ app_name }}/WEB-INF/lib/",mode: "0775" }
+    - { dir: "{{ deploy_web_path }}/{{ app_name }}/view",mode: "0775" }
+  when: not dir_backup_stat.stat.exists
+
+
+- name: 开始更新后端 jar 文件
+  include_tasks: update_jar.yml
+  when: app_type_dir.stat.exists and jar_files is not undefined
+
+- name: 开始更新前端 view 文件
+  include_tasks: update_view.yml
+  when: app_type_dir.stat.exists and (dir_paths is not undefined or file_paths is not undefined)
+
+- name: 开始更新微服务
+  include_tasks: update_microservice.yml
+  when: deploy_path is not undefined

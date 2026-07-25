@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 表格搜索</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacFilterFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 16px; margin-top: 32px; }
+h3 { font-size: 13px; color: #6B7A99; font-weight: 400; margin-bottom: 16px; margin-top: 4px; }
+.section { background: #FFFFFF; border-radius: 8px; margin-bottom: 24px; overflow: hidden; }
+
+/* ===================== 全圆角按钮 ===================== */
+.z-pill-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 16px;
+  border-radius: 100px;
+  border: 1px solid #DDE1EB;
+  background: #FFFFFF;
+  font-size: 14px; color: #223355;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+.z-pill-btn:hover { background: #F0F9FF; border-color: #3388FF; color: #3388FF; }
+.z-pill-btn.is-primary { color: #3388FF; }
+.z-pill-btn.is-primary:hover { background: #F0F9FF; border-color: #3388FF; }
+.z-pill-btn.is-active { background: #F0F9FF; border-color: #3388FF; color: #3388FF; }
+.z-pill-btn--danger:hover { background: #FFF4F0; border-color: #FF4433; color: #FF4433; }
+
+/* ===================== 矩形按钮 ===================== */
+.z-rect-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 32px; padding: 0 16px;
+  border-radius: 4px;
+  border: 1px solid #DDE1EB;
+  background: #FFFFFF;
+  font-size: 14px; color: #223355;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+.z-rect-btn:hover { background: #F0F9FF; border-color: #3388FF; color: #3388FF; }
+.z-rect-btn.is-primary { background: #3388FF; border-color: #3388FF; color: #FFFFFF; }
+.z-rect-btn.is-primary:hover { background: #5CA5FF; border-color: #5CA5FF; }
+
+/* ===================== 表格工具栏 ===================== */
+.z-table-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #F5F7FA;
+}
+.z-toolbar-left  { display: flex; align-items: center; gap: 8px; }
+.z-toolbar-right { display: flex; align-items: center; gap: 8px; }
+
+/* ===================== 常规搜索框 ===================== */
+.z-search-input {
+  display: inline-flex; align-items: center;
+  height: 32px; padding: 0 0 0 12px;
+  border-radius: 16px; border: 1px solid #DDE1EB;
+  background: #FFFFFF; transition: border-color .15s;
+  position: relative;
+}
+.z-search-input:focus-within { border-color: #3388FF; }
+.z-search-input input {
+  border: none; outline: none;
+  font-size: 14px; color: #223355;
+  background: transparent; width: 344px; padding-right: 44px;
+}
+.z-search-input input::placeholder { color: #A8B4C8; }
+.z-search-divider {
+  position: absolute; right: 44px; top: 0; bottom: 0;
+  width: 1px; background: #DDE1EB;
+}
+.z-search-icon {
+  position: absolute; right: 15px;
+  color: #A8B4C8; cursor: pointer;
+}
+
+/* ===================== 内联筛选控件（水平表单规范） ===================== */
+
+/* 水平表单行：标题在左，控件在右 */
+.z-inline-form-row {
+  display: flex; align-items: center; gap: 20px;
+  flex-wrap: wrap;
+}
+.z-inline-form-item {
+  display: flex; align-items: center; flex-shrink: 0;
+}
+.z-inline-form-label {
+  height: 32px; display: flex; align-items: center;
+  font-size: 14px; color: #223355; white-space: nowrap;
+  flex-shrink: 0; margin-right: 8px;
+}
+.z-inline-form-label::after { content: '：'; }
+
+/* 自定义下拉触发框 — select-spec 单选触发框 */
+.z-sel {
+  position: relative; flex-shrink: 0; min-width: 120px; max-width: 280px;
+  user-select: none;
+}
+.z-sel-trigger {
+  height: 32px; padding: 0 32px 0 8px;
+  border-radius: 4px; border: 1px solid #DDE1EB;
+  background: #FFFFFF; font-size: 14px; color: #A8B4C8;
+  cursor: pointer; display: flex; align-items: center;
+  transition: border-color .15s, box-shadow .15s;
+  white-space: nowrap;
+}
+.z-sel-trigger.has-value { color: #223355; }
+.z-sel-trigger:hover { border-color: #3388FF; }
+.z-sel.is-open .z-sel-trigger { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+.z-sel-chevron {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; color: #A8B4C8;
+  transition: transform .2s, color .15s;
+}
+.z-sel.is-open .z-sel-chevron { transform: translateY(-50%) rotate(180deg); color: #3388FF; }
+.z-sel-clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  display: none; align-items: center; justify-content: center;
+  width: 16px; height: 16px; cursor: pointer;
+  color: #A8B4C8; transition: opacity .15s;
+}
+.z-sel-clear:hover { opacity: 0.75; }
+.z-sel.has-value:hover .z-sel-clear { display: flex; }
+.z-sel.has-value:hover .z-sel-chevron { display: none; }
+
+/* 下拉面板 — select-spec panel */
+.z-sel-panel {
+  display: none;
+  position: fixed;
+  background: #FFFFFF;
+  border-radius: 8px;
+  box-shadow: 0 2px 20px 0 rgba(34,51,85,0.16);
+  padding: 8px;
+  z-index: 3000;
+  min-width: 120px;
+}
+.z-sel.is-open .z-sel-panel { display: block; }
+
+/* 选项 — select-spec option */
+.z-sel-option {
+  height: 40px; padding: 0 8px;
+  border-radius: 4px; font-size: 14px; color: #223355;
+  display: flex; align-items: center; cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.z-sel-option:hover    { background: #F5F7FA; }
+.z-sel-option.selected { background: #F0F9FF; }
+
+/* 输入框 — formitem-spec input */
+.z-inline-input {
+  height: 32px; padding: 0 8px;
+  border-radius: 4px; border: 1px solid #DDE1EB;
+  background: #FFFFFF; font-size: 14px; color: #223355;
+  outline: none; max-width: 280px; min-width: 160px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.z-inline-input::placeholder { color: #A8B4C8; }
+.z-inline-input:hover { border-color: #3388FF; }
+.z-inline-input:focus { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+
+/* ===================== 表格 ===================== */
+.z-table-placeholder { padding: 0 20px 20px; }
+.z-table-placeholder table {
+  width: 100%; border-collapse: collapse;
+  font-size: 14px; color: #223355;
+}
+.z-table-placeholder thead tr {
+  height: 40px; background: #F5F7FA;
+  border-top: 1px solid #DDE1EB; border-bottom: 1px solid #DDE1EB;
+}
+.z-table-placeholder thead th {
+  text-align: left; padding: 0 12px;
+  font-size: 14px; font-weight: 400; color: #223355;
+  position: relative;
+}
+.z-table-placeholder thead th:not(:first-child)::before {
+  content: ''; position: absolute;
+  left: 4px; top: 50%; transform: translateY(-50%);
+  width: 1px; height: 16px; background: #E9ECF2;
+}
+.z-table-placeholder tbody tr {
+  height: 48px; border-bottom: 1px solid #DDE1EB;
+}
+.z-table-placeholder tbody tr:first-child { border-top: 1px solid #DDE1EB; }
+.z-table-placeholder tbody tr:hover { background: #F5F7FA; }
+.z-table-placeholder tbody td { padding: 0 12px; }
+
+/* ===================== 已选条件栏 ===================== */
+.z-filter-bar {
+  display: none; align-items: center; flex-wrap: wrap;
+  gap: 8px; padding: 8px 20px;
+  border-bottom: 1px solid #F5F7FA;
+}
+.z-filter-bar.is-visible { display: flex; }
+.z-filter-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 10px;
+  background: #F5F7FA; border-radius: 4px;
+  font-size: 14px; white-space: nowrap;
+}
+.z-filter-tag-label { color: #6B7A99; }
+.z-filter-tag-val   { color: #223355; }
+.z-filter-tag-del {
+  width: 14px; height: 14px;
+  display: flex; align-items: center; justify-content: center;
+  color: #A8B4C8; cursor: pointer; flex-shrink: 0;
+  transition: color .15s;
+}
+.z-filter-tag-del:hover { color: #FF4433; }
+.z-filter-bar-clear {
+  font-size: 13px; color: #3388FF; cursor: pointer;
+  white-space: nowrap; flex-shrink: 0; transition: color .15s;
+}
+.z-filter-bar-clear:hover { color: #2167D9; }
+
+/* ===================== 抽屉遮罩 ===================== */
+.z-drawer-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.3); z-index: 1000;
+}
+.z-drawer-overlay.is-open { display: block; }
+
+/* ===================== 高级搜索抽屉 ===================== */
+.z-search-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 400px;
+  background: #FFFFFF;
+  box-shadow: -4px 0 24px rgba(0,67,202,0.1);
+  display: flex; flex-direction: column;
+  z-index: 1001;
+  transform: translateX(100%); transition: transform 0.25s ease;
+}
+.z-search-drawer.is-open { transform: translateX(0); }
+
+.z-drawer-header {
+  height: 56px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px; border-bottom: 1px solid #F5F7FA;
+}
+.z-drawer-title { font-size: 14px; font-weight: 500; color: #081126; }
+.z-drawer-close {
+  width: 28px; height: 28px; border: none; background: transparent;
+  color: #A8B4C8; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: color .15s, background .15s;
+}
+.z-drawer-close:hover { color: #6B7A99; background: #F5F7FA; }
+
+.z-search-drawer-body {
+  flex: 1; overflow-y: auto; padding: 20px;
+}
+.z-search-drawer-body::-webkit-scrollbar { width: 4px; }
+.z-search-drawer-body::-webkit-scrollbar-track { background: transparent; }
+.z-search-drawer-body::-webkit-scrollbar-thumb { background: #DDE1EB; border-radius: 2px; }
+
+/* 表单项 */
+.z-form-item {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-bottom: 20px;
+}
+.z-form-item:last-child { margin-bottom: 0; }
+.z-form-label { font-size: 14px; color: #223355; line-height: 1; }
+.z-form-label::after { content: '：'; }
+
+/* 输入框 */
+.z-form-input {
+  width: 100%; height: 32px;
+  border: 1px solid #DDE1EB; border-radius: 4px;
+  padding: 0 8px; font-size: 14px; color: #223355;
+  background: #FFFFFF; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  box-sizing: border-box;
+}
+.z-form-input::placeholder { color: #A8B4C8; }
+.z-form-input:hover  { border-color: #3388FF; }
+.z-form-input:focus  { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+
+/* 下拉选择框 */
+.z-form-select-wrap { position: relative; width: 100%; }
+.z-form-select {
+  width: 100%; height: 32px;
+  border: 1px solid #DDE1EB; border-radius: 4px;
+  padding: 0 32px 0 8px; font-size: 14px;
+  background: #FFFFFF; outline: none; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  transition: border-color .15s, box-shadow .15s;
+  box-sizing: border-box;
+}
+.z-form-select.is-placeholder { color: #A8B4C8; }
+.z-form-select option { color: #223355; }
+.z-form-select:hover  { border-color: #3388FF; }
+.z-form-select:focus  { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+.z-form-chevron {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; color: #A8B4C8; transition: transform .2s, color .15s;
+}
+.z-form-select:focus + .z-form-chevron { color: #3388FF; }
+
+/* 日期范围 */
+.z-date-range { display: flex; align-items: center; gap: 8px; }
+.z-date-range-input {
+  flex: 1; height: 32px;
+  border: 1px solid #DDE1EB; border-radius: 4px;
+  padding: 0 8px 0 12px; font-size: 14px; color: #223355;
+  background: #FFFFFF; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  box-sizing: border-box; min-width: 0;
+}
+.z-date-range-input::placeholder { color: #A8B4C8; }
+.z-date-range-input:hover { border-color: #3388FF; }
+.z-date-range-input:focus { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+.z-date-range-sep { color: #A8B4C8; font-size: 14px; flex-shrink: 0; }
+
+/* ===================== 平铺搜索区 ===================== */
+.z-flat-search {
+  padding: 16px 20px 0;
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.z-flat-search-row {
+  display: flex; align-items: center; flex-wrap: nowrap;
+  column-gap: 40px; row-gap: 20px; overflow: hidden; flex: 1;
+}
+.z-flat-search-row.is-expanded { flex-wrap: wrap; overflow: visible; }
+.z-flat-search-item {
+  display: flex; align-items: center; flex-shrink: 0; width: 300px;
+}
+.z-flat-search-label {
+  height: 32px; display: flex; align-items: center;
+  font-size: 14px; color: #223355; white-space: nowrap;
+  flex-shrink: 0; margin-right: 8px; width: 100px;
+}
+.z-flat-search-label::after { content: '：'; }
+.z-flat-search-actions {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+/* 展开/收起图标按钮 */
+.z-expand-btn {
+  display: inline-flex; align-items: center;
+  width: 32px; height: 32px;
+  background: transparent; border: none;
+  color: #6B7A99; cursor: pointer;
+  flex-shrink: 0; transition: color .15s;
+  justify-content: center;
+}
+.z-expand-btn:hover { color: #223355; }
+.z-expand-btn svg { transition: transform .2s; }
+.z-expand-btn.is-expanded svg { transform: rotate(180deg); }
+
+/* 第6个起的扩展条件：默认隐藏，展开后显示 */
+.z-flat-extra { display: none; }
+.z-flat-search-row.is-expanded .z-flat-extra { display: flex; }
+
+/* 平铺条件内控件宽度撑满 */
+.z-flat-search-item .z-inline-input,
+.z-flat-search-item .z-sel { flex: 1; min-width: 0; max-width: none; }
+.z-flat-search-item .z-sel-trigger { width: 100%; }
+
+/* 贯穿间隔线 */
+.z-flat-divider {
+  margin: 12px 20px;
+  height: 1px; background: #E9ECF2;
+}
+
+/* 工具栏（操作按钮行） */
+.z-flat-toolbar {
+  display: flex; align-items: center;
+  padding: 0 20px 16px;
+  gap: 8px;
+}
+  flex-shrink: 0; height: 64px;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 20px; gap: 8px;
+  border-top: 1px solid #F5F7FA;
+}
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 表格搜索</h1>
+<p class="page-desc">两种搜索形态：操作按钮右侧内联筛选 / 高级查询抽屉</p>
+
+<!-- ============================================================ -->
+<h2>形态一：操作按钮右侧内联筛选</h2>
+<h3>适用场景：操作按钮 ≤ 6 个且按钮文字较短，筛选项 ≤ 2 个。选择类筛选项可实时过滤，有输入类时显示查询/重置按钮。</h3>
+
+<!-- ── 变体 1：纯选择类，实时筛选，无查询重置 ── -->
+<h2 style="font-size:13px;color:#6B7A99;font-weight:400;margin-top:0;margin-bottom:12px;">变体 1：纯选择类 — 实时筛选，无查询/重置按钮</h2>
+<div class="section">
+  <div class="z-table-toolbar">
+    <div class="z-toolbar-left">
+      <button class="z-pill-btn is-primary">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        新增案件
+      </button>
+      <button class="z-pill-btn">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 9V2M4.5 4.5L7 2l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 11h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        导出
+      </button>
+    </div>
+    <div class="z-toolbar-right">
+      <div class="z-inline-form-row">
+        <div class="z-inline-form-item">
+          <span class="z-inline-form-label">签收状态</span>
+          <div class="z-sel" id="sel-status-1">
+            <div class="z-sel-trigger" onclick="toggleSel('sel-status-1')">请选择</div>
+            <svg class="z-sel-clear" onclick="clearSel('sel-status-1',filterTable1)" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" fill="#A8B4C8"/>
+              <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            <svg class="z-sel-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="z-sel-panel">
+              <div class="z-sel-option" onclick="selectOpt('sel-status-1','已签收',filterTable1)">已签收</div>
+              <div class="z-sel-option" onclick="selectOpt('sel-status-1','待签收',filterTable1)">待签收</div>
+              <div class="z-sel-option" onclick="selectOpt('sel-status-1','已拒收',filterTable1)">已拒收</div>
+            </div>
+          </div>
+        </div>
+        <div class="z-inline-form-item">
+          <span class="z-inline-form-label">案件类型</span>
+          <div class="z-sel" id="sel-type-1">
+            <div class="z-sel-trigger" onclick="toggleSel('sel-type-1')">请选择</div>
+            <svg class="z-sel-clear" onclick="clearSel('sel-type-1',filterTable1)" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" fill="#A8B4C8"/>
+              <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            <svg class="z-sel-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="z-sel-panel">
+              <div class="z-sel-option" onclick="selectOpt('sel-type-1','环境卫生',filterTable1)">环境卫生</div>
+              <div class="z-sel-option" onclick="selectOpt('sel-type-1','道路交通',filterTable1)">道路交通</div>
+              <div class="z-sel-option" onclick="selectOpt('sel-type-1','市政设施',filterTable1)">市政设施</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="z-table-placeholder">
+    <table>
+      <thead><tr>
+        <th>案件号</th><th>举报人</th><th>签收状态</th><th>案件类型</th><th>操作</th>
+      </tr></thead>
+      <tbody id="table1-body">
+        <tr data-status="已签收" data-type="环境卫生">
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260519001</span></td>
+          <td>章小蕙</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#06A17F;display:inline-block;"></span>已签收</span></td>
+          <td>环境卫生</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+        <tr data-status="待签收" data-type="道路交通">
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260518032</span></td>
+          <td>李建国</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#A8B4C8;display:inline-block;"></span>待签收</span></td>
+          <td>道路交通</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+        <tr data-status="已拒收" data-type="市政设施">
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260517018</span></td>
+          <td>王芳</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#FF4433;display:inline-block;"></span>已拒收</span></td>
+          <td>市政设施</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+        <tr data-status="已签收" data-type="道路交通">
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260516005</span></td>
+          <td>刘伟</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#06A17F;display:inline-block;"></span>已签收</span></td>
+          <td>道路交通</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── 变体 2：含输入类，需查询/重置按钮 ── -->
+<h2 style="font-size:13px;color:#6B7A99;font-weight:400;margin-top:0;margin-bottom:12px;">变体 2：含输入类 — 需查询/重置按钮</h2>
+<div class="section">
+  <div class="z-table-toolbar">
+    <div class="z-toolbar-left">
+      <button class="z-pill-btn is-primary">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        新增案件
+      </button>
+      <button class="z-pill-btn">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 9V2M4.5 4.5L7 2l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 11h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        导出
+      </button>
+    </div>
+    <div class="z-toolbar-right">
+      <div class="z-inline-form-row">
+        <div class="z-inline-form-item">
+          <span class="z-inline-form-label">举报人</span>
+          <input class="z-inline-input" id="inline-reporter-2" type="text" placeholder="请输入">
+        </div>
+        <div class="z-inline-form-item">
+          <span class="z-inline-form-label">签收状态</span>
+          <div class="z-sel" id="sel-status-2">
+            <div class="z-sel-trigger" onclick="toggleSel('sel-status-2')">请选择</div>
+            <svg class="z-sel-clear" onclick="clearSel('sel-status-2')" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" fill="#A8B4C8"/>
+              <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            <svg class="z-sel-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="z-sel-panel">
+              <div class="z-sel-option" onclick="selectOpt('sel-status-2','已签收')">已签收</div>
+              <div class="z-sel-option" onclick="selectOpt('sel-status-2','待签收')">待签收</div>
+              <div class="z-sel-option" onclick="selectOpt('sel-status-2','已拒收')">已拒收</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <button class="z-rect-btn" onclick="resetTable2()">重置</button>
+          <button class="z-rect-btn is-primary" onclick="filterTable2()">查询</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="z-table-placeholder">
+    <table>
+      <thead><tr>
+        <th>案件号</th><th>举报人</th><th>签收状态</th><th>案件类型</th><th>操作</th>
+      </tr></thead>
+      <tbody id="table2-body">
+        <tr data-reporter="章小蕙" data-status="已签收">
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260519001</span></td>
+          <td>章小蕙</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#06A17F;display:inline-block;"></span>已签收</span></td>
+          <td>环境卫生</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+        <tr data-reporter="李建国" data-status="待签收">
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260518032</span></td>
+          <td>李建国</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#A8B4C8;display:inline-block;"></span>待签收</span></td>
+          <td>道路交通</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+        <tr data-reporter="王芳" data-status="已拒收">
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260517018</span></td>
+          <td>王芳</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#FF4433;display:inline-block;"></span>已拒收</span></td>
+          <td>市政设施</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+        <tr data-reporter="刘伟" data-status="已签收">
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260516005</span></td>
+          <td>刘伟</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#06A17F;display:inline-block;"></span>已签收</span></td>
+          <td>道路交通</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>形态三：搜索条件平铺在表格上方</h2>
+<h3>适用场景：不需要高级搜索抽屉，查询条件直接平铺在操作按钮上方；条件间距 40px，默认单行，超出时点击展开图标展开；查询条件与操作按钮之间贯穿间隔线，间距各 12px。</h3>
+<div class="section">
+  <!-- 搜索条件区 -->
+  <div class="z-flat-search">
+    <div class="z-flat-search-row" id="flatSearchRow">
+      <div class="z-flat-search-item">
+        <span class="z-flat-search-label">案件建立时间</span>
+        <input class="z-inline-input" type="text" id="fs-time" placeholder="请选择日期范围" style="flex:1;min-width:0;">
+      </div>
+      <div class="z-flat-search-item">
+        <span class="z-flat-search-label">案件号</span>
+        <input class="z-inline-input" type="text" id="fs-no" placeholder="请输入" style="flex:1;min-width:0;">
+      </div>
+      <div class="z-flat-search-item">
+        <span class="z-flat-search-label">举报人</span>
+        <input class="z-inline-input" type="text" id="fs-reporter" placeholder="请输入" style="flex:1;min-width:0;">
+      </div>
+      <div class="z-flat-search-item">
+        <span class="z-flat-search-label">签收状态</span>
+        <div class="z-sel" id="fs-status" style="flex:1;min-width:0;">
+          <div class="z-sel-trigger" onclick="toggleSel('fs-status')">请选择</div>
+          <svg class="z-sel-clear" onclick="clearSel('fs-status')" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="7" fill="#A8B4C8"/>
+            <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <svg class="z-sel-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="z-sel-panel">
+            <div class="z-sel-option" onclick="selectOpt('fs-status','已签收')">已签收</div>
+            <div class="z-sel-option" onclick="selectOpt('fs-status','待签收')">待签收</div>
+            <div class="z-sel-option" onclick="selectOpt('fs-status','已拒收')">已拒收</div>
+          </div>
+        </div>
+      </div>
+      <div class="z-flat-search-item">
+        <span class="z-flat-search-label">问题来源</span>
+        <div class="z-sel" id="fs-source" style="flex:1;min-width:0;">
+          <div class="z-sel-trigger" onclick="toggleSel('fs-source')">请选择</div>
+          <svg class="z-sel-clear" onclick="clearSel('fs-source')" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="7" fill="#A8B4C8"/>
+            <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <svg class="z-sel-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="z-sel-panel">
+            <div class="z-sel-option" onclick="selectOpt('fs-source','12345热线')">12345热线</div>
+            <div class="z-sel-option" onclick="selectOpt('fs-source','市民投诉')">市民投诉</div>
+            <div class="z-sel-option" onclick="selectOpt('fs-source','网格巡查')">网格巡查</div>
+            <div class="z-sel-option" onclick="selectOpt('fs-source','领导批示')">领导批示</div>
+          </div>
+        </div>
+      </div>
+      <!-- 第6个起为扩展条件，默认隐藏 -->
+      <div class="z-flat-search-item z-flat-extra">
+        <span class="z-flat-search-label">案件类型</span>
+        <div class="z-sel" id="fs-type" style="flex:1;min-width:0;">
+          <div class="z-sel-trigger" onclick="toggleSel('fs-type')">请选择</div>
+          <svg class="z-sel-clear" onclick="clearSel('fs-type')" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="7" fill="#A8B4C8"/>
+            <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <svg class="z-sel-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="z-sel-panel">
+            <div class="z-sel-option" onclick="selectOpt('fs-type','环境卫生')">环境卫生</div>
+            <div class="z-sel-option" onclick="selectOpt('fs-type','道路交通')">道路交通</div>
+            <div class="z-sel-option" onclick="selectOpt('fs-type','市政设施')">市政设施</div>
+            <div class="z-sel-option" onclick="selectOpt('fs-type','城市绿化')">城市绿化</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 操作按钮组（行外固定，始终可见） -->
+    <div class="z-flat-search-actions">
+        <button class="z-expand-btn" id="fsExpandBtn" onclick="toggleFlatSearch()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      <button class="z-rect-btn" onclick="resetFlatSearch()">重置</button>
+      <button class="z-rect-btn is-primary" onclick="queryFlatSearch()">查询</button>
+    </div>
+  </div>
+
+  <!-- 贯穿间隔线 -->
+  <div class="z-flat-divider"></div>
+
+  <!-- 操作按钮工具栏 -->
+  <div class="z-flat-toolbar">
+    <button class="z-pill-btn is-primary">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      新增案件
+    </button>
+    <button class="z-pill-btn">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M7 9V2M4.5 4.5L7 2l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 11h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      导出
+    </button>
+    <button class="z-pill-btn">批量操作</button>
+  </div>
+
+  <div class="z-table-placeholder">
+    <table>
+      <thead><tr>
+        <th>案件建立时间</th><th>案件号</th><th>举报人</th><th>签收状态</th><th>问题来源</th><th>案件类型</th><th>操作</th>
+      </tr></thead>
+      <tbody id="table3-body">
+        <tr>
+          <td>2026-05-19 09:32</td>
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260519001</span></td>
+          <td>章小蕙</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#06A17F;display:inline-block;"></span>已签收</span></td>
+          <td>12345热线</td><td>环境卫生</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+        <tr>
+          <td>2026-05-18 14:20</td>
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260518032</span></td>
+          <td>李建国</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#A8B4C8;display:inline-block;"></span>待签收</span></td>
+          <td>市民投诉</td><td>道路交通</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+        <tr>
+          <td>2026-05-17 16:08</td>
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260517018</span></td>
+          <td>王芳</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#FF4433;display:inline-block;"></span>已拒收</span></td>
+          <td>网格巡查</td><td>市政设施</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>形态二：高级查询抽屉</h2>
+<h3>适用场景：筛选项较多或有复杂条件组合，点击工具栏「高级查询」按钮从右侧滑入抽屉，确定后工具栏按钮高亮，表格上方显示已选条件标签。</h3>
+<div class="section">
+  <div class="z-table-toolbar">
+    <div class="z-toolbar-left">
+      <button class="z-pill-btn is-primary">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        新增案件
+      </button>
+      <button class="z-pill-btn">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 9V2M4.5 4.5L7 2l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 11h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        导出
+      </button>
+    </div>
+    <div class="z-toolbar-right">
+      <!-- 常规搜索框 -->
+      <label class="z-search-input">
+        <input type="text" placeholder="请输入关键字搜索">
+        <span class="z-search-divider"></span>
+        <svg class="z-search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      </label>
+      <button class="z-pill-btn" id="advSearchBtn" onclick="openSearchDrawer()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M1 3h12M3 7h8M5 11h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        高级查询
+      </button>
+    </div>
+  </div>
+
+  <!-- 已选条件栏 -->
+  <div class="z-filter-bar" id="filterBar"></div>
+
+  <div class="z-table-placeholder">
+    <table>
+      <thead><tr>
+        <th>案件建立时间</th><th>案件号</th><th>举报人</th><th>签收状态</th><th>问题来源</th><th>案件类型</th><th>操作</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>2026-05-19 09:32</td>
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260519001</span></td>
+          <td>章小蕙</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#06A17F;display:inline-block;"></span>已签收</span></td>
+          <td>12345热线</td><td>环境卫生</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+        <tr>
+          <td>2026-05-18 14:20</td>
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260518032</span></td>
+          <td>李建国</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#A8B4C8;display:inline-block;"></span>待签收</span></td>
+          <td>市民投诉</td><td>道路交通</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+        <tr>
+          <td>2026-05-17 16:08</td>
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260517018</span></td>
+          <td>王芳</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#FF4433;display:inline-block;"></span>已拒收</span></td>
+          <td>网格巡查</td><td>市政设施</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 遮罩 -->
+<div class="z-drawer-overlay" id="drawerOverlay" onclick="closeSearchDrawer()"></div>
+
+<!-- 高级搜索抽屉 -->
+<div class="z-search-drawer" id="searchDrawer">
+  <div class="z-drawer-header">
+    <span class="z-drawer-title">高级查询</span>
+    <button class="z-drawer-close" onclick="closeSearchDrawer()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="z-search-drawer-body">
+    <div class="z-form-item">
+      <label class="z-form-label">案件建立时间</label>
+      <div class="z-date-range">
+        <input class="z-date-range-input" type="text" id="sq-time-start" placeholder="开始日期">
+        <span class="z-date-range-sep">至</span>
+        <input class="z-date-range-input" type="text" id="sq-time-end" placeholder="结束日期">
+      </div>
+    </div>
+    <div class="z-form-item">
+      <label class="z-form-label">案件号</label>
+      <input class="z-form-input" type="text" id="sq-no" placeholder="请输入案件号">
+    </div>
+    <div class="z-form-item">
+      <label class="z-form-label">举报人</label>
+      <input class="z-form-input" type="text" id="sq-reporter" placeholder="请输入举报人姓名">
+    </div>
+    <div class="z-form-item">
+      <label class="z-form-label">签收状态</label>
+      <div class="z-form-select-wrap">
+        <select class="z-form-select is-placeholder" id="sq-status" onchange="syncSelectPlaceholder(this)">
+          <option value="">请选择</option>
+          <option value="已签收">已签收</option>
+          <option value="待签收">待签收</option>
+          <option value="已拒收">已拒收</option>
+        </select>
+        <svg class="z-form-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="z-form-item">
+      <label class="z-form-label">问题来源</label>
+      <div class="z-form-select-wrap">
+        <select class="z-form-select is-placeholder" id="sq-source" onchange="syncSelectPlaceholder(this)">
+          <option value="">请选择</option>
+          <option value="12345热线">12345热线</option>
+          <option value="市民投诉">市民投诉</option>
+          <option value="网格巡查">网格巡查</option>
+          <option value="领导批示">领导批示</option>
+          <option value="媒体曝光">媒体曝光</option>
+        </select>
+        <svg class="z-form-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="z-form-item">
+      <label class="z-form-label">案件类型</label>
+      <div class="z-form-select-wrap">
+        <select class="z-form-select is-placeholder" id="sq-type" onchange="syncSelectPlaceholder(this)">
+          <option value="">请选择</option>
+          <option value="环境卫生">环境卫生</option>
+          <option value="道路交通">道路交通</option>
+          <option value="市政设施">市政设施</option>
+          <option value="城市绿化">城市绿化</option>
+          <option value="违法建设">违法建设</option>
+        </select>
+        <svg class="z-form-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="z-drawer-footer">
+    <button class="z-rect-btn" onclick="closeSearchDrawer()">取消</button>
+    <button class="z-rect-btn" onclick="resetSearchDrawer()">重置</button>
+    <button class="z-rect-btn is-primary" onclick="applySearch()">确定</button>
+  </div>
+</div>
+
+<script>
+/* ── 自定义下拉组件 ── */
+const selValues = {};
+
+function getSelValue(id) {
+  return selValues[id] || '';
+}
+
+function toggleSel(id) {
+  const el = document.getElementById(id);
+  const isOpen = el.classList.contains('is-open');
+  // 关闭所有已打开的
+  document.querySelectorAll('.z-sel.is-open').forEach(s => s.classList.remove('is-open'));
+  if (!isOpen) {
+    el.classList.add('is-open');
+    // 用 getBoundingClientRect 定位面板
+    const trigger = el.querySelector('.z-sel-trigger');
+    const panel   = el.querySelector('.z-sel-panel');
+    const rect = trigger.getBoundingClientRect();
+    panel.style.top   = (rect.bottom + 4) + 'px';
+    panel.style.left  = rect.left + 'px';
+    panel.style.minWidth = rect.width + 'px';
+  }
+}
+
+function selectOpt(id, value, callback) {
+  selValues[id] = value;
+  const el = document.getElementById(id);
+  const trigger = el.querySelector('.z-sel-trigger');
+  trigger.textContent = value || '请选择';
+  trigger.classList.toggle('has-value', !!value);
+  el.classList.toggle('has-value', !!value);
+  // 标记选中项
+  el.querySelectorAll('.z-sel-option').forEach(opt => {
+    opt.classList.toggle('selected', opt.textContent.trim() === value);
+  });
+  el.classList.remove('is-open');
+  if (typeof callback === 'function') callback();
+}
+
+function clearSel(id, callback) {
+  selectOpt(id, '', callback);
+}
+
+// 点击外部关闭所有下拉
+document.addEventListener('click', e => {
+  if (!e.target.closest('.z-sel')) {
+    document.querySelectorAll('.z-sel.is-open').forEach(s => s.classList.remove('is-open'));
+  }
+});
+
+/* ── 变体1：实时筛选 ── */
+function filterTable1() {
+  const status = getSelValue('sel-status-1');
+  const type   = getSelValue('sel-type-1');
+  document.querySelectorAll('#table1-body tr').forEach(tr => {
+    const show = (!status || tr.dataset.status === status) &&
+                 (!type   || tr.dataset.type   === type);
+    tr.style.display = show ? '' : 'none';
+  });
+}
+
+/* ── 变体2：点击查询 ── */
+function filterTable2() {
+  const reporter = document.getElementById('inline-reporter-2').value.trim();
+  const status   = getSelValue('sel-status-2');
+  document.querySelectorAll('#table2-body tr').forEach(tr => {
+    const show = (!reporter || tr.dataset.reporter.includes(reporter)) &&
+                 (!status   || tr.dataset.status === status);
+    tr.style.display = show ? '' : 'none';
+  });
+}
+function resetTable2() {
+  document.getElementById('inline-reporter-2').value = '';
+  selectOpt('sel-status-2', '');
+  document.querySelectorAll('#table2-body tr').forEach(tr => tr.style.display = '');
+}
+
+/* ── 高级搜索抽屉 ── */
+function openSearchDrawer() {
+  document.getElementById('drawerOverlay').classList.add('is-open');
+  document.getElementById('searchDrawer').classList.add('is-open');
+}
+function closeSearchDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('is-open');
+  document.getElementById('searchDrawer').classList.remove('is-open');
+}
+
+function syncSelectPlaceholder(el) {
+  el.classList.toggle('is-placeholder', el.value === '');
+}
+
+const searchFields = [
+  { id: 'sq-time-start', label: '开始时间', type: 'range' },
+  { id: 'sq-time-end',   label: '结束时间', type: 'range' },
+  { id: 'sq-no',       label: '案件号',   type: 'input'  },
+  { id: 'sq-reporter', label: '举报人',   type: 'input'  },
+  { id: 'sq-status',   label: '签收状态', type: 'select' },
+  { id: 'sq-source',   label: '问题来源', type: 'select' },
+  { id: 'sq-type',     label: '案件类型', type: 'select' },
+];
+
+function resetSearchDrawer() {
+  searchFields.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (!el) return;
+    el.value = '';
+    if (el.tagName === 'SELECT') el.classList.add('is-placeholder');
+  });
+}
+
+function applySearch() {
+  const conditions = [];
+  const start = document.getElementById('sq-time-start').value.trim();
+  const end   = document.getElementById('sq-time-end').value.trim();
+  if (start || end) {
+    conditions.push({ label: '案件建立时间', value: (start || '…') + ' 至 ' + (end || '…'), ids: ['sq-time-start','sq-time-end'] });
+  }
+  searchFields.filter(f => f.type !== 'range').forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el && el.value.trim()) {
+      conditions.push({ label: f.label, value: el.value.trim(), ids: [f.id] });
+    }
+  });
+  renderFilterBar(conditions);
+  document.getElementById('advSearchBtn').classList.toggle('is-active', conditions.length > 0);
+  closeSearchDrawer();
+}
+
+function renderFilterBar(conditions) {
+  const bar = document.getElementById('filterBar');
+  if (!conditions.length) { bar.classList.remove('is-visible'); bar.innerHTML = ''; return; }
+  bar.classList.add('is-visible');
+  bar.innerHTML = conditions.map((c, i) => `
+    <div class="z-filter-tag">
+      <span class="z-filter-tag-label">${c.label}：</span>
+      <span class="z-filter-tag-val">${c.value}</span>
+      <span class="z-filter-tag-del" onclick="removeCondition(${i})">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      </span>
+    </div>
+  `).join('') + `<span class="z-filter-bar-clear" onclick="clearAllConditions()">清空条件</span>`;
+  bar._conditions = conditions;
+}
+
+function removeCondition(i) {
+  const bar = document.getElementById('filterBar');
+  const conditions = bar._conditions || [];
+  const removed = conditions.splice(i, 1)[0];
+  if (removed && removed.ids) removed.ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; if (el.tagName === 'SELECT') el.classList.add('is-placeholder'); }
+  });
+  renderFilterBar(conditions);
+  document.getElementById('advSearchBtn').classList.toggle('is-active', conditions.length > 0);
+}
+
+function clearAllConditions() {
+  resetSearchDrawer();
+  renderFilterBar([]);
+  document.getElementById('advSearchBtn').classList.remove('is-active');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeSearchDrawer();
+});
+
+/* ── 形态三：平铺搜索展开/收起 ── */
+function toggleFlatSearch() {
+  const row = document.getElementById('flatSearchRow');
+  const btn = document.getElementById('fsExpandBtn');
+  const expanded = row.classList.toggle('is-expanded');
+  btn.classList.toggle('is-expanded', expanded);
+}
+
+function resetFlatSearch() {
+  ['fs-time','fs-no','fs-reporter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['fs-status','fs-source','fs-type'].forEach(id => clearSel(id));
+}
+
+function queryFlatSearch() {
+  // 此处可接入实际查询逻辑，预览中仅作占位
+}
+</script>
+</body>
+</html>

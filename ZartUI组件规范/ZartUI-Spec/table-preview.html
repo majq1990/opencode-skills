@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 单行表格</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; margin-top: 32px; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; overflow: hidden; }
+
+/* ===================== 表格 ===================== */
+.z-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  color: #223355;
+  table-layout: fixed;
+}
+
+/* 表头 */
+.z-table thead tr {
+  height: 40px;
+  background: #F5F7FA;
+  border-top: 1px solid #DDE1EB;
+}
+
+.z-table thead th {
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  text-align: left;
+  padding: 0 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+}
+
+/* 表头列间隔线（末列不需要，阴影已做视觉分隔） */
+.z-table thead th + th::before,
+.z-table-sticky thead th + th::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 16px;
+  background: #E9ECF2;
+}
+.z-table-sticky thead th:last-child::before {
+  display: none;
+}
+
+/* 表体行 */
+.z-table tbody tr {
+  height: 48px;
+  border-top: 1px solid #DDE1EB;
+  border-bottom: 1px solid #DDE1EB;
+  transition: background 0.15s;
+}
+
+.z-table tbody tr:hover { background: #F5F7FA; }
+
+/* 相邻行只保留一条线 */
+.z-table tbody tr + tr {
+  border-top: none;
+}
+
+.z-table tbody td {
+  text-align: left;
+  padding: 0 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+/* 蓝色链接 */
+.z-table-link {
+  color: #3388FF;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.z-table-link:hover { color: #2167D9; }
+
+/* 创建人：头像 + 姓名 */
+.z-table-user {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+.z-table-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3388FF, #2167D9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: #FFFFFF;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.z-table-user-name {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px 0 14px;
+  margin-left: -10px;
+  background: #F5F7FA;
+  border-radius: 100px;
+  font-size: 13px;
+  color: #223355;
+  white-space: nowrap;
+}
+
+/* 签收状态 */
+.z-table-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.z-table-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.z-table-dot.is-success { background: #06A17F; }
+.z-table-dot.is-default { background: #A8B4C8; }
+.z-table-dot.is-danger  { background: #FF4433; }
+
+/* 操作列按钮 */
+.z-table-actions {
+  display: inline-flex;
+  align-items: center;
+}
+.z-table-action-btn {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: #3388FF;
+  cursor: pointer;
+  padding: 0 8px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+.z-table-action-btn:hover { color: #2167D9; }
+.z-table-action-btn.is-danger { color: #3388FF; }
+.z-table-action-btn.is-danger:hover { color: #FF4433; }
+/* 操作按钮间隔线 */
+.z-table-action-divider {
+  width: 1px;
+  height: 16px;
+  background: #E9ECF2;
+  flex-shrink: 0;
+}
+
+/* 列宽配置 */
+.col-time       { width: 160px; }
+.col-case-no    { width: 140px; }
+.col-creator    { width: 120px; }
+.col-status     { width: 100px; }
+.col-source     { width: 100px; }
+.col-type       { width: 100px; }
+.col-sub1       { width: 100px; }
+.col-sub2       { width: 100px; }
+.col-street     { width: 100px; }
+.col-community  { width: 100px; }
+.col-actions    { width: 130px; }
+
+/* 双行表格列宽 */
+.col-build-code  { width: 130px; }
+.col-build-addr  { width: 180px; }
+.col-build-type  { width: 90px; }
+.col-build-plate { width: 110px; }
+.col-build-area  { width: 90px; }
+.col-build-zone  { width: 80px; }
+.col-build-street{ width: 90px; }
+.col-build-comm  { width: 90px; }
+.col-build-photo { width: 200px; }
+.col-build-acts  { width: 130px; }
+
+/* ===================== 建筑照片列 ===================== */
+.z-photo-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.z-photo-item {
+  width: 54px;
+  height: 54px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #E9ECF2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.z-photo-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.z-photo-more {
+  width: 54px;
+  height: 54px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: #E9ECF2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+}
+/* 三个圆点图标 */
+.z-photo-more-icon {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.z-photo-more-icon span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #A8B4C8;
+  display: block;
+}
+.z-photo-dropdown {
+  display: none;
+  position: fixed;
+  background: #FFFFFF;
+  border-radius: 4px;
+  box-shadow: 0 2px 50px 0 rgba(0, 67, 202, 0.16);
+  padding: 8px;
+  z-index: 9999;
+  white-space: nowrap;
+}
+.z-photo-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top: none;
+  border-bottom-color: #FFFFFF;
+  filter: drop-shadow(0 -1px 2px rgba(0,67,202,0.08));
+}
+.z-photo-dropdown-grid {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-width: 180px;
+}
+.z-photo-dropdown-item {
+  width: 54px;
+  height: 54px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #E9ECF2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.z-photo-dropdown-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ===================== 气泡确认卡片 ===================== */
+.z-popover-confirm {
+  display: none;
+  position: fixed;
+  width: 242px;
+  background: #FFFFFF;
+  border-radius: 4px;
+  box-shadow: 0 2px 50px 0 rgba(0, 67, 202, 0.16);
+  padding: 12px 16px;
+  z-index: 9999;
+}
+.z-popover-confirm.is-open { display: block; }
+.z-popover-confirm::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-bottom: none;
+  border-top-color: #FFFFFF;
+  filter: drop-shadow(0 1px 2px rgba(0,67,202,0.08));
+}
+.z-popover-title-danger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #081126;
+  margin-bottom: 6px;
+}
+.z-popover-content {
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  line-height: 1.6;
+}
+.z-popover-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: flex-end;
+}
+.z-popover-btn {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 4px;
+  border: 1px solid #DDE1EB;
+  background: #FFFFFF;
+  font-size: 13px;
+  color: #223355;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.z-popover-btn:hover { border-color: #3388FF; background: #F0F9FF; color: #3388FF; }
+.z-popover-btn.is-danger {
+  background: #FF4433;
+  border-color: #FF4433;
+  color: #FFFFFF;
+}
+.z-popover-btn.is-danger:hover { background: #D93020; border-color: #D93020; }
+
+/* 删除按钮容器 */
+.z-delete-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+.z-table.is-double tbody tr {
+  height: 70px;
+}
+.z-table.is-double tbody td {
+  white-space: normal;
+  word-break: break-all;
+  vertical-align: middle;
+}
+
+/* ===================== 表格锁定 ===================== */
+.z-table-outer {
+  position: relative;
+  overflow: hidden;
+}
+.z-table-wrap {
+  overflow: auto;
+  max-height: 320px;
+}
+.z-table-sticky {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.z-table-sticky thead tr { border-top: none; }
+.z-table-sticky thead th {
+  border-top: 1px solid #DDE1EB;
+  border-bottom: 1px solid #DDE1EB;
+  overflow: visible;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #F5F7FA;
+}
+.z-table-sticky tbody td {
+  border-bottom: 1px solid #DDE1EB;
+  overflow: hidden;
+}
+.z-table-sticky th:first-child,
+.z-table-sticky td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: #FFFFFF;
+}
+.z-table-sticky thead th:first-child {
+  z-index: 5;
+  background: #F5F7FA;
+}
+.z-table-sticky th:last-child,
+.z-table-sticky td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 4;
+  background: #FFFFFF;
+}
+.z-table-sticky thead th:last-child {
+  z-index: 5;
+  background: #F5F7FA;
+}
+.z-table-sticky tbody tr:hover td:first-child,
+.z-table-sticky tbody tr:hover td:last-child {
+  background: #F5F7FA;
+}
+.z-table-sticky thead th:last-child::before { display: none; }
+
+/* 阴影覆盖层 — fixed 定位，JS 跟随滚动容器实时更新位置 */
+.z-shadow-left,
+.z-shadow-right,
+.z-shadow-top {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.z-shadow-left {
+  width: 8px;
+  background: linear-gradient(to right, rgba(34,51,85,0.08), transparent);
+}
+.z-shadow-right {
+  width: 8px;
+  background: linear-gradient(to left, rgba(34,51,85,0.08), transparent);
+}
+.z-shadow-top {
+  height: 8px;
+  background: linear-gradient(to bottom, rgba(34,51,85,0.06), transparent);
+}
+
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 单行表格 Table</h1>
+<p class="page-desc">表头高度 40px，表体行高 48px，支持链接、状态徽点、头像、文字操作按钮等内容形态</p>
+
+<h2>基础单行表格</h2>
+<div class="section">
+  <table class="z-table">
+    <colgroup>
+      <col class="col-time">
+      <col class="col-case-no">
+      <col class="col-creator">
+      <col class="col-status">
+      <col class="col-source">
+      <col class="col-type">
+      <col class="col-sub1">
+      <col class="col-sub2">
+      <col class="col-street">
+      <col class="col-community">
+      <col class="col-actions">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>案件建立时间</th>
+        <th>案件号</th>
+        <th>创建人</th>
+        <th>签收状态</th>
+        <th>问题来源</th>
+        <th>案件类型</th>
+        <th>二级分类</th>
+        <th>三级分类</th>
+        <th>所属街道</th>
+        <th>所属社区</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>2026-05-19 09:32</td>
+        <td><a class="z-table-link">AJ20260519001</a></td>
+        <td>
+          <div class="z-table-user">
+            <div class="z-table-avatar">章</div>
+            <span class="z-table-user-name">章小蕙</span>
+          </div>
+        </td>
+        <td>
+          <div class="z-table-status">
+            <span class="z-table-dot is-success"></span>
+            已签收
+          </div>
+        </td>
+        <td>12345热线</td>
+        <td>环境卫生</td>
+        <td>垃圾处理</td>
+        <td>乱堆乱放</td>
+        <td>滨江街道</td>
+        <td>江滨社区</td>
+        <td>
+          <div class="z-table-actions">
+            <button class="z-table-action-btn">编辑</button>
+            <span class="z-table-action-divider"></span>
+            <span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-20')">删除</button><div class="z-popover-confirm" id="confirm-20"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-20')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-20')">取消</button></div></div></span>
+            <span class="z-table-action-divider"></span>
+            <button class="z-table-action-btn">更多</button>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td>2026-05-18 14:20</td>
+        <td><a class="z-table-link">AJ20260518032</a></td>
+        <td>
+          <div class="z-table-user">
+            <div class="z-table-avatar">李</div>
+            <span class="z-table-user-name">李建国</span>
+          </div>
+        </td>
+        <td>
+          <div class="z-table-status">
+            <span class="z-table-dot is-default"></span>
+            待签收
+          </div>
+        </td>
+        <td>市民投诉</td>
+        <td>道路交通</td>
+        <td>路面破损</td>
+        <td>井盖缺失</td>
+        <td>西湖街道</td>
+        <td>文化社区</td>
+        <td>
+          <div class="z-table-actions">
+            <button class="z-table-action-btn">编辑</button>
+            <span class="z-table-action-divider"></span>
+            <span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-21')">删除</button><div class="z-popover-confirm" id="confirm-21"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-21')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-21')">取消</button></div></div></span>
+            <span class="z-table-action-divider"></span>
+            <button class="z-table-action-btn">更多</button>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td>2026-05-17 16:08</td>
+        <td><a class="z-table-link">AJ20260517018</a></td>
+        <td>
+          <div class="z-table-user">
+            <div class="z-table-avatar" style="background:none;padding:0;overflow:hidden;"><img src="https://i.pravatar.cc/24?img=5" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
+            <span class="z-table-user-name">王芳</span>
+          </div>
+        </td>
+        <td>
+          <div class="z-table-status">
+            <span class="z-table-dot is-danger"></span>
+            已拒收
+          </div>
+        </td>
+        <td>网格巡查</td>
+        <td>市政设施</td>
+        <td>路灯照明</td>
+        <td>灯具损坏</td>
+        <td>古荡街道</td>
+        <td>益乐社区</td>
+        <td>
+          <div class="z-table-actions">
+            <button class="z-table-action-btn">编辑</button>
+            <span class="z-table-action-divider"></span>
+            <span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-22')">删除</button><div class="z-popover-confirm" id="confirm-22"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-22')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-22')">取消</button></div></div></span>
+            <span class="z-table-action-divider"></span>
+            <button class="z-table-action-btn">更多</button>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td>2026-05-16 11:45</td>
+        <td><a class="z-table-link">AJ20260516007</a></td>
+        <td>
+          <div class="z-table-user">
+            <div class="z-table-avatar">赵</div>
+            <span class="z-table-user-name">赵磊</span>
+          </div>
+        </td>
+        <td>
+          <div class="z-table-status">
+            <span class="z-table-dot is-success"></span>
+            已签收
+          </div>
+        </td>
+        <td>APP上报</td>
+        <td>绿化养护</td>
+        <td>树木修剪</td>
+        <td>枯枝清理</td>
+        <td>拱墅街道</td>
+        <td>运河社区</td>
+        <td>
+          <div class="z-table-actions">
+            <button class="z-table-action-btn">编辑</button>
+            <span class="z-table-action-divider"></span>
+            <span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-23')">删除</button><div class="z-popover-confirm" id="confirm-23"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-23')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-23')">取消</button></div></div></span>
+            <span class="z-table-action-divider"></span>
+            <button class="z-table-action-btn">更多</button>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td>2026-05-15 10:12</td>
+        <td><a class="z-table-link">AJ20260515009</a></td>
+        <td><div class="z-table-user"><div class="z-table-avatar">陈</div><span class="z-table-user-name">陈晓燕</span></div></td>
+        <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+        <td>12345热线</td><td>市政设施</td><td>路灯照明</td><td>灯具损坏</td><td>江干街道</td><td>景芳社区</td>
+        <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-1')">删除</button><div class="z-popover-confirm" id="confirm-1"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-1')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-1')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+      </tr>
+      <tr>
+        <td>2026-05-14 15:30</td>
+        <td><a class="z-table-link">AJ20260514021</a></td>
+        <td><div class="z-table-user"><div class="z-table-avatar">林</div><span class="z-table-user-name">林志远</span></div></td>
+        <td><div class="z-table-status"><span class="z-table-dot is-default"></span>待签收</div></td>
+        <td>市民投诉</td><td>绿化养护</td><td>树木修剪</td><td>枯枝清理</td><td>下城街道</td><td>朝晖社区</td>
+        <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-2')">删除</button><div class="z-popover-confirm" id="confirm-2"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-2')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-2')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+      </tr>
+      <tr>
+        <td>2026-05-13 08:55</td>
+        <td><a class="z-table-link">AJ20260513005</a></td>
+        <td><div class="z-table-user"><div class="z-table-avatar">吴</div><span class="z-table-user-name">吴建平</span></div></td>
+        <td><div class="z-table-status"><span class="z-table-dot is-danger"></span>已拒收</div></td>
+        <td>网格巡查</td><td>道路交通</td><td>路面破损</td><td>路面坑洼</td><td>余杭街道</td><td>闲林社区</td>
+        <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-3')">删除</button><div class="z-popover-confirm" id="confirm-3"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-3')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-3')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+      </tr>
+      <tr>
+        <td>2026-05-12 13:40</td>
+        <td><a class="z-table-link">AJ20260512033</a></td>
+        <td><div class="z-table-user"><div class="z-table-avatar">张</div><span class="z-table-user-name">张国华</span></div></td>
+        <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+        <td>APP上报</td><td>环境卫生</td><td>垃圾处理</td><td>乱扔垃圾</td><td>萧山街道</td><td>新塘社区</td>
+        <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-4')">删除</button><div class="z-popover-confirm" id="confirm-4"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-4')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-4')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h1>ZartUI — 双行表格 Table</h1>
+<p class="page-desc">表头高度 40px，表体行高 70px，单元格内容换行显示</p>
+
+<h2>基础双行表格</h2>
+<div class="section">
+  <table class="z-table is-double">
+    <colgroup>
+      <col class="col-build-code">
+      <col class="col-build-addr">
+      <col class="col-build-type">
+      <col class="col-build-plate">
+      <col class="col-build-area">
+      <col class="col-build-zone">
+      <col class="col-build-street">
+      <col class="col-build-comm">
+      <col class="col-build-photo">
+      <col class="col-build-acts">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>建筑编码</th>
+        <th>门牌地址</th>
+        <th>建筑类型</th>
+        <th>公安楼牌</th>
+        <th>总面积</th>
+        <th>所属区域</th>
+        <th>所属街道</th>
+        <th>所属社区</th>
+        <th>建筑照片</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="z-table-link">BLD20260001</a></td>
+        <td>浙江省杭州市西湖区文三路 478 号西湖数字科技园 A 幢</td>
+        <td>办公建筑</td>
+        <td>文三路478号</td>
+        <td>12680.5 ㎡</td>
+        <td>西湖区</td>
+        <td>文新街道</td>
+        <td>文三社区</td>
+        <td>
+          <div class="z-photo-list">
+            <div class="z-photo-item"><img src="https://picsum.photos/seed/bld1a/54/54" alt=""></div>
+            <div class="z-photo-item"><img src="https://picsum.photos/seed/bld1b/54/54" alt=""></div>
+            <div class="z-photo-more" data-dropdown-id="photo-drop-1"><div class="z-photo-more-icon"><span></span><span></span><span></span></div>
+              <div class="z-photo-dropdown" id="photo-drop-1" style="display:none;">
+                <div class="z-photo-dropdown-grid">
+                  <div class="z-photo-dropdown-item"><img src="https://picsum.photos/seed/bld1a/54/54" alt=""></div>
+                  <div class="z-photo-dropdown-item"><img src="https://picsum.photos/seed/bld1b/54/54" alt=""></div>
+                  <div class="z-photo-dropdown-item"><img src="https://picsum.photos/seed/bld1c/54/54" alt=""></div>
+                  <div class="z-photo-dropdown-item"><img src="https://picsum.photos/seed/bld1d/54/54" alt=""></div>
+                  <div class="z-photo-dropdown-item"><img src="https://picsum.photos/seed/bld1e/54/54" alt=""></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="z-table-actions">
+            <button class="z-table-action-btn">编辑</button>
+            <span class="z-table-action-divider"></span>
+            <span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-24')">删除</button><div class="z-popover-confirm" id="confirm-24"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-24')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-24')">取消</button></div></div></span>
+            <span class="z-table-action-divider"></span>
+            <button class="z-table-action-btn">更多</button>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td><a class="z-table-link">BLD20260002</a></td>
+        <td>浙江省杭州市拱墅区丽水路 58 号运河财富中心 B 座 1201 室</td>
+        <td>商业建筑</td>
+        <td>丽水路58号</td>
+        <td>8920.0 ㎡</td>
+        <td>拱墅区</td>
+        <td>和睦街道</td>
+        <td>运河社区</td>
+        <td>
+          <div class="z-photo-list">
+            <div class="z-photo-item"><img src="https://picsum.photos/seed/bld2a/54/54" alt=""></div>
+            <div class="z-photo-item"><img src="https://picsum.photos/seed/bld2b/54/54" alt=""></div>
+            <div class="z-photo-item"><img src="https://picsum.photos/seed/bld2c/54/54" alt=""></div>
+          </div>
+        </td>
+        <td>
+          <div class="z-table-actions">
+            <button class="z-table-action-btn">编辑</button>
+            <span class="z-table-action-divider"></span>
+            <span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-25')">删除</button><div class="z-popover-confirm" id="confirm-25"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-25')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-25')">取消</button></div></div></span>
+            <span class="z-table-action-divider"></span>
+            <button class="z-table-action-btn">更多</button>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td><a class="z-table-link">BLD20260003</a></td>
+        <td>浙江省杭州市滨江区滨盛路 1809 号网易大厦东楼三层</td>
+        <td>工业建筑</td>
+        <td>滨盛路1809号</td>
+        <td>32150.8 ㎡</td>
+        <td>滨江区</td>
+        <td>长河街道</td>
+        <td>滨盛社区</td>
+        <td>
+          <div class="z-photo-list">
+            <div class="z-photo-item"><img src="https://picsum.photos/seed/bld3a/54/54" alt=""></div>
+            <div class="z-photo-item"><img src="https://picsum.photos/seed/bld3b/54/54" alt=""></div>
+          </div>
+        </td>
+        <td>
+          <div class="z-table-actions">
+            <button class="z-table-action-btn">编辑</button>
+            <span class="z-table-action-divider"></span>
+            <span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-26')">删除</button><div class="z-popover-confirm" id="confirm-26"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-26')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-26')">取消</button></div></div></span>
+            <span class="z-table-action-divider"></span>
+            <button class="z-table-action-btn">更多</button>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td><a class="z-table-link">BLD20260004</a></td>
+        <td>浙江省杭州市上城区望江东路 369 号钱江新城国际中心 C 栋</td>
+        <td>居住建筑</td>
+        <td>望江东路369号</td>
+        <td>5640.2 ㎡</td>
+        <td>上城区</td>
+        <td>闸弄口街道</td>
+        <td>新塘社区</td>
+        <td>
+          <div class="z-photo-list">
+            <div class="z-photo-item"><img src="https://picsum.photos/seed/bld4a/54/54" alt=""></div>
+            <div class="z-photo-item"><img src="https://picsum.photos/seed/bld4b/54/54" alt=""></div>
+            <div class="z-photo-more" data-dropdown-id="photo-drop-2"><div class="z-photo-more-icon"><span></span><span></span><span></span></div>
+              <div class="z-photo-dropdown" id="photo-drop-2" style="display:none;">
+                <div class="z-photo-dropdown-grid">
+                  <div class="z-photo-dropdown-item"><img src="https://picsum.photos/seed/bld4a/54/54" alt=""></div>
+                  <div class="z-photo-dropdown-item"><img src="https://picsum.photos/seed/bld4b/54/54" alt=""></div>
+                  <div class="z-photo-dropdown-item"><img src="https://picsum.photos/seed/bld4c/54/54" alt=""></div>
+                  <div class="z-photo-dropdown-item"><img src="https://picsum.photos/seed/bld4d/54/54" alt=""></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="z-table-actions">
+            <button class="z-table-action-btn">编辑</button>
+            <span class="z-table-action-divider"></span>
+            <span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-27')">删除</button><div class="z-popover-confirm" id="confirm-27"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-27')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-27')">取消</button></div></div></span>
+            <span class="z-table-action-divider"></span>
+            <button class="z-table-action-btn">更多</button>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h1>ZartUI — 表格锁定 Table Sticky</h1>
+<p class="page-desc">上下滚动时表头固定；左右滚动时第一列与操作列固定</p>
+
+<h2>表格锁定</h2>
+<div class="section" style="padding:0;overflow:hidden;">
+  <div class="z-table-outer">
+    <div class="z-shadow-left"></div>
+    <div class="z-shadow-right"></div>
+    <div class="z-shadow-top"></div>
+    <div class="z-table-wrap">
+    <table class="z-table z-table-sticky">
+      <colgroup>
+        <col class="col-time">
+        <col class="col-case-no">
+        <col class="col-creator">
+        <col class="col-status">
+        <col class="col-source">
+        <col class="col-type">
+        <col class="col-sub1">
+        <col class="col-sub2">
+        <col style="width:240px;">
+        <col class="col-street">
+        <col class="col-community">
+        <col class="col-actions">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>案件建立时间</th>
+          <th>案件号</th>
+          <th>创建人</th>
+          <th>签收状态</th>
+          <th>问题来源</th>
+          <th>案件类型</th>
+          <th>二级分类</th>
+          <th>三级分类</th>
+          <th>案件描述</th>
+          <th>所属街道</th>
+          <th>所属社区</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2026-05-19 09:32</td><td><a class="z-table-link">AJ20260519001</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">章</div><span class="z-table-user-name">章小蕙</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+          <td>12345热线</td><td>环境卫生</td><td>垃圾处理</td><td>乱堆乱放</td><td>小区门口有大量生活垃圾堆积，影响通行</td><td>滨江街道</td><td>江滨社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-5')">删除</button><div class="z-popover-confirm" id="confirm-5"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-5')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-5')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-18 14:20</td><td><a class="z-table-link">AJ20260518032</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">李</div><span class="z-table-user-name">李建国</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-default"></span>待签收</div></td>
+          <td>市民投诉</td><td>道路交通</td><td>路面破损</td><td>井盖缺失</td><td>路口井盖丢失，存在安全隐患，需尽快处理</td><td>西湖街道</td><td>文化社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-6')">删除</button><div class="z-popover-confirm" id="confirm-6"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-6')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-6')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-17 16:08</td><td><a class="z-table-link">AJ20260517018</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar" style="background:none;padding:0;"><img src="https://i.pravatar.cc/24?img=5" style="width:100%;height:100%;object-fit:cover;display:block;"></div><span class="z-table-user-name">王芳</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-danger"></span>已拒收</div></td>
+          <td>网格巡查</td><td>市政设施</td><td>路灯照明</td><td>灯具损坏</td><td>街道路灯连续三天未亮，夜间行人反映安全问题</td><td>古荡街道</td><td>益乐社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-7')">删除</button><div class="z-popover-confirm" id="confirm-7"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-7')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-7')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-16 11:45</td><td><a class="z-table-link">AJ20260516007</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">赵</div><span class="z-table-user-name">赵磊</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+          <td>APP上报</td><td>绿化养护</td><td>树木修剪</td><td>枯枝清理</td><td>公园内大树枯枝较多，存在坠落风险</td><td>拱墅街道</td><td>运河社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-8')">删除</button><div class="z-popover-confirm" id="confirm-8"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-8')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-8')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-15 10:12</td><td><a class="z-table-link">AJ20260515009</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">陈</div><span class="z-table-user-name">陈晓燕</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+          <td>12345热线</td><td>市政设施</td><td>路灯照明</td><td>灯具损坏</td><td>居民反映路灯不亮已一周，影响夜间出行</td><td>江干街道</td><td>景芳社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-9')">删除</button><div class="z-popover-confirm" id="confirm-9"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-9')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-9')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-14 15:30</td><td><a class="z-table-link">AJ20260514021</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">林</div><span class="z-table-user-name">林志远</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-default"></span>待签收</div></td>
+          <td>市民投诉</td><td>绿化养护</td><td>树木修剪</td><td>枯枝清理</td><td>路边行道树枯枝垂落，影响行人及车辆通行</td><td>下城街道</td><td>朝晖社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-10')">删除</button><div class="z-popover-confirm" id="confirm-10"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-10')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-10')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-13 08:55</td><td><a class="z-table-link">AJ20260513005</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">吴</div><span class="z-table-user-name">吴建平</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-danger"></span>已拒收</div></td>
+          <td>网格巡查</td><td>道路交通</td><td>路面破损</td><td>路面坑洼</td><td>主干道出现多处坑洼，雨天积水严重</td><td>余杭街道</td><td>闲林社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-11')">删除</button><div class="z-popover-confirm" id="confirm-11"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-11')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-11')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-12 13:40</td><td><a class="z-table-link">AJ20260512033</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">张</div><span class="z-table-user-name">张国华</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+          <td>APP上报</td><td>环境卫生</td><td>垃圾处理</td><td>乱扔垃圾</td><td>公共绿地内发现大量建筑垃圾，需清运</td><td>萧山街道</td><td>新塘社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-12')">删除</button><div class="z-popover-confirm" id="confirm-12"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-12')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-12')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-11 09:15</td><td><a class="z-table-link">AJ20260511044</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">黄</div><span class="z-table-user-name">黄丽萍</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+          <td>12345热线</td><td>环境卫生</td><td>噪音扰民</td><td>施工噪音</td><td>附近工地夜间施工噪音扰民，居民多次反映</td><td>西湖街道</td><td>北山社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-13')">删除</button><div class="z-popover-confirm" id="confirm-13"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-13')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-13')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-10 16:50</td><td><a class="z-table-link">AJ20260510028</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">刘</div><span class="z-table-user-name">刘明辉</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-default"></span>待签收</div></td>
+          <td>市民投诉</td><td>市政设施</td><td>排水设施</td><td>下水道堵塞</td><td>小区内多处下水道堵塞，积水无法排出</td><td>拱墅街道</td><td>大关社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-14')">删除</button><div class="z-popover-confirm" id="confirm-14"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-14')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-14')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-09 11:22</td><td><a class="z-table-link">AJ20260509016</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">孙</div><span class="z-table-user-name">孙伟</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-danger"></span>已拒收</div></td>
+          <td>网格巡查</td><td>绿化养护</td><td>绿化破坏</td><td>踩踏草坪</td><td>健身广场草坪被大面积踩踏，绿化受损严重</td><td>滨江街道</td><td>浦沿社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-15')">删除</button><div class="z-popover-confirm" id="confirm-15"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-15')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-15')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-08 14:05</td><td><a class="z-table-link">AJ20260508039</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">周</div><span class="z-table-user-name">周晨</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+          <td>APP上报</td><td>道路交通</td><td>交通标志</td><td>标志破损</td><td>路口指示牌损坏倾斜，影响行车安全</td><td>上城街道</td><td>清波社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-16')">删除</button><div class="z-popover-confirm" id="confirm-16"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-16')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-16')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-07 10:33</td><td><a class="z-table-link">AJ20260507011</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">钱</div><span class="z-table-user-name">钱秀英</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-default"></span>待签收</div></td>
+          <td>12345热线</td><td>市政设施</td><td>公共设施</td><td>座椅损坏</td><td>公园休息座椅多处损坏，老人儿童使用存隐患</td><td>下城街道</td><td>长庆社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-17')">删除</button><div class="z-popover-confirm" id="confirm-17"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-17')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-17')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-06 15:48</td><td><a class="z-table-link">AJ20260506023</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">徐</div><span class="z-table-user-name">徐建波</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+          <td>市民投诉</td><td>环境卫生</td><td>垃圾处理</td><td>垃圾箱满溢</td><td>垃圾收集点长期满溢，臭味扰民，需增加清运频次</td><td>江干街道</td><td>采荷社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-18')">删除</button><div class="z-popover-confirm" id="confirm-18"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-18')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-18')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-05 08:20</td><td><a class="z-table-link">AJ20260505047</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">郑</div><span class="z-table-user-name">郑小云</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-danger"></span>已拒收</div></td>
+          <td>网格巡查</td><td>道路交通</td><td>路面破损</td><td>路面开裂</td><td>非机动车道出现大面积裂缝，骑行存在安全隐患</td><td>余杭街道</td><td>仓前社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><span class="z-delete-wrap"><button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-19')">删除</button><div class="z-popover-confirm" id="confirm-19"><div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div><div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div><div class="z-popover-actions"><button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-19')">确定</button><button class="z-popover-btn" onclick="closeConfirm('confirm-19')">取消</button></div></div></span><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<h1>ZartUI — 操作确认</h1>
+<p class="page-desc">点击删除按钮后弹出带危险图标的气泡确认卡片；确定在左，取消在右</p>
+
+<h2>删除二次确认</h2>
+<div class="section" style="overflow: visible; padding-bottom: 80px;">
+  <table class="z-table" style="min-width: 700px;">
+    <colgroup>
+      <col style="width:160px;">
+      <col style="width:140px;">
+      <col style="width:130px;">
+      <col style="width:110px;">
+      <col style="width:auto;">
+      <col style="width:160px;">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>案件建立时间</th>
+        <th>案件号</th>
+        <th>创建人</th>
+        <th>签收状态</th>
+        <th>问题来源</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>2026-05-19 09:32</td>
+        <td><a class="z-table-link">AJ20260519001</a></td>
+        <td><div class="z-table-user"><div class="z-table-avatar">章</div><span class="z-table-user-name">章小蕙</span></div></td>
+        <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+        <td>12345热线</td>
+        <td>
+          <div class="z-table-actions">
+            <button class="z-table-action-btn">编辑</button>
+            <span class="z-table-action-divider"></span>
+            <span class="z-delete-wrap">
+              <button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-d1')">删除</button>
+              <div class="z-popover-confirm" id="confirm-d1">
+                <div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div>
+                <div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div>
+                <div class="z-popover-actions">
+                  <button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-d1')">确定</button>
+                  <button class="z-popover-btn" onclick="closeConfirm('confirm-d1')">取消</button>
+                </div>
+              </div>
+            </span>
+            <span class="z-table-action-divider"></span>
+            <button class="z-table-action-btn">更多</button>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td>2026-05-18 14:20</td>
+        <td><a class="z-table-link">AJ20260518032</a></td>
+        <td><div class="z-table-user"><div class="z-table-avatar">李</div><span class="z-table-user-name">李建国</span></div></td>
+        <td><div class="z-table-status"><span class="z-table-dot is-default"></span>待签收</div></td>
+        <td>市民投诉</td>
+        <td>
+          <div class="z-table-actions">
+            <button class="z-table-action-btn">编辑</button>
+            <span class="z-table-action-divider"></span>
+            <span class="z-delete-wrap">
+              <button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-d2')">删除</button>
+              <div class="z-popover-confirm" id="confirm-d2">
+                <div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div>
+                <div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div>
+                <div class="z-popover-actions">
+                  <button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-d2')">确定</button>
+                  <button class="z-popover-btn" onclick="closeConfirm('confirm-d2')">取消</button>
+                </div>
+              </div>
+            </span>
+            <span class="z-table-action-divider"></span>
+            <button class="z-table-action-btn">更多</button>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td>2026-05-17 16:08</td>
+        <td><a class="z-table-link">AJ20260517018</a></td>
+        <td><div class="z-table-user"><div class="z-table-avatar">王</div><span class="z-table-user-name">王芳</span></div></td>
+        <td><div class="z-table-status"><span class="z-table-dot is-danger"></span>已拒收</div></td>
+        <td>网格巡查</td>
+        <td>
+          <div class="z-table-actions">
+            <button class="z-table-action-btn">编辑</button>
+            <span class="z-table-action-divider"></span>
+            <span class="z-delete-wrap">
+              <button class="z-table-action-btn is-danger" onclick="toggleConfirm(event,'confirm-d3')">删除</button>
+              <div class="z-popover-confirm" id="confirm-d3">
+                <div class="z-popover-title-danger"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#FF4433"/><rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/><circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/></svg>确认删除</div>
+                <div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div>
+                <div class="z-popover-actions">
+                  <button class="z-popover-btn is-danger" onclick="closeConfirm('confirm-d3')">确定</button>
+                  <button class="z-popover-btn" onclick="closeConfirm('confirm-d3')">取消</button>
+                </div>
+              </div>
+            </span>
+            <span class="z-table-action-divider"></span>
+            <button class="z-table-action-btn">更多</button>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+/* ── 表格锁定阴影 (position: fixed，跟随滚动容器实时定位) ── */
+document.querySelectorAll('.z-table-wrap').forEach(function(wrap) {
+  const outer = wrap.closest('.z-table-outer');
+  if (!outer) return;
+  const shadowLeft  = outer.querySelector('.z-shadow-left');
+  const shadowRight = outer.querySelector('.z-shadow-right');
+  const shadowTop   = outer.querySelector('.z-shadow-top');
+  const table   = wrap.querySelector('.z-table-sticky');
+  const firstTh = table && table.querySelector('thead th:first-child');
+  const lastTh  = table && table.querySelector('thead th:last-child');
+
+  function positionShadows() {
+    var wr = wrap.getBoundingClientRect();
+    var firstW = firstTh ? firstTh.offsetWidth : 0;
+    var lastW  = lastTh  ? lastTh.offsetWidth  : 0;
+    var theadH = firstTh ? firstTh.offsetHeight : 40;
+
+    if (shadowLeft) {
+      shadowLeft.style.left   = (wr.left + firstW) + 'px';
+      shadowLeft.style.top    = wr.top + 'px';
+      shadowLeft.style.height = wr.height + 'px';
+    }
+    if (shadowRight) {
+      shadowRight.style.left   = (wr.right - lastW - 8) + 'px';
+      shadowRight.style.top    = wr.top + 'px';
+      shadowRight.style.height = wr.height + 'px';
+    }
+    if (shadowTop) {
+      shadowTop.style.left  = wr.left + 'px';
+      shadowTop.style.top   = (wr.top + theadH) + 'px';
+      shadowTop.style.width = wr.width + 'px';
+    }
+  }
+
+  function updateOpacity() {
+    const sl   = wrap.scrollLeft;
+    const st   = wrap.scrollTop;
+    const maxX = wrap.scrollWidth - wrap.clientWidth;
+    if (shadowLeft)  shadowLeft.style.opacity  = sl > 0 ? '1' : '0';
+    if (shadowRight) shadowRight.style.opacity = sl < maxX - 1 ? '1' : '0';
+    if (shadowTop)   shadowTop.style.opacity   = st > 0 ? '1' : '0';
+  }
+
+  requestAnimationFrame(function() {
+    positionShadows();
+    updateOpacity();
+  });
+
+  wrap.addEventListener('scroll', function() {
+    positionShadows();
+    updateOpacity();
+  });
+
+  window.addEventListener('resize', function() {
+    positionShadows();
+    updateOpacity();
+  });
+});
+
+/* ── 气泡确认 (position: fixed 定位，绕过 td overflow:hidden) ── */
+// 把所有 .z-popover-confirm 在 DOMContentLoaded 后移到 body
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.z-popover-confirm').forEach(function(el) {
+    document.body.appendChild(el);
+  });
+  document.querySelectorAll('.z-photo-dropdown').forEach(function(el) {
+    document.body.appendChild(el);
+  });
+});
+
+function toggleConfirm(e, id) {
+  e.stopPropagation();
+  var btn = e.currentTarget;
+  var el = document.getElementById(id);
+  var isOpen = el.classList.contains('is-open');
+  // 关所有
+  document.querySelectorAll('.z-popover-confirm.is-open').forEach(function(p) { p.classList.remove('is-open'); });
+  if (!isOpen) {
+    var r = btn.getBoundingClientRect();
+    var popW = 242;
+    var left = r.left + r.width / 2 - popW / 2;
+    // 确保不超出视口右边
+    if (left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
+    if (left < 8) left = 8;
+    el.style.left = left + 'px';
+    el.style.top  = (r.top - 10) + 'px'; // 先设一个值
+    el.classList.add('is-open');
+    // 计算高度后再调整 top
+    var popH = el.offsetHeight;
+    el.style.top = (r.top - popH - 10) + 'px';
+  }
+}
+function closeConfirm(id) {
+  document.getElementById(id).classList.remove('is-open');
+}
+document.addEventListener('click', function() {
+  document.querySelectorAll('.z-popover-confirm.is-open').forEach(function(p) { p.classList.remove('is-open'); });
+});
+
+/* ── 照片更多下拉 (position: fixed，移到 body 后用 JS 控制) ── */
+document.addEventListener('mouseover', function(e) {
+  var more = e.target.closest('.z-photo-more');
+  if (!more) return;
+  var dropId = more.dataset.dropdownId;
+  if (!dropId) return;
+  var dropdown = document.getElementById(dropId);
+  if (!dropdown) return;
+  // 定位
+  var r = more.getBoundingClientRect();
+  dropdown.style.display = 'block';
+  var dropW = dropdown.offsetWidth;
+  var left = r.left + r.width / 2 - dropW / 2;
+  if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
+  if (left < 8) left = 8;
+  dropdown.style.left = left + 'px';
+  dropdown.style.top  = (r.bottom + 8) + 'px';
+  dropdown._sourceMore = more;
+});
+document.addEventListener('mouseout', function(e) {
+  var more = e.target.closest('.z-photo-more');
+  if (!more) return;
+  var dropId = more.dataset.dropdownId;
+  if (!dropId) return;
+  var dropdown = document.getElementById(dropId);
+  if (!dropdown) return;
+  // 如果鼠标移到了 dropdown 自身则不隐藏
+  var to = e.relatedTarget;
+  if (to && (dropdown.contains(to) || to === dropdown)) return;
+  dropdown.style.display = 'none';
+});
+document.addEventListener('mouseout', function(e) {
+  var dropdown = e.target.closest('.z-photo-dropdown');
+  if (!dropdown) return;
+  var to = e.relatedTarget;
+  if (!to || (!dropdown.contains(to) && to !== dropdown)) {
+    // 检查是否移回了对应的 more 按钮
+    var more = dropdown._sourceMore;
+    if (more && (more === to || more.contains(to))) return;
+    dropdown.style.display = 'none';
+  }
+});
+</script>
+
+</body>
+</html>

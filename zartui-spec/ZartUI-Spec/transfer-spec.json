@@ -1,0 +1,177 @@
+{
+  "name": "transfer-spec",
+  "version": "1.1.0",
+  "description": "ZartUI 穿梭框规范，左侧待选列表 + 中间穿梭操作 + 右侧已选列表，两侧均含统计信息和分页",
+
+  "layout": {
+    "display": "flex",
+    "align_items": "flex-start",
+    "gap_between_panel_and_arrow": "12px",
+    "structure": "左侧面板 | 中间箭头区 | 右侧面板"
+  },
+
+  "panel": {
+    "width": "240px",
+    "border": "1px solid #DDE1EB",
+    "border_radius": "4px",
+    "background": "#FFFFFF",
+    "display": "flex flex-direction: column",
+
+    "header": {
+      "height": "40px",
+      "padding": "0 12px",
+      "border_bottom": "1px solid #E9ECF2",
+      "background": "#FFFFFF",
+      "display": "flex，align-items: center，justify-content: space-between",
+      "title": {
+        "font_size": "14px",
+        "font_weight": "500",
+        "color": "#223355"
+      },
+      "count": {
+        "font_size": "12px",
+        "color": "#6B7A99",
+        "format": "已选 M / 共 N 项"
+      },
+      "checkbox_states": {
+        "unchecked": "默认边框，背景 #FFFFFF",
+        "indeterminate": "背景 #3388FF，横线图标 #FFFFFF",
+        "checked": "背景 #3388FF，勾图标 #FFFFFF"
+      }
+    },
+
+    "search": {
+      "ref": "dropdown-spec.json#search",
+      "height": "32px",
+      "margin": "8px 12px",
+      "border": "1px solid #DDE1EB",
+      "border_radius": "16px",
+      "padding": "0 12px",
+      "background": "#FFFFFF",
+      "display": "flex，align-items: center，gap: 6px",
+      "icon": {
+        "size": "14×14px",
+        "color": "#A8B4C8",
+        "position": "内联在 flex 容器左侧"
+      },
+      "input": {
+        "font_size": "14px",
+        "color": "#223355",
+        "placeholder_color": "#A8B4C8",
+        "border": "none",
+        "background": "transparent"
+      }
+    },
+
+    "list": {
+      "min_height": "200px",
+      "max_height": "200px",
+      "overflow_y": "auto",
+      "padding": "4px 0",
+      "scrollbar_width": "4px",
+      "scrollbar_thumb": "#E9ECF2"
+    },
+
+    "item": {
+      "height": "40px",
+      "padding": "0 20px",
+      "display": "flex，align-items: center，gap: 8px",
+      "font_size": "14px",
+      "color": "#223355",
+      "checkbox_to_panel_edge": "20px",
+      "checkbox_to_label_gap": "8px",
+      "label_overflow": "ellipsis",
+      "states": {
+        "default":  { "background": "transparent" },
+        "hover":    { "background": "#F5F7FA", "margin": "0 8px", "border_radius": "4px", "padding": "0 12px" },
+        "checked":  { "background": "transparent" },
+        "disabled": { "color": "#A8B4C8", "cursor": "not-allowed", "hover": "无效果" }
+      },
+      "checkbox": {
+        "ref": "checkbox-spec.json",
+        "size": "16×16px",
+        "border_radius": "4px"
+      }
+    },
+
+    "empty": {
+      "display": "flex，align-items: center，justify-content: center",
+      "min_height": "200px",
+      "font_size": "14px",
+      "color": "#A8B4C8",
+      "text": "暂无数据"
+    },
+
+    "footer": {
+      "height": "44px",
+      "padding": "0 12px",
+      "border_top": "1px solid #E9ECF2",
+      "display": "flex，align-items: center，justify-content: flex-end",
+      "pagination": {
+        "ref": "pagination-spec.json#mini",
+        "type": "迷你分页",
+        "align": "靠右对齐",
+        "prev_next_size": "28×28px",
+        "page_input": {
+          "width": "28px",
+          "height": "28px",
+          "border": "1px solid #DDE1EB",
+          "border_radius": "4px",
+          "font_size": "14px",
+          "color": "#3388FF",
+          "text_align": "center"
+        }
+      }
+    }
+  },
+
+  "arrow_area": {
+    "display": "flex",
+    "flex_direction": "column",
+    "align_items": "center",
+    "justify_content": "center",
+    "gap": "8px",
+    "width": "40px",
+
+    "button": {
+      "width": "32px",
+      "height": "32px",
+      "padding": "0",
+      "border": "none",
+      "border_radius": "4px",
+      "icon_size": "14×14px",
+      "states": {
+        "default":  { "background": "transparent", "color": "#A8B4C8" },
+        "hover":    { "background": "#F0F9FF", "color": "#3388FF" },
+        "active":   { "background": "#3388FF", "color": "#FFFFFF" },
+        "disabled": { "color": "#C0C7D6", "cursor": "not-allowed", "pointer_events": "none" }
+      },
+      "active_rule": "对应侧面板有勾选项时可用，无勾选项时为禁用态"
+    }
+  },
+
+  "tree_variant": {
+    "description": "树列表穿梭框，左侧面板展示树形结构，右侧已选列表平铺展示",
+    "tree_row": {
+      "height": "40px",
+      "padding": "0 20px",
+      "hover": "同普通列表项，margin: 0 8px，border-radius: 4px，padding: 0 12px"
+    },
+    "indent": "子节点 padding-left: 20px",
+    "toggle_icon": {
+      "size": "12×12px",
+      "color": "#A8B4C8",
+      "open": "旋转 90deg",
+      "leaf": "visibility: hidden（占位）"
+    },
+    "parent_checkbox": "支持半选（indeterminate）态",
+    "right_panel": "已选项统一平铺展示，与普通穿梭框右侧列表规格相同"
+  },
+
+  "error_message": {
+    "ref": "global-spec.json",
+    "margin_top": "4px",
+    "font_size": "12px",
+    "color": "#FF4433"
+  }
+}

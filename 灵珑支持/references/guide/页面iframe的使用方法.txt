@@ -1,0 +1,75 @@
+页面iframe的使用方法
+1 使用场景
+在进行配置页面的时候会存在复用其他系统的页面，因此使用iframe来进行嵌套使用其他页面。
+2 效果
+在页面中嵌套使用其他已经配置好或存在的页面。
+3 配置
+新建页面，在布局组件中拖入iframe部件
+点击页面，点开右下角绑定动作，按图所示绑定页面动作
+页面动作代码如下
+/**
+* 尊敬的用户，你好：页面 JS 面板是高阶用法，一般不建议普通用户使用，如需使用，请确定你具备研发背景，能够自我排查问题。
+* 我们可以用 JS 面板来开发一些定制度高功能，比如：调用API接口，自定义动作执行等等。
+*/
+
+// 当页面渲染完毕后马上调用下面的函数，这个函数是在当前页面 - 设置 - 生命周期 - 页面加载完成时中被关联的。
+export function didMount() {
+  debugger
+  console.log("this.state.extraParams");
+  console.log(this.state.extraParams);
+  let url = "http://10.255.18.71:58080/dist/index.html#/user-detail";//需要展示的页面连接
+  if (this.state.extraParams) {
+    var extraParams = this.state.extraParams;
+    url += "?detailFrom=2";
+    url += "&fromID=" + extraParams.dutyDeptId;
+    url += "&fromName=" + extraParams.dutyDeptName;//传递的参数名称需要跟对应的列表传参的参数一一对应
+    url += "&v22_token=" + extraParams.v22_token;
+    url += "&startTime=" + encodeURI(extraParams.startTime) + "&endTime=" + encodeURI(extraParams.endTime);
+  }
+
+  var interfaceUrl = "http://10.255.18.71:58080/eUrbanMIS/perceptionserver"
+
+  url += "&interfaceUrl=" + interfaceUrl;
+
+  this.$$model("basic_iframe_9199uh").props.url = url;//当前页面的iframe组件标识
+  console.log(url);
+  console.log("「页面 JS」：当前页面地址 " + location.href);
+}
+配置页面参考代码块如下，注意定义的字段名称，定义字段标注在代码块中
+4.1 编辑需要进行传参跳转的入口
+4.2 选中目标页面使用自定义脚本传参
+4.3 脚本代码如下
+function main(defaultParams) {
+    debugger
+    console.log(defaultParams);
+    let qe = this.findElement("query_field_wrapper_7enrhg");
+    let result = {};
+    return new Promise((resolve, reject) => {
+        let curValue = qe.getCurrentValue();
+
+        curValue.then((curDate) => {
+            let params = {};
+            if (curDate && curDate.length == 2) {
+                // result["startTime"] = curDate[0];
+                // result["endTime"] = curDate[1];
+                // result["dutyDeptId"] = defaultParams['f13602b5-927e-429f-aeb6-11d4d1da9e03'];
+                // result["dutyDeptName"] = defaultParams['d8c21d35-8d67-4479-82b3-7daac376e9c8'];
+                // result["token"] = defaultParams['623da888-010c-41d8-9171-a7a6cfdbc588'];
+
+                params = {
+                    'startTime': curDate[0],
+                    'endTime': curDate[1],
+                    // 'startTime': '2023-09-15',
+                    // 'endTime': '2023-09-25',
+                    'dutyDeptId': defaultParams['73134f04-4a6a-4baf-bd8e-17b0abda449a'],
+                    'dutyDeptName': defaultParams['5cb065f6-fe86-4c18-aaf3-e9018e53be14'],
+                    'v22_token': defaultParams['43d74649-5071-4e9d-969f-b346f85a0139']
+                };
+            }
+            console.log("params:", params);
+            resolve(params);
+        }).catch(err => {
+            reject(err);
+        });
+    });
+}

@@ -1,0 +1,11 @@
+[Unit]
+Description=cetus
+
+[Service]
+WorkingDirectory=/usr/local/cetus
+ExecStart=/usr/local/cetus/bin/cetus --defaults-file=/usr/local/cetus/conf/proxy.conf
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

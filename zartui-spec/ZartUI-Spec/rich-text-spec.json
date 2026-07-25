@@ -1,0 +1,344 @@
+{
+  "name": "rich-text-spec",
+  "version": "1.1.0",
+  "description": "ZartUI 富文本编辑器规范，含容器、工具栏、颜色面板（矩形色盘+渐变）、边框设置面板、下拉面板、编辑区",
+
+  "container": {
+    "border": "1px solid #DDE1EB",
+    "border_radius": "8px",
+    "background": "#FFFFFF",
+    "overflow": "visible"
+  },
+
+  "toolbar": {
+    "background": "#FFFFFF",
+    "border_bottom": "1px solid #E9ECF2",
+    "padding": "6px 8px",
+    "min_height": "40px",
+    "gap": "4px",
+    "flex_wrap": "nowrap",
+
+    "divider": {
+      "width": "1px",
+      "height": "16px",
+      "color": "#E9ECF2",
+      "margin": "0 4px"
+    },
+
+    "icon_btn": {
+      "size": "28×28px",
+      "border_radius": "4px",
+      "icon_render_size": "18×18px",
+      "icon_viewbox": "0 0 16 16",
+      "icon_style": "线状",
+      "stroke_width": "1.5",
+      "stroke_linecap": "round",
+      "stroke_linejoin": "round",
+      "color_default": "#223355",
+      "hover_bg": "#F5F7FA",
+      "active_bg": "#EEF5FF",
+      "active_icon": "#3388FF",
+      "disabled_icon": "#A8B4C8",
+      "disabled_pointer_events": "none"
+    },
+
+    "select_btn": {
+      "height": "28px",
+      "padding": "0 6px",
+      "border_radius": "4px",
+      "font_size": "13px",
+      "color": "#223355",
+      "chevron_size": "12×12px",
+      "chevron_color": "#223355",
+      "chevron_stroke_width": "1.5",
+      "hover_bg": "#F5F7FA",
+      "open_bg": "#EEF5FF"
+    },
+
+    "color_btn": {
+      "size": "28×28px",
+      "border_radius": "4px",
+      "layout": "flex column, align-items center",
+      "icon_size": "16×16px",
+      "icon_style": "线状",
+      "icon_stroke": "#223355",
+      "color_bar_width": "14px",
+      "color_bar_height": "3px",
+      "color_bar_border_radius": "1px",
+      "color_bar_note": "显示当前已选颜色"
+    },
+
+    "groups": [
+      {
+        "group": 1,
+        "label": "历史 & 清除",
+        "items": ["撤销", "重做", "清除格式"]
+      },
+      {
+        "group": 2,
+        "label": "字体",
+        "items": ["字体选择（下拉）"]
+      },
+      {
+        "group": 3,
+        "label": "字号",
+        "items": ["字号选择（下拉）", "缩小字号（A−）", "增大字号（A+）"],
+        "order_note": "字号选择 → 缩小字号 → 增大字号，从左到右"
+      },
+      {
+        "group": 4,
+        "label": "文字样式",
+        "items": ["加粗", "斜体", "下划线", "删除线", "大小写（下拉）"]
+      },
+      {
+        "group": 5,
+        "label": "颜色",
+        "items": ["文字颜色", "填充颜色"]
+      },
+      {
+        "group": 6,
+        "label": "段落格式",
+        "items": ["段落格式（下拉：标题1 / 标题2 / 标题3 / 正文）"]
+      },
+      {
+        "group": 7,
+        "label": "对齐",
+        "items": ["左对齐", "居中对齐", "右对齐", "两端对齐"]
+      },
+      {
+        "group": 8,
+        "label": "插入 & 边框",
+        "items": ["插入图片", "边框设置"]
+      }
+    ]
+  },
+
+  "color_panel": {
+    "width": "240px",
+    "padding": "12px",
+    "background": "#FFFFFF",
+    "border": "1px solid #E9ECF2",
+    "border_radius": "4px",
+    "box_shadow": "0 4px 12px rgba(34,51,85,0.10)",
+    "position": "触发按钮正下方 4px，水平居中对齐",
+
+    "preset_swatches": {
+      "count": 16,
+      "swatch_size": "20×20px",
+      "columns": 8,
+      "gap": "4px",
+      "border_radius": "3px",
+      "border": "1px solid rgba(0,0,0,0.08)",
+      "hover": "scale(1.15) + box-shadow",
+      "selected": "outline: 2px solid #3388FF, outline-offset: 1px",
+      "colors": [
+        "#000000", "#223355", "#3388FF", "#06A17F",
+        "#FF6600", "#FF4433", "#9C27B0", "#FFFFFF",
+        "#6B7A99", "#A8B4C8", "#D6EDFF", "#E8F5E9",
+        "#FFF3E0", "#FFEBEE", "#F3E5F5", "#FFEB3B"
+      ]
+    },
+
+    "custom_color_picker": {
+      "type": "矩形 HSV 色盘",
+      "palette": {
+        "width": "100%",
+        "height": "120px",
+        "border_radius": "4px",
+        "border": "1px solid #E9ECF2",
+        "cursor": "crosshair",
+        "axis_x": "饱和度（左：白色 → 右：纯色）",
+        "axis_y": "明度（上：纯色 → 下：黑色）",
+        "cursor_indicator": "白色实心圆 + 半透明黑色外描边，radius 5px"
+      },
+      "hue_bar": {
+        "width": "100%",
+        "height": "10px",
+        "border_radius": "4px",
+        "border": "1px solid #E9ECF2",
+        "gradient": "彩虹渐变 0°→360°",
+        "cursor_indicator": "白色圆形"
+      },
+      "bottom_row": {
+        "layout": "flex, gap 6px",
+        "preview_swatch": {
+          "position": "嵌入输入框左侧内部，absolute left:5px",
+          "size": "16×16px",
+          "border_radius": "2px",
+          "border": "1px solid rgba(0,0,0,0.12)"
+        },
+        "hex_input": {
+          "flex": "1",
+          "height": "26px",
+          "padding_left": "26px",
+          "border": "1px solid #DDE1EB",
+          "border_radius": "4px",
+          "font_size": "12px",
+          "font_family": "monospace",
+          "focus_border": "#3388FF",
+          "focus_shadow": "0 0 0 2px #D6EDFF",
+          "note": "支持手动输入实时联动色盘与预览"
+        },
+        "apply_btn": {
+          "height": "26px",
+          "padding": "0 10px",
+          "background": "#3388FF",
+          "hover_background": "#2167D9",
+          "color": "#FFFFFF",
+          "border_radius": "4px",
+          "font_size": "12px",
+          "position_note": "右边缘与矩形色盘右边对齐"
+        }
+      }
+    },
+
+    "gradient": {
+      "presets": {
+        "count": 8,
+        "columns": 4,
+        "gap": "6px",
+        "item_height": "24px",
+        "border_radius": "4px",
+        "hover": "scale(1.04) + box-shadow",
+        "selected": "outline: 2px solid #3388FF, outline-offset: 1px",
+        "colors": [
+          ["#3388FF", "#06A17F"], ["#3388FF", "#9C27B0"],
+          ["#FF6600", "#FF4433"], ["#FFEB3B", "#FF6600"],
+          ["#06A17F", "#D6EDFF"], ["#223355", "#3388FF"],
+          ["#F3E5F5", "#9C27B0"], ["#FFF3E0", "#FF4433"]
+        ]
+      },
+      "custom": {
+        "layout": "flex, gap 6px",
+        "from_picker": "原生 color input，24×24px",
+        "to_picker": "原生 color input，24×24px",
+        "preview_bar": "flex:1，高 20px，圆角 3px，实时渐变预览"
+      }
+    }
+  },
+
+  "border_panel": {
+    "description": "边框设置面板，点击工具栏边框图标触发",
+    "position": "触发按钮正下方 4px，右对齐",
+    "background": "#FFFFFF",
+    "border": "1px solid #E9ECF2",
+    "border_radius": "4px",
+    "box_shadow": "0 4px 12px rgba(34,51,85,0.10)",
+    "padding": "12px",
+    "gap": "12px",
+    "layout": "flex row：左侧设置区 + 1px 分隔线 + 右侧四边切换区",
+
+    "label_style": {
+      "font_size": "12px",
+      "color": "#223355",
+      "layout": "与控件同行显示，标签后带冒号"
+    },
+
+    "left_section": {
+      "width": "200px",
+      "row_gap": "20px",
+
+      "border_style": {
+        "label": "线型：",
+        "control": "下拉选择框",
+        "options": ["实线", "虚线", "点线", "双线"],
+        "option_preview": "SVG 线段预览",
+        "chevron_color": "#A8B4C8"
+      },
+
+      "border_width": {
+        "label": "宽度：",
+        "control": "数字输入框",
+        "suffix": "px",
+        "min": 1,
+        "max": 20,
+        "default": 1,
+        "height": "28px",
+        "border": "1px solid #DDE1EB",
+        "border_radius": "4px",
+        "focus_border": "#3388FF",
+        "focus_shadow": "0 0 0 2px #D6EDFF",
+        "suffix_color": "#A8B4C8",
+        "suffix_font_size": "12px"
+      },
+
+      "border_color": {
+        "label": "颜色：",
+        "control": "28×28px 色块（圆角 4px，描边 #DDE1EB）",
+        "hover_border": "#3388FF",
+        "click": "展开与文字颜色/填充颜色完全一致的颜色面板（预设色板 + 矩形色盘 + 渐变）",
+        "default_color": "#223355"
+      }
+    },
+
+    "right_section": {
+      "label": "边框位置：",
+      "layout": "Grid 3×3，中心为预览方块，四边各有线段切换按钮",
+      "grid_template": "'. top .' / 'left preview right' / '. bottom .'",
+      "grid_columns": "20px 48px 20px",
+      "grid_rows": "20px 48px 20px",
+
+      "edge_btn": {
+        "active_opacity": 1,
+        "inactive_opacity": 0.35,
+        "hover_opacity": 0.7,
+        "border_radius": "3px"
+      },
+
+      "preview_block": {
+        "size": "48×48px",
+        "border": "1px solid #E9ECF2",
+        "border_radius": "3px",
+        "note": "实时反映各边显示状态及当前颜色"
+      },
+
+      "shortcuts": {
+        "items": ["全部", "清除"],
+        "font_size": "11px",
+        "color": "#3388FF",
+        "background": "#F0F9FF",
+        "border": "1px solid #D6EDFF",
+        "border_radius": "3px",
+        "hover_background": "#D6EDFF",
+        "margin_top": "8px",
+        "layout": "flex center, gap 6px"
+      }
+    }
+  },
+
+  "dropdown_panel": {
+    "background": "#FFFFFF",
+    "border": "1px solid #E9ECF2",
+    "border_radius": "4px",
+    "box_shadow": "0 4px 12px rgba(34,51,85,0.10)",
+    "offset_top": "4px",
+    "item_height": "34px",
+    "item_padding": "0 12px",
+    "item_font_size": "14px",
+    "item_color": "#223355",
+    "item_hover_bg": "#F5F7FA",
+    "item_selected_color": "#3388FF",
+    "item_selected_bg": "#F0F9FF"
+  },
+
+  "editor": {
+    "min_height": "200px",
+    "padding": "16px",
+    "font_size": "14px",
+    "color": "#223355",
+    "line_height": "1.8",
+    "h1": { "font_size": "24px", "font_weight": "600", "color": "#081126", "margin_bottom": "12px" },
+    "h2": { "font_size": "20px", "font_weight": "600", "color": "#081126", "margin_bottom": "10px" },
+    "h3": { "font_size": "17px", "font_weight": "600", "color": "#081126", "margin_bottom": "8px" },
+    "p":  { "margin_bottom": "8px" }
+  },
+
+  "tooltip": {
+    "background": "#223355",
+    "color": "#FFFFFF",
+    "font_size": "12px",
+    "padding": "3px 8px",
+    "border_radius": "4px",
+    "position": "触发元素正下方 6px，水平居中"
+  }
+}

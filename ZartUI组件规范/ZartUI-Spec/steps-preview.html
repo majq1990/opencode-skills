@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZartUI · Steps 步骤条 规范预览</title>
+<style>
+:root {
+  --color-bg-page:      #F5F7FA;
+  --color-bg-panel:     #FFFFFF;
+  --color-text-primary: #081126;
+  --color-text-body:    #223355;
+  --color-text-muted:   #6B7A99;
+  --color-primary:      #3388FF;
+  --color-primary-soft: #F0F9FF;
+  --color-border:       #E9ECF2;
+  --font-family:        'PingFang SC','Microsoft YaHei',sans-serif;
+  --radius-m: 8px;
+  --radius-s: 4px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-body);
+  background: var(--color-bg-page);
+  padding: 40px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 32px;
+}
+
+.spec-section {
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-m);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.spec-section-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 24px;
+}
+
+.spec-block-title {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.demo-block { margin-bottom: 32px; }
+
+/* ── 规格参数表 ── */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.spec-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: #F5F7FA;
+}
+.spec-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td code {
+  font-family: 'SF Mono','Consolas',monospace;
+  font-size: 12px;
+  background: #F5F7FA;
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  color: var(--color-primary);
+}
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.swatch {
+  width: 14px; height: 14px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════
+   公共节点
+   ══════════════════════════════════════ */
+.step-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.step-circle.pending { background: #F5F7FA; color: #6B7A99; }
+.step-circle.active  { background: #3388FF; color: #FFFFFF; }
+.step-circle.done    { background: #F0F9FF; }
+
+.step-label { font-size: 14px; white-space: nowrap; }
+.step-label.pending { color: #6B7A99; }
+.step-label.active  { color: #3388FF; font-weight: 500; }
+.step-label.done    { color: #3388FF; }
+
+.step-desc { font-size: 12px; line-height: 18px; white-space: nowrap; }
+.step-desc.pending { color: #6B7A99; }
+.step-desc.active  { color: #223355; }
+.step-desc.done    { color: #6B7A99; }
+
+.icon-check { width: 12px; height: 12px; display: block; }
+
+/* ══════════════════════════════════════
+   横向步骤条
+   ══════════════════════════════════════ */
+.steps-h {
+  display: flex;
+  align-items: center;
+}
+
+/* 节点：圆 + 文字横排 */
+.step-h-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 节点：圆 + 文字 + 描述纵排 */
+.step-h-node-desc {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+.step-h-node-desc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* 描述缩进与圆宽+gap对齐 */
+.step-h-desc-indent { padding-left: 32px; }
+
+/* 横向连接线 */
+.step-line-h {
+  flex: 1;
+  height: 1px;
+  min-width: 40px;
+  margin: 0 8px;
+}
+.step-line-h.pending { background: #E9ECF2; }
+.step-line-h.active  { background: #3388FF; }
+.step-line-h.done    { background: #3388FF; }
+
+/* 带描述时连接线需要上移到圆的垂直中心 */
+.step-line-h.offset {
+  margin-top: 11px;  /* (24px圆高 - 1px线高) / 2，与圆垂直居中 */
+  align-self: flex-start;
+}
+
+/* ══════════════════════════════════════
+   上下结构（圆、文字、描述全部居中）
+   ══════════════════════════════════════ */
+.steps-tb {
+  display: flex;
+  align-items: flex-start; /* 各列顶部对齐，线自己用 margin-top 定位 */
+}
+
+/* 节点列：内容居中 */
+.step-tb-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* 连接线：margin-top = (24px圆高 - 1px线高) / 2 = 11.5px ≈ 11px，使线与圆垂直居中 */
+.step-line-tb {
+  flex: 1;
+  height: 1px;
+  min-width: 40px;
+  margin: 11px 8px 0;
+  align-self: auto;
+}
+.step-line-tb.pending { background: #E9ECF2; }
+.step-line-tb.active  { background: #3388FF; }
+.step-line-tb.done    { background: #3388FF; }
+
+/* ══════════════════════════════════════
+   纵向步骤条
+   圆与进度线水平居中（left = 11px = 24/2 - 1/2）
+   文字在圆右侧左对齐
+   ══════════════════════════════════════ */
+.steps-v {
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.step-v {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 节点行 */
+.step-v-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* 文字区 */
+.step-v-text {
+  display: flex;
+  flex-direction: column;
+  padding-top: 1px; /* 微调与圆垂直对齐 */
+}
+
+/* 进度线：margin-left = 11px 使线与圆水平居中；上下各 4px 间距 */
+.step-line-v {
+  width: 1px;
+  height: 20px;
+  margin-left: 11px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+.step-line-v.pending { background: #E9ECF2; }
+.step-line-v.active  { background: #3388FF; }
+.step-line-v.done    { background: #3388FF; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · Steps 步骤条 规范预览</h1>
+
+<!-- ══════════════════════════════════════
+     横向 · 不带描述
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">左右结构 · 不带描述</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">组件演示</div>
+    <div class="steps-h">
+      <div class="step-h-node">
+        <div class="step-circle done">
+          <svg class="icon-check" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6l3 3 5-5" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="step-label done">提交申请</span>
+      </div>
+      <div class="step-line-h done"></div>
+
+      <div class="step-h-node">
+        <div class="step-circle active">2</div>
+        <span class="step-label active">部门审批</span>
+      </div>
+      <div class="step-line-h pending"></div>
+
+      <div class="step-h-node">
+        <div class="step-circle pending">3</div>
+        <span class="step-label pending">财务审核</span>
+      </div>
+      <div class="step-line-h pending"></div>
+
+      <div class="step-h-node">
+        <div class="step-circle pending">4</div>
+        <span class="step-label pending">完成</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:100px;">状态</th><th style="width:80px;">属性</th><th style="width:200px;">规格值</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="3">未开始</td>
+        <td>节点</td>
+        <td><code>24×24px</code> 圆形</td>
+        <td>背景 <span class="chip"><span class="swatch" style="background:#F5F7FA;border-color:#ccc;"></span><code>#F5F7FA</code></span> · 数字 <span class="chip"><span class="swatch" style="background:#6B7A99;"></span><code>#6B7A99</code></span></td>
+      </tr>
+      <tr><td>文字</td><td><code>14px</code></td><td>颜色 <span class="chip"><span class="swatch" style="background:#6B7A99;"></span><code>#6B7A99</code></span></td></tr>
+      <tr><td>连接线</td><td><code>1px</code></td><td>颜色 <span class="chip"><span class="swatch" style="background:#E9ECF2;border-color:#ccc;"></span><code>#E9ECF2</code></span></td></tr>
+      <tr>
+        <td rowspan="3">进行中</td>
+        <td>节点</td>
+        <td><code>24×24px</code> 圆形</td>
+        <td>背景 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span> · 数字 <code>#FFFFFF</code></td>
+      </tr>
+      <tr><td>文字</td><td><code>14px · 500</code></td><td>颜色 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td></tr>
+      <tr><td>连接线</td><td><code>1px</code></td><td>颜色 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td></tr>
+      <tr>
+        <td rowspan="2">已完成</td>
+        <td>节点</td>
+        <td><code>24×24px</code> 圆形</td>
+        <td>背景 <span class="chip"><span class="swatch" style="background:#F0F9FF;border-color:#ccc;"></span><code>#F0F9FF</code></span> · 对勾 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td>
+      </tr>
+      <tr><td>文字</td><td><code>14px</code></td><td>颜色 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     横向 · 带描述
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">左右结构 · 带描述</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">组件演示</div>
+    <div class="steps-h" style="align-items: flex-start;">
+      <div class="step-h-node-desc">
+        <div class="step-h-node-desc-row">
+          <div class="step-circle done">
+            <svg class="icon-check" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6l3 3 5-5" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <span class="step-label done">提交申请</span>
+        </div>
+        <div class="step-h-desc-indent"><span class="step-desc done">2024-03-01 10:00</span></div>
+      </div>
+      <div class="step-line-h done offset"></div>
+
+      <div class="step-h-node-desc">
+        <div class="step-h-node-desc-row">
+          <div class="step-circle active">2</div>
+          <span class="step-label active">部门审批</span>
+        </div>
+        <div class="step-h-desc-indent"><span class="step-desc active">等待审批人处理</span></div>
+      </div>
+      <div class="step-line-h pending offset"></div>
+
+      <div class="step-h-node-desc">
+        <div class="step-h-node-desc-row">
+          <div class="step-circle pending">3</div>
+          <span class="step-label pending">财务审核</span>
+        </div>
+        <div class="step-h-desc-indent"><span class="step-desc pending">待财务部门处理</span></div>
+      </div>
+      <div class="step-line-h pending offset"></div>
+
+      <div class="step-h-node-desc">
+        <div class="step-h-node-desc-row">
+          <div class="step-circle pending">4</div>
+          <span class="step-label pending">完成</span>
+        </div>
+        <div class="step-h-desc-indent"><span class="step-desc pending">流程结束</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-block-title">描述文字规格</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:180px;">状态</th><th style="width:220px;">描述文字色</th><th>字号</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>未开始 / 已完成</td>
+        <td><span class="chip"><span class="swatch" style="background:#6B7A99;"></span><code>#6B7A99</code></span></td>
+        <td><code>12px</code></td>
+      </tr>
+      <tr>
+        <td>进行中</td>
+        <td><span class="chip"><span class="swatch" style="background:#223355;"></span><code>#223355</code></span></td>
+        <td><code>12px</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     上下结构 · 不带描述
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">上下结构 · 不带描述</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">组件演示（圆与文字居中对齐，进度线与圆居中对齐）</div>
+    <div class="steps-tb">
+      <div class="step-tb-node">
+        <div class="step-circle done">
+          <svg class="icon-check" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6l3 3 5-5" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="step-label done">提交申请</span>
+      </div>
+      <div class="step-line-tb done no-desc"></div>
+
+      <div class="step-tb-node">
+        <div class="step-circle active">2</div>
+        <span class="step-label active">部门审批</span>
+      </div>
+      <div class="step-line-tb pending no-desc"></div>
+
+      <div class="step-tb-node">
+        <div class="step-circle pending">3</div>
+        <span class="step-label pending">财务审核</span>
+      </div>
+      <div class="step-line-tb pending no-desc"></div>
+
+      <div class="step-tb-node">
+        <div class="step-circle pending">4</div>
+        <span class="step-label pending">完成</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     上下结构 · 带描述
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">上下结构 · 带描述</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">组件演示（圆、文字、描述均居中对齐，进度线与圆居中对齐）</div>
+    <div class="steps-tb">
+      <div class="step-tb-node">
+        <div class="step-circle done">
+          <svg class="icon-check" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6l3 3 5-5" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="step-label done">提交申请</span>
+        <span class="step-desc done">2024-03-01</span>
+      </div>
+      <div class="step-line-tb done has-desc"></div>
+
+      <div class="step-tb-node">
+        <div class="step-circle active">2</div>
+        <span class="step-label active">部门审批</span>
+        <span class="step-desc active">等待审批人处理</span>
+      </div>
+      <div class="step-line-tb pending has-desc"></div>
+
+      <div class="step-tb-node">
+        <div class="step-circle pending">3</div>
+        <span class="step-label pending">财务审核</span>
+        <span class="step-desc pending">待财务部门处理</span>
+      </div>
+      <div class="step-line-tb pending has-desc"></div>
+
+      <div class="step-tb-node">
+        <div class="step-circle pending">4</div>
+        <span class="step-label pending">完成</span>
+        <span class="step-desc pending">流程结束</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     纵向 · 不带描述
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">纵向步骤条 · 不带描述</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">组件演示（圆与进度线水平居中，文字在右侧左对齐，线与圆间距 4px）</div>
+    <div class="steps-v">
+      <div class="step-v">
+        <div class="step-v-row">
+          <div class="step-circle done">
+            <svg class="icon-check" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6l3 3 5-5" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="step-v-text"><span class="step-label done">提交申请</span></div>
+        </div>
+        <div class="step-line-v done"></div>
+      </div>
+
+      <div class="step-v">
+        <div class="step-v-row">
+          <div class="step-circle active">2</div>
+          <div class="step-v-text"><span class="step-label active">部门审批</span></div>
+        </div>
+        <div class="step-line-v pending"></div>
+      </div>
+
+      <div class="step-v">
+        <div class="step-v-row">
+          <div class="step-circle pending">3</div>
+          <div class="step-v-text"><span class="step-label pending">财务审核</span></div>
+        </div>
+        <div class="step-line-v pending"></div>
+      </div>
+
+      <div class="step-v">
+        <div class="step-v-row">
+          <div class="step-circle pending">4</div>
+          <div class="step-v-text"><span class="step-label pending">完成</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     纵向 · 带描述
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">纵向步骤条 · 带描述</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">组件演示（圆与进度线水平居中，名称+描述在右侧左对齐，线与圆间距 4px）</div>
+    <div class="steps-v">
+      <div class="step-v">
+        <div class="step-v-row">
+          <div class="step-circle done">
+            <svg class="icon-check" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6l3 3 5-5" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="step-v-text">
+            <span class="step-label done">提交申请</span>
+            <span class="step-desc done">2024-03-01 10:00</span>
+          </div>
+        </div>
+        <div class="step-line-v done"></div>
+      </div>
+
+      <div class="step-v">
+        <div class="step-v-row">
+          <div class="step-circle active">2</div>
+          <div class="step-v-text">
+            <span class="step-label active">部门审批</span>
+            <span class="step-desc active">等待审批人处理</span>
+          </div>
+        </div>
+        <div class="step-line-v pending"></div>
+      </div>
+
+      <div class="step-v">
+        <div class="step-v-row">
+          <div class="step-circle pending">3</div>
+          <div class="step-v-text">
+            <span class="step-label pending">财务审核</span>
+            <span class="step-desc pending">待财务部门处理</span>
+          </div>
+        </div>
+        <div class="step-line-v pending"></div>
+      </div>
+
+      <div class="step-v">
+        <div class="step-v-row">
+          <div class="step-circle pending">4</div>
+          <div class="step-v-text">
+            <span class="step-label pending">完成</span>
+            <span class="step-desc pending">流程结束</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

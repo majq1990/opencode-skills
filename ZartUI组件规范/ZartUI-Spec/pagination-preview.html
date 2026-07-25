@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZartUI · 分页 规范预览</title>
+<style>
+:root {
+  --color-bg-page:      #F5F7FA;
+  --color-bg-panel:     #FFFFFF;
+  --color-text-primary: #081126;
+  --color-text-body:    #223355;
+  --color-text-muted:   #6B7A99;
+  --color-primary:      #3388FF;
+  --color-border:       #DDE1EB;
+  --font-family:        'PingFang SC','Microsoft YaHei',sans-serif;
+  --radius-m: 8px;
+  --radius-s: 4px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-body);
+  background: var(--color-bg-page);
+  padding: 40px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  margin-bottom: 32px;
+}
+
+.spec-section {
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-m);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.spec-section-title {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid #E9ECF2;
+  margin-bottom: 24px;
+}
+
+.spec-block-title {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.demo-block { margin-bottom: 32px; }
+
+/* 规格参数表 */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border: 1px solid #E9ECF2;
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.spec-table th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #E9ECF2;
+  background: #F5F7FA;
+}
+.spec-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid #E9ECF2;
+  vertical-align: middle;
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td code {
+  font-family: 'SF Mono','Consolas',monospace;
+  font-size: 12px;
+  background: #F5F7FA;
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  color: var(--color-primary);
+}
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 14px; height: 14px; border-radius: var(--radius-s); border: 1px solid #E9ECF2; flex-shrink: 0; }
+
+/* ══════════════════════════════════════
+   分页组件
+   ══════════════════════════════════════ */
+
+/* 通用分页项 */
+.pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pg-item {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  transition: border-color 0.15s, color 0.15s;
+  user-select: none;
+  flex-shrink: 0;
+}
+.pg-item:hover {
+  border-color: #3388FF;
+  color: #3388FF;
+}
+.pg-item.is-active {
+  border-color: #3388FF;
+  color: #3388FF;
+}
+.pg-item.is-disabled {
+  color: #C0C7D6;
+  border-color: #E9ECF2;
+  cursor: not-allowed;
+}
+.pg-item svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pg-ellipsis {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #6B7A99;
+  flex-shrink: 0;
+}
+
+/* 总条目 */
+.pg-total {
+  font-size: 14px;
+  color: #6B7A99;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+/* 高级分页：每页条数选择（ZartUI 下拉规范） */
+.pg-size-wrap {
+  position: relative;
+  display: inline-block;
+}
+.pg-size-select {
+  height: 32px;
+  padding: 0 28px 0 10px;
+  border: 1px solid #DDE1EB;
+  border-radius: var(--radius-s);
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  background: #FFFFFF;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 100px;
+}
+.pg-size-select:focus { border-color: #3388FF; }
+.pg-size-wrap::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 6px;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B7A99' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+}
+
+.pg-jumper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #6B7A99;
+  white-space: nowrap;
+}
+.pg-jumper-input {
+  width: 52px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-s);
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  text-align: center;
+  outline: none;
+  padding: 0 6px;
+}
+.pg-jumper-input:focus { border-color: #3388FF; }
+
+/* 迷你分页 */
+.pagination-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.pg-mini-item {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #223355;
+  flex-shrink: 0;
+}
+.pg-mini-item.is-disabled { color: #C0C7D6; cursor: not-allowed; }
+.pg-mini-item svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pg-mini-input {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #DDE1EB;
+  border-radius: var(--radius-s);
+  font-size: 14px;
+  font-weight: 400;
+  color: #3388FF;
+  text-align: center;
+  outline: none;
+  padding: 0;
+}
+.pg-mini-input:focus { border-color: #3388FF; }
+.pg-mini-sep {
+  font-size: 14px;
+  color: #6B7A99;
+}
+.pg-mini-total {
+  font-size: 14px;
+  color: #223355;
+}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · 分页 规范预览</h1>
+
+<!-- 基础分页 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">基础分页</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">默认状态</div>
+    <div style="display:flex; align-items:center; gap:24px; flex-wrap:wrap;">
+      <span class="pg-total">共 128 条</span>
+      <div class="pagination">
+        <!-- 上一页 -->
+        <div class="pg-item is-disabled">
+          <svg viewBox="0 0 14 14"><path d="M9 11L5 7l4-4"/></svg>
+        </div>
+        <div class="pg-item is-active">1</div>
+        <div class="pg-item">2</div>
+        <div class="pg-item">3</div>
+        <div class="pg-ellipsis">···</div>
+        <div class="pg-item">8</div>
+        <!-- 下一页 -->
+        <div class="pg-item">
+          <svg viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-block">
+    <div class="spec-block-title">中间页状态</div>
+    <div style="display:flex; align-items:center; gap:24px; flex-wrap:wrap;">
+      <span class="pg-total">共 128 条</span>
+      <div class="pagination">
+        <div class="pg-item">
+          <svg viewBox="0 0 14 14"><path d="M9 11L5 7l4-4"/></svg>
+        </div>
+        <div class="pg-item">1</div>
+        <div class="pg-ellipsis">···</div>
+        <div class="pg-item">3</div>
+        <div class="pg-item is-active">4</div>
+        <div class="pg-item">5</div>
+        <div class="pg-ellipsis">···</div>
+        <div class="pg-item">8</div>
+        <div class="pg-item">
+          <svg viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">元素</th><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="5">页码按钮</td>
+        <td>尺寸</td>
+        <td><code>32×32px</code></td>
+      </tr>
+      <tr><td>圆角</td><td><code>4px</code></td></tr>
+      <tr><td>描边</td><td><code>1px solid #DDE1EB</code>（默认）</td></tr>
+      <tr><td>默认颜色</td><td><span class="chip"><span class="swatch" style="background:#223355;"></span><code>#223355</code></span></td></tr>
+      <tr><td>选中描边 / 颜色</td><td><span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td></tr>
+      <tr>
+        <td>箭头图标</td>
+        <td>尺寸</td>
+        <td><code>14×14px</code>，线状，颜色同页码</td>
+      </tr>
+      <tr>
+        <td>省略号</td>
+        <td>样式</td>
+        <td><code>···</code>，颜色 <code>#6B7A99</code>，不可点击</td>
+      </tr>
+      <tr>
+        <td>总条目</td>
+        <td>文字</td>
+        <td><code>14px · #6B7A99</code>，位于分页左侧，间距 <code>8px</code></td>
+      </tr>
+      <tr>
+        <td>按钮间距</td>
+        <td>gap</td>
+        <td><code>6px</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 高级分页 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">高级分页</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">带每页条数 + 跳转</div>
+    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+      <span class="pg-total">共 128 条</span>
+      <div class="pagination">
+        <div class="pg-item is-disabled">
+          <svg viewBox="0 0 14 14"><path d="M9 11L5 7l4-4"/></svg>
+        </div>
+        <div class="pg-item is-active">1</div>
+        <div class="pg-item">2</div>
+        <div class="pg-item">3</div>
+        <div class="pg-ellipsis">···</div>
+        <div class="pg-item">13</div>
+        <div class="pg-item">
+          <svg viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+      </div>
+      <div class="pg-size-wrap">
+        <select class="pg-size-select">
+          <option>10 条/页</option>
+          <option>20 条/页</option>
+          <option>50 条/页</option>
+          <option>100 条/页</option>
+        </select>
+      </div>
+      <div class="pg-jumper">
+        跳至
+        <input class="pg-jumper-input" type="text" placeholder="1"/>
+        页
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">元素</th><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="3">每页条数选择框</td>
+        <td>高度</td>
+        <td><code>32px</code></td>
+      </tr>
+      <tr><td>描边 / 圆角</td><td><code>1px solid #DDE1EB</code>，<code>4px</code></td></tr>
+      <tr><td>选项</td><td>10 条/页 · 20 条/页 · 50 条/页 · 100 条/页</td></tr>
+      <tr>
+        <td rowspan="3">跳转输入框</td>
+        <td>尺寸</td>
+        <td><code>52×32px</code></td>
+      </tr>
+      <tr><td>描边 / 圆角</td><td><code>1px solid #DDE1EB</code>，<code>4px</code></td></tr>
+      <tr><td>文字格式</td><td>"跳至 [输入框] 页"，颜色 <code>#6B7A99</code></td></tr>
+      <tr>
+        <td>聚焦态</td>
+        <td>描边</td>
+        <td>选择框与输入框聚焦时描边变为 <code>#3388FF</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 迷你分页 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">迷你分页</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">左右箭头 + 当前页输入框 / 总页数</div>
+    <div class="pagination-mini">
+      <div class="pg-mini-item is-disabled">
+        <svg viewBox="0 0 12 12"><path d="M8 10L4 6l4-4"/></svg>
+      </div>
+      <input class="pg-mini-input" type="text" value="1"/>
+      <span class="pg-mini-sep">/</span>
+      <span class="pg-mini-total">13</span>
+      <div class="pg-mini-item">
+        <svg viewBox="0 0 12 12"><path d="M4 2l4 4-4 4"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">元素</th><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="2">箭头按钮</td>
+        <td>尺寸</td>
+        <td><code>28×28px</code></td>
+      </tr>
+      <tr><td>图标</td><td><code>12×12px</code>，线状，无边框，颜色 <code>#223355</code></td></tr>
+      <tr>
+        <td rowspan="3">当前页输入框</td>
+        <td>尺寸</td>
+        <td><code>44×28px</code></td>
+      </tr>
+      <tr><td>描边 / 圆角</td><td><code>1px solid #DDE1EB</code>，<code>4px</code>，居中对齐</td></tr>
+      <tr><td>数字颜色</td><td><span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td></tr>
+      <tr>
+        <td>分隔符 / 总页数</td>
+        <td>文字</td>
+        <td><code>/</code> 颜色 <code>#6B7A99</code>；总页数颜色 <span class="chip"><span class="swatch" style="background:#223355;"></span><code>#223355</code></span></td>
+      </tr>
+      <tr>
+        <td>间距</td>
+        <td>gap</td>
+        <td><code>8px</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

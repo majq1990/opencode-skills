@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>图标预览</title>
+  <style>
+    :root { --bg:#0a0a0f; --card-bg:#14141c; --border:#2a2a3a; --text:#e8e8f0; --sub:#8888aa; --accent:#65E5FF; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--bg); color:var(--text); font-family:'PingFang SC','Microsoft YaHei',sans-serif; padding:60px 20px; }
+    header { text-align:center; margin-bottom:40px; }
+    header h1 { font-size:28px; font-weight:700; background:linear-gradient(135deg,#fff 0%,#65E5FF 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:6px; }
+    header p { color:var(--sub); font-size:13px; }
+    
+    .color-section { display:flex; flex-direction:column; gap:10px; margin-bottom:24px; padding:16px 20px; border:1px solid var(--border); border-radius:12px; background:var(--card-bg); max-width:600px; margin-left:auto; margin-right:auto; }
+    .color-label { font-size:12px; color:#8888aa; flex-shrink:0; align-self:flex-start; line-height:32px; }
+    .color-row { display:flex; align-items:center; gap:10px; width:100%; }
+    .color-row-label { font-size:12px; color:var(--sub); white-space:nowrap; flex-shrink:0; width:48px; }
+    .color-bar { display:flex; gap:8px; flex-wrap:wrap; flex:1; align-items:center; }
+    .swatch { width:32px; height:32px; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:transform 0.15s, border-color 0.15s; }
+    .swatch:hover { transform:scale(1.12); }
+    .swatch.active { border-color:var(--accent); transform:scale(1.08); }
+    .swatch-white { box-shadow:inset 0 0 0 1px rgba(255,255,255,0.2); }
+    
+    .size-bar { display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+    .size-btn { padding:6px 16px; border:1px solid var(--border); border-radius:20px; background:var(--card-bg); color:var(--sub); font-size:12px; cursor:pointer; transition:all 0.2s; }
+    .size-btn:hover, .size-btn.active { border-color:var(--accent); color:var(--accent); background:rgba(101,229,255,0.08); }
+    .custom-size-btn { padding:6px 14px; border:1px solid var(--border); border-radius:20px; background:var(--card-bg); color:var(--sub); font-size:12px; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+    .custom-size-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(101,229,255,0.08); }
+    .custom-size-btn.active { border-color:var(--accent); color:var(--accent); background:rgba(101,229,255,0.08); }
+    .custom-size-panel { display:none; justify-content:center; align-items:center; gap:10px; margin-bottom:24px; }
+    .custom-size-panel.show { display:flex; }
+    .custom-size-panel label { font-size:12px; color:var(--sub); }
+    .custom-size-input-wrap { display:flex; align-items:center; gap:4px; }
+    .custom-size-input-wrap input[type=number] { width:64px; padding:5px 8px; border:1px solid var(--border); border-radius:8px; background:var(--card-bg); color:var(--text); font-size:13px; outline:none; text-align:center; -moz-appearance:textfield; }
+    .custom-size-input-wrap input[type=number]::-webkit-outer-spin-button,
+    .custom-size-input-wrap input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+    .custom-size-input-wrap input[type=number]:focus { border-color:var(--accent); }
+    .custom-size-unit { font-size:11px; color:var(--sub); }
+    .custom-size-sep { font-size:14px; color:var(--sub); margin:0 2px; }
+    
+    .preview-wrap { display:flex; flex-direction:column; align-items:center; gap:24px; max-width:500px; margin:0 auto; }
+    .preview-area { min-width:80px; min-height:80px; width:160px; height:160px; border-radius:16px; background:repeating-conic-gradient(#2a2a3a 0% 25%,#1a1a28 0% 50%) 50%/16px 16px; display:flex; align-items:center; justify-content:center; transition:width 0.2s, height 0.2s; }
+    /* 图标容器：相对定位，两个独立SVG叠加 */
+    .icon-container { position:relative; }
+    .icon-container svg { position:absolute; top:0; left:0; transition:width 0.3s, height 0.3s; }
+    .icon-container svg.bg-svg { z-index:1; }
+    .icon-container svg.icon-svg { z-index:2; }
+
+    .btn-row { display:flex; gap:10px; }
+    .btn { padding:8px 20px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
+    .btn-paste { background:rgba(255,152,35,0.4); border:1px solid #FF9823; color:#ffffff; }
+    .btn-copy { background:rgba(35,199,155,0.4); border:1px solid #23C79B; color:#ffffff; }
+    .btn-svg { background:rgba(55,187,255,0.4); border:1px solid #37BBFF; color:#ffffff; }
+    .btn-png { background:rgba(52,136,255,0.4); border:1px solid #3488FF; color:#ffffff; }
+    .btn:hover { opacity:0.85; }
+    .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:8px 20px; border-radius:20px; font-size:13px; opacity:0; transition:opacity 0.25s; pointer-events:none; }
+    .toast.show { opacity:1; }
+    footer { text-align:center; margin-top:60px; color:var(--sub); font-size:11px; }
+
+    .bg-layer-section { display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:24px; padding:16px 20px; border:1px solid var(--border); border-radius:12px; background:var(--card-bg); max-width:600px; margin-left:auto; margin-right:auto; }
+    .bg-layer-header { display:flex; align-items:center; justify-content:space-between; width:100%; }
+    .bg-layer-title { font-size:13px; color:#ffffff; font-weight:700; }
+    .toggle { position:relative; width:44px; height:24px; border-radius:12px; background:var(--border); cursor:pointer; transition:background 0.2s; }
+    .toggle.active { background:var(--accent); }
+    .toggle-knob { position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:#fff; transition:left 0.2s; }
+    .toggle.active .toggle-knob { left:22px; }
+    .bg-layer-controls { display:none; flex-direction:column; align-items:center; gap:12px; width:100%; }
+    .bg-layer-controls.show { display:flex; }
+    .bg-color-bar { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+    .bg-swatch { width:32px; height:32px; border-radius:6px; cursor:pointer; border:2px solid transparent; transition:transform 0.15s, border-color 0.15s; }
+    .bg-swatch:hover { transform:scale(1.1); }
+    .bg-swatch.active { border-color:var(--accent); }
+    .radius-control { display:flex; align-items:center; gap:10px; width:100%; }
+    .radius-control label { font-size:12px; color:var(--sub); white-space:nowrap; min-width:56px; }
+    .radius-control input[type=range] { flex:1; -webkit-appearance:none; height:4px; border-radius:2px; background:var(--border); outline:none; }
+    .radius-control input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--accent); cursor:pointer; }
+    .radius-value { font-size:12px; color:var(--accent); min-width:36px; text-align:right; }
+
+    /* 自定义配色 */
+    .custom-grad-row { display:flex; align-items:center; gap:8px; margin-top:4px; }
+    .custom-grad-btn { padding:5px 12px; border:1px solid var(--border); border-radius:6px; background:var(--card-bg); color:var(--sub); font-size:11px; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+    .custom-grad-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .custom-grad-btn.active { border-color:var(--accent); color:var(--accent); background:rgba(101,229,255,0.08); }
+    .custom-grad-panel { display:none; flex-direction:column; gap:10px; margin-top:8px; padding:12px; border:1px solid var(--border); border-radius:10px; background:rgba(20,20,28,0.8); width:100%; max-width:600px; }
+    .custom-grad-panel.show { display:flex; }
+    .grad-dir-row { display:flex; align-items:center; gap:10px; }
+    .grad-dir-row label { font-size:11px; color:var(--sub); white-space:nowrap; }
+    .grad-dir-row select { flex:1; padding:4px 8px; border:1px solid var(--border); border-radius:6px; background:var(--card-bg); color:var(--text); font-size:12px; outline:none; cursor:pointer; }
+    .grad-dir-row select:focus { border-color:var(--accent); }
+    .grad-config-row { display:flex; align-items:center; gap:16px; flex-wrap:nowrap; }
+    .grad-dir-group { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+    .grad-dir-group label { font-size:11px; color:var(--sub); white-space:nowrap; }
+    .grad-dir-group select { padding:4px 8px; border:1px solid var(--border); border-radius:6px; background:var(--card-bg); color:var(--text); font-size:12px; outline:none; cursor:pointer; }
+    .grad-dir-group select:focus { border-color:var(--accent); }
+    .grad-colors-inline { display:flex; align-items:center; gap:6px; flex:1; }
+    .grad-colors-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .grad-color-group { display:flex; align-items:center; gap:4px; }
+    .grad-color-group label { font-size:11px; color:var(--sub); }
+    .grad-color-input-wrap { display:flex; align-items:center; gap:2px; border:1px solid var(--border); border-radius:6px; overflow:hidden; background:var(--card-bg); }
+    .grad-color-input-wrap input[type=text] { width:72px; padding:4px 6px; border:none; background:transparent; color:var(--text); font-size:12px; font-family:monospace; outline:none; }
+    .grad-color-picker-btn { width:28px; height:28px; border:none; cursor:pointer; padding:0; background:none; display:flex; align-items:center; justify-content:center; position:relative; }
+    .grad-color-picker-btn .picker-preview { width:20px; height:20px; border-radius:4px; border:1px solid rgba(255,255,255,0.15); }
+    .grad-color-arrow { font-size:16px; color:var(--sub); margin:0 2px; }
+    /* 色板弹窗 */
+    .color-picker-popup { display:none; position:absolute; z-index:1000; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--card-bg); box-shadow:0 8px 32px rgba(0,0,0,0.5); }
+    .color-picker-popup.show { display:block; }
+    .picker-sv { position:relative; width:200px; height:150px; border-radius:6px; cursor:crosshair; margin-bottom:10px; }
+    .picker-sv-cursor { position:absolute; width:12px; height:12px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 2px rgba(0,0,0,0.5); pointer-events:none; transform:translate(-50%,-50%); }
+    .picker-hue { position:relative; width:200px; height:14px; border-radius:7px; cursor:pointer; margin-bottom:8px; background:linear-gradient(to right,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000); }
+    .picker-hue-cursor { position:absolute; top:-2px; width:6px; height:18px; border-radius:3px; border:2px solid #fff; box-shadow:0 0 2px rgba(0,0,0,0.5); pointer-events:none; transform:translateX(-50%); }
+    .picker-hex-row { display:flex; align-items:center; gap:6px; }
+    .picker-hex-row label { font-size:11px; color:var(--sub); }
+    .picker-hex-row input { width:80px; padding:3px 6px; border:1px solid var(--border); border-radius:4px; background:var(--bg); color:var(--text); font-size:12px; font-family:monospace; outline:none; }
+    .picker-preview-bar { display:flex; align-items:center; gap:8px; margin-top:6px; }
+    .picker-preview-swatch { width:32px; height:20px; border-radius:4px; border:1px solid rgba(255,255,255,0.15); }
+ 
+  </style>
+  <script src="//at.alicdn.com/t/c/font_5064679_wfkhie1dn2.js"></script>
+  <script src="//at.alicdn.com/t/c/font_3632408_jfq3j1asgn.js"></script>
+  <script src="//at.alicdn.com/t/c/font_3563889_jj7d0vj2cg.js"></script>
+</head>
+<body>
+
+<header>
+  <h1 id="pageTitle"></h1>
+  <p id="pageSubtitle"></p>
+</header>
+
+<div class="color-section">
+  <span class="color-label" style="color:#ffffff;font-weight:700;font-size:13px;">图标颜色</span>
+  <div class="color-row">
+    <span class="color-row-label">纯色</span>
+    <div class="color-bar" id="iconSolidBar">
+      <div class="swatch swatch-white active" style="background:#ffffff" onclick="setIconColor(this,'solid',0)" title="白色"></div>
+      <div class="swatch" style="background:#3FBF00" onclick="setIconColor(this,'solid',1)" title="绿色"></div>
+      <div class="swatch" style="background:#11C79B" onclick="setIconColor(this,'solid',2)" title="青色"></div>
+      <div class="swatch" style="background:#33BBFF" onclick="setIconColor(this,'solid',3)" title="浅蓝"></div>
+      <div class="swatch" style="background:#3388FF" onclick="setIconColor(this,'solid',4)" title="蓝色"></div>
+      <div class="swatch" style="background:#4433FF" onclick="setIconColor(this,'solid',5)" title="蓝紫"></div>
+      <div class="swatch" style="background:#AA33FF" onclick="setIconColor(this,'solid',6)" title="紫色"></div>
+      <div class="swatch" style="background:#FF33DD" onclick="setIconColor(this,'solid',7)" title="粉色"></div>
+      <div class="swatch" style="background:#FF4433" onclick="setIconColor(this,'solid',8)" title="红色"></div>
+      <div class="swatch" style="background:#FF6600" onclick="setIconColor(this,'solid',9)" title="橙色"></div>
+      <div class="swatch" style="background:#FFAA00" onclick="setIconColor(this,'solid',10)" title="黄色"></div>
+    </div>
+  </div>
+  <div class="color-row" style="margin-top:10px;">
+    <span class="color-row-label">渐变色</span>
+    <div class="color-bar" id="iconGradBar" style="align-items:center;">
+      <div class="swatch" style="background:linear-gradient(180deg,#28EB78,#28CD78)" onclick="setIconColor(this,'grad',0)" title="绿色"></div>
+      <div class="swatch" style="background:linear-gradient(180deg,#00CD91,#00AF91)" onclick="setIconColor(this,'grad',1)" title="青色"></div>
+      <div class="swatch" style="background:linear-gradient(180deg,#00E6F0,#00C8F0)" onclick="setIconColor(this,'grad',2)" title="浅蓝"></div>
+      <div class="swatch" style="background:linear-gradient(180deg,#00C8F0,#0091FA)" onclick="setIconColor(this,'grad',3)" title="蓝色"></div>
+      <div class="swatch" style="background:linear-gradient(180deg,#0091FA,#505FDC)" onclick="setIconColor(this,'grad',4)" title="蓝紫"></div>
+      <div class="swatch" style="background:linear-gradient(180deg,#917DFF,#505FDC)" onclick="setIconColor(this,'grad',5)" title="紫色"></div>
+      <div class="swatch" style="background:linear-gradient(180deg,#FF69AF,#FF4BAF)" onclick="setIconColor(this,'grad',6)" title="粉色"></div>
+      <div class="swatch" style="background:linear-gradient(180deg,#FF5023,#E62314)" onclick="setIconColor(this,'grad',7)" title="红色"></div>
+      <div class="swatch" style="background:linear-gradient(180deg,#FF9623,#FF5023)" onclick="setIconColor(this,'grad',8)" title="橙色"></div>
+      <div class="swatch" style="background:linear-gradient(180deg,#FFEB23,#FF9623)" onclick="setIconColor(this,'grad',9)" title="黄色"></div>
+      <button class="custom-grad-btn" id="customGradBtn" onclick="toggleCustomGrad()">自定义配色</button>
+    </div>
+  </div>
+  <!-- 自定义配色面板 -->
+  <div class="custom-grad-panel" id="customGradPanel">
+    <div class="grad-config-row">
+      <div class="grad-dir-group">
+        <label>方向</label>
+        <select id="gradDirSelect" onchange="applyCustomGrad()">
+          <option value="to-bottom" selected>从上到下</option>
+          <option value="to-right">从左到右</option>
+          <option value="to-bottom-right">从左上到右下</option>
+          <option value="to-bottom-left">从右上到左下</option>
+        </select>
+      </div>
+      <div class="grad-colors-inline">
+        <div class="grad-color-group">
+          <label>起始</label>
+          <div class="grad-color-input-wrap">
+            <input type="text" id="gradStartInput" value="#28EB78" maxlength="7" oninput="onGradInputChange('start')">
+            <button class="grad-color-picker-btn" id="startPickerBtn" onclick="openColorPicker('start')">
+              <div class="picker-preview" id="startPickerPreview" style="background:#28EB78;"></div>
+            </button>
+          </div>
+        </div>
+        <span class="grad-color-arrow">→</span>
+        <div class="grad-color-group">
+          <label>结束</label>
+          <div class="grad-color-input-wrap">
+            <input type="text" id="gradEndInput" value="#28CD78" maxlength="7" oninput="onGradInputChange('end')">
+            <button class="grad-color-picker-btn" id="endPickerBtn" onclick="openColorPicker('end')">
+              <div class="picker-preview" id="endPickerPreview" style="background:#28CD78;"></div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bg-layer-section">
+  <div class="bg-layer-header">
+    <span class="bg-layer-title">背景层</span>
+    <div class="toggle" id="bgToggle" onclick="toggleBg()">
+      <div class="toggle-knob"></div>
+    </div>
+  </div>
+  <div class="bg-layer-controls" id="bgControls">
+    <div class="color-row" style="width:100%;">
+      <span class="color-row-label">背景颜色</span>
+      <div class="color-bar" id="bgGradBar" style="align-items:center;">
+        <div class="bg-swatch active" style="background:linear-gradient(180deg,#28EB78,#28CD78)" onclick="setBgColor(this,0)" title="绿色"></div>
+        <div class="bg-swatch" style="background:linear-gradient(180deg,#00CD91,#00AF91)" onclick="setBgColor(this,1)" title="青色"></div>
+        <div class="bg-swatch" style="background:linear-gradient(180deg,#00E6F0,#00C8F0)" onclick="setBgColor(this,2)" title="浅蓝"></div>
+        <div class="bg-swatch" style="background:linear-gradient(180deg,#00C8F0,#0091FA)" onclick="setBgColor(this,3)" title="蓝色"></div>
+        <div class="bg-swatch" style="background:linear-gradient(180deg,#0091FA,#505FDC)" onclick="setBgColor(this,4)" title="蓝紫"></div>
+        <div class="bg-swatch" style="background:linear-gradient(180deg,#917DFF,#505FDC)" onclick="setBgColor(this,5)" title="紫色"></div>
+        <div class="bg-swatch" style="background:linear-gradient(180deg,#FF69AF,#FF4BAF)" onclick="setBgColor(this,6)" title="粉色"></div>
+        <div class="bg-swatch" style="background:linear-gradient(180deg,#FF5023,#E62314)" onclick="setBgColor(this,7)" title="红色"></div>
+        <div class="bg-swatch" style="background:linear-gradient(180deg,#FF9623,#FF5023)" onclick="setBgColor(this,8)" title="橙色"></div>
+        <div class="bg-swatch" style="background:linear-gradient(180deg,#FFEB23,#FF9623)" onclick="setBgColor(this,9)" title="黄色"></div>
+        <button class="custom-grad-btn" id="customBgGradBtn" onclick="toggleCustomBgGrad()">自定义配色</button>
+      </div>
+    </div>
+    <!-- 背景层自定义配色面板 -->
+    <div class="custom-grad-panel" id="customBgGradPanel" style="margin-top:0;">
+      <div class="grad-config-row">
+        <div class="grad-dir-group">
+          <label>方向</label>
+          <select id="bgGradDirSelect" onchange="applyCustomBgGrad()">
+            <option value="to-bottom" selected>从上到下</option>
+            <option value="to-right">从左到右</option>
+            <option value="to-bottom-right">从左上到右下</option>
+            <option value="to-bottom-left">从右上到左下</option>
+          </select>
+        </div>
+        <div class="grad-colors-inline">
+          <div class="grad-color-group">
+            <label>起始</label>
+            <div class="grad-color-input-wrap">
+              <input type="text" id="bgGradStartInput" value="#28EB78" maxlength="7" oninput="onBgGradInputChange('start')">
+              <button class="grad-color-picker-btn" id="bgStartPickerBtn" onclick="openColorPicker('bg-start')">
+                <div class="picker-preview" id="bgStartPickerPreview" style="background:#28EB78;"></div>
+              </button>
+            </div>
+          </div>
+          <span class="grad-color-arrow">→</span>
+          <div class="grad-color-group">
+            <label>结束</label>
+            <div class="grad-color-input-wrap">
+              <input type="text" id="bgGradEndInput" value="#28CD78" maxlength="7" oninput="onBgGradInputChange('end')">
+              <button class="grad-color-picker-btn" id="bgEndPickerBtn" onclick="openColorPicker('bg-end')">
+                <div class="picker-preview" id="bgEndPickerPreview" style="background:#28CD78;"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="radius-control">
+      <label>圆角</label>
+      <input type="range" id="radiusSlider" min="1" max="100" value="16" oninput="setBgRadius(this.value)">
+      <span class="radius-value" id="radiusValue">16px</span>
+    </div>
+  </div>
+</div>
+
+<div class="size-bar">
+  <button class="size-btn" id="sizeBtn1" onclick="setSize(24,this)">24×24</button>
+  <button class="size-btn active" id="sizeBtn2" onclick="setSize(32,this)">32×32</button>
+  <button class="size-btn" id="sizeBtn3" onclick="setSize(48,this)">48×48</button>
+  <button class="size-btn" id="sizeBtn4" onclick="setSize(64,this)">64×64</button>
+  <button class="custom-size-btn" id="customSizeBtn" onclick="toggleCustomSize()">自定义尺寸</button>
+</div>
+<div class="custom-size-panel" id="customSizePanel">
+  <div class="custom-size-input-wrap">
+    <label>宽</label>
+    <input type="number" id="customWidthInput" value="64" min="8" max="2048" oninput="onCustomSizeInput()">
+    <span class="custom-size-unit">px</span>
+  </div>
+  <span class="custom-size-sep">×</span>
+  <div class="custom-size-input-wrap">
+    <label>高</label>
+    <input type="number" id="customHeightInput" value="64" min="8" max="2048" oninput="onCustomSizeInput()">
+    <span class="custom-size-unit">px</span>
+  </div>
+</div>
+
+<div class="preview-wrap">
+  <div class="preview-area">
+    <!-- 图标容器：背景层SVG + 图标层SVG，两个独立的SVG叠加 -->
+    <div class="icon-container" id="iconContainer">
+      <!-- 背景层 SVG（独立） -->
+      <svg id="bgSvg" class="bg-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="0" height="0" style="display:none;">
+        <defs>
+          <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#4facfe"/>
+            <stop offset="100%" stop-color="#00f2fe"/>
+          </linearGradient>
+        </defs>
+        <rect id="bgRect" width="100" height="100" rx="100" fill="url(#bgGrad)"/>
+      </svg>
+      <!-- 图标层 SVG（独立） -->
+      <svg id="iconSvg" class="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="32" height="32">
+        <defs>
+          <linearGradient id="iconGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="100%" stop-color="#ffffff"/>
+          </linearGradient>
+        </defs>
+        <g id="previewIconGroup"></g>
+      </svg>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-paste" onclick="pasteSvgCode()">粘贴SVG代码</button>
+    <button class="btn btn-copy" onclick="copySvg()">复制SVG</button>
+    <button class="btn btn-svg" onclick="downloadSvg()">下载SVG</button>
+    <button class="btn btn-png" onclick="downloadPng()">下载PNG</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 色板弹窗 -->
+<div class="color-picker-popup" id="colorPickerPopup">
+  <div class="picker-sv" id="pickerSv">
+    <div class="picker-sv-cursor" id="pickerSvCursor"></div>
+  </div>
+  <div class="picker-hue" id="pickerHue">
+    <div class="picker-hue-cursor" id="pickerHueCursor"></div>
+  </div>
+  <div class="picker-hex-row">
+    <label>#</label>
+    <input type="text" id="pickerHexInput" maxlength="6" oninput="onPickerHexInput()">
+  </div>
+  <div class="picker-preview-bar">
+    <div class="picker-preview-swatch" id="pickerPreviewSwatch"></div>
+    <button style="padding:3px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text);font-size:11px;cursor:pointer;" onclick="confirmColorPicker()">确定</button>
+    <button style="padding:3px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--sub);font-size:11px;cursor:pointer;" onclick="closeColorPicker()">取消</button>
+  </div>
+</div>
+<footer><p id="pageFooter"></p></footer>
+
+<script>
+  // 图标层颜色
+  var iconColorType = 'solid'; // 'solid' 或 'grad'
+  var iconSolidIndex = 0;      // 当前选中的纯色索引
+  var iconGradIndex = -1;      // 当前选中的渐变色索引（-1表示未选中）
+  var iconSolidColors = ['#ffffff','#3FBF00','#11C79B','#33BBFF','#3388FF','#4433FF','#AA33FF','#FF33DD','#FF4433','#FF6600','#FFAA00'];
+  var iconGradColors = [
+    ['#28EB78','#28CD78'], // 绿色
+    ['#00CD91','#00AF91'], // 青色
+    ['#00E6F0','#00C8F0'], // 浅蓝
+    ['#00C8F0','#0091FA'], // 蓝色
+    ['#0091FA','#505FDC'], // 蓝紫
+    ['#917DFF','#505FDC'], // 紫色
+    ['#FF69AF','#FF4BAF'], // 粉色
+    ['#FF5023','#E62314'], // 红色
+    ['#FF9623','#FF5023'], // 橙色
+    ['#FFEB23','#FF9623']  // 黄色
+  ];
+  
+  var currentSize = 32;
+  var noBgSizes = [24, 32, 48, 64];
+  var bgSizes = [48, 64, 96, 128];
+  var customSizeEnabled = false;
+  var customWidth = 64;
+  var customHeight = 64;
+  
+  var bgEnabled = false;
+  var bgColorIndex = 0;
+  var bgRadius = 16;
+  // 背景层渐变色与图标层渐变色一致
+  var bgGradColors = iconGradColors;
+
+  var cachedPaths = null;
+  var cachedViewBox = null; // 图标层的 viewBox 字符串
+
+  var iconfontUrls = [
+    '//at.alicdn.com/t/c/font_5064679_wfkhie1dn2.js',
+    '//at.alicdn.com/t/c/font_3632408_jfq3j1asgn.js',
+    '//at.alicdn.com/t/c/font_3563889_jj7d0vj2cg.js'
+  ];
+  var targetSymbolId = 'custom-duijie-caikeng';
+  var targetIconName = '对接前置踩坑助手';
+  var targetCategory = '工程实施';
+
+  // 自定义绘制的图标 path（空数组表示从 iconfont 加载）
+  // 设计：上方圆角警示三角（含感叹号镂空 = 踩坑预警/助手）+ 下方坑口椭圆环（= 坑）
+  var customPaths = [
+    // 警示三角 + 感叹号（竖条 + 圆点 两处镂空）
+    'M535.2 169.7 L768.8 570.3 Q792 610 746 610 L278 610 Q232 610 255.2 570.3 L488.8 169.7 Q512 130 535.2 169.7 Z M487 280 L487 440 L537 440 L537 280 Z M544 505 A32 32 0 0 0 480 505 A32 32 0 0 0 544 505 Z',
+    // 坑口椭圆环（外环 + 内环镂空，表现凹陷的坑）
+    'M242 760 A270 86 0 0 1 782 760 A270 86 0 0 1 242 760 Z M307 760 A205 56 0 0 0 717 760 A205 56 0 0 0 307 760 Z'
+  ];
+
+  function getSizeList() {
+    return bgEnabled ? bgSizes : noBgSizes;
+  }
+
+  // 用浏览器 getBBox() 精确计算图标的 viewBox
+  function calcIconViewBox(paths) {
+    // 创建临时 SVG，用浏览器渲染获取精确 bounds
+    var tmpSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    tmpSvg.setAttribute('viewBox', '0 0 1024 1024');
+    tmpSvg.setAttribute('width', '1024');
+    tmpSvg.setAttribute('height', '1024');
+    tmpSvg.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    paths.forEach(function(d) {
+      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      g.appendChild(path);
+    });
+    tmpSvg.appendChild(g);
+    document.body.appendChild(tmpSvg);
+
+    var bbox = g.getBBox();
+    document.body.removeChild(tmpSvg);
+
+    // 等比扩展成正方形 viewBox，确保图标铺满且居中
+    var side = Math.max(bbox.width, bbox.height);
+    if (side === 0) side = 1024;
+    var ox = bbox.x - (side - bbox.width) / 2;
+    var oy = bbox.y - (side - bbox.height) / 2;
+    return ox + ' ' + oy + ' ' + side + ' ' + side;
+  }
+
+  // 获取当前图标层的填充属性
+  function getIconFill() {
+    if (iconColorType === 'solid') {
+      return iconSolidColors[iconSolidIndex];
+    } else {
+      return 'url(#iconGrad)';
+    }
+  }
+
+  // 更新预览
+  function updatePreviewIcon() {
+    if (!cachedPaths || !cachedViewBox) return;
+    if (customSizeEnabled) {
+      updatePreviewIconCustomSize(customWidth, customHeight);
+      return;
+    }
+    // 恢复 preview-area 为默认正方形
+    var previewArea = document.querySelector('.preview-area');
+    previewArea.style.width = '160px';
+    previewArea.style.height = '160px';
+
+    var container = document.getElementById('iconContainer');
+    var bgSvg = document.getElementById('bgSvg');
+    var iconSvg = document.getElementById('iconSvg');
+    var bgRect = document.getElementById('bgRect');
+    var bgGradEl = document.getElementById('bgGrad');
+    var iconGradEl = document.getElementById('iconGrad');
+    var g = document.getElementById('previewIconGroup');
+
+    // 恢复 bgSvg viewBox 和 bgRect 为正方形
+    bgSvg.setAttribute('viewBox', '0 0 100 100');
+    bgRect.setAttribute('width', '100');
+    bgRect.setAttribute('height', '100');
+
+    // 图标渐变色设置
+    if (iconColorType === 'grad') {
+      var gradEl = iconGradEl;
+      if (iconGradIndex >= 0) {
+        // 预设渐变色
+        var gradC = iconGradColors[iconGradIndex];
+        gradEl.children[0].setAttribute('stop-color', gradC[0]);
+        gradEl.children[1].setAttribute('stop-color', gradC[1]);
+        gradEl.setAttribute('x1', '0%');
+        gradEl.setAttribute('y1', '0%');
+        gradEl.setAttribute('x2', '0%');
+        gradEl.setAttribute('y2', '100%');
+      } else if (customGradEnabled) {
+        // 自定义渐变色
+        gradEl.children[0].setAttribute('stop-color', customGradStart);
+        gradEl.children[1].setAttribute('stop-color', customGradEnd);
+        var dir = gradDirMap[customGradDir] || gradDirMap['to-bottom'];
+        gradEl.setAttribute('x1', dir.x1);
+        gradEl.setAttribute('y1', dir.y1);
+        gradEl.setAttribute('x2', dir.x2);
+        gradEl.setAttribute('y2', dir.y2);
+      }
+    }
+
+    // 图标层 SVG：viewBox 由 getBBox 精确计算
+    iconSvg.setAttribute('viewBox', cachedViewBox);
+
+    if (bgEnabled) {
+      var bgSize = currentSize;
+      var iconSize = currentSize / 2;
+      var iconOffset = currentSize / 4;
+
+      var bgColors;
+      if (customBgGradEnabled) {
+        bgColors = [customBgGradStart, customBgGradEnd];
+        var bgDir = gradDirMap[customBgGradDir] || gradDirMap['to-bottom'];
+        bgGradEl.setAttribute('x1', bgDir.x1);
+        bgGradEl.setAttribute('y1', bgDir.y1);
+        bgGradEl.setAttribute('x2', bgDir.x2);
+        bgGradEl.setAttribute('y2', bgDir.y2);
+      } else {
+        bgColors = bgGradColors[bgColorIndex];
+        bgGradEl.setAttribute('x1', '0%');
+        bgGradEl.setAttribute('y1', '0%');
+        bgGradEl.setAttribute('x2', '0%');
+        bgGradEl.setAttribute('y2', '100%');
+      }
+      bgGradEl.children[0].setAttribute('stop-color', bgColors[0]);
+      bgGradEl.children[1].setAttribute('stop-color', bgColors[1]);
+
+      // 背景层 viewBox 为 0 0 100 100，将 px 圆角按比例映射到 viewBox
+      var rxVb = bgRadius / currentSize * 100;
+      bgRect.setAttribute('rx', rxVb);
+
+      bgSvg.setAttribute('width', bgSize);
+      bgSvg.setAttribute('height', bgSize);
+      bgSvg.style.display = '';
+      bgSvg.style.left = '0px';
+      bgSvg.style.top = '0px';
+
+      iconSvg.setAttribute('width', iconSize);
+      iconSvg.setAttribute('height', iconSize);
+      iconSvg.style.left = iconOffset + 'px';
+      iconSvg.style.top = iconOffset + 'px';
+
+      container.style.width = bgSize + 'px';
+      container.style.height = bgSize + 'px';
+
+    } else {
+      bgSvg.style.display = 'none';
+
+      iconSvg.setAttribute('width', currentSize);
+      iconSvg.setAttribute('height', currentSize);
+      iconSvg.style.left = '0px';
+      iconSvg.style.top = '0px';
+
+      container.style.width = currentSize + 'px';
+      container.style.height = currentSize + 'px';
+    }
+
+    // 图标 path（无需 transform，viewBox 精确匹配 bounds）
+    g.removeAttribute('transform');
+    g.innerHTML = '';
+    var fill = getIconFill();
+    cachedPaths.forEach(function(d) {
+      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', fill);
+      g.appendChild(path);
+    });
+  }
+
+  // 构建下载用的 SVG 字符串（支持自定义宽高）
+  function buildDownloadSvgStr(paths, outputW, outputH) {
+    if (outputH === undefined) outputH = outputW;
+    var withBg = bgEnabled;
+    var iconVb = cachedViewBox;
+    var isSolid = iconColorType === 'solid';
+
+    var svgStr = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + outputW + ' ' + outputH + '" width="' + outputW + '" height="' + outputH + '">';
+    svgStr += '<defs>';
+
+    if (withBg) {
+      var bgColors, bgDirAttr;
+      if (customBgGradEnabled) {
+        bgColors = [customBgGradStart, customBgGradEnd];
+        bgDirAttr = gradDirMap[customBgGradDir] || gradDirMap['to-bottom'];
+      } else {
+        bgColors = bgGradColors[bgColorIndex];
+        bgDirAttr = { x1:'0%', y1:'0%', x2:'0%', y2:'100%' };
+      }
+      svgStr += '<linearGradient id="bgG" x1="' + bgDirAttr.x1 + '" y1="' + bgDirAttr.y1 + '" x2="' + bgDirAttr.x2 + '" y2="' + bgDirAttr.y2 + '">';
+      svgStr += '<stop offset="0%" stop-color="' + bgColors[0] + '"/>';
+      svgStr += '<stop offset="100%" stop-color="' + bgColors[1] + '"/>';
+      svgStr += '</linearGradient>';
+    }
+
+    if (!isSolid) {
+      if (iconGradIndex >= 0) {
+        var gradC = iconGradColors[iconGradIndex];
+        svgStr += '<linearGradient id="iconG" x1="0%" y1="0%" x2="0%" y2="100%">';
+        svgStr += '<stop offset="0%" stop-color="' + gradC[0] + '"/>';
+        svgStr += '<stop offset="100%" stop-color="' + gradC[1] + '"/>';
+        svgStr += '</linearGradient>';
+      } else if (customGradEnabled) {
+        var dir = gradDirMap[customGradDir] || gradDirMap['to-bottom'];
+        svgStr += '<linearGradient id="iconG" x1="' + dir.x1 + '" y1="' + dir.y1 + '" x2="' + dir.x2 + '" y2="' + dir.y2 + '">';
+        svgStr += '<stop offset="0%" stop-color="' + customGradStart + '"/>';
+        svgStr += '<stop offset="100%" stop-color="' + customGradEnd + '"/>';
+        svgStr += '</linearGradient>';
+      }
+    }
+
+    svgStr += '</defs>';
+
+    var iconFill = isSolid ? iconSolidColors[iconSolidIndex] : 'url(#iconG)';
+
+    if (withBg) {
+      var rxPx = bgRadius;
+      svgStr += '<rect width="' + outputW + '" height="' + outputH + '" rx="' + rxPx + '" fill="url(#bgG)"/>';
+
+      var iconW = outputW / 2;
+      var iconH = outputH / 2;
+      var iconOffX = outputW / 4;
+      var iconOffY = outputH / 4;
+      svgStr += '<svg x="' + iconOffX + '" y="' + iconOffY + '" width="' + iconW + '" height="' + iconH + '" viewBox="' + iconVb + '">';
+      paths.forEach(function(d) {
+        svgStr += '<path d="' + d + '" fill="' + iconFill + '"/>';
+      });
+      svgStr += '</svg>';
+    } else {
+      svgStr += '<svg width="' + outputW + '" height="' + outputH + '" viewBox="' + iconVb + '">';
+      paths.forEach(function(d) {
+        svgStr += '<path d="' + d + '" fill="' + iconFill + '"/>';
+      });
+      svgStr += '</svg>';
+    }
+
+    svgStr += '</svg>';
+    return svgStr;
+  }
+
+  // 页面加载时动态设置标题和预加载图标数据
+  function initPageMeta() {
+    var name = targetIconName || '图标';
+    var cat = targetCategory || '';
+    document.title = name + ' 图标预览';
+    document.getElementById('pageTitle').textContent = name;
+    document.getElementById('pageSubtitle').textContent = (cat ? cat + ' · ' : '') + '自定义矢量图标 · 点击下载 SVG 或 PNG';
+    document.getElementById('pageFooter').textContent = name + ' · 自定义矢量图标 · 可商用';
+  }
+
+  // 同步 UI 状态到初始变量
+  function syncInitialUI() {
+    // 背景层开关
+    if (bgEnabled) {
+      document.getElementById('bgToggle').classList.add('active');
+      document.getElementById('bgControls').classList.add('show');
+    }
+    // 圆角滑块
+    var slider = document.getElementById('radiusSlider');
+    slider.value = bgRadius;
+    document.getElementById('radiusValue').textContent = bgRadius + 'px';
+    // 背景色选中
+    var swatches = document.querySelectorAll('.bg-swatch');
+    swatches.forEach(function(s, i){ if (i === bgColorIndex) s.classList.add('active'); else s.classList.remove('active'); });
+    // 自定义尺寸
+    if (customSizeEnabled) {
+      document.getElementById('customSizeBtn').classList.add('active');
+      document.getElementById('customSizePanel').classList.add('show');
+      document.getElementById('customWidthInput').value = customWidth;
+      document.getElementById('customHeightInput').value = customHeight;
+      document.querySelectorAll('.size-btn').forEach(function(b){ b.classList.remove('active'); });
+    } else {
+      updateSizeButtons();
+    }
+    // 图标颜色选中（白色第一个）
+    var iconSwatches = document.querySelectorAll('.icon-swatch');
+    iconSwatches.forEach(function(s, i){ if (i === iconSolidIndex) s.classList.add('active'); else s.classList.remove('active'); });
+  }
+
+  window.addEventListener('DOMContentLoaded', function() {
+    initPageMeta();
+    syncInitialUI();
+    fetchSymbolPaths(function(paths) {
+      if (paths) {
+        updatePreviewIcon();
+      }
+    });
+  });
+
+  function setIconColor(el, type, idx) {
+    iconColorType = type;
+    if (type === 'solid') {
+      iconSolidIndex = idx;
+      iconGradIndex = -1;
+      // 清除纯色排所有 active（包括自身），再激活当前
+      document.querySelectorAll('#iconSolidBar .swatch').forEach(function(s){ s.classList.remove('active'); });
+      // 清除另一排的 active
+      document.querySelectorAll('#iconGradBar .swatch').forEach(function(s){ s.classList.remove('active'); });
+      // 关闭自定义配色
+      if (customGradEnabled) {
+        customGradEnabled = false;
+        document.getElementById('customGradPanel').classList.remove('show');
+        document.getElementById('customGradBtn').classList.remove('active');
+      }
+    } else {
+      iconGradIndex = idx;
+      iconSolidIndex = -1;
+      // 清除渐变色排所有 active（包括自身），再激活当前
+      document.querySelectorAll('#iconGradBar .swatch').forEach(function(s){ s.classList.remove('active'); });
+      document.querySelectorAll('#iconSolidBar .swatch').forEach(function(s){ s.classList.remove('active'); });
+      // 关闭自定义配色
+      if (customGradEnabled) {
+        customGradEnabled = false;
+        document.getElementById('customGradPanel').classList.remove('show');
+        document.getElementById('customGradBtn').classList.remove('active');
+      }
+    }
+    el.classList.add('active');
+    updatePreviewIcon();
+  }
+
+  function toggleBg() {
+    bgEnabled = !bgEnabled;
+    var toggle = document.getElementById('bgToggle');
+    var controls = document.getElementById('bgControls');
+    if (bgEnabled) {
+      toggle.classList.add('active');
+      controls.classList.add('show');
+    } else {
+      toggle.classList.remove('active');
+      controls.classList.remove('show');
+    }
+    if (!customSizeEnabled) {
+      var sizes = getSizeList();
+      var closest = sizes[0];
+      for (var i = 0; i < sizes.length; i++) {
+        if (Math.abs(sizes[i] - currentSize) < Math.abs(closest - currentSize)) {
+          closest = sizes[i];
+        }
+      }
+      currentSize = closest;
+      updateSizeButtons();
+    }
+    updatePreviewIcon();
+  }
+
+  function updateSizeButtons() {
+    var sizes = getSizeList();
+    var btns = [
+      document.getElementById('sizeBtn1'),
+      document.getElementById('sizeBtn2'),
+      document.getElementById('sizeBtn3'),
+      document.getElementById('sizeBtn4')
+    ];
+    for (var i = 0; i < 4; i++) {
+      btns[i].textContent = sizes[i] + '×' + sizes[i];
+      btns[i].setAttribute('onclick', 'setSize(' + sizes[i] + ',this)');
+      if (sizes[i] === currentSize) {
+        btns[i].classList.add('active');
+      } else {
+        btns[i].classList.remove('active');
+      }
+    }
+  }
+
+  function setBgColor(el, idx) {
+    bgColorIndex = idx;
+    customBgGradEnabled = false;
+    document.querySelectorAll('.bg-swatch').forEach(function(s){ s.classList.remove('active'); });
+    el.classList.add('active');
+    document.getElementById('customBgGradPanel').classList.remove('show');
+    document.getElementById('customBgGradBtn').classList.remove('active');
+    updatePreviewIcon();
+  }
+
+  function setBgRadius(val) {
+    bgRadius = parseInt(val);
+    document.getElementById('radiusValue').textContent = val + 'px';
+    updatePreviewIcon();
+  }
+
+  function setSize(size, btn) {
+    currentSize = size;
+    customSizeEnabled = false;
+    document.querySelectorAll('.size-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('customSizeBtn').classList.remove('active');
+    document.getElementById('customSizePanel').classList.remove('show');
+    updatePreviewIcon();
+  }
+
+  function toggleCustomSize() {
+    customSizeEnabled = !customSizeEnabled;
+    var btn = document.getElementById('customSizeBtn');
+    var panel = document.getElementById('customSizePanel');
+    if (customSizeEnabled) {
+      btn.classList.add('active');
+      panel.classList.add('show');
+      // 清除预设尺寸的选中状态
+      document.querySelectorAll('.size-btn').forEach(function(b){ b.classList.remove('active'); });
+      // 读取当前输入框的值并更新预览
+      onCustomSizeInput();
+    } else {
+      btn.classList.remove('active');
+      panel.classList.remove('show');
+      // 恢复到 currentSize 对应的预设按钮激活
+      updateSizeButtons();
+      updatePreviewIcon();
+    }
+  }
+
+  function onCustomSizeInput() {
+    var w = parseInt(document.getElementById('customWidthInput').value) || 64;
+    var h = parseInt(document.getElementById('customHeightInput').value) || 64;
+    w = Math.max(8, Math.min(2048, w));
+    h = Math.max(8, Math.min(2048, h));
+    customWidth = w;
+    customHeight = h;
+    if (customSizeEnabled) {
+      updatePreviewIconCustomSize(w, h);
+    }
+  }
+
+  // 预览时使用自定义宽高，保持与下载输出完全一致的宽高比
+  function updatePreviewIconCustomSize(w, h) {
+    if (!cachedPaths || !cachedViewBox) return;
+
+    var container = document.getElementById('iconContainer');
+    var bgSvg = document.getElementById('bgSvg');
+    var iconSvg = document.getElementById('iconSvg');
+    var bgRect = document.getElementById('bgRect');
+    var bgGradEl = document.getElementById('bgGrad');
+    var iconGradEl = document.getElementById('iconGrad');
+    var previewArea = document.querySelector('.preview-area');
+    var g = document.getElementById('previewIconGroup');
+
+    // 图标渐变色设置（同 updatePreviewIcon）
+    if (iconColorType === 'grad') {
+      if (iconGradIndex >= 0) {
+        var gradC = iconGradColors[iconGradIndex];
+        iconGradEl.children[0].setAttribute('stop-color', gradC[0]);
+        iconGradEl.children[1].setAttribute('stop-color', gradC[1]);
+        iconGradEl.setAttribute('x1', '0%'); iconGradEl.setAttribute('y1', '0%');
+        iconGradEl.setAttribute('x2', '0%'); iconGradEl.setAttribute('y2', '100%');
+      } else if (customGradEnabled) {
+        iconGradEl.children[0].setAttribute('stop-color', customGradStart);
+        iconGradEl.children[1].setAttribute('stop-color', customGradEnd);
+        var dir = gradDirMap[customGradDir] || gradDirMap['to-bottom'];
+        iconGradEl.setAttribute('x1', dir.x1); iconGradEl.setAttribute('y1', dir.y1);
+        iconGradEl.setAttribute('x2', dir.x2); iconGradEl.setAttribute('y2', dir.y2);
+      }
+    }
+
+    iconSvg.setAttribute('viewBox', cachedViewBox);
+
+    // 预览区最大 200px，按实际宽高比缩放，保证宽高比与下载完全一致
+    var maxPreview = 200;
+    var scale = Math.min(maxPreview / w, maxPreview / h);
+    var previewW = Math.round(w * scale);
+    var previewH = Math.round(h * scale);
+
+    // 调整 preview-area 大小以正确显示内容
+    previewArea.style.width = (Math.max(previewW, 80) + 20) + 'px';
+    previewArea.style.height = (Math.max(previewH, 80) + 20) + 'px';
+
+    if (bgEnabled) {
+      var bgColors;
+      if (customBgGradEnabled) {
+        bgColors = [customBgGradStart, customBgGradEnd];
+        var bgDir = gradDirMap[customBgGradDir] || gradDirMap['to-bottom'];
+        bgGradEl.setAttribute('x1', bgDir.x1); bgGradEl.setAttribute('y1', bgDir.y1);
+        bgGradEl.setAttribute('x2', bgDir.x2); bgGradEl.setAttribute('y2', bgDir.y2);
+      } else {
+        bgColors = bgGradColors[bgColorIndex];
+        bgGradEl.setAttribute('x1', '0%'); bgGradEl.setAttribute('y1', '0%');
+        bgGradEl.setAttribute('x2', '0%'); bgGradEl.setAttribute('y2', '100%');
+      }
+      bgGradEl.children[0].setAttribute('stop-color', bgColors[0]);
+      bgGradEl.children[1].setAttribute('stop-color', bgColors[1]);
+
+      // bgSvg viewBox 改为与实际宽高比一致（以实际像素为坐标单位）
+      bgSvg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+      // 圆角：bgRadius 是 px，直接用，不做 viewBox 换算
+      bgRect.setAttribute('width', w);
+      bgRect.setAttribute('height', h);
+      bgRect.setAttribute('rx', bgRadius);
+
+      bgSvg.setAttribute('width', previewW);
+      bgSvg.setAttribute('height', previewH);
+      bgSvg.style.display = '';
+      bgSvg.style.left = '0px';
+      bgSvg.style.top = '0px';
+
+      var iconPreviewW = previewW / 2;
+      var iconPreviewH = previewH / 2;
+      iconSvg.setAttribute('width', iconPreviewW);
+      iconSvg.setAttribute('height', iconPreviewH);
+      iconSvg.style.left = (previewW / 4) + 'px';
+      iconSvg.style.top = (previewH / 4) + 'px';
+
+      container.style.width = previewW + 'px';
+      container.style.height = previewH + 'px';
+    } else {
+      bgSvg.style.display = 'none';
+      iconSvg.setAttribute('width', previewW);
+      iconSvg.setAttribute('height', previewH);
+      iconSvg.style.left = '0px';
+      iconSvg.style.top = '0px';
+      container.style.width = previewW + 'px';
+      container.style.height = previewH + 'px';
+    }
+
+    g.removeAttribute('transform');
+    g.innerHTML = '';
+    var fill = getIconFill();
+    cachedPaths.forEach(function(d) {
+      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', fill);
+      g.appendChild(path);
+    });
+  }
+
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 2000);
+  }
+
+  function fetchSymbolPaths(callback) {
+    // 如果有自定义路径，直接使用
+    if (customPaths && customPaths.length > 0) {
+      cachedPaths = customPaths;
+      cachedViewBox = calcIconViewBox(customPaths);
+      callback(customPaths);
+      return;
+    }
+
+    var urls = iconfontUrls.map(function(u){ return 'https:' + u; });
+
+    function tryIconfont(idx) {
+      if (idx >= urls.length) {
+        toast('未找到图标数据');
+        callback(null);
+        return;
+      }
+      fetch(urls[idx]).then(function(r){ return r.text(); }).then(function(text){
+        var regex = new RegExp('<symbol[^>]*id="' + targetSymbolId + '"[^>]*>([\\s\\S]*?)<\\/symbol>');
+        var match = text.match(regex);
+        if (match) {
+          var pathRegex = /<path[^>]*d="([^"]*)"[^>]*\/?>/g;
+          var paths = [];
+          var m;
+          while ((m = pathRegex.exec(match[1])) !== null) {
+            paths.push(m[1]);
+          }
+          if (paths.length > 0) {
+            cachedPaths = paths;
+            cachedViewBox = calcIconViewBox(paths);
+            callback(paths);
+            return;
+          }
+        }
+        tryIconfont(idx + 1);
+      }).catch(function(){
+        tryIconfont(idx + 1);
+      });
+    }
+    tryIconfont(0);
+  }
+
+  function getDownloadBaseName() {
+    if (customPaths && customPaths.length > 0) return '自定义图标';
+    return targetIconName || targetSymbolId;
+  }
+
+  function downloadSvg() {
+    fetchSymbolPaths(function(paths) {
+      if (!paths) { toast('无法获取图标数据'); return; }
+      var w = customSizeEnabled ? customWidth : currentSize;
+      var h = customSizeEnabled ? customHeight : currentSize;
+      var svgStr = buildDownloadSvgStr(paths, w, h);
+      var blob = new Blob([svgStr], {type:'image/svg+xml'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      var baseName = getDownloadBaseName();
+      var suffix = bgEnabled ? '-bg' : '';
+      var fileName = baseName + suffix + '-' + w + 'x' + h + '.svg';
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast('SVG 已下载: ' + fileName);
+    });
+  }
+
+  function copySvg() {
+    fetchSymbolPaths(function(paths) {
+      if (!paths) { toast('无法获取图标数据'); return; }
+      var w = customSizeEnabled ? customWidth : currentSize;
+      var h = customSizeEnabled ? customHeight : currentSize;
+      var svgStr = buildDownloadSvgStr(paths, w, h);
+      navigator.clipboard.writeText(svgStr).then(function() {
+        toast('SVG 代码已复制到剪贴板');
+      }).catch(function() {
+        // fallback
+        var textarea = document.createElement('textarea');
+        textarea.value = svgStr;
+        textarea.style.cssText = 'position:fixed;left:-9999px;';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        toast('SVG 代码已复制到剪贴板');
+      });
+    });
+  }
+
+  // ========== 粘贴SVG代码 ==========
+  function pasteSvgCode() {
+    navigator.clipboard.readText().then(function(text) {
+      parseAndLoadSvg(text);
+    }).catch(function() {
+      // fallback: 创建临时输入框让用户手动粘贴
+      var modal = document.createElement('div');
+      modal.id = 'pasteModal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;';
+      modal.innerHTML = '<div style="background:#14141c;border:1px solid #2a2a3a;border-radius:12px;padding:20px;width:90%;max-width:560px;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+        + '<span style="color:#fff;font-size:14px;font-weight:600;">粘贴SVG代码</span>'
+        + '<button id="pasteModalClose" style="background:none;border:none;color:#8888aa;font-size:18px;cursor:pointer;">✕</button>'
+        + '</div>'
+        + '<textarea id="pasteModalInput" style="width:100%;height:200px;background:#0a0a0f;border:1px solid #2a2a3a;border-radius:8px;color:#e8e8f0;font-family:monospace;font-size:12px;padding:12px;resize:vertical;outline:none;" placeholder="请粘贴 SVG 代码..."></textarea>'
+        + '<div style="margin-top:12px;text-align:right;">'
+        + '<button id="pasteModalConfirm" style="padding:8px 24px;border:1px solid #FF9823;border-radius:8px;background:rgba(255,152,35,0.4);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">确定</button>'
+        + '</div>'
+        + '</div>';
+      document.body.appendChild(modal);
+
+      document.getElementById('pasteModalClose').onclick = function() {
+        document.body.removeChild(modal);
+      };
+      document.getElementById('pasteModalConfirm').onclick = function() {
+        var val = document.getElementById('pasteModalInput').value.trim();
+        if (val) {
+          parseAndLoadSvg(val);
+          document.body.removeChild(modal);
+        } else {
+          toast('请输入 SVG 代码');
+        }
+      };
+      modal.onclick = function(e) {
+        if (e.target === modal) document.body.removeChild(modal);
+      };
+    });
+  }
+
+  function parseAndLoadSvg(svgText) {
+    svgText = svgText.trim();
+    if (svgText.indexOf('<svg') === -1) {
+      toast('未检测到有效的 SVG 代码');
+      return;
+    }
+
+    // 解析 SVG 提取所有 path 的 d 属性
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(svgText, 'image/svg+xml');
+    var svgEl = doc.querySelector('svg');
+    if (!svgEl) {
+      toast('SVG 解析失败');
+      return;
+    }
+
+    // 收集所有 path d
+    var pathEls = svgEl.querySelectorAll('path');
+    var paths = [];
+    pathEls.forEach(function(p) {
+      var d = p.getAttribute('d');
+      if (d) paths.push(d);
+    });
+
+    // 如果没有 path，尝试其他元素
+    if (paths.length === 0) {
+      var rects = svgEl.querySelectorAll('rect');
+      var circles = svgEl.querySelectorAll('circle');
+      var lines = svgEl.querySelectorAll('line');
+      var polygons = svgEl.querySelectorAll('polygon');
+      var ellipses = svgEl.querySelectorAll('ellipse');
+      // 将简单形状转为 path
+      rects.forEach(function(r) {
+        var x = parseFloat(r.getAttribute('x') || 0);
+        var y = parseFloat(r.getAttribute('y') || 0);
+        var w = parseFloat(r.getAttribute('width') || 0);
+        var h = parseFloat(r.getAttribute('height') || 0);
+        var rx = parseFloat(r.getAttribute('rx') || 0);
+        if (rx > 0) {
+          paths.push('M' + (x+rx) + ',' + y + 'h' + (w-2*rx) + 'a' + rx + ',' + rx + ' 0 0 1 ' + rx + ',' + rx + 'v' + (h-2*rx) + 'a' + rx + ',' + rx + ' 0 0 1 ' + (-rx) + ',' + rx + 'h' + (-w+2*rx) + 'a' + rx + ',' + rx + ' 0 0 1 ' + (-rx) + ',' + (-rx) + 'v' + (-h+2*rx) + 'a' + rx + ',' + rx + ' 0 0 1 ' + rx + ',' + (-rx) + 'z');
+        } else {
+          paths.push('M' + x + ',' + y + 'h' + w + 'v' + h + 'h' + (-w) + 'z');
+        }
+      });
+      circles.forEach(function(c) {
+        var cx = parseFloat(c.getAttribute('cx') || 0);
+        var cy = parseFloat(c.getAttribute('cy') || 0);
+        var r = parseFloat(c.getAttribute('r') || 0);
+        paths.push('M' + (cx-r) + ',' + cy + 'a' + r + ',' + r + ' 0 1 0 ' + (2*r) + ',0a' + r + ',' + r + ' 0 1 0 ' + (-2*r) + ',0z');
+      });
+      ellipses.forEach(function(e) {
+        var cx = parseFloat(e.getAttribute('cx') || 0);
+        var cy = parseFloat(e.getAttribute('cy') || 0);
+        var rx = parseFloat(e.getAttribute('rx') || 0);
+        var ry = parseFloat(e.getAttribute('ry') || 0);
+        paths.push('M' + (cx-rx) + ',' + cy + 'a' + rx + ',' + ry + ' 0 1 0 ' + (2*rx) + ',0a' + rx + ',' + ry + ' 0 1 0 ' + (-2*rx) + ',0z');
+      });
+      lines.forEach(function(l) {
+        var x1 = parseFloat(l.getAttribute('x1') || 0);
+        var y1 = parseFloat(l.getAttribute('y1') || 0);
+        var x2 = parseFloat(l.getAttribute('x2') || 0);
+        var y2 = parseFloat(l.getAttribute('y2') || 0);
+        paths.push('M' + x1 + ',' + y1 + 'L' + x2 + ',' + y2);
+      });
+      polygons.forEach(function(pg) {
+        var pts = pg.getAttribute('points');
+        if (pts) paths.push('M' + pts.replace(/\s+/g, ' ').replace(/,/g, ',').trim().replace(/(\d)\s+/g, '$1 ').replace(/\s(\d)/g, 'L$1') + 'z');
+      });
+    }
+
+    if (paths.length === 0) {
+      toast('SVG 中未找到可渲染的图形');
+      return;
+    }
+
+    // 切换为自定义路径模式
+    customPaths = paths;
+    cachedPaths = paths;
+    cachedViewBox = calcIconViewBox(paths);
+    updatePreviewIcon();
+    toast('SVG 代码已加载，共 ' + paths.length + ' 个路径');
+  }
+
+  function downloadPng() {
+    fetchSymbolPaths(function(paths) {
+      if (!paths) { toast('无法获取图标数据'); return; }
+      var w = customSizeEnabled ? customWidth : currentSize;
+      var h = customSizeEnabled ? customHeight : currentSize;
+      var svgStr = buildDownloadSvgStr(paths, w, h);
+      var canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      var img = new Image();
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, w, h);
+        var a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        var baseName = getDownloadBaseName();
+        var suffix = bgEnabled ? '-bg' : '';
+        var fileName = baseName + suffix + '-' + w + 'x' + h + '.png';
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast('PNG 已下载: ' + fileName);
+      };
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+    });
+  }
+
+  // ========== 自定义渐变配色 ==========
+  var customGradEnabled = false;
+  var customGradDir = 'to-bottom';
+  var customGradStart = '#28EB78';
+  var customGradEnd = '#28CD78';
+
+  // 方向 → SVG linearGradient 坐标映射
+  var gradDirMap = {
+    'to-bottom':       { x1:'0%',  y1:'0%',  x2:'0%',  y2:'100%' },
+    'to-right':        { x1:'0%',  y1:'0%',  x2:'100%',y2:'0%'   },
+    'to-bottom-right': { x1:'0%',  y1:'0%',  x2:'100%',y2:'100%' },
+    'to-bottom-left':  { x1:'100%',y1:'0%',  x2:'0%',  y2:'100%' }
+  };
+
+  function toggleCustomGrad() {
+    customGradEnabled = !customGradEnabled;
+    var panel = document.getElementById('customGradPanel');
+    var btn = document.getElementById('customGradBtn');
+    if (customGradEnabled) {
+      panel.classList.add('show');
+      btn.classList.add('active');
+      // 清除预设渐变色的选中状态
+      document.querySelectorAll('#iconGradBar .swatch').forEach(function(s){ s.classList.remove('active'); });
+      // 清除纯色选中
+      document.querySelectorAll('#iconSolidBar .swatch').forEach(function(s){ s.classList.remove('active'); });
+      iconColorType = 'grad';
+      iconGradIndex = -1; // 表示使用自定义
+      applyCustomGrad();
+    } else {
+      panel.classList.remove('show');
+      btn.classList.remove('active');
+      // 恢复到默认白色纯色
+      iconColorType = 'solid';
+      iconSolidIndex = 0;
+      document.querySelector('#iconSolidBar .swatch').classList.add('active');
+      updatePreviewIcon();
+    }
+  }
+
+  function applyCustomGrad() {
+    customGradDir = document.getElementById('gradDirSelect').value;
+    customGradStart = document.getElementById('gradStartInput').value;
+    customGradEnd = document.getElementById('gradEndInput').value;
+    if (customGradEnabled) {
+      iconColorType = 'grad';
+      iconGradIndex = -1; // 自定义模式
+      updatePreviewIcon();
+    }
+  }
+
+  function onGradInputChange(which) {
+    var input = which === 'start' ? document.getElementById('gradStartInput') : document.getElementById('gradEndInput');
+    var preview = which === 'start' ? document.getElementById('startPickerPreview') : document.getElementById('endPickerPreview');
+    var val = input.value;
+    if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+      preview.style.background = val;
+      applyCustomGrad();
+    }
+  }
+
+  // ========== 背景层自定义渐变配色 ==========
+  var customBgGradEnabled = false;
+  var customBgGradDir = 'to-bottom';
+  var customBgGradStart = '#28EB78';
+  var customBgGradEnd = '#28CD78';
+
+  function toggleCustomBgGrad() {
+    customBgGradEnabled = !customBgGradEnabled;
+    var panel = document.getElementById('customBgGradPanel');
+    var btn = document.getElementById('customBgGradBtn');
+    if (customBgGradEnabled) {
+      panel.classList.add('show');
+      btn.classList.add('active');
+      // 清除预设背景色选中
+      document.querySelectorAll('.bg-swatch').forEach(function(s){ s.classList.remove('active'); });
+      applyCustomBgGrad();
+    } else {
+      panel.classList.remove('show');
+      btn.classList.remove('active');
+      // 恢复默认第一个预设色
+      bgColorIndex = 0;
+      var swatches = document.querySelectorAll('.bg-swatch');
+      if (swatches.length > 0) swatches[0].classList.add('active');
+      updatePreviewIcon();
+    }
+  }
+
+  function applyCustomBgGrad() {
+    customBgGradDir = document.getElementById('bgGradDirSelect').value;
+    customBgGradStart = document.getElementById('bgGradStartInput').value;
+    customBgGradEnd = document.getElementById('bgGradEndInput').value;
+    if (customBgGradEnabled) {
+      updatePreviewIcon();
+    }
+  }
+
+  function onBgGradInputChange(which) {
+    var input = which === 'start' ? document.getElementById('bgGradStartInput') : document.getElementById('bgGradEndInput');
+    var preview = which === 'start' ? document.getElementById('bgStartPickerPreview') : document.getElementById('bgEndPickerPreview');
+    var val = input.value;
+    if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+      preview.style.background = val;
+      applyCustomBgGrad();
+    }
+  }
+
+
+  var pickerTarget = null; // 'start' 或 'end'
+  var pickerHue = 0;
+  var pickerSat = 1;
+  var pickerVal = 1;
+  var pickerDraggingSv = false;
+  var pickerDraggingHue = false;
+
+  function hsvToRgb(h, s, v) {
+    var i = Math.floor(h / 60) % 6;
+    var f = h / 60 - Math.floor(h / 60);
+    var p = v * (1 - s);
+    var q = v * (1 - f * s);
+    var t = v * (1 - (1 - f) * s);
+    var r, g, b;
+    switch (i) {
+      case 0: r=v; g=t; b=p; break;
+      case 1: r=q; g=v; b=p; break;
+      case 2: r=p; g=v; b=t; break;
+      case 3: r=p; g=q; b=v; break;
+      case 4: r=t; g=p; b=v; break;
+      case 5: r=v; g=p; b=q; break;
+    }
+    return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+  }
+
+  function rgbToHex(r, g, b) {
+    return '#' + [r,g,b].map(function(c){ return c.toString(16).padStart(2,'0'); }).join('');
+  }
+
+  function hexToHsv(hex) {
+    hex = hex.replace('#','');
+    var r = parseInt(hex.substring(0,2),16)/255;
+    var g = parseInt(hex.substring(2,4),16)/255;
+    var b = parseInt(hex.substring(4,6),16)/255;
+    var max = Math.max(r,g,b), min = Math.min(r,g,b);
+    var h, s, v = max;
+    var d = max - min;
+    s = max === 0 ? 0 : d / max;
+    if (d === 0) { h = 0; }
+    else {
+      switch (max) {
+        case r: h = ((g-b)/d + (g<b?6:0))*60; break;
+        case g: h = ((b-r)/d + 2)*60; break;
+        case b: h = ((r-g)/d + 4)*60; break;
+      }
+    }
+    return [h, s, v];
+  }
+
+  function updatePickerUI() {
+    var rgb = hsvToRgb(pickerHue, pickerSat, pickerVal);
+    var hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
+
+    // 更新 SV 面板背景（色相纯色 → 白色/黑色渐变叠加）
+    var pureRgb = hsvToRgb(pickerHue, 1, 1);
+    var pureHex = rgbToHex(pureRgb[0], pureRgb[1], pureRgb[2]);
+    var svEl = document.getElementById('pickerSv');
+    svEl.style.background = 'linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ' + pureHex + ')';
+
+    // SV 光标位置
+    var svCursor = document.getElementById('pickerSvCursor');
+    svCursor.style.left = (pickerSat * 100) + '%';
+    svCursor.style.top = ((1 - pickerVal) * 100) + '%';
+
+    // 色相条光标
+    var hueCursor = document.getElementById('pickerHueCursor');
+    hueCursor.style.left = (pickerHue / 360 * 100) + '%';
+
+    // HEX 输入
+    document.getElementById('pickerHexInput').value = hex.replace('#','');
+
+    // 预览色块
+    document.getElementById('pickerPreviewSwatch').style.background = hex;
+  }
+
+  function openColorPicker(target) {
+    pickerTarget = target;
+    var currentHex;
+    if (target === 'start') currentHex = customGradStart;
+    else if (target === 'end') currentHex = customGradEnd;
+    else if (target === 'bg-start') currentHex = customBgGradStart;
+    else currentHex = customBgGradEnd;
+
+    var hsv = hexToHsv(currentHex);
+    pickerHue = hsv[0]; pickerSat = hsv[1]; pickerVal = hsv[2];
+
+    var btnId;
+    if (target === 'start') btnId = 'startPickerBtn';
+    else if (target === 'end') btnId = 'endPickerBtn';
+    else if (target === 'bg-start') btnId = 'bgStartPickerBtn';
+    else btnId = 'bgEndPickerBtn';
+
+    var popup = document.getElementById('colorPickerPopup');
+    var btn = document.getElementById(btnId);
+    var rect = btn.getBoundingClientRect();
+    popup.style.position = 'fixed';
+    popup.style.left = rect.left + 'px';
+    popup.style.top = (rect.bottom + 6) + 'px';
+    popup.classList.add('show');
+
+    updatePickerUI();
+  }
+
+  function closeColorPicker() {
+    document.getElementById('colorPickerPopup').classList.remove('show');
+    pickerTarget = null;
+  }
+
+  function confirmColorPicker() {
+    if (!pickerTarget) return;
+    var rgb = hsvToRgb(pickerHue, pickerSat, pickerVal);
+    var hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
+    if (pickerTarget === 'start') {
+      customGradStart = hex;
+      document.getElementById('gradStartInput').value = hex;
+      document.getElementById('startPickerPreview').style.background = hex;
+      applyCustomGrad();
+    } else if (pickerTarget === 'end') {
+      customGradEnd = hex;
+      document.getElementById('gradEndInput').value = hex;
+      document.getElementById('endPickerPreview').style.background = hex;
+      applyCustomGrad();
+    } else if (pickerTarget === 'bg-start') {
+      customBgGradStart = hex;
+      document.getElementById('bgGradStartInput').value = hex;
+      document.getElementById('bgStartPickerPreview').style.background = hex;
+      applyCustomBgGrad();
+    } else if (pickerTarget === 'bg-end') {
+      customBgGradEnd = hex;
+      document.getElementById('bgGradEndInput').value = hex;
+      document.getElementById('bgEndPickerPreview').style.background = hex;
+      applyCustomBgGrad();
+    }
+    closeColorPicker();
+  }
+
+  // SV 面板交互
+  document.addEventListener('mousedown', function(e) {
+    var svEl = document.getElementById('pickerSv');
+    if (svEl.contains(e.target)) {
+      pickerDraggingSv = true;
+      handleSvMove(e);
+    }
+    var hueEl = document.getElementById('pickerHue');
+    if (hueEl.contains(e.target)) {
+      pickerDraggingHue = true;
+      handleHueMove(e);
+    }
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (pickerDraggingSv) handleSvMove(e);
+    if (pickerDraggingHue) handleHueMove(e);
+  });
+  document.addEventListener('mouseup', function() {
+    pickerDraggingSv = false;
+    pickerDraggingHue = false;
+  });
+
+  function handleSvMove(e) {
+    var svEl = document.getElementById('pickerSv');
+    var rect = svEl.getBoundingClientRect();
+    var x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    var y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    pickerSat = x;
+    pickerVal = 1 - y;
+    updatePickerUI();
+  }
+
+  function handleHueMove(e) {
+    var hueEl = document.getElementById('pickerHue');
+    var rect = hueEl.getBoundingClientRect();
+    var x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    pickerHue = x * 360;
+    updatePickerUI();
+  }
+
+  function onPickerHexInput() {
+    var val = document.getElementById('pickerHexInput').value;
+    if (/^[0-9a-fA-F]{6}$/.test(val)) {
+      var hsv = hexToHsv('#' + val);
+      pickerHue = hsv[0]; pickerSat = hsv[1]; pickerVal = hsv[2];
+      updatePickerUI();
+    }
+  }
+
+  // 点击弹窗外关闭
+  document.addEventListener('mousedown', function(e) {
+    var popup = document.getElementById('colorPickerPopup');
+    if (popup.classList.contains('show') && !popup.contains(e.target)) {
+      var startBtn = document.getElementById('startPickerBtn');
+      var endBtn = document.getElementById('endPickerBtn');
+      var bgStartBtn = document.getElementById('bgStartPickerBtn');
+      var bgEndBtn = document.getElementById('bgEndPickerBtn');
+      if (!startBtn.contains(e.target) && !endBtn.contains(e.target)
+          && !bgStartBtn.contains(e.target) && !bgEndBtn.contains(e.target)) {
+        closeColorPicker();
+      }
+    }
+  });
+</script>
+</body>
+</html>

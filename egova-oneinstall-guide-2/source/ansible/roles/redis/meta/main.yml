@@ -1,0 +1,3 @@
+dependencies:
+  - role: lock_files
+    vars:

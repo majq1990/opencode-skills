@@ -1,0 +1,27 @@
+iot.platform.enable-kafka=true
+{% for depend in microservice[app_type][app_name].depends %}
+{% if depend.type == 'kafka' %}
+kafka.producer.servers={{ kafka[depend.depend_key].ip }}:{{ kafka[depend.depend_key].port }}
+kafka.producer.retries=0
+kafka.producer.batch-size=16384
+kafka.producer.linger=1
+kafka.producer.buffer-memory=33554432
+kafka.producer.open=true
+
+kafka.consumer.servers={{ kafka[depend.depend_key].ip }}:{{ kafka[depend.depend_key].port }}
+kafka.consumer.enable-auto-commit=true
+kafka.consumer.auto-commit-interval=100
+kafka.consumer.session-timeout=6000
+kafka.consumer.auto-offset-reset=latest
+kafka.consumer.group-id=test-consumer-group
+kafka.consumer.concurrency=10
+kafka.consumer.open=true
+{% endif %}
+{% endfor %}
+iot.platform.kafka-topic=iot_topic
+
+iot.platform.kafka-async-core-pool-size=20
+iot.platform.kafka-async-max-pool-size=75
+iot.platform.kafka-async-queue-capacity=30
+iot.platform.kafka-async-batch-size-per-thread=20
+

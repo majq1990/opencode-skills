@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 验证码</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; margin-top: 32px; }
+h2:first-of-type { margin-top: 0; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; display: flex; flex-direction: column; gap: 32px; }
+.demo-label { font-size: 12px; color: #A8B4C8; margin-bottom: 12px; }
+
+/* ===================== 表单 Label 规范 ===================== */
+/* 标签：14px 占位 + 文字 + ::after 冒号 */
+.z-label {
+  display: inline-flex; align-items: center;
+  font-size: 14px; color: #223355; white-space: nowrap; flex-shrink: 0;
+}
+.z-label::after { content: '：'; color: #223355; }
+.z-required-mark {
+  width: 14px; flex-shrink: 0;
+  font-size: 14px; color: #FF4433; line-height: 1;
+  display: flex; align-items: center;
+}
+.z-required-placeholder { width: 14px; flex-shrink: 0; }
+
+/* ===================== 左右布局 ===================== */
+.z-form-h {
+  display: flex; align-items: flex-start; gap: 20px;
+}
+.z-form-h .z-label-wrap {
+  height: 32px; display: flex; align-items: center; flex-shrink: 0;
+}
+.z-form-h .z-control { flex: 1; }
+
+/* ===================== 上下布局 ===================== */
+.z-form-v { display: flex; flex-direction: column; }
+.z-form-v .z-label-wrap {
+  display: flex; align-items: center; margin-bottom: 8px; line-height: 1;
+}
+.z-form-v .z-control { margin-left: 14px; /* 对齐必填占位宽度 */ }
+
+/* ===================== 输入框（formitem-spec.json#input）===================== */
+.z-input {
+  width: 100%; height: 32px;
+  padding: 0 8px; border-radius: 4px;
+  border: 1px solid #DDE1EB; background: #FFFFFF;
+  font-size: 14px; color: #223355; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.z-input::placeholder { color: #A8B4C8; }
+.z-input:hover  { border-color: #3388FF; }
+.z-input:focus  { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+.z-input.is-error { border-color: #FF4433; }
+.z-input.is-error:focus { box-shadow: none; }
+
+/* 错误提示 */
+.z-error-msg {
+  margin-top: 4px; font-size: 12px; color: #FF4433;
+}
+
+/* ===================== 验证码图片容器 ===================== */
+.z-captcha-img {
+  position: relative; overflow: hidden;
+  border: 1px solid #DDE1EB; border-radius: 4px;
+  background: #F5F7FA; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.z-captcha-img canvas { display: block; }
+.z-captcha-refresh {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.72); opacity: 0;
+  transition: opacity .15s; cursor: pointer;
+  border: none; padding: 0;
+}
+.z-captcha-img:hover .z-captcha-refresh { opacity: 1; }
+.z-captcha-refresh svg { width: 20px; height: 20px; color: #3388FF; }
+
+/* ===================== 类型一：行内（输入框 + 右侧验证码，同行）===================== */
+.z-captcha-inline {
+  display: flex; align-items: center; gap: 8px;
+}
+/* 验证码图片与输入框等高 */
+.z-captcha-inline .z-captcha-img { width: 96px; height: 32px; }
+
+/* ===================== 类型二：下方大图（输入框宽度 = 图片宽度 240px）===================== */
+.z-captcha-block { display: flex; flex-direction: column; gap: 8px; }
+.z-captcha-block .z-captcha-img { width: 240px; height: 96px; }
+.z-captcha-hint {
+  font-size: 12px; color: #A8B4C8;
+  display: flex; align-items: center; gap: 4px;
+}
+.z-captcha-hint svg { width: 12px; height: 12px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 验证码</h1>
+<p class="page-desc">两种验证码形态，各含左右布局与上下布局</p>
+
+<!-- ============================================================
+     类型一：输入框右侧行内验证码
+============================================================ -->
+<h2>类型一 · 输入框右侧</h2>
+<div class="section">
+
+  <!-- 左右布局 · 默认 -->
+  <div>
+    <div class="demo-label">左右布局 · 默认</div>
+    <div class="z-form-h">
+      <div class="z-label-wrap">
+        <span class="z-required-placeholder"></span>
+        <span class="z-label">验证码</span>
+      </div>
+      <div class="z-control">
+        <div class="z-captcha-inline">
+          <input class="z-input" type="text" placeholder="请输入验证码">
+          <div class="z-captcha-img" onclick="refresh(this, 96, 32)">
+            <canvas width="96" height="32"></canvas>
+            <button class="z-captcha-refresh" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1 0 1.2-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5.5V10h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 左右布局 · 输入中 -->
+  <div>
+    <div class="demo-label">左右布局 · 输入中</div>
+    <div class="z-form-h">
+      <div class="z-label-wrap">
+        <span class="z-required-mark">*</span>
+        <span class="z-label">验证码</span>
+      </div>
+      <div class="z-control">
+        <div class="z-captcha-inline">
+          <input class="z-input" type="text" value="X8K2" style="border-color:#3388FF; box-shadow:0 0 0 2px #D6EDFF;">
+          <div class="z-captcha-img" onclick="refresh(this, 96, 32)">
+            <canvas width="96" height="32"></canvas>
+            <button class="z-captcha-refresh" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1 0 1.2-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5.5V10h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 左右布局 · 验证失败 -->
+  <div>
+    <div class="demo-label">左右布局 · 验证失败</div>
+    <div class="z-form-h">
+      <div class="z-label-wrap">
+        <span class="z-required-mark">*</span>
+        <span class="z-label">验证码</span>
+      </div>
+      <div class="z-control">
+        <div class="z-captcha-inline">
+          <input class="z-input is-error" type="text" value="X8K2">
+          <div class="z-captcha-img" onclick="refresh(this, 96, 32)">
+            <canvas width="96" height="32"></canvas>
+            <button class="z-captcha-refresh" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1 0 1.2-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5.5V10h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+        <div class="z-error-msg">验证码错误，请重新输入</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 上下布局 · 默认 -->
+  <div>
+    <div class="demo-label">上下布局 · 默认</div>
+    <div class="z-form-v">
+      <div class="z-label-wrap">
+        <span class="z-required-placeholder"></span>
+        <span class="z-label">验证码</span>
+      </div>
+      <div class="z-control">
+        <div class="z-captcha-inline">
+          <input class="z-input" type="text" placeholder="请输入验证码">
+          <div class="z-captcha-img" onclick="refresh(this, 96, 32)">
+            <canvas width="96" height="32"></canvas>
+            <button class="z-captcha-refresh" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1 0 1.2-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5.5V10h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 上下布局 · 输入中 -->
+  <div>
+    <div class="demo-label">上下布局 · 输入中</div>
+    <div class="z-form-v">
+      <div class="z-label-wrap">
+        <span class="z-required-mark">*</span>
+        <span class="z-label">验证码</span>
+      </div>
+      <div class="z-control">
+        <div class="z-captcha-inline">
+          <input class="z-input" type="text" value="X8K2" style="border-color:#3388FF; box-shadow:0 0 0 2px #D6EDFF;">
+          <div class="z-captcha-img" onclick="refresh(this, 96, 32)">
+            <canvas width="96" height="32"></canvas>
+            <button class="z-captcha-refresh" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1 0 1.2-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5.5V10h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 上下布局 · 验证失败 -->
+  <div>
+    <div class="demo-label">上下布局 · 验证失败</div>
+    <div class="z-form-v">
+      <div class="z-label-wrap">
+        <span class="z-required-mark">*</span>
+        <span class="z-label">验证码</span>
+      </div>
+      <div class="z-control">
+        <div class="z-captcha-inline">
+          <input class="z-input is-error" type="text" value="X8K2">
+          <div class="z-captcha-img" onclick="refresh(this, 96, 32)">
+            <canvas width="96" height="32"></canvas>
+            <button class="z-captcha-refresh" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1 0 1.2-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5.5V10h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+        <div class="z-error-msg">验证码错误，请重新输入</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     类型二：输入框下方大图验证码
+============================================================ -->
+<h2>类型二 · 输入框下方大图（240×96）</h2>
+<div class="section">
+
+  <!-- 左右布局 · 默认 -->
+  <div>
+    <div class="demo-label">左右布局 · 默认</div>
+    <div class="z-form-h">
+      <div class="z-label-wrap">
+        <span class="z-required-placeholder"></span>
+        <span class="z-label">验证码</span>
+      </div>
+      <div class="z-control">
+        <div class="z-captcha-block">
+          <input class="z-input" type="text" placeholder="请输入验证码" style="max-width:240px;">
+          <div class="z-captcha-img" onclick="refresh(this, 240, 96)">
+            <canvas width="240" height="96"></canvas>
+            <button class="z-captcha-refresh" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1 0 1.2-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5.5V10h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div class="z-captcha-hint"><svg viewBox="0 0 12 12" fill="none"><path d="M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1zm0 4v3m0-4.5v.5" stroke="#A8B4C8" stroke-width="1.2" stroke-linecap="round"/></svg>点击图片可刷新验证码</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 左右布局 · 输入中 -->
+  <div>
+    <div class="demo-label">左右布局 · 输入中</div>
+    <div class="z-form-h">
+      <div class="z-label-wrap">
+        <span class="z-required-mark">*</span>
+        <span class="z-label">验证码</span>
+      </div>
+      <div class="z-control">
+        <div class="z-captcha-block">
+          <input class="z-input" type="text" value="XK82" style="max-width:240px; border-color:#3388FF; box-shadow:0 0 0 2px #D6EDFF;">
+          <div class="z-captcha-img" onclick="refresh(this, 240, 96)">
+            <canvas width="240" height="96"></canvas>
+            <button class="z-captcha-refresh" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1 0 1.2-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5.5V10h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div class="z-captcha-hint"><svg viewBox="0 0 12 12" fill="none"><path d="M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1zm0 4v3m0-4.5v.5" stroke="#A8B4C8" stroke-width="1.2" stroke-linecap="round"/></svg>点击图片可刷新验证码</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 左右布局 · 验证失败 -->
+  <div>
+    <div class="demo-label">左右布局 · 验证失败</div>
+    <div class="z-form-h">
+      <div class="z-label-wrap">
+        <span class="z-required-mark">*</span>
+        <span class="z-label">验证码</span>
+      </div>
+      <div class="z-control">
+        <div class="z-captcha-block">
+          <input class="z-input is-error" type="text" value="XK82" style="max-width:240px;">
+          <div class="z-captcha-img" onclick="refresh(this, 240, 96)">
+            <canvas width="240" height="96"></canvas>
+            <button class="z-captcha-refresh" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1 0 1.2-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5.5V10h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div class="z-error-msg">验证码错误，请重新输入</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 上下布局 · 默认 -->
+  <div>
+    <div class="demo-label">上下布局 · 默认</div>
+    <div class="z-form-v">
+      <div class="z-label-wrap">
+        <span class="z-required-placeholder"></span>
+        <span class="z-label">验证码</span>
+      </div>
+      <div class="z-control">
+        <div class="z-captcha-block">
+          <input class="z-input" type="text" placeholder="请输入验证码" style="max-width:240px;">
+          <div class="z-captcha-img" onclick="refresh(this, 240, 96)">
+            <canvas width="240" height="96"></canvas>
+            <button class="z-captcha-refresh" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1 0 1.2-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5.5V10h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div class="z-captcha-hint"><svg viewBox="0 0 12 12" fill="none"><path d="M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1zm0 4v3m0-4.5v.5" stroke="#A8B4C8" stroke-width="1.2" stroke-linecap="round"/></svg>点击图片可刷新验证码</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 上下布局 · 输入中 -->
+  <div>
+    <div class="demo-label">上下布局 · 输入中</div>
+    <div class="z-form-v">
+      <div class="z-label-wrap">
+        <span class="z-required-mark">*</span>
+        <span class="z-label">验证码</span>
+      </div>
+      <div class="z-control">
+        <div class="z-captcha-block">
+          <input class="z-input" type="text" value="XK82" style="max-width:240px; border-color:#3388FF; box-shadow:0 0 0 2px #D6EDFF;">
+          <div class="z-captcha-img" onclick="refresh(this, 240, 96)">
+            <canvas width="240" height="96"></canvas>
+            <button class="z-captcha-refresh" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1 0 1.2-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5.5V10h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div class="z-captcha-hint"><svg viewBox="0 0 12 12" fill="none"><path d="M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1zm0 4v3m0-4.5v.5" stroke="#A8B4C8" stroke-width="1.2" stroke-linecap="round"/></svg>点击图片可刷新验证码</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 上下布局 · 验证失败 -->
+  <div>
+    <div class="demo-label">上下布局 · 验证失败</div>
+    <div class="z-form-v">
+      <div class="z-label-wrap">
+        <span class="z-required-mark">*</span>
+        <span class="z-label">验证码</span>
+      </div>
+      <div class="z-control">
+        <div class="z-captcha-block">
+          <input class="z-input is-error" type="text" value="XK82" style="max-width:240px;">
+          <div class="z-captcha-img" onclick="refresh(this, 240, 96)">
+            <canvas width="240" height="96"></canvas>
+            <button class="z-captcha-refresh" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1 0 1.2-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5.5V10h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div class="z-error-msg">验证码错误，请重新输入</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const COLORS = ['#3388FF','#223355','#06A17F','#FF6600','#6B7A99','#D24726'];
+
+function drawCaptcha(canvas, w, h) {
+  const ctx = canvas.getContext('2d');
+  canvas.width = w; canvas.height = h;
+
+  ctx.fillStyle = '#F5F7FA';
+  ctx.fillRect(0, 0, w, h);
+
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath();
+    ctx.moveTo(rand(0, w), rand(0, h));
+    ctx.lineTo(rand(0, w), rand(0, h));
+    ctx.strokeStyle = COLORS[rand(0, COLORS.length)] + '44';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < 50; i++) {
+    ctx.beginPath();
+    ctx.arc(rand(0, w), rand(0, h), 1, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS[rand(0, COLORS.length)] + '55';
+    ctx.fill();
+  }
+
+  const fontSize = h < 50 ? 18 : 40;
+  const charW = w / 5;
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < 4; i++) {
+    ctx.save();
+    const x = charW * (i + 0.9);
+    const y = h / 2 + rand(-h * 0.06, h * 0.06);
+    ctx.translate(x, y);
+    ctx.rotate((rand(-20, 20)) * Math.PI / 180);
+    ctx.font = `bold ${fontSize}px -apple-system, "PingFang SC", sans-serif`;
+    ctx.fillStyle = COLORS[rand(0, COLORS.length)];
+    ctx.fillText(CHARS[rand(0, CHARS.length)], 0, 0);
+    ctx.restore();
+  }
+}
+
+function refresh(el, w, h) {
+  drawCaptcha(el.querySelector('canvas'), w, h);
+}
+
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
+}
+
+document.querySelectorAll('.z-captcha-img canvas').forEach(c => {
+  drawCaptcha(c, parseInt(c.width), parseInt(c.height));
+});
+</script>
+</body>
+</html>

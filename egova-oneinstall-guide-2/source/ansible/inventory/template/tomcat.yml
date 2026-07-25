@@ -1,0 +1,6 @@
+# tomcat配置模板
+# 部署场景下，host和ip配置根据部署的节点，自动生成注入
+# host: node1
+biz_type: MIS
+port: 8081
+ip: 127.0.0.1

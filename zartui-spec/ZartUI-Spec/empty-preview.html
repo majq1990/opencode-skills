@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 缺省页</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; margin-top: 32px; }
+h2:first-of-type { margin-top: 0; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; }
+.demo-label { font-size: 12px; color: #A8B4C8; margin-bottom: 16px; }
+
+/* ===================== 图标网格 ===================== */
+.icon-grid {
+  display: flex; flex-wrap: wrap; gap: 24px;
+}
+.icon-item {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  width: 120px;
+}
+.icon-item img {
+  width: 80px; height: 80px; object-fit: contain;
+}
+.icon-item span {
+  font-size: 12px; color: #6B7A99; text-align: center; word-break: break-all;
+}
+
+/* ===================== 缺省页示例 ===================== */
+.empty-demo {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 48px 0; gap: 12px;
+  border: 1px solid #E9ECF2; border-radius: 4px;
+}
+.empty-demo img { width: 120px; height: 120px; object-fit: contain; }
+.empty-title { font-size: 14px; font-weight: 400; color: #223355; }
+.empty-action {
+  margin-top: 4px;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 16px; border-radius: 4px;
+  border: 1px solid #DDE1EB; background: #FFFFFF;
+  font-size: 14px; color: #223355; cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.empty-action:hover { border-color: #3388FF; background: #F0F9FF; color: #3388FF; }
+.empty-action-pill {
+  margin-top: 4px;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 16px; border-radius: 100px;
+  border: 1px solid #DDE1EB; background: #FFFFFF;
+  font-size: 14px; color: #3388FF; cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.empty-action-pill:hover { border-color: #3388FF; background: #F0F9FF; }
+
+.demo-row-2 { display: flex; gap: 24px; flex-wrap: wrap; }
+.demo-row-2 .empty-demo { flex: 1; min-width: 280px; }
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 缺省页 Empty</h1>
+<p class="page-desc">缺省页图标库，含无图片、无评论、无审批、无搜索结果、无消息、暂无内容等场景</p>
+
+<!-- ============================================================
+     图标总览
+============================================================ -->
+<h2>图标总览</h2>
+<div class="section">
+
+  <div class="demo-label">无图片系列（10 种变体）</div>
+  <div class="icon-grid" style="margin-bottom:28px;">
+    <div class="icon-item"><img src="数据展示-缺省页/无图片.png"><span>无图片</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无图片(1).png"><span>无图片 1</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无图片(2).png"><span>无图片 2</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无图片(3).png"><span>无图片 3</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无图片(4).png"><span>无图片 4</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无图片(5).png"><span>无图片 5</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无图片(6).png"><span>无图片 6</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无图片(7).png"><span>无图片 7</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无图片(8).png"><span>无图片 8</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无图片(9).png"><span>无图片 9</span></div>
+  </div>
+
+  <div class="demo-label">无评论系列（9 种变体）</div>
+  <div class="icon-grid" style="margin-bottom:28px;">
+    <div class="icon-item"><img src="数据展示-缺省页/无评论.png"><span>无评论</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论(1).png"><span>无评论 1</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论(2).png"><span>无评论 2</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论(3).png"><span>无评论 3</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论(4).png"><span>无评论 4</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论(6).png"><span>无评论 6</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论(7).png"><span>无评论 7</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论(8).png"><span>无评论 8</span></div>
+  </div>
+
+  <div class="demo-label">暂无数据系列</div>
+  <div class="icon-grid" style="margin-bottom:28px;">
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 2.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 3.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 4.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 5.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 6.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 7.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 8.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 9.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 10.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 11.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 12.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 13.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 14.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 15.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 16.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 17.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 18.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 19.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 20.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 21.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 22.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 23.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 24.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 25.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 26.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 27.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 28.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无评论备份 29.png"><span>暂无数据</span></div>
+  </div>
+
+  <div class="demo-label">其他场景图标</div>
+  <div class="icon-grid">
+    <div class="icon-item"><img src="数据展示-缺省页/无审批.png"><span>暂无数据</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无搜索结果.png"><span>无搜索结果</span></div>
+    <div class="icon-item"><img src="数据展示-缺省页/无消息.png"><span>无消息</span></div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     缺省页示例
+============================================================ -->
+<h2>缺省页示例</h2>
+<div class="section">
+
+  <div class="demo-row-2">
+
+    <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:280px;">
+      <div class="demo-label">暂无内容</div>
+      <div class="empty-demo">
+        <img src="数据展示-缺省页/暂无内容@2x.png">
+        <span class="empty-title">暂无内容</span>
+        <button class="empty-action-pill">+ 新增</button>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:280px;">
+      <div class="demo-label">无搜索结果</div>
+      <div class="empty-demo">
+        <img src="数据展示-缺省页/无搜索结果@2x.png">
+        <span class="empty-title">无搜索结果</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="demo-row-2">
+
+    <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:280px;">
+      <div class="demo-label">无消息</div>
+      <div class="empty-demo">
+        <img src="数据展示-缺省页/无消息@2x.png">
+        <span class="empty-title">暂无消息</span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:280px;">
+      <div class="demo-label">无审批</div>
+      <div class="empty-demo">
+        <img src="数据展示-缺省页/无审批@2x.png">
+        <span class="empty-title">暂无审批</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="demo-row-2">
+
+    <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:280px;">
+      <div class="demo-label">无评论</div>
+      <div class="empty-demo">
+        <img src="数据展示-缺省页/无评论@2x.png">
+        <span class="empty-title">暂无评论</span>
+        <button class="empty-action">发表评论</button>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:280px;">
+      <div class="demo-label">无图片</div>
+      <div class="empty-demo">
+        <img src="数据展示-缺省页/无图片@2x.png">
+        <span class="empty-title">暂无图片</span>
+        <button class="empty-action">上传图片</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>

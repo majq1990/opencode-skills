@@ -1,0 +1,13 @@
+{%- set upstream_ip = video_upstream_ip -%}
+
+upstream srvs_video_frontend {
+    server {{ upstream_ip }}:8080;
+}
+
+upstream srvs_video_backend {
+    server {{ upstream_ip }}:8083;
+}
+
+upstream srvs_video_media {
+    server {{ upstream_ip }}:8090;
+}

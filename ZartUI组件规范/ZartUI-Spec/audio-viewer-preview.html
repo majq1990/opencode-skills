@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 音频预览</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; margin-top: 32px; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; }
+.trigger-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 20px; border-radius: 4px;
+  border: 1px solid #DDE1EB; background: #FFFFFF;
+  font-size: 14px; color: #223355; cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.trigger-btn:hover { border-color: #3388FF; background: #F0F9FF; color: #3388FF; }
+
+/* ===================== 遮罩 ===================== */
+.z-audio-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+.z-audio-overlay.is-open { display: flex; }
+
+/* ===================== 弹窗 ===================== */
+.z-audio-dialog {
+  width: 520px;
+  height: 467px;
+  background: #FFFFFF;
+  box-shadow: 0 2px 50px 0 rgba(0, 67, 202, 0.2);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 标题栏 */
+.z-audio-header {
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid #F5F7FA;
+}
+.z-audio-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #081126;
+}
+.z-audio-close {
+  width: 28px; height: 28px;
+  border: none; background: transparent;
+  color: #A8B4C8;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border-radius: 4px;
+  transition: color .15s, background .15s;
+}
+.z-audio-close:hover { color: #6B7A99; background: #F5F7FA; }
+
+/* 播放控制区 */
+.z-audio-player {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 20px 20px;
+  gap: 12px;
+}
+
+/* 三个按钮横排 */
+.z-audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* 后退 / 前进按钮 */
+.z-audio-skip-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: #F0F9FF;
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #3388FF;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.z-audio-skip-btn:hover { background: #ddf0ff; }
+
+/* 主播放按钮 */
+.z-audio-play-btn {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: #3388FF;
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #FFFFFF;
+  transition: background .15s, transform .15s;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(51,136,255,0.4);
+}
+.z-audio-play-btn:hover { background: #2167D9; transform: scale(1.05); }
+
+/* 进度条区域 */
+.z-audio-progress-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.z-audio-time {
+  font-size: 12px;
+  color: #A8B4C8;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 36px;
+}
+.z-audio-time.is-right { text-align: right; }
+.z-audio-progress-track {
+  flex: 1;
+  height: 3px;
+  background: #F5F7FA;
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+}
+.z-audio-progress-bar {
+  height: 100%;
+  width: 30%;
+  background: #3388FF;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* ===================== 音频列表 ===================== */
+.z-audio-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.z-audio-list::-webkit-scrollbar { width: 4px; }
+.z-audio-list::-webkit-scrollbar-track { background: transparent; }
+.z-audio-list::-webkit-scrollbar-thumb { background: #DDE1EB; border-radius: 2px; }
+
+/* 音频条目 */
+.z-audio-item {
+  width: 480px;
+  height: 60px;
+  border-radius: 4px;
+  background: #F5F7FA;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 12px;
+  cursor: pointer;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.z-audio-item:hover { background: #eaf4ff; }
+.z-audio-item.is-active { background: #F0F9FF; }
+
+/* 音频图标 */
+.z-audio-icon {
+  width: 40px; height: 40px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  color: #6F5CFF;
+}
+
+/* 文件名 */
+.z-audio-name {
+  flex: 1;
+  font-size: 13px;
+  color: #223355;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.z-audio-item.is-active .z-audio-name { color: #3388FF; }
+
+/* 条目时间 */
+.z-audio-item-time {
+  font-size: 12px;
+  color: #A8B4C8;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* 条目播放按钮 */
+.z-audio-item-play {
+  width: 24px; height: 24px;
+  border: none; background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: #A8B4C8;
+  flex-shrink: 0;
+  border-radius: 4px;
+  transition: color .15s, background .15s;
+}
+.z-audio-item-play:hover { color: #3388FF; background: rgba(51,136,255,0.08); }
+.z-audio-item.is-active .z-audio-item-play { color: #3388FF; }
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 音频预览 AudioViewer</h1>
+<p class="page-desc">弹窗式音频播放，支持列表切换，进度条可拖拽</p>
+
+<h2>触发预览</h2>
+<div class="section">
+  <button class="trigger-btn" onclick="openAudio()">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M6 2v10l7-5-7-5z" fill="currentColor"/>
+      <rect x="1" y="2" width="2.5" height="10" rx="1" fill="currentColor"/>
+    </svg>
+    查看音频（列表）
+  </button>
+  <button class="trigger-btn" onclick="openAudio2()">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M6 2v10l7-5-7-5z" fill="currentColor"/>
+      <rect x="1" y="2" width="2.5" height="10" rx="1" fill="currentColor"/>
+    </svg>
+    查看音频（纯播放）
+  </button>
+</div>
+
+<!-- ===================== 音频弹窗 ===================== -->
+<div class="z-audio-overlay" id="audioOverlay" onclick="handleOverlayClick(event)">
+  <div class="z-audio-dialog" id="audioDialog">
+
+    <!-- 标题栏 -->
+    <div class="z-audio-header">
+      <span class="z-audio-title">查看音频</span>
+      <button class="z-audio-close" onclick="closeAudio()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- 播放控制 -->
+    <div class="z-audio-player">
+      <!-- 三按钮 -->
+      <div class="z-audio-controls">
+
+        <!-- 后退 -->
+        <button class="z-audio-skip-btn" onclick="skipTrack(-1)" title="上一个">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="2.5" y="2.5" width="2" height="11" rx="1"/>
+            <path d="M13 3.5C13 3.1 12.55 2.87 12.22 3.08L5.5 7.28a1 1 0 0 0 0 1.44l6.72 4.2C12.55 13.13 13 12.9 13 12.5V3.5z"/>
+          </svg>
+        </button>
+
+        <!-- 主播放/暂停 -->
+        <button class="z-audio-play-btn" onclick="togglePlay()" id="mainPlayBtn">
+          <!-- 播放图标 -->
+          <svg id="mainIconPlay" width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <path d="M8 5.5C8 4.9 8.65 4.55 9.16 4.87l14 8.5a1 1 0 0 1 0 1.72l-14 8.5C8.65 23.9 8 23.55 8 22.95V5.5z" fill="#FFFFFF"/>
+          </svg>
+          <!-- 暂停图标 -->
+          <svg id="mainIconPause" width="28" height="28" viewBox="0 0 28 28" fill="none" style="display:none;">
+            <rect x="6" y="5" width="5" height="18" rx="2.5" fill="#FFFFFF"/>
+            <rect x="17" y="5" width="5" height="18" rx="2.5" fill="#FFFFFF"/>
+          </svg>
+        </button>
+
+        <!-- 前进 -->
+        <button class="z-audio-skip-btn" onclick="skipTrack(1)" title="下一个">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="11.5" y="2.5" width="2" height="11" rx="1"/>
+            <path d="M3 3.5C3 3.1 3.45 2.87 3.78 3.08L10.5 7.28a1 1 0 0 1 0 1.44L3.78 12.92C3.45 13.13 3 12.9 3 12.5V3.5z"/>
+          </svg>
+        </button>
+
+      </div>
+
+      <!-- 进度条行 -->
+      <div class="z-audio-progress-row">
+        <span class="z-audio-time" id="currentTime">00:42</span>
+        <div class="z-audio-progress-track" onclick="seekAudio(event)">
+          <div class="z-audio-progress-bar" id="progressBar"></div>
+        </div>
+        <span class="z-audio-time is-right" id="totalTime">02:18</span>
+      </div>
+    </div>
+
+    <!-- 音频列表 -->
+    <div class="z-audio-list" id="audioList"></div>
+
+  </div>
+</div>
+
+<!-- ===================== 弹窗2：纯播放 ===================== -->
+<div class="z-audio-overlay" id="audioOverlay2" onclick="handleOverlayClick2(event)">
+  <div class="z-audio-dialog" style="height:206px;">
+
+    <!-- 标题栏 -->
+    <div class="z-audio-header">
+      <span class="z-audio-title">查看音频</span>
+      <button class="z-audio-close" onclick="closeAudio2()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- 播放控制 -->
+    <div class="z-audio-player">
+      <div class="z-audio-controls">
+        <button class="z-audio-skip-btn" onclick="skipTrack(-1)" title="上一个">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="2.5" y="2.5" width="2" height="11" rx="1"/>
+            <path d="M13 3.5C13 3.1 12.55 2.87 12.22 3.08L5.5 7.28a1 1 0 0 0 0 1.44l6.72 4.2C12.55 13.13 13 12.9 13 12.5V3.5z"/>
+          </svg>
+        </button>
+        <button class="z-audio-play-btn" onclick="togglePlay2()" id="mainPlayBtn2">
+          <svg id="mainIconPlay2" width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <path d="M8 5.5C8 4.9 8.65 4.55 9.16 4.87l14 8.5a1 1 0 0 1 0 1.72l-14 8.5C8.65 23.9 8 23.55 8 22.95V5.5z" fill="#FFFFFF"/>
+          </svg>
+          <svg id="mainIconPause2" width="28" height="28" viewBox="0 0 28 28" fill="none" style="display:none;">
+            <rect x="6" y="5" width="5" height="18" rx="2.5" fill="#FFFFFF"/>
+            <rect x="17" y="5" width="5" height="18" rx="2.5" fill="#FFFFFF"/>
+          </svg>
+        </button>
+        <button class="z-audio-skip-btn" onclick="skipTrack(1)" title="下一个">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="11.5" y="2.5" width="2" height="11" rx="1"/>
+            <path d="M3 3.5C3 3.1 3.45 2.87 3.78 3.08L10.5 7.28a1 1 0 0 1 0 1.44L3.78 12.92C3.45 13.13 3 12.9 3 12.5V3.5z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="z-audio-progress-row">
+        <span class="z-audio-time" id="currentTime2">00:42</span>
+        <div class="z-audio-progress-track" onclick="seekAudio2(event)">
+          <div class="z-audio-progress-bar" id="progressBar2" style="width:30%;"></div>
+        </div>
+        <span class="z-audio-time is-right" id="totalTime2">02:18</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const tracks = [
+  { name: '现场勘查录音_20260519.mp3',  duration: '02:18', elapsed: '00:42', progress: 0.30 },
+  { name: '调查笔录访谈_居民李建国.mp3', duration: '03:45', elapsed: '00:00', progress: 0    },
+  { name: '整改通知宣讲录音.mp3',        duration: '01:52', elapsed: '00:00', progress: 0    },
+  { name: '应急预案培训音频.mp3',         duration: '04:30', elapsed: '00:00', progress: 0    },
+];
+
+let currentIndex = 0;
+let isPlaying    = false;
+let progressTimer = null;
+
+/* ── 打开/关闭 ── */
+function openAudio() {
+  document.getElementById('audioOverlay').classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+  renderList();
+  syncMainControls();
+}
+function closeAudio() {
+  document.getElementById('audioOverlay').classList.remove('is-open');
+  document.body.style.overflow = '';
+  stopTimer();
+  isPlaying = false;
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('audioOverlay')) closeAudio();
+}
+
+/* ── 渲染列表 ── */
+function renderList() {
+  document.getElementById('audioList').innerHTML = tracks.map((t, i) => `
+    <div class="z-audio-item${i === currentIndex ? ' is-active' : ''}" onclick="selectTrack(${i})">
+      <div class="z-audio-icon">
+        <!-- 文件形状+音符面状图标 -->
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <!-- 文件底座（带右上角折角） -->
+          <path d="M6 4C6 2.9 6.9 2 8 2h12l6 6v18a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4z" fill="#6F5CFF"/>
+          <!-- 折角 -->
+          <path d="M20 2l6 6h-4a2 2 0 0 1-2-2V2z" fill="rgba(255,255,255,0.25)"/>
+          <!-- 音符竖线 -->
+          <rect x="13.5" y="11.5" width="1.8" height="9" rx="0.9" fill="white"/>
+          <!-- 音符旗（连接竖线顶部向右弯曲） -->
+          <path d="M15.3 11.5 C15.3 11.5 20 11 20 14.5 C20 17 17 17.5 15.3 16.5" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+          <!-- 音符头（椭圆，轻微倾斜） -->
+          <ellipse cx="12.5" cy="20.8" rx="2.8" ry="2" transform="rotate(-10 12.5 20.8)" fill="white"/>
+        </svg>
+      </div>
+      <span class="z-audio-name">${t.name}</span>
+      <span class="z-audio-item-time">${i === currentIndex ? t.elapsed + ' / ' + t.duration : t.duration}</span>
+      <button class="z-audio-item-play" onclick="event.stopPropagation();selectTrack(${i});togglePlay()">
+        ${i === currentIndex && isPlaying
+          ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+               <rect x="3" y="3" width="3.5" height="10" rx="1.75"/>
+               <rect x="9.5" y="3" width="3.5" height="10" rx="1.75"/>
+             </svg>`
+          : `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+               <path d="M4 3C4 2.6 4.45 2.37 4.78 2.58l9 5.5a1 1 0 0 1 0 1.84l-9 5.5C4.45 13.63 4 13.4 4 13V3z"/>
+             </svg>`
+        }
+      </button>
+    </div>
+  `).join('');
+
+  const t = tracks[currentIndex];
+  document.getElementById('currentTime').textContent = t.elapsed;
+  document.getElementById('totalTime').textContent   = t.duration;
+  document.getElementById('progressBar').style.width = (t.progress * 100) + '%';
+}
+
+/* ── 选择音轨 ── */
+function selectTrack(i) {
+  if (i === currentIndex) return;
+  stopTimer();
+  isPlaying = false;
+  currentIndex = i;
+  syncMainControls();
+  renderList();
+}
+
+/* ── 上一个/下一个 ── */
+function skipTrack(dir) {
+  stopTimer();
+  isPlaying = false;
+  currentIndex = (currentIndex + dir + tracks.length) % tracks.length;
+  syncMainControls();
+  renderList();
+}
+
+/* ── 播放/暂停 ── */
+function togglePlay() {
+  isPlaying = !isPlaying;
+  syncMainControls();
+  isPlaying ? startTimer() : stopTimer();
+  renderList();
+}
+
+function syncMainControls() {
+  document.getElementById('mainIconPlay').style.display  = isPlaying ? 'none' : '';
+  document.getElementById('mainIconPause').style.display = isPlaying ? ''     : 'none';
+}
+
+/* ── 进度模拟 ── */
+function startTimer() {
+  stopTimer();
+  progressTimer = setInterval(function() {
+    const t = tracks[currentIndex];
+    t.progress = Math.min(1, t.progress + 0.003);
+    const total = parseDuration(t.duration);
+    const cur   = Math.floor(t.progress * total);
+    t.elapsed = formatTime(cur);
+    document.getElementById('currentTime').textContent = t.elapsed;
+    document.getElementById('progressBar').style.width = (t.progress * 100) + '%';
+    // 更新列表里的时间
+    const items = document.querySelectorAll('.z-audio-item');
+    if (items[currentIndex]) {
+      const timeEl = items[currentIndex].querySelector('.z-audio-item-time');
+      if (timeEl) timeEl.textContent = t.elapsed + ' / ' + t.duration;
+    }
+    if (t.progress >= 1) { stopTimer(); isPlaying = false; syncMainControls(); renderList(); }
+  }, 100);
+}
+function stopTimer() {
+  if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+}
+
+/* ── 点击进度条 ── */
+function seekAudio(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const t = tracks[currentIndex];
+  t.progress = ratio;
+  t.elapsed = formatTime(Math.floor(ratio * parseDuration(t.duration)));
+  document.getElementById('currentTime').textContent = t.elapsed;
+  document.getElementById('progressBar').style.width = (ratio * 100) + '%';
+}
+
+/* ── 工具函数 ── */
+function parseDuration(str) {
+  const [m, s] = str.split(':').map(Number);
+  return m * 60 + s;
+}
+function formatTime(secs) {
+  const m = Math.floor(secs / 60).toString().padStart(2, '0');
+  const s = (secs % 60).toString().padStart(2, '0');
+  return m + ':' + s;
+}
+
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('audioOverlay').classList.contains('is-open')) return;
+  if (e.key === 'Escape') closeAudio();
+  if (e.key === ' ')      { e.preventDefault(); togglePlay(); }
+});
+
+/* ── 弹窗2：纯播放 ── */
+let isPlaying2 = false;
+let progressTimer2 = null;
+let progressVal2 = 0.30;
+
+function openAudio2() {
+  isPlaying2 = false;
+  progressVal2 = 0.30;
+  document.getElementById('audioOverlay2').classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+  syncPlayState2();
+}
+function closeAudio2() {
+  document.getElementById('audioOverlay2').classList.remove('is-open');
+  document.body.style.overflow = '';
+  if (progressTimer2) { clearInterval(progressTimer2); progressTimer2 = null; }
+  isPlaying2 = false;
+}
+function handleOverlayClick2(e) {
+  if (e.target === document.getElementById('audioOverlay2')) closeAudio2();
+}
+function togglePlay2() {
+  isPlaying2 = !isPlaying2;
+  syncPlayState2();
+  if (isPlaying2) {
+    progressTimer2 = setInterval(function() {
+      progressVal2 = Math.min(1, progressVal2 + 0.003);
+      document.getElementById('progressBar2').style.width = (progressVal2 * 100) + '%';
+      const cur = Math.floor(progressVal2 * 138);
+      document.getElementById('currentTime2').textContent = formatTime(cur);
+      if (progressVal2 >= 1) { isPlaying2 = false; clearInterval(progressTimer2); syncPlayState2(); }
+    }, 100);
+  } else {
+    clearInterval(progressTimer2);
+  }
+}
+function syncPlayState2() {
+  document.getElementById('mainIconPlay2').style.display  = isPlaying2 ? 'none' : '';
+  document.getElementById('mainIconPause2').style.display = isPlaying2 ? ''     : 'none';
+}
+function seekAudio2(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  progressVal2 = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  document.getElementById('progressBar2').style.width = (progressVal2 * 100) + '%';
+  document.getElementById('currentTime2').textContent = formatTime(Math.floor(progressVal2 * 138));
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+---
+## Directory where the binaries will be installed
+bin_dir: /usr/bin
+# Directory for src package path
+# 使用基于 playbook_dir 的路径， src/bin/jdk、src/bin/minio、src/web/linglong
+src_env_package_path: "{{ playbook_dir }}/../src/bin"
+src_web_package_path: "{{ playbook_dir }}/../src/web"
+# 基础平台产品部署的根目录
+app_root_dir: /egova/apps/basic
+# 数据目录
+data_root_dir: /egova/data
+# web目录
+web_root_dir: /egova/web
+# 日志目录
+log_root_dir: /egova/log
+# 工具目录
+tools_root_dir: /egova/tools
+# 配置目录
+conf_root_dir: /egova/conf
+# Directory for ansible dest path
+dest_package_root_path: /egova/deploy
+# service env file path
+service_env_path: /egova/web/services
+# service work path
+service_work_path: /egova/work
+# system service path
+system_service_path: /etc/systemd/system
+# 调试模式，某些操作将被跳过
+debug_flag: 0
+# 连接其他服务器的用户名
+devops_ssh_user: root
+# ssh端口
+devops_ssh_port: 22
+# ssh 密钥路径，用于只有私钥的现场
+devops_ssh_key: /root/.ssh/id_ed25519
+# 是否gather facts
+gather_facts: true
+# 主控机ip
+ansible_master_ip: 192.168.102.244
+# yum配置路径
+yum_conf_path: /etc/yum.repos.d
+# apt源配置路径
+apt_conf_path: /etc/apt
+# 本地源端口
+egova_local_port: 7777
+# ops_user
+ops_user: egova
+# common password
+common_password: Wk2uBTeyp6
+PG_password: Wk2uBTeyp6
+# mysql默认端口
+mysql_port: 3306
+# 业务库/统计库代理状态
+proxy_biz_flag: 0
+proxy_stat_flag: 0
+release_ver: V10
+# 默认 jdk 版本
+default_jdk_version: "8"

@@ -1,0 +1,64 @@
+ {# 兼容前端文件名称与项目名称不一致的情况 #}
+{% if microservice[app_type][app_name].frontend_name is defined and microservice[app_type][app_name].frontend_name is not none %}
+location ~ "{{ microservice[app_type][app_name].frontend_name }}/([^/]*)\.(js|html|json|ico|png)$" {
+    set $file_extension $2;
+    alias {{ microservice[app_type][app_name].frontend_path }}/$1.$2;
+    charset utf-8;
+    if ($file_extension != "html"){
+		add_header Cache-Control max-age=3600;
+	}
+  }
+  location  "{{ microservice[app_type][app_name].frontend_name }}/static/" {
+    alias {{ microservice[app_type][app_name].frontend_path }}/static/;
+    charset utf-8;
+	add_header Cache-Control max-age=3600;
+	if ( $uri ~ "\.(gif|jpg|jpeg|bmp|png|ico|zip|pdf|svg|mp3|swf|cur|woff|woff2|eot|ttf|mp3|mp4|swf)$" ){
+		add_header Cache-Control max-age=3600000;
+	}
+  }
+  location  "{{ microservice[app_type][app_name].frontend_name }}/" {
+    alias {{ microservice[app_type][app_name].frontend_path }}/;
+    charset utf-8;
+	add_header Cache-Control max-age=3600;
+	if ( $uri ~ "\.(gif|jpg|jpeg|bmp|png|ico|zip|pdf|svg|mp3|swf|cur|woff|woff2|eot|ttf|mp3|mp4|swf)$" ){
+		add_header Cache-Control max-age=3600000;
+	}
+  }
+{# 前端使用vue3.*的情况#}
+{% elif microservice[app_type][app_name].vue_version is defined and microservice[app_type][app_name].vue_version==3 %}
+  location  "/{{ app_type }}/" {
+    alias {{ microservice[app_type][app_name].base_path }}/webApps/{{ app_type }}/;
+    charset utf-8;
+    if ($uri !~ "\.html$"){
+      add_header Cache-Control max-age=3600;
+    }
+  	if ( $uri ~ "\.(gif|jpg|jpeg|bmp|png|ico|zip|pdf|svg|mp3|swf|cur|woff|woff2|eot|ttf|mp3|mp4|swf)$" ){
+  		add_header Cache-Control max-age=3600000;
+  	}
+  }
+{% else %}
+  location ~ "^/{{ app_type }}/([^/]*)\.(js|html|json|ico|png)$" {
+    set $file_extension $2;
+    alias {{ microservice[app_type][app_name].base_path }}/webApps/{{ app_type }}/$1.$2;
+    charset utf-8;
+     if ($file_extension != "html"){
+    		add_header Cache-Control max-age=3600;
+     }
+  }
+  location   "/{{ app_type }}/static/" {
+    alias {{ microservice[app_type][app_name].base_path }}/webApps/{{ app_type }}/static/;
+    charset utf-8;
+	add_header Cache-Control max-age=3600;
+	if ( $uri ~ "\.(gif|jpg|jpeg|bmp|png|ico|zip|pdf|svg|mp3|swf|cur|woff|woff2|eot|ttf|mp3|mp4|swf)$" ){
+		add_header Cache-Control max-age=3600000;
+	}
+  }
+  location  "/{{ app_type }}" {
+    alias {{ microservice[app_type][app_name].base_path }}/webApps/ ;
+    charset utf-8;
+	add_header Cache-Control max-age=3600;
+	if ( $uri ~ "\.(gif|jpg|jpeg|bmp|png|ico|zip|pdf|svg|mp3|swf|cur|woff|woff2|eot|ttf|mp3|mp4|swf)$" ){
+		add_header Cache-Control max-age=3600000;
+	}
+  }
+{% endif %}

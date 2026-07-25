@@ -1,0 +1,150 @@
+---
+# 配置文件
+
+- name: 获取主从节点配置
+  set_fact:
+    master_db_node: "{{ vars[db_type_ip]['hosts']['master'] }}"
+    slave_config: "{{ vars[db_type_ip]['hosts']['slave'] | default([]) }}"
+
+- name: 读取从节点 metadata 信息
+  connection: local
+  shell: "yq -o=csv '.mysql[] | select(.host == \"{{ item }}\") | [.ip, .port]' inventory/metadata.yml"
+  changed_when: false
+  with_items: "{{ slave_config }}"
+  register: slave_tmp_config
+
+- name: debug打印从节点 metadata 信息
+  debug:
+    msg: "slave_tmp_config: {{ slave_tmp_config }}"
+
+- name: 初始化从节点配置详情列表
+  set_fact:
+    slave_detail_config: []
+
+- name: 组装从节点配置详情列表
+  set_fact:
+    slave_detail_config: "{{ slave_detail_config + [ {'host': item.item, 'ip': item.stdout_lines[0].split(',')[0], 'port': item.stdout_lines[0].split(',')[1]} ] }}"
+  with_items: "{{ slave_tmp_config.results }}"
+
+- name: debug打印从节点配置详情
+  debug:
+    msg: "Host: {{ item.host }}, IP: {{ item.ip }}, Port: {{ item.port }}"
+  with_items: "{{ slave_detail_config }}"
+
+- set_fact: master_db_ip={{ hostvars[master_db_node]['ansible_ssh_host'] }}
+
+- name: 读取主节点 metadata 信息
+  connection: local
+  shell: yq '.mysql[] | select(.host == "{{ master_db_node }}") | .port ' inventory/metadata.yml
+  ignore_errors: yes
+  register: master_db_port
+
+- name: debug打印主节点端口
+  debug:
+    msg: "master_db_port: {{ master_db_port.stdout }}"
+
+- name: Calculate thread variable
+  become: true
+  become_user: root
+  shell: "lscpu | grep '^CPU(s)' | awk '{print $2}'"
+  register: cpu_output
+
+- block:
+    - name: Set thread  variable
+      set_fact:
+        thread: "{{ (cpu_output.stdout | int) // 2 }}"
+
+    - name: Set thread variable min/max
+      set_fact:
+        thread: "{{ thread | ternary(thread, 1) | ternary(4, thread) }}"
+
+    - name: Set other variable
+      set_fact:
+        default_pool: "{{ 500 // thread | int }}"
+        max_pool: "{{ 2000 // thread  | int }}"
+        log_maxnum: "{{ 50 // thread  | int }}"
+  when: cpu_output.rc == 0
+
+- name: Copy configuration file
+  template:
+    src: "{{ item.filename }}.j2"
+    dest: "{{ item.destpath }}/{{ item.filename }}"
+    mode: "{{ item.mode }}"
+  with_items:
+    - { filename: "proxy.conf",destpath: "{{ local_cetus_conf }}",mode: "0660" }
+    - { filename: "users.json",destpath: "{{ local_cetus_conf }}",mode: "0644" }
+    - { filename: "variables.json",destpath: "{{ local_cetus_conf }}",mode: "0644" }
+    - { filename: "cetus_master.sql",destpath: "{{ temp_conf_path }}",mode: "0644" }
+    - { filename: "cetus_slave.sql",destpath: "{{ temp_conf_path }}",mode: "0644" }
+    - { filename: "repl_master.sql",destpath: "{{ temp_conf_path }}",mode: "0644" }
+
+- name: 目录权限更新
+  file:
+    path: "{{ cetus_path }}"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    recurse: yes
+    state: directory
+  become: yes
+
+- name: 检查cetus组是否存在
+  command: groups cetus
+  register: cetus_group_result
+  ignore_errors: yes
+
+- name: 配置cetus文件权限
+  shell: |
+    sudo  usermod -a -G cetus egova
+    sudo chgrp -R cetus {{ cetus_path }}
+    sudo chmod -R g+rw {{ cetus_path }}
+    sudo chgrp -R cetus {{ log_path }}
+    sudo chmod -R g+rw {{ log_path }}
+  when: cetus_group_result.rc == 0
+
+- name: 对主库进行主从同步配置...
+  run_once: true
+  shell: "mysql -A -u{{ root_user }} -p{{ password }} -h{{ master_db_ip }} -P{{ master_db_port.stdout }}< {{ temp_conf_path }}/repl_master.sql"
+
+- name: 获取主库 binlog 信息
+  shell: mysql -A -u {{ root_user }} -p{{ password }} -e "show master status;"
+  register: master_status
+
+- name: 解析主库 binlog 信息
+  set_fact:
+    master_log_file: "{{ item.split('\t')[0] }}"
+    master_log_pos: "{{ item.split('\t')[1] }}"
+  with_items: "{{ master_status.stdout_lines }}"
+
+- name: 复制从库主从同步配置文件
+  template:
+    src: "repl_slave.sql.j2"
+    dest: "{{ temp_conf_path }}/repl_slave.sql"
+    mode: "0644"
+
+- name: 对从库进行主从同步配置...
+  shell: mysql -A -u{{ root_user }} -p{{ password }} -h{{ item.ip }} -P{{ item.port }}< {{ temp_conf_path }}/repl_slave.sql
+  with_items: "{{ slave_detail_config }}"
+
+- name: 获取从库主从状态
+  shell: mysql -A -u {{ root_user }} -p{{ password }} -e "show slave status;"
+  register: slave_status
+
+- name: 判断主从同步是否成功
+  fail:
+    msg: "The binlog file or position does not match the expected value."
+  when: item.split('\t')[10] != 'Yes' or item.split('\t')[11] != 'Yes'
+  with_items: "{{ slave_status.stdout_lines }}"
+
+- name: 对主库进行cetus用户授权...
+  run_once: true
+  shell: "mysql -A -u{{ root_user }} -p{{ password }} -h{{ master_db_ip }} -P{{ master_db_port.stdout }}< {{ temp_conf_path }}/cetus_master.sql"
+
+- name: 对从库进行cetus用户授权...
+  shell: "mysql -A -u{{ root_user }} -p{{ password }} -h{{ item.ip }} -P{{ item.port }}< {{ temp_conf_path }}/cetus_slave.sql"
+  with_items: "{{ slave_detail_config }}"
+
+
+
+
+
+

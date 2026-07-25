@@ -1,0 +1,79 @@
+{
+  "name": "badge-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 徽标组件规范，含红点/数字/文字/自定义图标四种类型，适用于头像右上角",
+
+  "basic": {
+    "position": "absolute; top: 0; right: 0",
+    "z_index": 10,
+    "border": "1.5px solid #FFFFFF",
+    "note": "白色描边用于与头像背景隔离"
+  },
+
+  "types": [
+    {
+      "id": "dot",
+      "label": "红点徽标",
+      "width": "10px",
+      "height": "10px",
+      "border_radius": "50%",
+      "background": "#FF4433",
+      "border": "1.5px solid #FFFFFF",
+      "offset": "translate(0%, -20%)",
+      "offset_lg": "translate(-4px, -20%)",
+      "note": "大尺寸头像（48px）额外向左偏移 4px"
+    },
+    {
+      "id": "count",
+      "label": "数字徽标",
+      "height": "18px",
+      "min_width": "18px",
+      "padding": "0 5px",
+      "border_radius": "9px",
+      "background": "#FF4433",
+      "color": "#FFFFFF",
+      "font_size": "11px",
+      "font_weight": "600",
+      "border": "1.5px solid #FFFFFF",
+      "offset": "translate(50%, -30%)",
+      "overflow_rule": "超过 99 显示 99+"
+    },
+    {
+      "id": "text",
+      "label": "文字徽标",
+      "style_ref": "与数字徽标完全一致",
+      "height": "18px",
+      "min_width": "18px",
+      "padding": "0 5px",
+      "border_radius": "9px",
+      "background": "#FF4433",
+      "color": "#FFFFFF",
+      "font_size": "11px",
+      "font_weight": "600",
+      "border": "1.5px solid #FFFFFF",
+      "offset": "translate(50%, -30%)",
+      "examples": ["HOT", "NEW"]
+    },
+    {
+      "id": "icon",
+      "label": "自定义图标徽标",
+      "width": "18px",
+      "height": "18px",
+      "border_radius": "50%",
+      "background": "#FF4433",
+      "icon_size": "10px",
+      "icon_color": "#FFFFFF",
+      "border": "1.5px solid #FFFFFF",
+      "offset": "translate(50%, -30%)",
+      "examples": ["铃铛", "邮件", "感叹号", "加号"]
+    }
+  ],
+
+  "size_adaption": {
+    "description": "徽标尺寸固定，不随头像大小缩放",
+    "avatar_sizes": ["lg（48px）", "md（36px）", "sm（28px）"],
+    "exception": "红点徽标在 lg 尺寸头像时额外向左偏移 4px"
+  },
+
+  "compatible_avatar_types": ["默认人形图标头像", "文字头像", "自定义图片头像"]
+}

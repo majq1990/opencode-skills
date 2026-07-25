@@ -1,0 +1,335 @@
+software_tools:
+  - name: jdk
+    desc: jdk环境
+
+  - name: mysql
+    desc: MySQL数据库
+    params:
+      - name: ip
+        desc: MySQL服务端IP
+        default: 127.0.0.1
+        display: 0 #安装时不可见
+        access_conf: 1 #可录入
+      - name: db_type
+        desc: 数据库类型(业务库或统计库)
+        default: biz
+        display: 0
+        access_conf: 0
+      - name: port
+        desc: MySQL监听端口
+        default: 3306
+        display: 1
+        access_conf: 1
+      - name: username
+        default: root
+        desc: MySQL用户名
+        display: 0
+        access_conf: 1
+      - name: password
+        default: Wk2uBTeyp6
+        desc: MySQL密码
+        display: 1
+        access_conf: 1
+      - name: data_dir
+        desc: 数据存储目录
+        default: /egova/db/mysql
+        display: 1
+      - name: temp_dir
+        default: /egova/db/.mysql_temp
+        desc: 临时目录
+        display: 0
+
+  - name: redis
+    desc: Redis缓存数据库
+    params:
+      - name: ip
+        desc: redis服务端IP
+        default: 127.0.0.1
+        display: 0
+        access_conf: 1
+      - name: port
+        desc: redis监听端口
+        default: 6380
+        display: 1
+        access_conf: 1
+      - name: password
+        default: Wk2uBTeyp6
+        desc: redis密码
+        display: 1
+        access_conf: 1
+      - name: dir
+        default: /egova/data/redis
+        desc: 数据目录
+        display: 0
+
+  - name: minio
+    desc: minio文件服务
+    params:
+      - name: ip
+        desc: minio服务端IP
+        default: 127.0.0.1
+        display: 0
+        access_conf: 1
+      - name: port
+        desc: minio监听端口
+        default: 30001
+        display: 1
+        access_conf: 1
+      - name: access_key
+        default: admin
+        desc: minio超级用户名
+        display: 1
+        access_conf: 1
+      - name: secret_key
+        default: Wk2uBTeyp6
+        desc: minio超级用户密码
+        display: 1
+        access_conf: 1
+      - name: catalog_user
+        default: egovacatalog
+        desc: catalog用户名
+        display: 0
+        access_conf: 0
+      - name: catalog_password
+        default: Wk2uBTeyp6
+        desc: catalog密码
+        display: 0
+        access_conf: 0
+
+  - name: nginx
+    desc: nginx代理服务
+    params:
+      - name: port
+        desc: nginx监听端口
+        default: 8080
+        display: 1
+
+  - name: zookeeper
+    desc: zookeeper
+    params:
+      - name: ip
+        desc: zookeeper服务端IP
+        default: 127.0.0.1
+        display: 0
+        access_conf: 1
+      - name: port
+        desc: zookeeper监听端口
+        default: 2182
+        display: 1
+        access_conf: 1
+
+  - name: kafka
+    desc: kafka消息队列
+    params:
+      - name: ip
+        desc: kafka服务端IP
+        default: 127.0.0.1
+        display: 0
+        access_conf: 1
+      - name: port
+        desc: kafka监听端口
+        default: 9093
+        display: 1
+        access_conf: 1
+
+  - name: elasticsearch
+    desc: es索引数据库
+    params:
+      - name: ip
+        desc: elasticsearch服务端IP
+        default: 127.0.0.1
+        display: 0
+        access_conf: 1
+      - name: port
+        desc: http监听端口
+        default: 9093
+        display: 1
+        access_conf: 1
+      - name: es_mem
+        desc: JVM堆内存
+        default: "256m"
+        display: 0
+      - name: username
+        desc: ES访问用户
+        default: "egova"
+        display: 1
+        access_conf: 1
+      - name: password
+        desc: ES访问密码
+        default: "Wk2uBTeyp6"
+        display: 1
+        access_conf: 1
+
+  - name: mysqlclient
+    desc: mysql客户端
+
+  - name: postgresql
+    desc: postgresql
+    params:
+      - name: ip
+        desc: postgresql服务端IP
+        default: 127.0.0.1
+        display: 0
+        access_conf: 1
+      - name: port
+        desc: postgresql监听端口
+        default: 5432
+        display: 1
+        access_conf: 1
+      - name: username
+        default: postgres
+        desc: postgresql用户名
+        display: 0
+        access_conf: 1
+      - name: password
+        default: Wk2uBTeyp6
+        desc: postgresql密码
+        display: 1
+        access_conf: 1
+
+  - name: cetus
+    desc: cetus(mysql代理)
+    params:
+      - name: ip
+        desc: 服务端IP
+        default: 127.0.0.1
+        display: 0
+        access_conf: 1
+      - name: db_type
+        desc: 数据库类型(业务库或统计库)
+        default: biz
+        display: 0
+        access_conf: 1
+      - name: port
+        desc: 监听端口
+        default: 3307
+        display: 1
+        access_conf: 0
+      - name: username
+        default: cetus
+        desc: 用户名
+        display: 0
+        access_conf: 1
+
+
+  - name: TDengine
+    desc: TDengine2时序数据库
+    params:
+      - name: ip
+        desc: TDengine服务端IP
+        default: 127.0.0.1
+        display: 0
+        access_conf: 1
+      - name: port
+        desc: TDengine监听端口
+        default: 6041
+        display: 1
+        access_conf: 1
+      - name: username
+        default: root
+        desc: TDengine用户名
+        display: 1
+        access_conf: 1
+      - name: password
+        default: eGova@td2023
+        desc: TDengine密码
+        display: 1
+        access_conf: 1
+
+  - name: TDengine3
+    desc: TDengine3时序数据库(Docker)
+    params:
+      - name: ip
+        desc: TDengine3服务端IP
+        default: 127.0.0.1
+        display: 0
+        access_conf: 1
+      - name: port
+        desc: TDengine3监听端口
+        default: 6041
+        display: 1
+        access_conf: 1
+      - name: native_port
+        desc: TDengine3原生连接端口
+        default: 6030
+        display: 1
+        access_conf: 1
+      - name: username
+        default: root
+        desc: TDengine3用户名
+        display: 1
+        access_conf: 1
+      - name: password
+        default: eGova@td2023
+        desc: TDengine3密码
+        display: 1
+        access_conf: 1
+
+  - name: TDengine3_client
+    desc: TDengine3客户端
+
+  - name: xtrabackup
+    desc: xtrabackup增量全量备份
+
+  - name: sysbench
+    desc: 性能测试工具(sysbench)
+
+  - name: nacos
+    desc: 服务发现与配置中心
+    params:
+      - name: ip
+        desc: nacos服务端IP
+        default: 127.0.0.1
+        display: 0
+        access_conf: 1
+      - name: port
+        desc: nacos监听端口
+        default: 8848
+        display: 1
+        access_conf: 1
+      - name: space_name
+        default: egova
+        desc: nacos命名空间
+        display: 0
+        access_conf: 1
+      - name: access_key
+        default: nacos
+        desc: nacos用户名
+        display: 0
+        access_conf: 1
+      - name: secret_key
+        default: tsEKh9a82C
+        desc: nacos用户密码
+        display: 0
+        access_conf: 1
+
+  - name: tomcat
+    desc: tomcat服务
+    params:
+      - name: ip
+        desc: tomcat服务端IP
+        default: 127.0.0.1
+        display: 0
+        access_conf: 1
+      - name: port
+        desc: tomcat监听端口
+        default: 8081
+        display: 1
+        access_conf: 1
+
+  - name: docker
+    desc: docker服务
+
+  - name: OnlyOffice
+    desc: OnlyOffice服务
+    params:
+      - name: ip
+        desc: onlyOffice服务端IP
+        default: 127.0.0.1
+        display: 0
+        access_conf: 1
+      - name: port
+        desc: onlyOffice监听端口
+        default: 9090
+        display: 1
+        access_conf: 1

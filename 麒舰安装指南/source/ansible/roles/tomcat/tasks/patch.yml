@@ -1,0 +1,33 @@
+---
+# 安装Tomcat补丁和安全加固
+- name: 查找jar包
+  find:
+    paths: "{{ src_path }}/patch/"
+    patterns: "*.jar"
+    file_type: file
+  register: jar_files
+
+- name: 拷贝JAR包到lib目录
+  copy:
+    src: "{{ item.path }}"
+    dest: "{{ link_path }}/lib/"
+  loop: "{{ jar_files.files }}"
+
+- name: 移除不需要的文件
+  file:
+    path: "{{ link_path }}/webapps/{{ item }}"
+    state: absent
+  with_items:
+    - examples
+    - docs
+    - host-manager
+    - manager
+    - ROOT
+
+
+
+
+
+
+
+

@@ -1,0 +1,61 @@
+lua_shared_dict healthcheck 1m;
+lua_socket_log_errors off;
+init_worker_by_lua_block {
+        local hc = require "resty.upstream.healthcheck"
+        local ok, err = hc.spawn_checker {
+            shm = "healthcheck",
+            upstream = "eUrbanMIS",
+            type = "http",
+            http_req = "GET /eUrbanMIS/main.htm HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: openresty\r\nCookie: SESSION=egova-healthcheck-ba5cfde5-c3dc-425a-984c-96fe04ff0594\r\n\r\n",
+            interval = 2000,
+            timeout = 2000,
+            fall = 3,
+            rise = 2,
+            valid_statuses = {200, 302},
+            concurrency = 1,
+        }
+
+        if not ok then
+            ngx.log(ngx.ERR, "=======> failed to spawn health checker: ", err)
+            return
+        end
+--[[egovastat
+        local ok, err = hc.spawn_checker {
+            shm = "healthcheck",
+            upstream = "egovastat",
+            type = "http",
+            http_req = "GET /eUrbanMIS/main.htm HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: openresty\r\nCookie: SESSION=egova-healthcheck-ba5cfde5-c3dc-425a-984c-96fe04ff0594\r\n\r\n",
+            interval = 2000,
+            timeout = 2000,
+            fall = 3,
+            rise = 2,
+            valid_statuses = {200, 302},
+            concurrency = 1,
+        }
+
+        if not ok then
+            ngx.log(ngx.ERR, "=======> failed to spawn health checker: ", err)
+            return
+        end
+egovastat---]]
+--[[egovagis
+        local ok, err = hc.spawn_checker {
+            shm = "healthcheck",
+            upstream = "eUrbanGIS",
+            type = "http",
+            http_req = "GET /eUrbanGIS/ HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: openresty\r\nCookie: SESSION=egova-healthcheck-ba5cfde5-c3dc-425a-984c-96fe04ff0594\r\n\r\n",
+            interval = 2000,
+            timeout = 2000,
+            fall = 3,
+            rise = 2,
+            valid_statuses = {200, 302},
+            concurrency = 1,
+        }
+
+        if not ok then
+            ngx.log(ngx.ERR, "=======> failed to spawn health checker: ", err)
+            return
+        end
+egovagis---]]
+
+}

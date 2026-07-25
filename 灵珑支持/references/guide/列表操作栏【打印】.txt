@@ -1,0 +1,193 @@
+列表操作栏【打印】
+列表里某条记录的数据根据指定的打印模板生成数据并下载打印后的文件。
+1 主要步骤
+准备一个实体或者SQL视图。
+通过【打印设计】根据以上数据实体新建打印模板，设计好要打印的字段信息。
+在【API管理】中设置获取文档下载链接的API。
+在列表部件中通过动作脚本Js将调用以上api，动态传递数据参数，下载文档。
+2 效果
+在列表操作栏点击【打印】（有些项目称【导出】）按钮，将本条记录的内容，按照打印模板定义的格式输出数据内容（#334363）。
+这里说明的是单条记录打印。可以打印单条主记录，也可以打印含明细表的数据；
+富文本模板打印时默认是.html格式，也可以指定打印的格式为.pdf（#406253）。
+打印时直接下载：
+列表【导出】word模板
+移动页面【打印】富文本模板 格式指定为pdf
+PC页面【打印】富文本模板 格式指定为pdf
+打印时先预览文档再打印效果。
+先预览文档再打印效果
+3 配置
+3.1 准备视图或实体
+准备视图和实体的目的是为了创建列表部件，可以在操作列表里配置【打印】按钮。打印一条主记录时直接使用视图就可以了。此处不做过多说明。
+如果要打印包含明细的数据，数据视图需要配置“导航属性”，用于查询子表的数据。
+以一个SQL视图为例：班级表视图，一对多，导航属性关联多条学生数据。
+3.2 设计打印模板
+在应用设置-打印设计里【新增模板】，选择上述准备的实体或视图，选择模板类型，定义模板格式并保存。
+点击左侧字段列表中的字段，字段占位符将自动在文档中生成。
+#499403
+【模拟数据】增加【真实数据缺失时，模拟数据填充至打印结果】的开关
+当开关打开、value有值、且字段为空时，使用value值填充字段内容
+设计好后，在浏览器URL地址栏获取模板id，在API参数里会用。
+3.3 定义打印API
+在数据管理-API管理，新建一个API，建议使用环境变量，端口用内网进程端口。该接口返回打印模板的下载地图。
+接口地址：
+/unity/establish/printing_template/binding-data/document-url?printingTemplateId=1bcea642-43d2-49ee-8587-ad0e83e04d33
+参数说明
+printingTemplateId：打印模板id，前面有获取说明；
+Headers
+Headers参数增加一条，use-web-Authorization: true。作用是透传token。
+Body参数
+选择json格式，传入SQL条件，该SQL条件应当能够返回打印模板里需要的数据。根据需要定义参数。
+Query参数
+定义打印模板用到的功能参数，注意大小写。这些参数均为可选，非必填，在列表部件的动作js中会动态传递。
+suffix：定义打印的文件格式，例如：pdf。如果不定义，富文本模板输出的是.html格式；
+fileName：定义打印文件的名称，勾选生效；
+前置脚本
+增加透传token脚本；
+var header = request.getHeader('Authorization');
+request.setHeader('Authorization', header);
+测试接口
+配置好后，点【发送】调用API接口，响应体中将得到下载的URL地址。这样说明API接口已经调通。直接复制到浏览器可以下载打印文件。
+这个接口主要在列表操作栏的【打印】动作交互里引用。
+3.4 【打印】动作交互
+在PC列表部件、PC列表页面或移动卡片列表的操作栏配置【打印】按钮，绑定动作里配置自定义动作脚本，调用前面的API，传入条件参数，实现点击下载打印模板文件的功能。
+PC表格列表按钮
+移动卡片列表按钮
+动作脚本内容
+脚本主要是调用api，传参方法比较灵活，根据需要传入即可。基本的参数替换以下图为示例。
+为了方便大家根据需要配置，下面分为几种情况分别罗列各种脚本内容。
+只打印不需要Query自定义参数
+id: params.id.value：替换body参数，用于查询模板数据；
+"a2c7b17e-8a45-463f-949a-696b85cd5502"：规则为api的id。可以按ctrl+shift+c获取，或者API管理里通过F12获取。
+function main(params) {
+    const self = this;
+    const hideMessage = self.$message.loading('打印中。。。', 0);
+    
+    let jsonParams = JSON.stringify({
+      // id是列表中主键的id, 可以按实际调整为文档等，该参数作为查询数据的条件
+        id: params.id.value
+    });
+
+    api.DATA_SOURCE_EXECUTE("a2c7b17e-8a45-463f-949a-696b85cd5502", 'api', [], [], jsonParams, new FormData()).then(res => {
+        if (!res.hasError && res.result) {
+            const result = JSON.parse(res.result);
+            console.log(result)
+            if (!result.hasError) {
+                self.$message.success('打印成功！');
+                window.open(result.result, 'download');
+            } else {
+                self.$message.error('打印失败！')
+            }
+        } else {
+            self.$message.error('打印失败！');
+        }
+    }).catch((err) => {
+        console.error(err);
+        self.$message.error('打印失败！');
+    }).finally(() => {
+        hideMessage();
+    });
+
+}
+传入打印文件格式
+id: params.id.value：替换body参数，用于查询模板数据；
+"a2c7b17e-8a45-463f-949a-696b85cd5502"：规则为api的id。可以按ctrl+shift+c获取，或者API管理里通过F12获取；
+valueContent: "pdf"   这里是定义打印的文件格式为pdf；注意：这里使用了queryParams和jsonParams两种。
+function main(params) {
+    const self = this;
+    //debugger;
+    const hideMessage = self.$message.loading('打印中。。。', 0);
+
+    let jsonParams = JSON.stringify({
+        // id是列表中主键的id, 可以按实际调整为文档等，该参数作为查询数据的条件
+        id: params.id.value
+    });
+    let queryParams =[
+  {
+        name: "suffix",
+        type: "QueryString",
+      valueContent: "pdf"
+        }]
+    //console.log('输出queryParams：',queryParams);
+
+    api.DATA_SOURCE_EXECUTE("ee87030a-87b5-4943-a022-7c29a04f10c9", 'api', queryParams, [], jsonParams, new FormData()).then(res => {
+        if (!res.hasError && res.result) {
+            const result = JSON.parse(res.result);
+            console.log(result)
+            if (!result.hasError) {
+                self.$message.success('打印成功！');
+                window.open(result.result, 'download');
+            } else {
+                self.$message.error('打印失败！')
+            }
+        } else {
+            self.$message.error('打印失败！');
+        }
+    }).catch((err) => {
+        console.error(err);
+        self.$message.error('打印失败！');
+    }).finally(() => {
+        hideMessage();
+    });
+
+}
+打印时先预览再下载
+区别是：19-21行，定义打印预览URL的参数previewUrl，并在窗口中打开。
+function main(params) {
+    const self = this;
+    const hideMessage = self.$message.loading('打印预览中...', 0);
+    let jsonParams = JSON.stringify({
+        id: params.id.value
+    });
+
+    api.DATA_SOURCE_EXECUTE("a2c7b17e-8a45-463f-949a-696b85cd5502", 'api', [], [], jsonParams, new FormData()).then(res => {
+        if (!res.hasError && res.result) {
+            const result = JSON.parse(res.result);
+            console.log(result)
+            if (!result.hasError) {
+                self.$message.success('打印预览成功！');
+                var fileurl = result.result
+                const startIndex = fileurl.lastIndexOf('/file/') + 6;
+                const endIndex = fileurl.indexOf('/download');
+                const fileId = fileurl.substring(startIndex, endIndex);
+                // 需要拼接为灵珑实际的前端地址
+                const previewUrl = "http://10.250.1.40:10003/linglong-api/linglong/design.html#/template/preview/" + fileId;
+                console.log(previewUrl)
+                window.open(previewUrl, '_blank');
+            } else {
+                self.$message.error('打印预览失败！')
+            }
+        } else {
+            self.$message.error('打印预览失败！');
+        }
+    }).catch((err) => {
+        console.error(err);
+        self.$message.error('打印预览失败！');
+    }).finally(() => {
+        hideMessage();
+    });
+
+}
+文档预览和打印效果；
+连接打印机得到纸质文档。
+4 场景
+4.1 在word打印模板中打印主表的图片
+在列表里点击【打印】输出word文档，里面打印出含有图片（一个）的数据，图片在表单部件里【上传图片】上传，保存在本地网盘。
+4.1.1 打印效果
+word文档打印的结果，显示图片。
+4.1.2 配置步骤
+表单部件：包含【上传图片】组件，选择本地网盘多媒体服务，记录下“唯一标识”后面视图的导航属性配置需要。
+数据视图：正文里正常编写列表需要的SQL，在右侧配置导航属性。
+导航属性：选择多媒体表，配置关联字段，常量输入表单里【上传图片】的唯一标识。
+打印模板：创建word打印模板，选择上面的视图。设计打印格式，光标定位在打印图片的位置，在左侧可以看到导航属性的表，例如：个人签名.多媒体表，点击fileId，此时页面上自动回填公式，注意回填后把两边的{}删除。300,300表示的是图片的宽和高。注意：有时候回填的有格式问题，可以拷贝到纯文本里再粘贴回来。
+API接口：该接口为获取打印数据并输出打印文件的统一接口，见上面“定义打印API”的接口说明，body参数里传入可以定位到一条数据的参数。
+打印操作按钮：列表里打印按钮的配置同样参见前面“【打印】动作交互”。
+4.2 在word打印模板中增加多图片的配置方式参见如下案卷：
+http://faq.egova.com.cn:7777/issues/334363
+4.3 表单 + 明细表格打印
+《使用打印设计按照文档格式导出文档数据》
+5 其他文档
+以下文档已经合并到本文档，可以删除。
+《使用打印模板在列表中动态生成word文档
+》
+《列表打印功能实现》
+《富文本打印模板常用样式设置》

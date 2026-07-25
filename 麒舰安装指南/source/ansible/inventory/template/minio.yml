@@ -1,0 +1,7 @@
+# minio配置模板
+# 部署场景下，host和ip根据部署节点的host自动生成注入
+# host: node1
+port: "30001"
+access_key: admin
+secret_key: Wk2uBTeyp6
+ip: 127.0.0.1

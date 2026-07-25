@@ -1,0 +1,75 @@
+---
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 准备onlyOffice目录
+  file: name={{ item.dir }} state=directory
+  with_items:
+    - { dir: "{{ deploy_path }}",mode: "0775" }
+    - { dir: "{{ onlyoffice_volumes_path }}",mode: "0775" }
+    - { dir: "{{ onlyoffice_volumes_path }}/onlyoffice/DocumentServer/logs",mode: "0775" }
+    - { dir: "{{ onlyoffice_volumes_path }}/onlyoffice/DocumentServer/data",mode: "0775" }
+    - { dir: "{{ onlyoffice_volumes_path }}/onlyoffice/DocumentServer/lib",mode: "0775" }
+    - { dir: "{{ onlyoffice_volumes_path }}/onlyoffice/DocumentServer/db",mode: "0775" }
+  when: ansible_distribution != 'UOS'
+
+- name: 准备onlyOffice目录
+  file: name={{ item.dir }} state=directory mode='{{ item.mode }}'
+  with_items:
+    - { dir: "{{ deploy_path }}",mode: "0775" }
+    - { dir: "/egova/data/onlyoffice/plugin-field",mode: "0775" }
+    - { dir: "/egova/data/onlyoffice/documentserver",mode: "0775" }
+  when: ansible_distribution == 'UOS'
+
+- name: copy package
+  copy: src={{ src_path }}/onlyoffice.tar dest={{ deploy_path }}
+
+- name: 镜像导入
+  shell: "docker load -i {{ deploy_path }}/onlyoffice.tar"
+
+- name: Set permissions for onlyoffice directory
+  become: true
+  file:
+    path: "{{ onlyoffice_volumes_path }}/onlyoffice"
+    mode: "0777"
+    recurse: yes
+
+- name: 拷贝 docker-compose文件
+  become: true
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: 0644
+  loop:
+    - { src: "docker-compose.yml.j2", dest: "{{ deploy_path }}/docker-compose.yml" }
+    - { src: "docker-compose-arm.yml.j2", dest: "{{ deploy_path }}/docker-compose.yml" }
+  when: (ansible_architecture != 'aarch64' and item.src == "docker-compose.yml.j2") or (ansible_architecture == 'aarch64' and item.src == "docker-compose-arm.yml.j2")
+
+- name: Start OnlyOffice service with Docker Compose
+  become: true
+  command: docker-compose up -d
+  args:
+    chdir: "{{ deploy_path }}"
+
+- name: Copy onlyoffice configuration file
+  template:
+    src: "{{ item.filename }}.j2"
+    dest: "{{ item.destpath }}/{{ item.filename }}"
+  with_items:
+    - { filename: "onlyoffice.location",destpath: "/etc/nginx/conf.d"}
+    - { filename: "onlyoffice.upstream",destpath: "/etc/nginx/conf.d" }
+
+- name: Set onlyoffice config
+  become: yes
+  shell: |
+    docker exec -i onlyoffice sed -i 's/"allowPrivateIPAddress": false/"allowPrivateIPAddress": true/g; s/"allowMetaIPAddress": false/"allowMetaIPAddress": true/g' /etc/onlyoffice/documentserver/default.json
+  ignore_errors: yes
+
+- name: Restart the onlyoffice container
+  shell: docker restart onlyoffice
+  become: true
+
+- name: reload nginx
+  shell: nginx -s reload

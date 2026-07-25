@@ -1,0 +1,67 @@
+[cetus]
+default-charset=utf8mb4
+# For mode-switch
+daemon = false
+
+# Loaded Plugins
+plugins=proxy,admin
+
+# Defines the number of worker processes. 
+worker-processes={{ thread }}
+
+# Proxy Configuration, For example: MySQL master and salve host ip are both 192.0.0.1
+proxy-address=0.0.0.0:3307
+proxy-backend-addresses = {{ master_db_ip }}:{{ master_db_port.stdout }}
+{% if slave_detail_config %}
+proxy-read-only-backend-addresses = {% for item in slave_detail_config %}{{ item.ip }}:{{ item.port }}{% if not loop.last %},{% endif %}{% endfor %}
+{% endif %}
+
+
+# Admin Configuration
+admin-address=127.0.0.1:7001
+admin-username=admin
+admin-password=eGO9hf@2024
+
+# Backend Configuration, use test db and username created
+default-db=mysql
+default-username={{ cetus_user }}
+default-pool-size={{ default_pool }}
+max-pool-size={{ max_pool }}
+max-resp-size=10485760
+long-query-time=100
+
+# File and Log Configuration, put log in /data and marked by proxy port, /data/cetus needs to be created manually and has rw authority for cetus os user
+max-open-files = 65536
+pid-file = cetus.pid
+plugin-dir=lib/cetus/plugins
+log-file={{ log_path }}/cetus.log
+log-level=info
+
+# Check salve delay
+disable-threads=false
+check-slave-delay=true
+slave-delay-down=10
+slave-delay-recover=1
+
+# For trouble
+keepalive=true
+verbose-shutdown=true
+log-backtrace-on-crash=true
+
+# For performance
+enable-tcp-stream=true
+enable-fast-stream=false
+
+# For MGR
+group-replication-mode=0
+
+enable-client-found-rows=true
+
+sql-log-bufsize=10485760
+sql-log-switch=ON
+sql-log-prefix=cetus
+sql-log-path={{ log_path }}/
+sql-log-maxsize=1024
+sql-log-mode=BACKEND
+sql-log-maxnum={{ log_maxnum }}
+user={{ cetus_user }}

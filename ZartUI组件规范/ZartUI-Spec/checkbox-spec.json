@@ -1,0 +1,78 @@
+{
+  "name": "checkbox-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 复选框规范，覆盖五种状态（默认/Hover/半选/全选/禁用）",
+
+  "size": {
+    "width": "16px",
+    "height": "16px",
+    "border_radius": "4px",
+    "label_gap": "8px"
+  },
+
+  "states": {
+    "default": {
+      "border": "1px solid #A8B4C8",
+      "background": "#FFFFFF"
+    },
+    "hover": {
+      "border": "1px solid #3388FF",
+      "background": "#FFFFFF",
+      "description": "禁用态不响应 Hover"
+    },
+    "indeterminate": {
+      "border": "1px solid #3388FF",
+      "background": "#3388FF",
+      "icon": {
+        "type": "横线",
+        "width": "8px",
+        "height": "2px",
+        "color": "#FFFFFF",
+        "border_radius": "1px",
+        "description": "圆角末端"
+      }
+    },
+    "checked": {
+      "border": "1px solid #3388FF",
+      "background": "#3388FF",
+      "icon": {
+        "type": "对勾",
+        "render": "SVG，stroke 2px，stroke-linecap: round，stroke-linejoin: round",
+        "color": "#FFFFFF",
+        "size": "10×8px（在 16×16 框内居中）",
+        "path": "M1.5 4L4 6.5L8.5 1.5"
+      }
+    },
+    "disabled_default": {
+      "border": "1px solid #DDE1EB",
+      "background": "#F5F7FA",
+      "cursor": "not-allowed"
+    },
+    "disabled_checked_or_indeterminate": {
+      "border": "1px solid #ADD8FF",
+      "background": "#ADD8FF",
+      "icon_color": "#FFFFFF"
+    }
+  },
+
+  "label_text": {
+    "font_size": "14px",
+    "color_default": "#223355",
+    "color_disabled": "#A8B4C8"
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "用 border-left + border-bottom 实现对勾，无法做到真正的圆角末端，且边角会有锐角",
+      "fix": "对勾改用 inline SVG 绘制，stroke-width: 2，stroke-linecap: round，stroke-linejoin: round"
+    },
+    {
+      "issue": "半选横线高度 1.5px 在不同设备上会模糊",
+      "fix": "横线高度统一 2px，并加 border-radius: 1px 使末端圆润"
+    },
+    {
+      "issue": "禁用态背景与默认态混用 #DDE1EB 让人误以为可点击",
+      "fix": "禁用未选用 #F5F7FA 填充 + #DDE1EB 描边；禁用全选/半选用 #ADD8FF 实色"
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+# check minio depend
+
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: check minio depend exist
+  connection: local
+  shell: yq '.'{{ app_type }}'.depends.[] | select(.type=="minio") | .bucket_name' ../shell/template/microservice_template.yml
+  register: minio_output
+
+- set_fact:
+    bucket_names: "{{ minio_output.stdout.split(',') }}"
+
+
+# 获取minio信息
+- block:
+    - name: get minio_ip
+      connection: local
+      shell: yq ".minio.{{ depend_key }}.ip" inventory/metadata.yml
+      ignore_errors: yes
+      register: minio_ip
+
+    - name: get minio_port
+      connection: local
+      shell: yq ".minio.{{ depend_key }}.port" inventory/metadata.yml
+      ignore_errors: yes
+      register: minio_port
+
+    - name: get minio_access
+      connection: local
+      shell: yq ".minio.{{ depend_key }}.access_key" inventory/metadata.yml
+      ignore_errors: yes
+      register: minio_access
+
+    - name: get minio_secret
+      connection: local
+      shell: yq ".minio.{{ depend_key }}.secret_key" inventory/metadata.yml
+      ignore_errors: yes
+      register: minio_secret
+
+    - name: get minio_gis_access
+      connection: local
+      shell: yq ".minio.{{ depend_key }}.catalog_user" inventory/metadata.yml
+      ignore_errors: yes
+      register: minio_gis_access
+
+    - name: get minio_gis_secret
+      connection: local
+      shell: yq ".minio.{{ depend_key }}.catalog_password" inventory/metadata.yml
+      ignore_errors: yes
+      register: minio_gis_secret
+
+    - name: check minio_host exist
+      shell: mc config host list | grep {{ depend_key }}
+      ignore_errors: yes
+      register: minio_host_exist
+
+    - name: create minio bucket
+      shell: mc config host add {{ depend_key }} http://{{ minio_ip.stdout }}:{{ minio_port.stdout }} {{ minio_access.stdout }} {{ minio_secret.stdout }}
+      when: minio_host_exist.stdout == ""
+
+    - name: check minio_bucket exist
+      shell: mc ls {{ depend_key }} | grep {{ item }}
+      ignore_errors: yes
+      register: minio_bucket_exist
+      loop: "{{ bucket_names }}"
+
+    - name: check gis_minio_user exist
+      shell: mc admin user list {{ depend_key }} | grep {{ minio_gis_access.stdout }}
+      ignore_errors: yes
+      register: gis_minio_user
+
+    #创建minio桶
+    - name: create minio bucket
+      shell: |
+        mc mb {{ depend_key }}/{{ item }} -p
+        mc admin user add {{ depend_key }} {{ item }} {{ common_password }}
+        mc admin policy attach {{ depend_key }} readonly --user {{ item }}
+        mc admin policy attach {{ depend_key }} writeonly --user {{ item }}\
+      loop: "{{ bucket_names }}"
+      when: "minio_bucket_exist.results | selectattr('stdout', 'search', item) | list | length == 0"
+
+    - name: create gis_minio_user
+      shell: |
+        mc admin user add {{ depend_key }} {{ minio_gis_access.stdout }} {{ minio_gis_secret.stdout }}
+        mc admin policy attach {{ depend_key }} readonly --user {{ minio_gis_access.stdout }}
+        mc admin policy attach {{ depend_key }} writeonly -user {{ minio_gis_access.stdout }}
+      when: gis_minio_user.stdout == ""
+  when: minio_output.stdout != ""

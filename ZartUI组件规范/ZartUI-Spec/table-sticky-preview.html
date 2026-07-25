@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 表格锁定</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 16px; margin-top: 32px; }
+.section { background: #FFFFFF; border-radius: 8px; margin-bottom: 24px; overflow: hidden; }
+
+/* ===================== 滚动容器 ===================== */
+.z-table-wrap {
+  overflow: auto;
+  max-height: 320px;
+}
+
+/* ===================== 表格基础 ===================== */
+.z-table {
+  width: 100%;
+  min-width: 1200px;
+  border-collapse: collapse;
+  font-size: 14px;
+  color: #223355;
+  table-layout: fixed;
+}
+
+/* 表头行 */
+.z-table thead tr {
+  height: 40px;
+  background: #F5F7FA;
+  border-top: 1px solid #DDE1EB;
+}
+
+.z-table thead th {
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  text-align: left;
+  padding: 0 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+  /* 表头纵向固定 */
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #F5F7FA;
+}
+
+/* 表头列间隔线 */
+.z-table thead th + th::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 16px;
+  background: #E9ECF2;
+}
+
+/* 表体行 */
+.z-table tbody tr {
+  height: 48px;
+  border-bottom: 1px solid #DDE1EB;
+}
+.z-table tbody tr:first-child {
+  border-top: 1px solid #DDE1EB;
+}
+.z-table tbody td {
+  text-align: left;
+  padding: 0 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  background: #FFFFFF;
+}
+.z-table tbody tr:hover td { background: #F5F7FA; }
+
+/* ===================== 首列固定 ===================== */
+.z-table th:first-child,
+.z-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+.z-table thead th:first-child { z-index: 4; }
+
+.z-table td:first-child::after,
+.z-table th:first-child::after {
+  content: '';
+  position: absolute;
+  top: 0; right: -8px; bottom: 0;
+  width: 8px;
+  background: linear-gradient(to right, rgba(0,0,0,0.06), transparent);
+  pointer-events: none;
+}
+
+/* ===================== 末列（操作列）固定 ===================== */
+.z-table th:last-child,
+.z-table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+}
+.z-table thead th:last-child { z-index: 4; background: #F5F7FA; }
+.z-table tbody td:last-child { background: inherit; }
+
+.z-table td:last-child::before,
+.z-table th:last-child::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -8px; bottom: 0;
+  width: 8px;
+  background: linear-gradient(to left, rgba(0,0,0,0.06), transparent);
+  pointer-events: none;
+}
+.z-table tbody tr:hover td:last-child { background: #F5F7FA; }
+
+/* ===================== 蓝色链接 ===================== */
+.z-table-link {
+  color: #3388FF;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.z-table-link:hover { color: #2167D9; }
+
+/* ===================== 签收状态 ===================== */
+.z-table-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.z-table-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.z-table-dot.is-success { background: #06A17F; }
+.z-table-dot.is-default { background: #A8B4C8; }
+.z-table-dot.is-danger  { background: #FF4433; }
+
+/* ===================== 创建人 ===================== */
+.z-table-user {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+.z-table-avatar {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: #3388FF;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 500; color: #FFFFFF;
+  flex-shrink: 0;
+  position: relative; z-index: 1;
+  overflow: hidden;
+}
+.z-table-user-name {
+  display: inline-flex; align-items: center;
+  height: 24px; padding: 0 8px 0 14px;
+  margin-left: -10px;
+  background: #F5F7FA;
+  border-radius: 100px;
+  font-size: 13px; color: #223355;
+  white-space: nowrap;
+}
+
+/* ===================== 操作列 ===================== */
+.z-table-actions {
+  display: inline-flex;
+  align-items: center;
+}
+.z-table-action-btn {
+  border: none; background: transparent;
+  font-size: 13px; color: #3388FF;
+  cursor: pointer; padding: 0 8px; height: 32px;
+  display: inline-flex; align-items: center;
+  transition: color 0.15s; white-space: nowrap;
+}
+.z-table-action-btn:hover { color: #2167D9; }
+.z-table-action-btn.is-danger { color: #3388FF; }
+.z-table-action-btn.is-danger:hover { color: #FF4433; }
+.z-table-action-divider {
+  width: 1px; height: 16px;
+  background: #E9ECF2; flex-shrink: 0;
+}
+
+/* 列宽 */
+.col-time      { width: 155px; }
+.col-case-no   { width: 140px; }
+.col-creator   { width: 130px; }
+.col-status    { width: 100px; }
+.col-source    { width: 100px; }
+.col-type      { width: 100px; }
+.col-sub1      { width: 100px; }
+.col-sub2      { width: 100px; }
+.col-street    { width: 100px; }
+.col-community { width: 100px; }
+.col-actions   { width: 130px; }
+
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 表格锁定 Table Sticky</h1>
+<p class="page-desc">上下滚动时表头固定；左右滚动时第一列与操作列固定</p>
+
+<h2>表格锁定</h2>
+<div class="section">
+  <div class="z-table-wrap">
+    <table class="z-table">
+      <colgroup>
+        <col class="col-time">
+        <col class="col-case-no">
+        <col class="col-creator">
+        <col class="col-status">
+        <col class="col-source">
+        <col class="col-type">
+        <col class="col-sub1">
+        <col class="col-sub2">
+        <col class="col-street">
+        <col class="col-community">
+        <col class="col-actions">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>案件建立时间</th>
+          <th>案件号</th>
+          <th>创建人</th>
+          <th>签收状态</th>
+          <th>问题来源</th>
+          <th>案件类型</th>
+          <th>二级分类</th>
+          <th>三级分类</th>
+          <th>所属街道</th>
+          <th>所属社区</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2026-05-19 09:32</td>
+          <td><a class="z-table-link">AJ20260519001</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">章</div><span class="z-table-user-name">章小蕙</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+          <td>12345热线</td><td>环境卫生</td><td>垃圾处理</td><td>乱堆乱放</td><td>滨江街道</td><td>江滨社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><button class="z-table-action-btn is-danger">删除</button><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-18 14:20</td>
+          <td><a class="z-table-link">AJ20260518032</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">李</div><span class="z-table-user-name">李建国</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-default"></span>待签收</div></td>
+          <td>市民投诉</td><td>道路交通</td><td>路面破损</td><td>井盖缺失</td><td>西湖街道</td><td>文化社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><button class="z-table-action-btn is-danger">删除</button><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-17 16:08</td>
+          <td><a class="z-table-link">AJ20260517018</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar" style="background:none;padding:0;"><img src="https://i.pravatar.cc/24?img=5" style="width:100%;height:100%;object-fit:cover;display:block;"></div><span class="z-table-user-name">王芳</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-danger"></span>已拒收</div></td>
+          <td>网格巡查</td><td>市政设施</td><td>路灯照明</td><td>灯具损坏</td><td>古荡街道</td><td>益乐社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><button class="z-table-action-btn is-danger">删除</button><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-16 11:45</td>
+          <td><a class="z-table-link">AJ20260516007</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">赵</div><span class="z-table-user-name">赵磊</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+          <td>APP上报</td><td>绿化养护</td><td>树木修剪</td><td>枯枝清理</td><td>拱墅街道</td><td>运河社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><button class="z-table-action-btn is-danger">删除</button><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-15 10:12</td>
+          <td><a class="z-table-link">AJ20260515009</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">陈</div><span class="z-table-user-name">陈晓燕</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+          <td>12345热线</td><td>市政设施</td><td>路灯照明</td><td>灯具损坏</td><td>江干街道</td><td>景芳社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><button class="z-table-action-btn is-danger">删除</button><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-14 15:30</td>
+          <td><a class="z-table-link">AJ20260514021</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">林</div><span class="z-table-user-name">林志远</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-default"></span>待签收</div></td>
+          <td>市民投诉</td><td>绿化养护</td><td>树木修剪</td><td>枯枝清理</td><td>下城街道</td><td>朝晖社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><button class="z-table-action-btn is-danger">删除</button><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-13 08:55</td>
+          <td><a class="z-table-link">AJ20260513005</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">吴</div><span class="z-table-user-name">吴建平</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-danger"></span>已拒收</div></td>
+          <td>网格巡查</td><td>道路交通</td><td>路面破损</td><td>路面坑洼</td><td>余杭街道</td><td>闲林社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><button class="z-table-action-btn is-danger">删除</button><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+        <tr>
+          <td>2026-05-12 13:40</td>
+          <td><a class="z-table-link">AJ20260512033</a></td>
+          <td><div class="z-table-user"><div class="z-table-avatar">张</div><span class="z-table-user-name">张国华</span></div></td>
+          <td><div class="z-table-status"><span class="z-table-dot is-success"></span>已签收</div></td>
+          <td>APP上报</td><td>环境卫生</td><td>垃圾处理</td><td>乱扔垃圾</td><td>萧山街道</td><td>新塘社区</td>
+          <td><div class="z-table-actions"><button class="z-table-action-btn">编辑</button><span class="z-table-action-divider"></span><button class="z-table-action-btn is-danger">删除</button><span class="z-table-action-divider"></span><button class="z-table-action-btn">更多</button></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,135 @@
+{
+  "name": "cascader-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 级联选择规范，覆盖触发框、下拉面板、选项、复选框、单选/多选交互",
+
+  "trigger": {
+    "description": "级联选择触发输入框",
+    "height": "32px",
+    "min_height_multiple": "32px（多选时随标签可自适应增高）",
+    "border_radius": "4px",
+    "border": "1px solid #DDE1EB",
+    "border_hover_focus": "#3388FF",
+    "padding": "4px 8px 4px 12px",
+    "placeholder": {
+      "font_size": "14px",
+      "color": "#A8B4C8"
+    },
+    "selected_text": {
+      "font_size": "14px",
+      "color": "#223355",
+      "single_format": "各级名称用 ` / ` 拼接，例如 华东 / 浙江 / 杭州"
+    },
+    "arrow": {
+      "size": "14×14px",
+      "color": "#A8B4C8",
+      "open_transform": "rotate(180deg)",
+      "transition": "0.2s"
+    }
+  },
+
+  "panel": {
+    "width": "512px",
+    "height": "由内容自适应，每列最大 337px 超出滚动",
+    "background": "#FFFFFF",
+    "border_radius": "4px",
+    "box_shadow": "0 2px 50px 0 #0043ca33",
+    "filter": "blur(0)",
+    "margin_top": "6px",
+    "layout": {
+      "columns": "三列等宽（flex: 1）",
+      "column_separator": "1px solid #E9ECF2",
+      "column_padding": "8px"
+    }
+  },
+
+  "option": {
+    "height": "32px",
+    "padding": "0 8px",
+    "border_radius": "4px",
+    "gap_between_items": "4px",
+    "font_size": "14px",
+    "states": {
+      "default": { "color": "#223355", "background": "#FFFFFF" },
+      "hover":   { "color": "#223355", "background": "#F5F7FA" },
+      "active_single": { "color": "#3388FF", "background": "#F0F9FF" }
+    },
+    "next_level_arrow": {
+      "description": "非叶子节点右侧显示朝右箭头",
+      "size": "14×14px",
+      "color": "#A8B4C8"
+    }
+  },
+
+  "single_select": {
+    "description": "单选模式",
+    "trigger_display": "各级名称用 ` / ` 拼接显示在触发框",
+    "interaction": "从左到右逐级展开；非叶子节点点击展开下级，叶子节点点击后选中并关闭面板"
+  },
+
+  "multi_select": {
+    "description": "多选模式",
+    "trigger_tags": {
+      "height": "22px",
+      "padding": "0 6px",
+      "border_radius": "4px",
+      "background": "#F5F7FA",
+      "color": "#223355",
+      "font_size": "12px",
+      "close_icon": {
+        "size": "10×10px",
+        "color": "#6B7A99",
+        "behavior": "点击删除当前标签"
+      }
+    },
+    "overflow_count": {
+      "description": "标签显示不下时尾部展示 +N 角标",
+      "background": "#F0F9FF",
+      "color": "#3388FF",
+      "font_size": "12px",
+      "format": "+N"
+    },
+    "option_layout": "选项前显示复选框，右侧显示下级箭头（非叶子节点）",
+    "checkbox": {
+      "$ref": "checkbox-spec.json",
+      "size": "16×16px",
+      "border_radius": "4px",
+      "border_default": "1px solid #A8B4C8",
+      "background_default": "#FFFFFF",
+      "hover": { "border": "1px solid #3388FF" },
+      "checked": { "background": "#3388FF", "border": "#3388FF", "icon": "白色对勾（SVG，stroke 2px，stroke-linecap: round）" },
+      "indeterminate": { "background": "#3388FF", "border": "#3388FF", "icon": "白色横线（8×2px，border-radius 1px）" },
+      "disabled_checked": { "background": "#ADD8FF", "border": "#ADD8FF" }
+    },
+    "select_all": {
+      "position": "每列底部，上方 1px solid #E9ECF2 分隔线",
+      "structure": "复选框 + 全选 文字",
+      "height": "32px",
+      "padding": "0 8px",
+      "logic": [
+        "全选：当前列所有项选中",
+        "半选：当前列部分项被选",
+        "父子联动：子节点全选 → 父节点选中；部分选 → 父节点半选"
+      ]
+    }
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "面板设置固定 height 后内容少时仍占满空间，与设计不符",
+      "fix": "面板只设置 width: 512px，列上设 max-height: 337px，让面板高度由内容决定"
+    },
+    {
+      "issue": "全选行直接放列顶部时不易识别且与浏览习惯不符",
+      "fix": "全选行放在每列底部，使用 margin-top: auto 推到底，并在上方加 1px #E9ECF2 分隔线"
+    },
+    {
+      "issue": "多选标签溢出时未做处理导致触发框无限增高",
+      "fix": "标签可见区域有限时尾部显示 +N 角标（#F0F9FF / #3388FF），点击展开后再切换为完整列表"
+    },
+    {
+      "issue": "复选框圆角设为 2px 与其余表单控件不一致",
+      "fix": "统一为 4px"
+    }
+  ]
+}

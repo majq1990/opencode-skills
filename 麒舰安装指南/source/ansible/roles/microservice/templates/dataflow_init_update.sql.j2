@@ -1,0 +1,17 @@
+-- 此文件应该放在 dataflow-db.tar 中，此处为备份
+{% macro get_ip(host_info) %}
+{%- set master = host_info.hosts.master if host_info is defined and host_info.hosts is defined else None %}
+{%- set ip = hostvars[master]['ansible_ssh_host'] if master and master in hostvars and 'ansible_ssh_host' in hostvars[master] else '127.0.0.1'  %}
+{{ ip }}
+{%- endmacro -%}
+
+{%- set biz_db_ip = get_ip(ip_db_biz) %}
+
+
+-- 设置统一用户中心地址、统计库地址、麒舰业务库地址
+UPDATE sys_datasource SET url = 'jdbc:mysql://{{ biz_db_ip }}:3306/usercenter?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&autoReconnect=true&connectTimeout=60000&socketTimeout=3600000&allowPublicKeyRetrieval=true' WHERE name = '统一用户中心';
+UPDATE sys_datasource SET url = 'jdbc:mysql://{{ biz_db_ip }}:3306/becensus?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&autoReconnect=true&connectTimeout=60000&socketTimeout=3600000&allowPublicKeyRetrieval=true' WHERE name = '统计库';
+UPDATE sys_datasource SET url = 'jdbc:mysql://{{ biz_db_ip }}:3306/eurbanpro?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&autoReconnect=true&connectTimeout=60000&socketTimeout=3600000&allowPublicKeyRetrieval=true'WHERE  name = '麒舰业务库';
+
+-- 更新数据库密码
+update sys_datasource set password='d6357bfbaf2af94cdad9ff44fdca1b2770c1d3e1d71a44d923c0d638a39a061a86e7a6d5272f6264da4f6902f438bfd147f0ea1f6bf4198790d255066e5e29fdebf96b667a065197aeaf95233d0d30fa45f370517acaa93948516ae67bf61e8be85f283f1711807dc2c03fb3d35cde38' where name in ('统一用户中心','统计库','麒舰业务库');

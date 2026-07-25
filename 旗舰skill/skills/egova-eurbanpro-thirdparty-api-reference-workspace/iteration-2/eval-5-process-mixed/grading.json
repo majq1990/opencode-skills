@@ -1,0 +1,40 @@
+{
+  "with_skill": {
+    "expectations": [
+      {
+        "text": "命中流程动作接口",
+        "passed": true,
+        "evidence": "标题明确为 'DISPOSE_FEEDBACK（工单处置反馈）'，命中接口部分写出 'action=DISPOSE_FEEDBACK 对应工单处置反馈接口'"
+      },
+      {
+        "text": "给最小字段和最小请求示例",
+        "passed": true,
+        "evidence": "第2节列出顶层必传4个字段和 data 中高频必传3个字段，第3节提供了完整的 JSON 最小请求示例"
+      },
+      {
+        "text": "失败原因分流而非展开",
+        "passed": true,
+        "evidence": "末尾明确'关于现场为什么会失败，这部分属于现象排障，建议切换到 troubleshooting'，未展开排障链路细节"
+      }
+    ]
+  },
+  "old_skill": {
+    "expectations": [
+      {
+        "text": "命中流程动作接口",
+        "passed": true,
+        "evidence": "标题明确为 'DISPOSE_FEEDBACK 接口速查'，命中接口部分写出 'action: DISPOSE_FEEDBACK'"
+      },
+      {
+        "text": "给最小字段和最小请求示例",
+        "passed": true,
+        "evidence": "第2节列出顶层必传和 data 中必传字段，第3节提供了完整的 JSON 最小请求示例"
+      },
+      {
+        "text": "失败原因分流而非展开",
+        "passed": false,
+        "evidence": "末尾虽然提示切换 troubleshooting，但随后列出了4项常见技术失败原因（工单未签收、senderCode不一致、token过期、disposeTime格式不对），属于展开失败原因细节而非纯分流"
+      }
+    ]
+  }
+}

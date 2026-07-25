@@ -1,0 +1,109 @@
+{
+  "name": "avatar-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 头像组件规范，含默认人形/文字/自定义图片三种类型，三种尺寸，悬停交互，上传删除及头像组",
+
+  "types": [
+    {
+      "id": "default",
+      "label": "默认人形图标头像",
+      "background": "#F0F9FF",
+      "icon_color": "#85C0FF",
+      "icon_size": "75%",
+      "icon_structure": {
+        "head": "圆形",
+        "eyes": "两个白色（#F0F9FF）圆角矩形竖条，宽 1.2px，高 2.8px，圆角 0.6px",
+        "body": "椭圆形，底部圆弧收口"
+      }
+    },
+    {
+      "id": "text",
+      "label": "文字头像",
+      "background": "#3388FF",
+      "text": "姓名第一个字",
+      "color": "#FFFFFF",
+      "font_weight": "600",
+      "font_size": {
+        "lg": "20px",
+        "md": "15px",
+        "sm": "12px"
+      }
+    },
+    {
+      "id": "image",
+      "label": "自定义图片头像",
+      "description": "用户上传图片，圆形裁切",
+      "object_fit": "cover"
+    }
+  ],
+
+  "sizes": [
+    { "id": "lg", "diameter": "48px" },
+    { "id": "md", "diameter": "36px" },
+    { "id": "sm", "diameter": "28px" }
+  ],
+
+  "shape": "border-radius: 50%",
+
+  "interactions": {
+    "tooltip": {
+      "trigger": "鼠标悬停头像",
+      "content": "显示姓名",
+      "position": "头像正上方，间距 6px",
+      "background": "rgba(34,51,85,0.85)",
+      "color": "#FFFFFF",
+      "font_size": "12px",
+      "padding": "3px 8px",
+      "border_radius": "4px",
+      "arrow": "底部三角箭头",
+      "transition": "opacity 0→1，0.15s"
+    },
+    "upload_delete": {
+      "trigger": "鼠标悬停头像",
+      "position": "右上角",
+      "container": {
+        "size": "16px",
+        "shape": "圆形",
+        "background": "#FFFFFF",
+        "border": "1px solid #E9ECF2"
+      },
+      "icon": "× 形",
+      "icon_color_default": "#C3CAD9",
+      "icon_color_hover": "#FF4433",
+      "transition": "opacity 0→1，0.15s"
+    }
+  },
+
+  "avatar_group": {
+    "direction": "horizontal",
+    "item_margin_left": "-16px",
+    "first_item_margin_left": "0",
+    "border": "1.5px solid #FFFFFF",
+    "more_bubble": {
+      "description": "超出数量时显示剩余人数",
+      "background": "#F0F9FF",
+      "color": "#3388FF",
+      "font_weight": "600",
+      "font_size": {
+        "lg": "14px",
+        "md": "12px",
+        "sm": "11px"
+      },
+      "border": "1.5px solid #FFFFFF",
+      "size": "与头像尺寸一致",
+      "z_index": 10,
+      "note": "始终显示在最上层"
+    }
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "头像组中更多气泡被其他头像遮挡",
+      "fix": "更多气泡需设置 z-index: 10，头像需设置 position: relative 以使层级生效"
+    },
+    {
+      "issue": "删除图标在未悬停时可见",
+      "fix": "默认 opacity: 0，仅在父级 .z-avatar:hover 时设置 opacity: 1"
+    }
+  ]
+}

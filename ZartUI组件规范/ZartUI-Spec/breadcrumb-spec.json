@@ -1,0 +1,95 @@
+{
+  "name": "breadcrumb-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 面包屑规范，覆盖基础样式、下拉切换及交互规则",
+
+  "container": {
+    "display": "inline-flex",
+    "align_items": "center",
+    "flex_wrap": "wrap",
+    "font_size": "14px",
+    "font_weight": "400"
+  },
+
+  "item": {
+    "description": "上级页面节点，可点击跳转",
+    "states": {
+      "default": { "color": "#6B7A99" },
+      "hover":   { "color": "#3388FF", "transition": "color 0.15s" }
+    }
+  },
+
+  "current_item": {
+    "description": "当前页面节点，不可点击",
+    "states": {
+      "default": { "color": "#223355" },
+      "hover":   { "color": "#223355", "description": "无变化" }
+    }
+  },
+
+  "separator": {
+    "symbol": "/",
+    "color": "#6B7A99",
+    "margin": "0 8px"
+  },
+
+  "ellipsis": {
+    "symbol": "···",
+    "color": "#6B7A99",
+    "clickable": false,
+    "description": "层级过多时替换中间节点，首尾节点始终显示"
+  },
+
+  "dropdown": {
+    "description": "某一层级有多个同级页面时，节点右侧显示下拉箭头，支持下拉切换",
+    "trigger_icon": {
+      "size": "12×12px",
+      "style": "线状（stroke，无 fill）",
+      "color_default": "#6B7A99",
+      "color_hover": "#3388FF",
+      "open_transform": "rotate(180deg)",
+      "transition": "0.2s"
+    },
+    "menu": {
+      "min_width": "140px",
+      "position": "左对齐，距节点底部 6px",
+      "background": "#FFFFFF",
+      "border": "1px solid #E9ECF2",
+      "border_radius": "8px",
+      "padding": "8px",
+      "box_shadow": "0 8px 24px rgba(18,74,180,0.12)"
+    },
+    "menu_item": {
+      "height": "36px",
+      "padding": "0 8px",
+      "border_radius": "4px",
+      "font_size": "14px",
+      "font_weight": "400",
+      "states": {
+        "default":  { "color": "#223355", "background": "transparent" },
+        "hover":    { "color": "#3388FF", "background": "#F5F7FA" },
+        "active":   { "color": "#3388FF", "background": "transparent" }
+      }
+    },
+    "close_behavior": "点击菜单外部自动关闭，同时只允许一个下拉菜单展开"
+  },
+
+  "interaction_rules": [
+    "上级页面节点：Hover 变色 #3388FF，点击跳转至对应页面",
+    "当前页面节点：Hover 无变化，不可点击",
+    "省略号节点：仅展示，不可点击",
+    "层级过多时中间节点替换为 ···，首尾节点始终显示",
+    "下拉展开时其他已展开的下拉菜单自动关闭"
+  ],
+
+  "known_pitfalls": [
+    {
+      "issue": "下拉菜单点击外部无法关闭",
+      "fix": "展开时挂载一次性 document click 监听，判断 !wrap.contains(e.target) 时移除 is-open，并用 setTimeout 延迟注册避免当次点击触发"
+    },
+    {
+      "issue": "多个下拉同时展开",
+      "fix": "展开前先遍历所有 .bc-dropdown-wrap 移除 is-open，再对当前节点添加"
+    }
+  ]
+}

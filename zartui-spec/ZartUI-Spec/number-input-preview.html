@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZartUI · 数字输入框 规范预览</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-size: 14px; color: #223355;
+      background: #F5F7FA; padding: 40px;
+    }
+    .page-title { font-size: 22px; font-weight: 400; color: #081126; margin-bottom: 8px; }
+    .page-desc  { font-size: 14px; color: #6B7A99; margin-bottom: 32px; }
+    .section { background: #fff; border-radius: 8px; padding: 24px; margin-bottom: 16px; }
+    .section-title {
+      font-size: 16px; font-weight: 500; color: #081126;
+      padding-bottom: 12px; border-bottom: 1px solid #E9ECF2; margin-bottom: 24px;
+    }
+    .demo-label { font-size: 12px; color: #A8B4C8; margin-bottom: 12px; }
+    .demo-row { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; margin-bottom: 24px; }
+    .demo-col { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+    .demo-col-wrap { display: flex; flex-direction: column; align-items: flex-start; }
+    .state-label { font-size: 12px; color: #6B7A99; }
+
+    /* ══ 数字输入框 Type 1 ══ */
+    .zart-num {
+      display: inline-flex; align-items: center;
+      height: 32px; border: 1px solid #DDE1EB; border-radius: 4px;
+      background: #FFFFFF; overflow: visible; position: relative;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .zart-num:hover:not(.is-disabled):not(.is-error) {
+      border-color: #3388FF;
+    }
+    .zart-num.is-focused:not(.is-disabled):not(.is-error) {
+      border-color: #3388FF;
+      box-shadow: 0 0 0 2px #D6EDFF;
+    }
+    .zart-num.is-error {
+      border-color: #FF4433;
+    }
+    .zart-num.is-disabled {
+      background: #F5F7FA;
+      border-color: #E9ECF2;
+      cursor: not-allowed;
+    }
+
+    /* 数字 input */
+    .zart-num-input {
+      width: 64px; height: 100%; border: none; outline: none;
+      padding: 0 0 0 8px; font-size: 14px; color: #223355;
+      background: transparent; -moz-appearance: textfield;
+    }
+    .zart-num-input::-webkit-inner-spin-button,
+    .zart-num-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .zart-num-input::placeholder { color: #A8B4C8; }
+    .zart-num.is-disabled .zart-num-input {
+      color: #A8B4C8; cursor: not-allowed; pointer-events: none;
+    }
+
+    /* 中间区域：上下箭头 + 单位 */
+    .zart-num-right {
+      display: flex; align-items: center; height: 100%;
+      flex-shrink: 0;
+    }
+
+    /* 上下箭头容器 */
+    .zart-num-arrows {
+      display: flex; flex-direction: column;
+      width: 20px; height: 100%;
+    }
+
+    .zart-num-arrow {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background 0.1s;
+      user-select: none;
+    }
+    .zart-num-arrow:first-child { border-bottom: none; }
+    .zart-num-arrow:hover { background: #F5F7FA; }
+    .zart-num-arrow:hover svg { stroke: #3388FF; }
+    .zart-num-arrow.is-pressed svg { stroke: #3388FF; }
+    .zart-num-arrow svg {
+      width: 10px; height: 10px;
+      fill: none; stroke: #A8B4C8;
+      stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+      transition: stroke 0.1s;
+    }
+    .zart-num.is-disabled .zart-num-arrow {
+      cursor: not-allowed; pointer-events: none;
+    }
+    .zart-num.is-disabled .zart-num-arrow svg { stroke: #C5CDD9; }
+
+    /* 单位 */
+    .zart-num-unit {
+      padding: 0 10px; font-size: 13px; color: #6B7A99;
+      white-space: nowrap; flex-shrink: 0;
+      border-left: 1px solid #E9ECF2;
+    }
+    .zart-num.is-disabled .zart-num-unit { color: #A8B4C8; }
+
+    /* ══ 数字输入框 Type 2：后置单位选择 ══ */
+    .zart-num2 {
+      display: inline-flex; align-items: center;
+      height: 32px; border-radius: 4px;
+      background: #FFFFFF; overflow: visible; position: relative;
+    }
+
+    /* 左侧输入部分 */
+    .zart-num2-input-wrap {
+      display: flex; align-items: center; height: 100%;
+      border: 1px solid #DDE1EB; border-radius: 4px 0 0 4px;
+      background: #FFFFFF; flex: 1;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      margin-right: -1px; /* 叠压消除双线 */
+      position: relative; z-index: 1;
+    }
+    .zart-num2-input-wrap:hover:not(.is-disabled):not(.is-error) { border-color: #3388FF; z-index: 2; }
+    .zart-num2-input-wrap.is-focused:not(.is-disabled):not(.is-error) {
+      border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; z-index: 2;
+    }
+    .zart-num2-input-wrap.is-error { border-color: #FF4433; z-index: 2; }
+    .zart-num2-input-wrap.is-disabled { background: #F5F7FA; border-color: #E9ECF2; }
+
+    .zart-num2-input {
+      width: 64px; height: 100%; border: none; outline: none;
+      padding: 0 0 0 8px; font-size: 14px; color: #223355;
+      background: transparent; -moz-appearance: textfield;
+    }
+    .zart-num2-input::-webkit-inner-spin-button,
+    .zart-num2-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .zart-num2-input::placeholder { color: #A8B4C8; }
+    .zart-num2-input-wrap.is-disabled .zart-num2-input { color: #A8B4C8; cursor: not-allowed; pointer-events: none; }
+
+    /* 上下箭头（同 type1，复用样式） */
+    .zart-num2-arrows {
+      display: flex; flex-direction: column;
+      width: 20px; height: 100%;
+    }
+    .zart-num2-arrow {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background 0.1s; user-select: none;
+    }
+    .zart-num2-arrow:hover { background: #F5F7FA; }
+    .zart-num2-arrow:hover svg { stroke: #3388FF; }
+    .zart-num2-arrow.is-pressed svg { stroke: #3388FF; }
+    .zart-num2-arrow svg {
+      width: 10px; height: 10px; fill: none; stroke: #A8B4C8;
+      stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+      transition: stroke 0.1s;
+    }
+    .zart-num2-input-wrap.is-disabled .zart-num2-arrow { cursor: not-allowed; pointer-events: none; }
+    .zart-num2-input-wrap.is-disabled .zart-num2-arrow svg { stroke: #C5CDD9; }
+
+    /* 后置单位选择 */
+    .zart-num2-append {
+      display: inline-flex; align-items: center; gap: 4px;
+      height: 100%; padding: 0 8px;
+      border: 1px solid #DDE1EB; border-radius: 0 4px 4px 0;
+      background: #F5F7FA; cursor: pointer; flex-shrink: 0;
+      font-size: 13px; color: #223355;
+      transition: border-color 0.15s; position: relative; z-index: 1;
+      white-space: nowrap;
+    }
+    .zart-num2-append:hover:not(.is-disabled) { border-color: #3388FF; z-index: 2; }
+    .zart-num2-append.is-open { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; z-index: 3; }
+    .zart-num2-append.is-error { border-color: #FF4433; }
+    .zart-num2-append.is-disabled { color: #A8B4C8; cursor: not-allowed; pointer-events: none; border-color: #E9ECF2; }
+    .zart-num2-append .chevron {
+      width: 12px; height: 12px; fill: none; stroke: #A8B4C8;
+      stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+    .zart-num2-append.is-open .chevron { transform: rotate(180deg); }
+
+    /* 后置下拉面板 */
+    .zart-num2-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; min-width: 100%;
+      background: #FFFFFF; border: 1px solid #E9ECF2; border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(34,51,85,0.10);
+      z-index: 200; display: none;
+    }
+    .zart-num2-dropdown.open { display: block; }
+    .zart-num2-opt {
+      height: 34px; padding: 0 12px; display: flex; align-items: center;
+      font-size: 14px; color: #223355; cursor: pointer; white-space: nowrap;
+    }
+    .zart-num2-opt:hover { background: #F5F7FA; }
+    .zart-num2-opt.is-selected { color: #3388FF; background: #F0F9FF; }
+
+    /* 同步描边：悬停/激活/错误时输入框与后置描边联动 */
+    .zart-num2:hover:not(.is-disabled-all) .zart-num2-input-wrap:not(.is-focused):not(.is-error),
+    .zart-num2:hover:not(.is-disabled-all) .zart-num2-append:not(.is-open):not(.is-error) {
+      border-color: #3388FF;
+    }
+    .zart-num2.is-error-all .zart-num2-input-wrap,
+    .zart-num2.is-error-all .zart-num2-append { border-color: #FF4433; }
+    .zart-num2.is-disabled-all .zart-num2-input-wrap { background: #F5F7FA; border-color: #E9ECF2; }
+    .zart-num2.is-disabled-all .zart-num2-append { border-color: #E9ECF2; color: #A8B4C8; cursor: not-allowed; pointer-events: none; }
+
+    /* ══ 数字输入框 Type 3：减号 | 输入框 | 加号 ══ */
+    .zart-num3 {
+      display: inline-flex; align-items: center;
+      height: 32px; border: 1px solid #DDE1EB; border-radius: 4px;
+      background: #FFFFFF; position: relative;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .zart-num3:hover:not(.is-disabled):not(.is-error) { border-color: #3388FF; }
+    .zart-num3.is-focused:not(.is-disabled):not(.is-error) {
+      border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF;
+    }
+    .zart-num3.is-error  { border-color: #FF4433; }
+    .zart-num3.is-disabled { background: #F5F7FA; border-color: #E9ECF2; cursor: not-allowed; }
+
+    /* 减/加按钮 */
+    .zart-num3-btn {
+      width: 32px; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+      transition: background 0.1s;
+    }
+    .zart-num3-btn:hover:not(.is-disabled) { background: #F5F7FA; }
+    .zart-num3-btn:hover:not(.is-disabled) svg { stroke: #3388FF; }
+    .zart-num3-btn.is-pressed svg { stroke: #3388FF; }
+    .zart-num3-btn svg {
+      width: 14px; height: 14px; fill: none; stroke: #A8B4C8;
+      stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+      transition: stroke 0.1s;
+    }
+    .zart-num3-btn:first-child { border-radius: 3px 0 0 3px; }
+    .zart-num3-btn:last-child  { border-radius: 0 3px 3px 0; }
+    .zart-num3.is-disabled .zart-num3-btn { cursor: not-allowed; pointer-events: none; }
+    .zart-num3.is-disabled .zart-num3-btn svg { stroke: #C5CDD9; }
+
+    /* 分隔线 */
+    .zart-num3-sep {
+      width: 1px; height: 100%; background: #E9ECF2; flex-shrink: 0;
+    }
+
+    /* 输入框 */
+    .zart-num3-input {
+      flex: 1; height: 100%; border: none; outline: none;
+      padding: 0 0 0 8px; font-size: 14px; color: #223355; text-align: left;
+      background: transparent; -moz-appearance: textfield; min-width: 48px;
+    }
+    .zart-num3-input::-webkit-inner-spin-button,
+    .zart-num3-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .zart-num3-input::placeholder { color: #A8B4C8; }
+    .zart-num3.is-disabled .zart-num3-input { color: #A8B4C8; cursor: not-allowed; pointer-events: none; }
+
+    .zart-num-error-msg {
+      font-size: 12px; color: #FF4433; margin-top: 4px;
+    }
+
+    /* spec table */
+    .spec-table { width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid #E9ECF2; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+    .spec-table th { text-align: left; font-weight: 400; color: #6B7A99; font-size: 12px; padding: 8px 16px; border-bottom: 1px solid #E9ECF2; background: #F5F7FA; }
+    .spec-table td { padding: 10px 16px; border-bottom: 1px solid #E9ECF2; color: #223355; vertical-align: top; }
+    .spec-table tr:last-child td { border-bottom: none; }
+    .spec-table td code { font-family: 'SF Mono','Consolas',monospace; font-size: 12px; background: #F5F7FA; padding: 1px 6px; border-radius: 4px; color: #3388FF; }
+  </style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · 数字输入框</h1>
+<p class="page-desc">第一种：左侧数字输入 + 中间上下箭头 + 右侧单位</p>
+
+<!-- ══ 状态演示 ══ -->
+<div class="section">
+  <div class="section-title">状态演示</div>
+
+  <div class="demo-row">
+
+    <!-- 默认 -->
+    <div class="demo-col">
+      <span class="state-label">默认</span>
+      <div class="zart-num" id="num-default">
+        <input class="zart-num-input" type="text" value="12" placeholder="0">
+        <div class="zart-num-right">
+          <div class="zart-num-arrows">
+            <div class="zart-num-arrow" data-dir="up">
+              <svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg>
+            </div>
+            <div class="zart-num-arrow" data-dir="down">
+              <svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+            </div>
+          </div>
+          <span class="zart-num-unit">px</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 悬停（模拟） -->
+    <div class="demo-col">
+      <span class="state-label">悬停</span>
+      <div class="zart-num" style="border-color:#3388FF;">
+        <input class="zart-num-input" type="text" value="12" placeholder="0">
+        <div class="zart-num-right">
+          <div class="zart-num-arrows">
+            <div class="zart-num-arrow" data-dir="up">
+              <svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg>
+            </div>
+            <div class="zart-num-arrow" data-dir="down">
+              <svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+            </div>
+          </div>
+          <span class="zart-num-unit">px</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 激活 -->
+    <div class="demo-col">
+      <span class="state-label">激活（聚焦）</span>
+      <div class="zart-num is-focused">
+        <input class="zart-num-input" type="text" value="12" placeholder="0">
+        <div class="zart-num-right">
+          <div class="zart-num-arrows">
+            <div class="zart-num-arrow" data-dir="up">
+              <svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg>
+            </div>
+            <div class="zart-num-arrow" data-dir="down">
+              <svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+            </div>
+          </div>
+          <span class="zart-num-unit">px</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 上箭头点击态 -->
+    <div class="demo-col">
+      <span class="state-label">点击上箭头</span>
+      <div class="zart-num is-focused">
+        <input class="zart-num-input" type="text" value="13" placeholder="0">
+        <div class="zart-num-right">
+          <div class="zart-num-arrows">
+            <div class="zart-num-arrow is-pressed" data-dir="up">
+              <svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5" stroke="#3388FF"/></svg>
+            </div>
+            <div class="zart-num-arrow" data-dir="down">
+              <svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+            </div>
+          </div>
+          <span class="zart-num-unit">px</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 下箭头点击态 -->
+    <div class="demo-col">
+      <span class="state-label">点击下箭头</span>
+      <div class="zart-num is-focused">
+        <input class="zart-num-input" type="text" value="11" placeholder="0">
+        <div class="zart-num-right">
+          <div class="zart-num-arrows">
+            <div class="zart-num-arrow" data-dir="up">
+              <svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg>
+            </div>
+            <div class="zart-num-arrow is-pressed" data-dir="down">
+              <svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5" stroke="#3388FF"/></svg>
+            </div>
+          </div>
+          <span class="zart-num-unit">px</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 禁用 -->
+    <div class="demo-col">
+      <span class="state-label">禁用</span>
+      <div class="zart-num is-disabled">
+        <input class="zart-num-input" type="text" value="12" placeholder="0" disabled>
+        <div class="zart-num-right">
+          <div class="zart-num-arrows">
+            <div class="zart-num-arrow" data-dir="up">
+              <svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg>
+            </div>
+            <div class="zart-num-arrow" data-dir="down">
+              <svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+            </div>
+          </div>
+          <span class="zart-num-unit">px</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="demo-col">
+      <span class="state-label">错误</span>
+      <div class="demo-col-wrap">
+        <div class="zart-num is-error">
+          <input class="zart-num-input" type="text" value="-1" placeholder="0">
+          <div class="zart-num-right">
+            <div class="zart-num-arrows">
+              <div class="zart-num-arrow" data-dir="up">
+                <svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg>
+              </div>
+              <div class="zart-num-arrow" data-dir="down">
+                <svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+              </div>
+            </div>
+            <span class="zart-num-unit">px</span>
+          </div>
+        </div>
+        <span class="zart-num-error-msg">数值不能小于 0</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ 交互演示 ══ -->
+<div class="section">
+  <div class="section-title">交互演示</div>
+  <p class="demo-label">点击上下箭头可 +1 / −1，也可直接在输入框内输入数字</p>
+
+  <div class="demo-row">
+    <div class="demo-col">
+      <span class="state-label">宽度</span>
+      <div class="zart-num" id="num-interactive-1">
+        <input class="zart-num-input" id="inp1" type="text" value="12" placeholder="0">
+        <div class="zart-num-right">
+          <div class="zart-num-arrows">
+            <div class="zart-num-arrow" data-dir="up" data-target="inp1">
+              <svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg>
+            </div>
+            <div class="zart-num-arrow" data-dir="down" data-target="inp1">
+              <svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+            </div>
+          </div>
+          <span class="zart-num-unit">px</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-col">
+      <span class="state-label">高度</span>
+      <div class="zart-num" id="num-interactive-2">
+        <input class="zart-num-input" id="inp2" type="text" value="32" placeholder="0">
+        <div class="zart-num-right">
+          <div class="zart-num-arrows">
+            <div class="zart-num-arrow" data-dir="up" data-target="inp2">
+              <svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg>
+            </div>
+            <div class="zart-num-arrow" data-dir="down" data-target="inp2">
+              <svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+            </div>
+          </div>
+          <span class="zart-num-unit">px</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-col">
+      <span class="state-label">不透明度</span>
+      <div class="zart-num" id="num-interactive-3">
+        <input class="zart-num-input" id="inp3" type="text" value="100" placeholder="0">
+        <div class="zart-num-right">
+          <div class="zart-num-arrows">
+            <div class="zart-num-arrow" data-dir="up" data-target="inp3">
+              <svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg>
+            </div>
+            <div class="zart-num-arrow" data-dir="down" data-target="inp3">
+              <svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg>
+            </div>
+          </div>
+          <span class="zart-num-unit">%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 第二种：后置单位选择 ══ -->
+<div class="section">
+  <div class="section-title">第二种：数字输入 + 后置单位选择</div>
+
+  <div class="demo-row" style="align-items:flex-start;">
+
+    <!-- 默认 -->
+    <div class="demo-col">
+      <span class="state-label">默认</span>
+      <div class="zart-num2" id="num2-default">
+        <div class="zart-num2-input-wrap">
+          <input class="zart-num2-input" type="text" value="12" placeholder="0">
+          <div class="zart-num2-arrows">
+            <div class="zart-num2-arrow" data-dir="up"><svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg></div>
+            <div class="zart-num2-arrow" data-dir="down"><svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg></div>
+          </div>
+        </div>
+        <div class="zart-num2-append" id="ap-default">
+          <span class="zart-num2-unit-label">px</span>
+          <svg class="chevron" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+          <div class="zart-num2-dropdown" id="dp-default">
+            <div class="zart-num2-opt is-selected" data-unit="px">px</div>
+            <div class="zart-num2-opt" data-unit="%">%</div>
+            <div class="zart-num2-opt" data-unit="em">em</div>
+            <div class="zart-num2-opt" data-unit="rem">rem</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 悬停 -->
+    <div class="demo-col">
+      <span class="state-label">悬停</span>
+      <div class="zart-num2">
+        <div class="zart-num2-input-wrap" style="border-color:#3388FF;">
+          <input class="zart-num2-input" type="text" value="12" placeholder="0">
+          <div class="zart-num2-arrows">
+            <div class="zart-num2-arrow"><svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg></div>
+            <div class="zart-num2-arrow"><svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg></div>
+          </div>
+        </div>
+        <div class="zart-num2-append" style="border-color:#3388FF;">
+          <span class="zart-num2-unit-label">px</span>
+          <svg class="chevron" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 激活（输入框聚焦） -->
+    <div class="demo-col">
+      <span class="state-label">激活（输入框聚焦）</span>
+      <div class="zart-num2">
+        <div class="zart-num2-input-wrap is-focused">
+          <input class="zart-num2-input" type="text" value="12" placeholder="0">
+          <div class="zart-num2-arrows">
+            <div class="zart-num2-arrow"><svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg></div>
+            <div class="zart-num2-arrow"><svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg></div>
+          </div>
+        </div>
+        <div class="zart-num2-append">
+          <span class="zart-num2-unit-label">px</span>
+          <svg class="chevron" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 后置展开 -->
+    <div class="demo-col">
+      <span class="state-label">后置展开</span>
+      <div class="zart-num2">
+        <div class="zart-num2-input-wrap">
+          <input class="zart-num2-input" type="text" value="12" placeholder="0">
+          <div class="zart-num2-arrows">
+            <div class="zart-num2-arrow"><svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg></div>
+            <div class="zart-num2-arrow"><svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg></div>
+          </div>
+        </div>
+        <div class="zart-num2-append is-open">
+          <span class="zart-num2-unit-label">px</span>
+          <svg class="chevron" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+          <div class="zart-num2-dropdown open">
+            <div class="zart-num2-opt is-selected">px</div>
+            <div class="zart-num2-opt">%</div>
+            <div class="zart-num2-opt">em</div>
+            <div class="zart-num2-opt">rem</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 禁用 -->
+    <div class="demo-col">
+      <span class="state-label">禁用</span>
+      <div class="zart-num2 is-disabled-all">
+        <div class="zart-num2-input-wrap is-disabled">
+          <input class="zart-num2-input" type="text" value="12" placeholder="0" disabled>
+          <div class="zart-num2-arrows">
+            <div class="zart-num2-arrow"><svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg></div>
+            <div class="zart-num2-arrow"><svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg></div>
+          </div>
+        </div>
+        <div class="zart-num2-append is-disabled">
+          <span class="zart-num2-unit-label">px</span>
+          <svg class="chevron" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="demo-col">
+      <span class="state-label">错误</span>
+      <div class="demo-col-wrap">
+        <div class="zart-num2 is-error-all">
+          <div class="zart-num2-input-wrap is-error">
+            <input class="zart-num2-input" type="text" value="-1" placeholder="0">
+            <div class="zart-num2-arrows">
+              <div class="zart-num2-arrow"><svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg></div>
+              <div class="zart-num2-arrow"><svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg></div>
+            </div>
+          </div>
+          <div class="zart-num2-append is-error">
+            <span class="zart-num2-unit-label">px</span>
+            <svg class="chevron" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+          </div>
+        </div>
+        <span class="zart-num-error-msg">数值不能小于 0</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 交互演示 -->
+  <p class="demo-label">可点击后置选择切换单位，点击上下箭头 ±1</p>
+  <div class="demo-row">
+    <div class="demo-col">
+      <div class="zart-num2" id="num2-live">
+        <div class="zart-num2-input-wrap" id="num2-live-wrap">
+          <input class="zart-num2-input" id="num2-live-input" type="text" value="12" placeholder="0">
+          <div class="zart-num2-arrows">
+            <div class="zart-num2-arrow" data-dir="up" data-num2="num2-live-input"><svg viewBox="0 0 10 10"><path d="M2 6.5L5 3.5L8 6.5"/></svg></div>
+            <div class="zart-num2-arrow" data-dir="down" data-num2="num2-live-input"><svg viewBox="0 0 10 10"><path d="M2 3.5L5 6.5L8 3.5"/></svg></div>
+          </div>
+        </div>
+        <div class="zart-num2-append" id="num2-live-append">
+          <span class="zart-num2-unit-label" id="num2-live-label">px</span>
+          <svg class="chevron" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+          <div class="zart-num2-dropdown" id="num2-live-dp">
+            <div class="zart-num2-opt is-selected" data-unit="px">px</div>
+            <div class="zart-num2-opt" data-unit="%">%</div>
+            <div class="zart-num2-opt" data-unit="em">em</div>
+            <div class="zart-num2-opt" data-unit="rem">rem</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 第三种：减 | 输入框 | 加 ══ -->
+<div class="section">
+  <div class="section-title">第三种：减号 | 数字输入框 | 加号</div>
+
+  <div class="demo-row" style="align-items:flex-start;">
+
+    <!-- 默认 -->
+    <div class="demo-col">
+      <span class="state-label">默认</span>
+      <div class="zart-num3">
+        <div class="zart-num3-btn" data-dir3="down" data-target3="inp3-1">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/></svg>
+        </div>
+        <div class="zart-num3-sep"></div>
+        <input class="zart-num3-input" id="inp3-1" type="text" value="12" placeholder="0">
+        <div class="zart-num3-sep"></div>
+        <div class="zart-num3-btn" data-dir3="up" data-target3="inp3-1">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/><line x1="7" y1="2" x2="7" y2="12"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 悬停 -->
+    <div class="demo-col">
+      <span class="state-label">悬停</span>
+      <div class="zart-num3" style="border-color:#3388FF;">
+        <div class="zart-num3-btn">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/></svg>
+        </div>
+        <div class="zart-num3-sep"></div>
+        <input class="zart-num3-input" type="text" value="12">
+        <div class="zart-num3-sep"></div>
+        <div class="zart-num3-btn">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/><line x1="7" y1="2" x2="7" y2="12"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 激活 -->
+    <div class="demo-col">
+      <span class="state-label">激活（聚焦）</span>
+      <div class="zart-num3 is-focused">
+        <div class="zart-num3-btn">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/></svg>
+        </div>
+        <div class="zart-num3-sep"></div>
+        <input class="zart-num3-input" type="text" value="12">
+        <div class="zart-num3-sep"></div>
+        <div class="zart-num3-btn">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/><line x1="7" y1="2" x2="7" y2="12"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 点击减号 -->
+    <div class="demo-col">
+      <span class="state-label">点击减号</span>
+      <div class="zart-num3 is-focused">
+        <div class="zart-num3-btn is-pressed">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7" stroke="#3388FF"/></svg>
+        </div>
+        <div class="zart-num3-sep"></div>
+        <input class="zart-num3-input" type="text" value="11">
+        <div class="zart-num3-sep"></div>
+        <div class="zart-num3-btn">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/><line x1="7" y1="2" x2="7" y2="12"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 点击加号 -->
+    <div class="demo-col">
+      <span class="state-label">点击加号</span>
+      <div class="zart-num3 is-focused">
+        <div class="zart-num3-btn">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/></svg>
+        </div>
+        <div class="zart-num3-sep"></div>
+        <input class="zart-num3-input" type="text" value="13">
+        <div class="zart-num3-sep"></div>
+        <div class="zart-num3-btn is-pressed">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7" stroke="#3388FF"/><line x1="7" y1="2" x2="7" y2="12" stroke="#3388FF"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 禁用 -->
+    <div class="demo-col">
+      <span class="state-label">禁用</span>
+      <div class="zart-num3 is-disabled">
+        <div class="zart-num3-btn">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/></svg>
+        </div>
+        <div class="zart-num3-sep"></div>
+        <input class="zart-num3-input" type="text" value="12" disabled>
+        <div class="zart-num3-sep"></div>
+        <div class="zart-num3-btn">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/><line x1="7" y1="2" x2="7" y2="12"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="demo-col">
+      <span class="state-label">错误</span>
+      <div class="demo-col-wrap">
+        <div class="zart-num3 is-error">
+          <div class="zart-num3-btn">
+            <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/></svg>
+          </div>
+          <div class="zart-num3-sep"></div>
+          <input class="zart-num3-input" type="text" value="-1">
+          <div class="zart-num3-sep"></div>
+          <div class="zart-num3-btn">
+            <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/><line x1="7" y1="2" x2="7" y2="12"/></svg>
+          </div>
+        </div>
+        <span class="zart-num-error-msg">数值不能小于 0</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 交互演示 -->
+  <p class="demo-label">点击减号 −1，点击加号 +1</p>
+  <div class="demo-row">
+    <div class="demo-col">
+      <div class="zart-num3" id="num3-live">
+        <div class="zart-num3-btn" data-dir3="down" data-target3="inp3-live">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/></svg>
+        </div>
+        <div class="zart-num3-sep"></div>
+        <input class="zart-num3-input" id="inp3-live" type="text" value="12" placeholder="0">
+        <div class="zart-num3-sep"></div>
+        <div class="zart-num3-btn" data-dir3="up" data-target3="inp3-live">
+          <svg viewBox="0 0 14 14"><line x1="2" y1="7" x2="12" y2="7"/><line x1="7" y1="2" x2="7" y2="12"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Spec 表 ══ -->
+<div class="section">
+  <div class="section-title">规范参数</div>
+  <table class="spec-table">
+    <thead><tr><th style="width:200px;">属性</th><th>值</th></tr></thead>
+    <tbody>
+      <tr><td>整体高度</td><td><code>32px</code>，圆角 <code>4px</code></td></tr>
+      <tr><td>默认描边</td><td><code>1px solid #DDE1EB</code></td></tr>
+      <tr><td>悬停描边</td><td><code>1px solid #3388FF</code></td></tr>
+      <tr><td>激活描边</td><td><code>1px solid #3388FF</code> + 外发光 <code>0 0 0 2px #D6EDFF</code></td></tr>
+      <tr><td>错误描边</td><td><code>1px solid #FF4433</code></td></tr>
+      <tr><td>禁用背景</td><td><code>#F5F7FA</code>，描边 <code>#E9ECF2</code></td></tr>
+      <tr><td>禁用文字/单位色</td><td><code>#A8B4C8</code></td></tr>
+      <tr><td>输入区内边距</td><td>左 <code>8px</code>，字号 <code>14px</code>，色 <code>#223355</code></td></tr>
+      <tr><td>Placeholder 色</td><td><code>#A8B4C8</code></td></tr>
+      <tr><td>上下箭头区宽度</td><td><code>20px</code>，左侧无分隔线，上下箭头之间无边框；单位区左侧有 <code>1px solid #E9ECF2</code> 分隔线</td></tr>
+      <tr><td>箭头图标尺寸</td><td><code>10×10px</code>，stroke <code>#A8B4C8</code>，stroke-width <code>1.5</code></td></tr>
+      <tr><td>箭头悬停</td><td>背景 <code>#F5F7FA</code>，箭头色 <code>#3388FF</code></td></tr>
+      <tr><td>箭头点击态</td><td>箭头色变为 <code>#3388FF</code>，数字 ±1</td></tr>
+      <tr><td>禁用箭头色</td><td><code>#C5CDD9</code>，pointer-events none</td></tr>
+      <tr><td>单位区内边距</td><td><code>0 10px</code>，字号 <code>13px</code>，色 <code>#6B7A99</code></td></tr>
+      <tr><td>错误提示</td><td>输入框下方，margin-top <code>4px</code>，字号 <code>12px</code>，色 <code>#FF4433</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  /* 聚焦/失焦状态切换 */
+  document.querySelectorAll('.zart-num-input').forEach(input => {
+    const wrap = input.closest('.zart-num');
+    if (!wrap || wrap.classList.contains('is-disabled')) return;
+    input.addEventListener('focus', () => wrap.classList.add('is-focused'));
+    input.addEventListener('blur',  () => wrap.classList.remove('is-focused'));
+  });
+
+  /* 上下箭头点击 */
+  document.querySelectorAll('.zart-num-arrow[data-target]').forEach(arrow => {
+    const dir    = arrow.dataset.dir;
+    const target = document.getElementById(arrow.dataset.target);
+    const wrap   = arrow.closest('.zart-num');
+
+    arrow.addEventListener('mousedown', e => {
+      e.preventDefault();
+      arrow.classList.add('is-pressed');
+      const val = parseFloat(target.value) || 0;
+      target.value = dir === 'up' ? val + 1 : val - 1;
+      wrap.classList.add('is-focused');
+    });
+
+    arrow.addEventListener('mouseup',   () => arrow.classList.remove('is-pressed'));
+    arrow.addEventListener('mouseleave',() => arrow.classList.remove('is-pressed'));
+  });
+
+  /* ── Type2 上下箭头 ── */
+  document.querySelectorAll('.zart-num2-arrow[data-num2]').forEach(arrow => {
+    const dir   = arrow.dataset.dir;
+    const input = document.getElementById(arrow.dataset.num2);
+    const wrap  = arrow.closest('.zart-num2-input-wrap');
+    arrow.addEventListener('mousedown', e => {
+      e.preventDefault();
+      arrow.classList.add('is-pressed');
+      input.value = (parseFloat(input.value) || 0) + (dir === 'up' ? 1 : -1);
+      wrap.classList.add('is-focused');
+    });
+    arrow.addEventListener('mouseup',    () => arrow.classList.remove('is-pressed'));
+    arrow.addEventListener('mouseleave', () => arrow.classList.remove('is-pressed'));
+  });
+
+  /* ── Type2 输入框聚焦 ── */
+  document.querySelectorAll('.zart-num2-input').forEach(input => {
+    const wrap = input.closest('.zart-num2-input-wrap');
+    if (!wrap || wrap.classList.contains('is-disabled')) return;
+    input.addEventListener('focus', () => wrap.classList.add('is-focused'));
+    input.addEventListener('blur',  () => wrap.classList.remove('is-focused'));
+  });
+
+  /* ── Type2 后置下拉 ── */
+  (function() {
+    const append = document.getElementById('num2-live-append');
+    const dp     = document.getElementById('num2-live-dp');
+    const label  = document.getElementById('num2-live-label');
+    append.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = dp.classList.contains('open');
+      dp.classList.toggle('open', !open);
+      append.classList.toggle('is-open', !open);
+    });
+    dp.querySelectorAll('.zart-num2-opt').forEach(opt => {
+      opt.addEventListener('click', e => {
+        e.stopPropagation();
+        dp.querySelectorAll('.zart-num2-opt').forEach(o => o.classList.remove('is-selected'));
+        opt.classList.add('is-selected');
+        label.textContent = opt.dataset.unit;
+        dp.classList.remove('open');
+        append.classList.remove('is-open');
+      });
+    });
+    document.addEventListener('click', () => {
+      dp.classList.remove('open');
+      append.classList.remove('is-open');
+    });
+    dp.addEventListener('click', e => e.stopPropagation());
+  })();
+
+  /* ── Type3 减/加按钮 ── */
+  document.querySelectorAll('.zart-num3-btn[data-dir3]').forEach(btn => {
+    const dir   = btn.dataset.dir3;
+    const input = document.getElementById(btn.dataset.target3);
+    const wrap  = btn.closest('.zart-num3');
+    btn.addEventListener('mousedown', e => {
+      e.preventDefault();
+      btn.classList.add('is-pressed');
+      input.value = (parseFloat(input.value) || 0) + (dir === 'up' ? 1 : -1);
+      wrap.classList.add('is-focused');
+    });
+    btn.addEventListener('mouseup',    () => btn.classList.remove('is-pressed'));
+    btn.addEventListener('mouseleave', () => btn.classList.remove('is-pressed'));
+  });
+
+  /* ── Type3 输入框聚焦 ── */
+  document.querySelectorAll('.zart-num3-input').forEach(input => {
+    const wrap = input.closest('.zart-num3');
+    if (!wrap || wrap.classList.contains('is-disabled')) return;
+    input.addEventListener('focus', () => wrap.classList.add('is-focused'));
+    input.addEventListener('blur',  () => wrap.classList.remove('is-focused'));
+  });
+</script>
+</body>
+</html>

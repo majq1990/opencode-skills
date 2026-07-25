@@ -1,0 +1,374 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egova.local/schemas/screen-spec.schema.json",
+  "title": "ScreenSpec",
+  "description": "Natural-language intent model for generating an editable Wukong screen draft.",
+  "type": "object",
+  "required": ["version", "title", "scene", "layout", "components"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "0.1"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scene": {
+      "type": "object",
+      "required": ["domain"],
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "type": "string",
+          "minLength": 1
+        },
+        "businessObjects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "region": {
+          "type": "string"
+        },
+        "timeRange": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "required": ["type", "resolution", "slots"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "center-map-side-panels",
+            "indicator-dashboard",
+            "list-monitor",
+            "video-device",
+            "custom"
+          ]
+        },
+        "resolution": {
+          "type": "object",
+          "required": ["width", "height"],
+          "additionalProperties": false,
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "slots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "role"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "header",
+                  "map",
+                  "metric-group",
+                  "chart",
+                  "ranking",
+                  "table",
+                  "tree",
+                  "video",
+                  "filter",
+                  "detail",
+                  "custom"
+                ]
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/component"
+      }
+    },
+    "filters": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/filter"
+      }
+    },
+    "interactions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/interaction"
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowFallbackStaticData": {
+          "type": "boolean",
+          "default": true
+        },
+        "requirePreviewPass": {
+          "type": "boolean",
+          "default": true
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "required": ["id", "slot", "intent", "componentType"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]*$"
+        },
+        "slot": {
+          "type": "string",
+          "minLength": 1
+        },
+        "intent": {
+          "type": "string",
+          "minLength": 1
+        },
+        "componentType": {
+          "type": "string",
+          "enum": [
+            "metric-card",
+            "multi-metric-card",
+            "bar-chart",
+            "line-chart",
+            "pie-chart",
+            "ranking",
+            "table",
+            "scroll-list",
+            "map-region",
+            "map-points",
+            "tree",
+            "video",
+            "filter",
+            "text",
+            "image",
+            "custom"
+          ]
+        },
+        "preferredComponentName": {
+          "type": "string"
+        },
+        "dataIntent": {
+          "$ref": "#/$defs/dataIntent"
+        },
+        "refresh": {
+          "$ref": "#/$defs/refresh"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/componentEvent"
+          }
+        },
+        "styleIntent": {
+          "type": "string"
+        }
+      }
+    },
+    "dataIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "object": {
+          "type": "string"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": [
+            "count",
+            "sum",
+            "avg",
+            "group",
+            "rank",
+            "trend",
+            "list",
+            "detail",
+            "points",
+            "custom"
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "filters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "refresh": {
+      "type": "object",
+      "required": ["mode"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["manual", "interval", "event"]
+        },
+        "seconds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "componentEvent": {
+      "type": "object",
+      "required": ["type", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["click", "hover", "change", "load", "custom"]
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "refresh-data",
+            "open-detail",
+            "open-dialog",
+            "navigate",
+            "set-variable",
+            "call-webhook",
+            "custom"
+          ]
+        },
+        "target": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "filter": {
+      "type": "object",
+      "required": ["id", "type", "scope"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "region",
+            "date-range",
+            "date",
+            "select",
+            "multi-select",
+            "search",
+            "switch",
+            "custom"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["global", "slot", "component"]
+        },
+        "defaultValue": {},
+        "targetComponents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "interaction": {
+      "type": "object",
+      "required": ["source", "event", "targets", "effect"],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "event": {
+          "type": "string",
+          "enum": ["click", "change", "load", "interval", "custom"]
+        },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "effect": {
+          "type": "string",
+          "enum": [
+            "refresh-data",
+            "open-detail",
+            "open-dialog",
+            "navigate",
+            "set-variable",
+            "call-webhook",
+            "custom"
+          ]
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZartUI · 输入框 规范预览</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-size: 14px; color: #223355;
+      background: #F5F7FA; padding: 40px;
+    }
+    .page-title { font-size: 22px; font-weight: 400; color: #081126; margin-bottom: 8px; }
+    .page-desc  { font-size: 14px; color: #6B7A99; margin-bottom: 32px; }
+    .section { background: #fff; border-radius: 8px; padding: 24px; margin-bottom: 16px; }
+    .section-title {
+      font-size: 16px; font-weight: 500; color: #081126;
+      padding-bottom: 12px; border-bottom: 1px solid #E9ECF2; margin-bottom: 24px;
+    }
+    .demo-row { display: flex; align-items: flex-start; gap: 32px; flex-wrap: wrap; margin-bottom: 28px; }
+    .demo-item { display: flex; flex-direction: column; gap: 8px; }
+    .demo-label { font-size: 12px; color: #A8B4C8; }
+
+    /* ══ 输入框基础 ══ */
+    .zart-input-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      width: 320px;
+    }
+    .zart-input {
+      width: 100%; height: 32px;
+      padding: 0 12px 0 8px;
+      border: 1px solid #DDE1EB; border-radius: 4px;
+      background: #FFFFFF;
+      font-size: 14px; color: #223355;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .zart-input::placeholder { color: #A8B4C8; }
+
+    /* 有清除图标时右侧内边距 */
+    .zart-input-wrap.has-clear .zart-input { padding-right: 32px; }
+    /* 有后缀+清除时，input 需为后缀+清除图标留出足够空间 */
+    .zart-input-wrap.has-suffix.has-clear .zart-input { padding-right: 100px; }
+
+    /* 清除图标 */
+    .zart-clear {
+      position: absolute; right: 8px;
+      width: 16px; height: 16px;
+      cursor: pointer; display: none; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .zart-clear svg {
+      width: 16px; height: 16px;
+      transition: opacity 0.12s;
+    }
+    .zart-clear:hover svg { opacity: 0.75; }
+
+    /* 有后缀时，清除图标移入 suffix flex 容器，不单独绝对定位 */
+    .zart-input-wrap.has-suffix .zart-clear { position: static; display: none; }
+
+    /* 悬停显示清除（有值时） */
+    .zart-input-wrap:hover .zart-clear.visible,
+    .zart-input-wrap.is-focus .zart-clear.visible { display: flex; }
+
+    /* 状态：悬停 */
+    .zart-input:hover { border-color: #3388FF; }
+
+    /* 状态：激活 */
+    .zart-input:focus,
+    .zart-input.is-active {
+      border-color: #3388FF;
+      box-shadow: 0 0 0 2px #D6EDFF;
+    }
+
+    /* 状态：禁用 */
+    .zart-input:disabled,
+    .zart-input.is-disabled {
+      background: #F5F7FA;
+      border-color: #E9ECF2;
+      color: #A8B4C8;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* 状态：错误 */
+    .zart-input.is-error { border-color: #FF4433; }
+    .zart-input.is-error:focus { box-shadow: 0 0 0 2px rgba(255,68,51,0.15); }
+    .zart-error-msg {
+      margin-top: -4px;
+      font-size: 12px; font-weight: 400; color: #FF4433;
+    }
+
+    /* ══ 静态展示 · 各状态强制样式 ══ */
+    .state-default  { border-color: #DDE1EB !important; box-shadow: none !important; }
+    .state-hover    { border-color: #3388FF !important; box-shadow: none !important; }
+    .state-active   { border-color: #3388FF !important; box-shadow: 0 0 0 2px #D6EDFF !important; }
+    .state-disabled { background: #F5F7FA !important; border-color: #E9ECF2 !important; color: #A8B4C8 !important; cursor: not-allowed; }
+    .state-error    { border-color: #FF4433 !important; box-shadow: none !important; }
+
+    /* ══ 多行输入框 ══ */
+    .zart-textarea-wrap {
+      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      width: 320px;
+    }
+    .zart-textarea {
+      width: 100%; min-height: 84px;
+      padding: 4px 12px 24px 8px;
+      border: 1px solid #DDE1EB; border-radius: 4px;
+      background: #FFFFFF;
+      font-size: 14px; color: #223355;
+      font-family: inherit;
+      outline: none; resize: vertical;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      line-height: 1.6;
+    }
+    .zart-textarea::placeholder { color: #A8B4C8; }
+    .zart-textarea:hover  { border-color: #3388FF; }
+    .zart-textarea:focus  { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+    .zart-textarea:disabled {
+      background: #F5F7FA; border-color: #E9ECF2;
+      color: #A8B4C8; cursor: not-allowed; pointer-events: none; resize: none;
+    }
+    .zart-textarea.is-error { border-color: #FF4433; }
+
+    .zart-char-count {
+      position: absolute; right: 10px; bottom: 8px;
+      font-size: 12px; color: #A8B4C8;
+      pointer-events: none; user-select: none;
+    }
+    .zart-char-count.near-limit { color: #FF6600; }
+    .zart-char-count.over-limit { color: #FF4433; }
+
+    /* ══ 前置选择 ══ */
+    .zart-input-wrap.has-prepend .zart-input { border-radius: 0 4px 4px 0; margin-left: -1px; }
+    .zart-prepend {
+      display: inline-flex; align-items: center; gap: 4px;
+      height: 32px; padding: 0 8px;
+      background: #F5F7FA;
+      border: 1px solid #DDE1EB; border-radius: 4px 0 0 4px;
+      font-size: 14px; color: #223355;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none; position: relative; z-index: 1;
+    }
+    .zart-prepend svg {
+      width: 12px; height: 12px;
+      fill: none; stroke: #A8B4C8; stroke-width: 1.5;
+      stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    /* 整体 wrap hover/focus 时前置和输入框描边同步变色 */
+    .zart-input-wrap.has-prepend:hover .zart-prepend,
+    .zart-input-wrap.has-prepend.is-focus .zart-prepend { border-color: #3388FF; }
+    .zart-input-wrap.has-prepend:hover .zart-input,
+    .zart-input-wrap.has-prepend.is-focus .zart-input  { border-color: #3388FF; }
+    /* 激活时输入框光晕 */
+    .zart-input-wrap.has-prepend.is-focus .zart-input {
+      border-color: #3388FF;
+      box-shadow: 0 0 0 2px #D6EDFF;
+    }
+    /* 静态状态类联动前置描边 */
+    .zart-input-wrap.has-prepend:has(.state-hover) .zart-prepend  { border-color: #3388FF; }
+    .zart-input-wrap.has-prepend:has(.state-active) .zart-prepend { border-color: #3388FF; background: #FFFFFF; }
+    .zart-input-wrap.has-prepend:has(.state-error) .zart-prepend  { border-color: #FF4433; }
+    .zart-input-wrap.has-prepend:has(.state-disabled) .zart-prepend {
+      color: #A8B4C8; cursor: not-allowed; pointer-events: none;
+      border-color: #E9ECF2;
+    }
+    /* 禁用 */
+    .zart-input-wrap.has-prepend .zart-prepend.is-disabled {
+      color: #A8B4C8; cursor: not-allowed; pointer-events: none;
+      border-color: #E9ECF2; background: #F5F7FA;
+    }
+
+    /* ══ 前缀图标 / 后缀 ══ */
+    .zart-input-wrap.has-prefix .zart-input { padding-left: 32px; }
+    .zart-input-wrap.has-suffix .zart-input { padding-right: 72px; } /* 后缀文字+图标 */
+    .zart-input-wrap.has-suffix.has-clear .zart-input { padding-right: 96px; }
+
+    .zart-prefix-icon {
+      position: absolute; left: 8px;
+      width: 16px; height: 16px;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .zart-prefix-icon svg {
+      width: 16px; height: 16px;
+      fill: none; stroke: #A8B4C8; stroke-width: 1.5;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .zart-suffix {
+      position: absolute; right: 8px;
+      display: flex; align-items: center; gap: 4px;
+      pointer-events: none;
+    }
+    .zart-suffix-text {
+      font-size: 14px; color: #223355; white-space: nowrap;
+    }
+    .zart-suffix-icon {
+      width: 16px; height: 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .zart-suffix-icon svg {
+      width: 16px; height: 16px;
+      fill: none; stroke: #A8B4C8; stroke-width: 1.5;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    /* ══ 后置选择 ══ */
+    .zart-input-wrap.has-append .zart-input { border-radius: 4px 0 0 4px; }
+    .zart-append {
+      display: inline-flex; align-items: center; gap: 4px;
+      height: 32px; padding: 0 8px;
+      background: #F5F7FA;
+      border: 1px solid #DDE1EB; border-radius: 0 4px 4px 0; margin-left: -1px;
+      font-size: 14px; color: #223355;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      transition: border-color 0.15s;
+      user-select: none; position: relative; z-index: 1;
+    }
+    .zart-append svg {
+      width: 12px; height: 12px;
+      fill: none; stroke: #A8B4C8; stroke-width: 1.5;
+      stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .zart-input-wrap.has-prepend.has-append .zart-input { border-radius: 0; }
+    /* hover/focus 时后置描边同步 */
+    .zart-input-wrap.has-append:hover .zart-append,
+    .zart-input-wrap.has-append.is-focus .zart-append { border-color: #3388FF; }
+    .zart-input-wrap.has-append:has(.state-hover) .zart-append  { border-color: #3388FF; }
+    .zart-input-wrap.has-append:has(.state-active) .zart-append { border-color: #3388FF; }
+    .zart-input-wrap.has-append:has(.state-error) .zart-append  { border-color: #FF4433; }
+    .zart-input-wrap.has-append:has(.state-disabled) .zart-append { border-color: #E9ECF2; color: #A8B4C8; cursor: not-allowed; }
+
+    /* ══ 下拉菜单 ══ */
+    .zart-dropdown-wrap { position: relative; display: inline-flex; }
+    .zart-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0;
+      min-width: 100%; background: #FFFFFF;
+      border: 1px solid #E9ECF2; border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(34,51,85,0.1);
+      z-index: 100; overflow: hidden;
+    }
+    .zart-dropdown-item {
+      display: flex; align-items: center;
+      height: 36px; padding: 0 12px;
+      font-size: 14px; color: #223355;
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.1s;
+    }
+    .zart-dropdown-item:hover { background: #F5F7FA; }
+    .zart-dropdown-item.is-selected { color: #3388FF; background: #F0F9FF; }
+
+    /* ══ spec table ══ */
+    .spec-table {
+      width: 100%; border-collapse: collapse; font-size: 13px;
+      border: 1px solid #E9ECF2; border-radius: 4px; overflow: hidden; margin-top: 24px;
+    }
+    .spec-table th {
+      text-align: left; font-weight: 400; color: #6B7A99; font-size: 12px;
+      padding: 8px 16px; border-bottom: 1px solid #E9ECF2; background: #F5F7FA;
+    }
+    .spec-table td { padding: 10px 16px; border-bottom: 1px solid #E9ECF2; color: #223355; }
+    .spec-table tr:last-child td { border-bottom: none; }
+    .spec-table td code {
+      font-family: 'SF Mono', 'Consolas', monospace; font-size: 12px;
+      background: #F5F7FA; padding: 1px 6px; border-radius: 4px; color: #3388FF;
+    }
+  </style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · 输入框</h1>
+<p class="page-desc">单行输入框（五种状态）· 多行输入框 · 前缀图标 + 后缀</p>
+
+<!-- ══ 单行输入框 ══ -->
+<div class="section">
+  <div class="section-title">单行输入框 · 状态展示</div>
+
+  <div class="demo-row">
+
+    <!-- 默认 -->
+    <div class="demo-item">
+      <span class="demo-label">默认</span>
+      <div class="zart-input-wrap">
+        <input class="zart-input state-default" type="text" placeholder="请输入">
+      </div>
+    </div>
+
+    <!-- 悬停（无值） -->
+    <div class="demo-item">
+      <span class="demo-label">悬停（无内容）</span>
+      <div class="zart-input-wrap">
+        <input class="zart-input state-hover" type="text" placeholder="请输入">
+      </div>
+    </div>
+
+    <!-- 悬停（有值，显示清除） -->
+    <div class="demo-item">
+      <span class="demo-label">悬停（有内容，显示清除图标）</span>
+      <div class="zart-input-wrap has-clear" id="hoverWrap">
+        <input class="zart-input state-hover" type="text" value="已输入的内容">
+        <span class="zart-clear visible" id="hoverClear">
+          <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" fill="#A8B4C8"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- 激活（无值） -->
+    <div class="demo-item">
+      <span class="demo-label">激活（无内容）</span>
+      <div class="zart-input-wrap">
+        <input class="zart-input state-active" type="text" placeholder="请输入">
+      </div>
+    </div>
+
+    <!-- 激活（有值，显示清除） -->
+    <div class="demo-item">
+      <span class="demo-label">激活（有内容，显示清除图标）</span>
+      <div class="zart-input-wrap has-clear" id="activeWrap">
+        <input class="zart-input state-active" type="text" value="已输入的内容">
+        <span class="zart-clear visible" id="activeClear">
+          <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" fill="#A8B4C8"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- 禁用 -->
+    <div class="demo-item">
+      <span class="demo-label">禁用</span>
+      <div class="zart-input-wrap">
+        <input class="zart-input state-disabled" type="text" placeholder="请输入" disabled>
+      </div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="demo-item">
+      <span class="demo-label">错误</span>
+      <div class="zart-input-wrap">
+        <input class="zart-input state-error" type="text" value="错误的输入内容">
+      </div>
+      <span class="zart-error-msg">请输入正确的格式</span>
+    </div>
+
+  </div>
+
+  <!-- 交互演示 -->
+  <div class="section-title" style="margin-top:8px;">单行输入框 · 交互演示</div>
+  <div class="demo-row">
+    <div class="demo-item">
+      <span class="demo-label">输入框（悬停查看描边变化，输入内容后悬停/聚焦显示清除）</span>
+      <div class="zart-input-wrap has-clear" id="demoWrap">
+        <input class="zart-input" type="text" placeholder="请输入" id="demoInput">
+        <span class="zart-clear" id="demoClear">
+          <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" fill="#A8B4C8"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spec 表 -->
+  <table class="spec-table">
+    <thead><tr><th style="width:140px;">状态</th><th>描边</th><th>背景</th><th>其他</th></tr></thead>
+    <tbody>
+      <tr><td>默认</td><td><code>#DDE1EB</code></td><td><code>#FFFFFF</code></td><td>占位文字 <code>#A8B4C8</code></td></tr>
+      <tr><td>悬停</td><td><code>#3388FF</code></td><td><code>#FFFFFF</code></td><td>有内容时右侧显示清除图标</td></tr>
+      <tr><td>激活</td><td><code>#3388FF</code></td><td><code>#FFFFFF</code></td><td>外发光 <code>0 0 0 2px #D6EDFF</code>；有内容时右侧显示清除图标</td></tr>
+      <tr><td>禁用</td><td><code>#E9ECF2</code></td><td><code>#F5F7FA</code></td><td>不可交互，cursor: not-allowed</td></tr>
+      <tr><td>错误</td><td><code>#FF4433</code></td><td><code>#FFFFFF</code></td><td>框下方错误说明文字 12px <code>#FF4433</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══ 多行输入框 ══ -->
+<div class="section">
+  <div class="section-title">多行输入框 · 状态展示</div>
+
+  <div class="demo-row">
+
+    <!-- 默认 -->
+    <div class="demo-item">
+      <span class="demo-label">默认</span>
+      <div class="zart-textarea-wrap">
+        <textarea class="zart-textarea" placeholder="请输入" style="border-color:#DDE1EB;box-shadow:none;" onfocus="this.style.borderColor='#3388FF';this.style.boxShadow='0 0 0 2px #D6EDFF'" onblur="this.style.borderColor='#DDE1EB';this.style.boxShadow='none'" oninput="updateCount(this,'count1',200)"></textarea>
+        <span class="zart-char-count" id="count1">0 / 200</span>
+      </div>
+    </div>
+
+    <!-- 禁用 -->
+    <div class="demo-item">
+      <span class="demo-label">禁用</span>
+      <div class="zart-textarea-wrap">
+        <textarea class="zart-textarea" placeholder="请输入" disabled></textarea>
+        <span class="zart-char-count">0 / 200</span>
+      </div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="demo-item">
+      <span class="demo-label">错误</span>
+      <div class="zart-textarea-wrap">
+        <textarea class="zart-textarea is-error" style="box-shadow:none;">错误的输入内容示例</textarea>
+        <span class="zart-char-count">9 / 200</span>
+      </div>
+      <span class="zart-error-msg">输入内容不符合要求</span>
+    </div>
+
+    <!-- 接近上限 -->
+    <div class="demo-item">
+      <span class="demo-label">接近字数上限</span>
+      <div class="zart-textarea-wrap">
+        <textarea class="zart-textarea" style="border-color:#DDE1EB;box-shadow:none;">这是一段示例文字，用于演示接近字数上限时的样式效果，字数统计颜色会变为警示色。</textarea>
+        <span class="zart-char-count near-limit">42 / 50</span>
+      </div>
+    </div>
+
+  </div>
+
+  <table class="spec-table">
+    <thead><tr><th style="width:160px;">属性</th><th>值</th></tr></thead>
+    <tbody>
+      <tr><td>最小高度</td><td><code>84px</code>（单行 32px + 增量 52px）</td></tr>
+      <tr><td>内边距</td><td><code>8px 12px 24px 12px</code>（底部留字数统计空间）</td></tr>
+      <tr><td>resize</td><td>vertical（可拖拽高度，不可横向拉伸）</td></tr>
+      <tr><td>字数统计位置</td><td>输入框右下角，绝对定位</td></tr>
+      <tr><td>字数统计颜色</td><td>正常 <code>#A8B4C8</code>；接近上限 <code>#FF6600</code>；超出上限 <code>#FF4433</code></td></tr>
+      <tr><td>其余状态</td><td>悬停 / 激活 / 禁用 / 错误与单行一致</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══ 前缀图标 + 后缀 ══ -->
+<div class="section">
+  <div class="section-title">输入框 · 前缀图标 + 后缀内容</div>
+
+  <div class="demo-row">
+
+    <!-- 默认（前缀账号图标） -->
+    <div class="demo-item">
+      <span class="demo-label">默认（前缀账号图标）</span>
+      <div class="zart-input-wrap has-prefix has-suffix">
+        <!-- 账号线状图标 -->
+        <span class="zart-prefix-icon">
+          <svg viewBox="0 0 16 16">
+            <circle cx="8" cy="5.5" r="2.5"/>
+            <path d="M2.5 13.5c0-3.038 2.462-5.5 5.5-5.5s5.5 2.462 5.5 5.5"/>
+          </svg>
+        </span>
+        <input class="zart-input state-default" type="text" placeholder="请输入">
+        <!-- 后缀：文字 + 提示图标 -->
+        <span class="zart-suffix">
+          <span class="zart-suffix-text">@example.com</span>
+          <span class="zart-suffix-icon">
+            <svg viewBox="0 0 16 16">
+              <circle cx="8" cy="8" r="6"/>
+              <path d="M8 7v4M8 5.5v.5"/>
+            </svg>
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <!-- 悬停（前缀 + 后缀） -->
+    <div class="demo-item">
+      <span class="demo-label">悬停（前缀 + 后缀）</span>
+      <div class="zart-input-wrap has-prefix has-suffix">
+        <span class="zart-prefix-icon">
+          <svg viewBox="0 0 16 16">
+            <circle cx="8" cy="5.5" r="2.5"/>
+            <path d="M2.5 13.5c0-3.038 2.462-5.5 5.5-5.5s5.5 2.462 5.5 5.5"/>
+          </svg>
+        </span>
+        <input class="zart-input state-hover" type="text" placeholder="请输入">
+        <span class="zart-suffix">
+          <span class="zart-suffix-text">@example.com</span>
+          <span class="zart-suffix-icon">
+            <svg viewBox="0 0 16 16">
+              <circle cx="8" cy="8" r="6"/>
+              <path d="M8 7v4M8 5.5v.5"/>
+            </svg>
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <!-- 激活（前缀 + 后缀 + 清除） -->
+    <div class="demo-item">
+      <span class="demo-label">激活（有内容，前缀 + 后缀 + 清除图标）</span>
+      <div class="zart-input-wrap has-prefix has-suffix has-clear" id="affixActiveWrap">
+        <span class="zart-prefix-icon">
+          <svg viewBox="0 0 16 16">
+            <circle cx="8" cy="5.5" r="2.5"/>
+            <path d="M2.5 13.5c0-3.038 2.462-5.5 5.5-5.5s5.5 2.462 5.5 5.5"/>
+          </svg>
+        </span>
+        <input class="zart-input state-active" type="text" value="已输入内容">
+        <span class="zart-suffix">
+          <span class="zart-clear visible" id="affixActiveClear">
+            <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" fill="#A8B4C8"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </span>
+          <span class="zart-suffix-text">@example.com</span>
+          <span class="zart-suffix-icon">
+            <svg viewBox="0 0 16 16">
+              <circle cx="8" cy="8" r="6"/>
+              <path d="M8 7v4M8 5.5v.5"/>
+            </svg>
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <!-- 禁用（前缀 + 后缀） -->
+    <div class="demo-item">
+      <span class="demo-label">禁用（前缀 + 后缀）</span>
+      <div class="zart-input-wrap has-prefix has-suffix">
+        <span class="zart-prefix-icon">
+          <svg viewBox="0 0 16 16">
+            <circle cx="8" cy="5.5" r="2.5"/>
+            <path d="M2.5 13.5c0-3.038 2.462-5.5 5.5-5.5s5.5 2.462 5.5 5.5"/>
+          </svg>
+        </span>
+        <input class="zart-input state-disabled" type="text" placeholder="请输入" disabled>
+        <span class="zart-suffix">
+          <span class="zart-suffix-text" style="color:#A8B4C8;">@example.com</span>
+          <span class="zart-suffix-icon">
+            <svg viewBox="0 0 16 16">
+              <circle cx="8" cy="8" r="6"/>
+              <path d="M8 7v4M8 5.5v.5"/>
+            </svg>
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <!-- 交互演示（前缀 + 后缀） -->
+    <div class="demo-item">
+      <span class="demo-label">交互演示（输入后悬停/聚焦显示清除）</span>
+      <div class="zart-input-wrap has-prefix has-suffix has-clear" id="affixDemoWrap">
+        <span class="zart-prefix-icon">
+          <svg viewBox="0 0 16 16">
+            <circle cx="8" cy="5.5" r="2.5"/>
+            <path d="M2.5 13.5c0-3.038 2.462-5.5 5.5-5.5s5.5 2.462 5.5 5.5"/>
+          </svg>
+        </span>
+        <input class="zart-input" type="text" placeholder="请输入" id="affixDemoInput">
+        <span class="zart-suffix">
+          <span class="zart-clear" id="affixDemoClear">
+            <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" fill="#A8B4C8"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </span>
+          <span class="zart-suffix-text">@example.com</span>
+          <span class="zart-suffix-icon">
+            <svg viewBox="0 0 16 16">
+              <circle cx="8" cy="8" r="6"/>
+              <path d="M8 7v4M8 5.5v.5"/>
+            </svg>
+          </span>
+        </span>
+      </div>
+    </div>
+
+  </div>
+
+  <table class="spec-table">
+    <thead><tr><th style="width:160px;">属性</th><th>值</th></tr></thead>
+    <tbody>
+      <tr><td>前缀图标</td><td>账号线状图标，16×16px，stroke <code>#A8B4C8</code>，绝对定位 left: 8px</td></tr>
+      <tr><td>有前缀时左内边距</td><td><code>padding-left: 32px</code></td></tr>
+      <tr><td>后缀文字颜色</td><td><code>#223355</code></td></tr>
+      <tr><td>后缀提示图标</td><td>线状 info 图标，16×16px，stroke <code>#A8B4C8</code></td></tr>
+      <tr><td>清除图标与后缀共存</td><td>清除图标偏移至后缀左侧，right 值随后缀宽度调整</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══ 前置选择 + 后缀文字 ══ -->
+<div class="section">
+  <div class="section-title">输入框 · 前置选择 + 后缀文字</div>
+
+  <div class="demo-row">
+
+    <!-- 默认 -->
+    <div class="demo-item">
+      <span class="demo-label">默认</span>
+      <div class="zart-input-wrap has-prepend has-suffix" style="width:380px;">
+        <span class="zart-prepend">
+          手机号
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+        <input class="zart-input state-default" type="text" placeholder="请输入">
+        <span class="zart-suffix">
+          <span class="zart-suffix-text">@example.com</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- 悬停 -->
+    <div class="demo-item">
+      <span class="demo-label">悬停</span>
+      <div class="zart-input-wrap has-prepend has-suffix" style="width:380px;">
+        <span class="zart-prepend">
+          手机号
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+        <input class="zart-input state-hover" type="text" placeholder="请输入">
+        <span class="zart-suffix">
+          <span class="zart-suffix-text">@example.com</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- 激活（有内容） -->
+    <div class="demo-item">
+      <span class="demo-label">激活（有内容，显示清除图标）</span>
+      <div class="zart-input-wrap has-prepend has-suffix has-clear" style="width:380px;" id="prependActiveWrap">
+        <span class="zart-prepend">
+          手机号
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+        <input class="zart-input state-active" type="text" value="138 0000 0000">
+        <span class="zart-suffix">
+          <span class="zart-clear visible" id="prependActiveClear">
+            <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" fill="#A8B4C8"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </span>
+          <span class="zart-suffix-text">@example.com</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- 禁用 -->
+    <div class="demo-item">
+      <span class="demo-label">禁用</span>
+      <div class="zart-input-wrap has-prepend has-suffix" style="width:380px;">
+        <span class="zart-prepend">
+          手机号
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+        <input class="zart-input state-disabled" type="text" placeholder="请输入" disabled>
+        <span class="zart-suffix">
+          <span class="zart-suffix-text" style="color:#A8B4C8;">@example.com</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="demo-item">
+      <span class="demo-label">错误</span>
+      <div class="zart-input-wrap has-prepend has-suffix" style="width:380px;">
+        <span class="zart-prepend">
+          手机号
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+        <input class="zart-input state-error" type="text" value="错误内容">
+        <span class="zart-suffix">
+          <span class="zart-suffix-text">@example.com</span>
+        </span>
+      </div>
+      <span class="zart-error-msg">请输入正确的手机号</span>
+    </div>
+
+    <!-- 交互演示 -->
+    <div class="demo-item">
+      <span class="demo-label">交互演示（输入后悬停/聚焦显示清除）</span>
+      <div class="zart-input-wrap has-prepend has-suffix has-clear" style="width:380px;" id="prependDemoWrap">
+        <span class="zart-prepend" id="prependDemoLabel">
+          手机号
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+        <input class="zart-input" type="text" placeholder="请输入" id="prependDemoInput">
+        <span class="zart-suffix">
+          <span class="zart-clear" id="prependDemoClear">
+            <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" fill="#A8B4C8"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </span>
+          <span class="zart-suffix-text">@example.com</span>
+        </span>
+      </div>
+    </div>
+
+  </div>
+
+  <table class="spec-table">
+    <thead><tr><th style="width:160px;">属性</th><th>值</th></tr></thead>
+    <tbody>
+      <tr><td>前置区域背景</td><td><code>#F5F7FA</code></td></tr>
+      <tr><td>前置已选文字颜色</td><td><code>#223355</code></td></tr>
+      <tr><td>前置下拉箭头</td><td>线状，12×12px，stroke <code>#A8B4C8</code></td></tr>
+      <tr><td>前置与输入框拼接</td><td>共用描边，hover/focus 时两侧同步变色为 <code>#3388FF</code></td></tr>
+      <tr><td>后缀文字颜色</td><td><code>#223355</code>；禁用时 <code>#A8B4C8</code></td></tr>
+      <tr><td>其余状态</td><td>悬停 / 激活 / 禁用 / 错误与基础单行一致</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══ 前置选择 + 后置选择 ══ -->
+<div class="section">
+  <div class="section-title">输入框 · 前置选择 + 后置选择</div>
+
+  <div class="demo-row">
+
+    <!-- 默认（含下拉展开） -->
+    <div class="demo-item">
+      <span class="demo-label">默认（点击前置查看下拉）</span>
+      <div class="zart-dropdown-wrap">
+        <div class="zart-input-wrap has-prepend has-append" style="width:420px;" id="bothWrap">
+          <span class="zart-prepend" id="bothPrepend">
+            手机号
+            <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+          </span>
+          <input class="zart-input state-default" type="text" placeholder="请输入" id="bothInput">
+          <span class="zart-append">
+            .com
+            <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+          </span>
+        </div>
+        <div class="zart-dropdown" id="bothDropdown" style="display:none; min-width:88px;">
+          <div class="zart-dropdown-item is-selected">手机号</div>
+          <div class="zart-dropdown-item">邮箱</div>
+          <div class="zart-dropdown-item">用户名</div>
+          <div class="zart-dropdown-item">工号</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 悬停 -->
+    <div class="demo-item">
+      <span class="demo-label">悬停</span>
+      <div class="zart-input-wrap has-prepend has-append" style="width:420px;">
+        <span class="zart-prepend" style="border-color:#3388FF;">
+          手机号
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+        <input class="zart-input state-hover" type="text" placeholder="请输入">
+        <span class="zart-append" style="border-color:#3388FF;">
+          .com
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- 激活 -->
+    <div class="demo-item">
+      <span class="demo-label">激活</span>
+      <div class="zart-input-wrap has-prepend has-append" style="width:420px;">
+        <span class="zart-prepend" style="border-color:#3388FF; background:#FFFFFF;">
+          手机号
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+        <input class="zart-input state-active" type="text" value="138 0000 0000">
+        <span class="zart-append" style="border-color:#3388FF;">
+          .com
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- 禁用 -->
+    <div class="demo-item">
+      <span class="demo-label">禁用</span>
+      <div class="zart-input-wrap has-prepend has-append" style="width:420px;">
+        <span class="zart-prepend" style="border-color:#E9ECF2; color:#A8B4C8; cursor:not-allowed;">
+          手机号
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+        <input class="zart-input state-disabled" type="text" placeholder="请输入" disabled>
+        <span class="zart-append" style="border-color:#E9ECF2; color:#A8B4C8; cursor:not-allowed;">
+          .com
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="demo-item">
+      <span class="demo-label">错误</span>
+      <div class="zart-input-wrap has-prepend has-append" style="width:420px;">
+        <span class="zart-prepend" style="border-color:#FF4433;">
+          手机号
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+        <input class="zart-input state-error" type="text" value="错误内容">
+        <span class="zart-append" style="border-color:#FF4433;">
+          .com
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </span>
+      </div>
+      <span class="zart-error-msg">请输入正确的手机号</span>
+    </div>
+
+  </div>
+
+  <!-- 下拉展开静态示意 -->
+  <div class="section-title" style="margin-top:8px;">前置下拉选项 · 展开示意</div>
+  <div class="demo-row">
+    <div class="demo-item">
+      <span class="demo-label">下拉展开（已选"手机号"）</span>
+      <div style="position:relative; display:inline-flex; flex-direction:column; gap:0;">
+        <div class="zart-input-wrap has-prepend has-append" style="width:420px;">
+          <span class="zart-prepend" style="border-color:#3388FF; background:#FFFFFF;">
+            手机号
+            <svg viewBox="0 0 12 12" style="transform:rotate(180deg)"><path d="M2 4l4 4 4-4"/></svg>
+          </span>
+          <input class="zart-input state-active" type="text" placeholder="请输入">
+          <span class="zart-append">
+            .com
+            <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+          </span>
+        </div>
+        <div class="zart-dropdown" style="position:absolute; top:36px; left:0; display:block; min-width:96px;">
+          <div class="zart-dropdown-item is-selected">手机号</div>
+          <div class="zart-dropdown-item">邮箱</div>
+          <div class="zart-dropdown-item">用户名</div>
+          <div class="zart-dropdown-item">工号</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="spec-table">
+    <thead><tr><th style="width:160px;">属性</th><th>值</th></tr></thead>
+    <tbody>
+      <tr><td>前置背景</td><td>默认 <code>#F5F7FA</code>；激活时变 <code>#FFFFFF</code></td></tr>
+      <tr><td>后置背景</td><td>始终 <code>#F5F7FA</code>（不随激活变化）</td></tr>
+      <tr><td>描边联动</td><td>hover / focus / error 时前置、输入框、后置描边同步</td></tr>
+      <tr><td>下拉菜单</td><td>距触发元素 4px，圆角 4px，选中项 <code>#3388FF</code> / 背景 <code>#F0F9FF</code></td></tr>
+      <tr><td>下拉 hover</td><td>背景 <code>#F5F7FA</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  /* ── 交互演示：清除图标显隐 ── */
+  const demoInput = document.getElementById('demoInput');
+  const demoClear = document.getElementById('demoClear');
+  const demoWrap  = document.getElementById('demoWrap');
+
+  function updateClearVisibility() {
+    if (demoInput.value.length > 0) {
+      demoClear.classList.add('visible');
+    } else {
+      demoClear.classList.remove('visible');
+    }
+  }
+
+  demoInput.addEventListener('input', updateClearVisibility);
+  demoInput.addEventListener('focus', () => {
+    demoWrap.classList.add('is-focus');
+    updateClearVisibility();
+  });
+  demoInput.addEventListener('blur', () => {
+    demoWrap.classList.remove('is-focus');
+  });
+  demoClear.addEventListener('click', () => {
+    demoInput.value = '';
+    demoClear.classList.remove('visible');
+    demoInput.focus();
+  });
+
+  /* 静态展示的清除图标点击 */
+  document.getElementById('hoverClear').addEventListener('click', function() {
+    this.closest('.zart-input-wrap').querySelector('input').value = '';
+    this.classList.remove('visible');
+  });
+  document.getElementById('activeClear').addEventListener('click', function() {
+    this.closest('.zart-input-wrap').querySelector('input').value = '';
+    this.classList.remove('visible');
+  });
+
+  /* ── 前置选择交互演示 ── */
+  const prependDemoInput = document.getElementById('prependDemoInput');
+  const prependDemoClear = document.getElementById('prependDemoClear');
+  const prependDemoWrap  = document.getElementById('prependDemoWrap');
+  const prependDemoLabel = document.getElementById('prependDemoLabel');
+
+  function updatePrependClear() {
+    if (prependDemoInput.value.length > 0) prependDemoClear.classList.add('visible');
+    else prependDemoClear.classList.remove('visible');
+  }
+  prependDemoInput.addEventListener('input', updatePrependClear);
+  prependDemoInput.addEventListener('focus', () => {
+    prependDemoWrap.classList.add('is-focus');
+    prependDemoLabel.style.borderColor = '#3388FF';
+    prependDemoLabel.style.background = '#FFFFFF';
+    updatePrependClear();
+  });
+  prependDemoInput.addEventListener('blur', () => {
+    prependDemoWrap.classList.remove('is-focus');
+    prependDemoLabel.style.borderColor = '';
+    prependDemoLabel.style.background = '';
+  });
+  prependDemoClear.addEventListener('click', () => {
+    prependDemoInput.value = '';
+    prependDemoClear.classList.remove('visible');
+    prependDemoInput.focus();
+  });
+
+  document.getElementById('prependActiveClear').addEventListener('click', function() {
+    this.closest('.zart-input-wrap').querySelector('input').value = '';
+    this.classList.remove('visible');
+  });
+
+  /* ── 前缀后缀交互演示：清除图标显隐 ── */
+  const affixDemoInput = document.getElementById('affixDemoInput');
+  const affixDemoClear = document.getElementById('affixDemoClear');
+  const affixDemoWrap  = document.getElementById('affixDemoWrap');
+
+  function updateAffixClear() {
+    if (affixDemoInput.value.length > 0) {
+      affixDemoClear.classList.add('visible');
+    } else {
+      affixDemoClear.classList.remove('visible');
+    }
+  }
+  affixDemoInput.addEventListener('input', updateAffixClear);
+  affixDemoInput.addEventListener('focus', () => {
+    affixDemoWrap.classList.add('is-focus');
+    updateAffixClear();
+  });
+  affixDemoInput.addEventListener('blur', () => {
+    affixDemoWrap.classList.remove('is-focus');
+  });
+  affixDemoClear.addEventListener('click', () => {
+    affixDemoInput.value = '';
+    affixDemoClear.classList.remove('visible');
+    affixDemoInput.focus();
+  });
+
+  document.getElementById('affixActiveClear').addEventListener('click', function() {
+    this.closest('.zart-input-wrap').querySelector('input').value = '';
+    this.classList.remove('visible');
+  });
+
+  /* ── 前置选择下拉（前置+后置演示） ── */
+  const bothPrepend  = document.getElementById('bothPrepend');
+  const bothDropdown = document.getElementById('bothDropdown');
+  const bothWrap     = document.getElementById('bothWrap');
+  const bothInput    = document.getElementById('bothInput');
+
+  bothPrepend.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = bothDropdown.style.display === 'block';
+    bothDropdown.style.display = open ? 'none' : 'block';
+    bothPrepend.querySelector('svg').style.transform = open ? '' : 'rotate(180deg)';
+  });
+
+  bothDropdown.querySelectorAll('.zart-dropdown-item').forEach(item => {
+    item.addEventListener('click', () => {
+      bothDropdown.querySelectorAll('.zart-dropdown-item').forEach(i => i.classList.remove('is-selected'));
+      item.classList.add('is-selected');
+      bothPrepend.childNodes[0].textContent = item.textContent;
+      bothDropdown.style.display = 'none';
+      bothPrepend.querySelector('svg').style.transform = '';
+      bothInput.focus();
+    });
+  });
+
+  document.addEventListener('click', () => {
+    bothDropdown.style.display = 'none';
+    bothPrepend.querySelector('svg').style.transform = '';
+  });
+
+  bothInput.addEventListener('focus', () => {
+    bothWrap.classList.add('is-focus');
+    bothPrepend.style.borderColor = '#3388FF';
+    bothPrepend.style.background  = '#FFFFFF';
+    bothWrap.querySelector('.zart-append').style.borderColor = '#3388FF';
+  });
+  bothInput.addEventListener('blur', () => {
+    bothWrap.classList.remove('is-focus');
+    bothPrepend.style.borderColor = '';
+    bothPrepend.style.background  = '';
+    bothWrap.querySelector('.zart-append').style.borderColor = '';
+  });
+
+  /* ── 多行：字数统计 ── */
+  function updateCount(el, countId, max) {
+    const count = el.value.length;
+    const span = document.getElementById(countId);
+    span.textContent = count + ' / ' + max;
+    span.className = 'zart-char-count';
+    if (count > max) span.classList.add('over-limit');
+    else if (count >= max * 0.8) span.classList.add('near-limit');
+  }
+</script>
+</body>
+</html>

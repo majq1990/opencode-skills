@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZartUI · 复选框 规范预览</title>
+<style>
+:root {
+  --color-bg-page:      #F5F7FA;
+  --color-bg-panel:     #FFFFFF;
+  --color-text-primary: #081126;
+  --color-text-body:    #223355;
+  --color-text-muted:   #6B7A99;
+  --color-text-light:   #A8B4C8;
+  --color-primary:      #3388FF;
+  --color-border:       #DDE1EB;
+  --color-border-soft:  #E9ECF2;
+  --font-family:        'PingFang SC','Microsoft YaHei',sans-serif;
+  --radius-m: 8px;
+  --radius-s: 4px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-body);
+  background: var(--color-bg-page);
+  padding: 40px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  margin-bottom: 32px;
+}
+
+.spec-section {
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-m);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.spec-section-title {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-soft);
+  margin-bottom: 24px;
+}
+
+.spec-block-title {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.demo-block { margin-bottom: 32px; }
+.demo-row { display: flex; gap: 32px; align-items: center; flex-wrap: wrap; }
+.demo-cell { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.demo-label { font-size: 12px; color: var(--color-text-muted); }
+
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.spec-table th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border-soft);
+  background: #F5F7FA;
+}
+.spec-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border-soft);
+  vertical-align: middle;
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td code {
+  font-family: 'SF Mono','Consolas',monospace;
+  font-size: 12px;
+  background: #F5F7FA;
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  color: var(--color-primary);
+}
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 14px; height: 14px; border-radius: var(--radius-s); border: 1px solid var(--color-border-soft); flex-shrink: 0; }
+
+/* ══════════════════════════════════════
+   复选框
+   ══════════════════════════════════════ */
+.checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 14px;
+  color: #223355;
+}
+.checkbox-wrap.is-disabled {
+  cursor: not-allowed;
+  color: #A8B4C8;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #A8B4C8;
+  border-radius: 4px;
+  background: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+}
+
+/* Hover */
+.checkbox-wrap:not(.is-disabled):hover .checkbox {
+  border-color: #3388FF;
+}
+
+/* 全选（对勾） */
+.checkbox.is-checked {
+  background: #3388FF;
+  border-color: #3388FF;
+}
+.checkbox.is-checked::after {
+  content: '';
+  width: 10px;
+  height: 8px;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='8' viewBox='0 0 10 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 4L4 6.5L8.5 1.5' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* 半选（横线） */
+.checkbox.is-indeterminate {
+  background: #3388FF;
+  border-color: #3388FF;
+}
+.checkbox.is-indeterminate::after {
+  content: '';
+  width: 8px;
+  height: 2px;
+  background: #FFFFFF;
+  border-radius: 1px;
+}
+
+/* 禁用 - 未选 */
+.checkbox-wrap.is-disabled .checkbox {
+  border-color: #DDE1EB;
+  background: #F5F7FA;
+}
+.checkbox-wrap.is-disabled:hover .checkbox {
+  border-color: #DDE1EB;
+}
+
+/* 禁用 - 全选 / 半选 */
+.checkbox-wrap.is-disabled .checkbox.is-checked,
+.checkbox-wrap.is-disabled .checkbox.is-indeterminate {
+  background: #ADD8FF;
+  border-color: #ADD8FF;
+}
+/* ══════════════════════════════════════
+   卡片复选
+   ══════════════════════════════════════ */
+.check-card {
+  position: relative;
+  padding: 16px;
+  background: #FFFFFF;
+  border: 1px solid #DDE1EB;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  overflow: hidden;
+}
+.check-card.size-sm { width: 200px; }
+.check-card.size-lg { width: 320px; padding: 20px; }
+
+.check-card:hover { border-color: #3388FF; }
+.check-card.is-checked { border-color: #3388FF; }
+
+.check-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #223355;
+  margin-bottom: 4px;
+}
+.check-card.size-lg .check-card-title { font-size: 16px; }
+.check-card-desc {
+  font-size: 12px;
+  color: #6B7A99;
+  line-height: 18px;
+}
+
+/* 角标基础 */
+.check-corner {
+  position: absolute;
+  width: 0;
+  height: 0;
+  display: none;
+  pointer-events: none;
+}
+.check-card.is-checked .check-corner { display: block; }
+
+/* 小卡片 32px 角标 */
+.check-card.size-sm .check-corner-tr {
+  top: 0; right: 0;
+  border-top: 32px solid #3388FF;
+  border-left: 32px solid transparent;
+}
+.check-card.size-sm .check-corner-tr-icon {
+  position: absolute;
+  top: 4px; right: 3px;
+  width: 14px; height: 12px;
+}
+.check-card.size-sm .check-corner-tl {
+  top: 0; left: 0;
+  border-top: 32px solid #3388FF;
+  border-right: 32px solid transparent;
+}
+.check-card.size-sm .check-corner-tl-icon {
+  position: absolute;
+  top: 4px; left: 3px;
+  width: 14px; height: 12px;
+}
+
+/* 大卡片 40px 角标 */
+.check-card.size-lg .check-corner-tr {
+  top: 0; right: 0;
+  border-top: 40px solid #3388FF;
+  border-left: 40px solid transparent;
+}
+.check-card.size-lg .check-corner-tr-icon {
+  position: absolute;
+  top: 6px; right: 3px;
+  width: 16px; height: 14px;
+}
+.check-card.size-lg .check-corner-tl {
+  top: 0; left: 0;
+  border-top: 40px solid #3388FF;
+  border-right: 40px solid transparent;
+}
+.check-card.size-lg .check-corner-tl-icon {
+  position: absolute;
+  top: 6px; left: 3px;
+  width: 16px; height: 14px;
+}
+
+/* 对勾通用样式 */
+.check-corner-tr-icon,
+.check-corner-tl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='10' viewBox='0 0 12 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 5L5 8L10 2' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  display: none;
+}
+.check-card.is-checked .check-corner-tr-icon,
+.check-card.is-checked .check-corner-tl-icon { display: block; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · 复选框 规范预览</h1>
+
+<div class="spec-section">
+  <h2 class="spec-section-title">五种状态</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">默认 / Hover / 半选 / 全选 / 禁用</div>
+    <div class="demo-row">
+
+      <div class="demo-cell">
+        <span class="demo-label">默认（未选）</span>
+        <label class="checkbox-wrap"><span class="checkbox"></span></label>
+      </div>
+
+      <div class="demo-cell">
+        <span class="demo-label">Hover</span>
+        <label class="checkbox-wrap"><span class="checkbox" style="border-color:#3388FF;"></span></label>
+      </div>
+
+      <div class="demo-cell">
+        <span class="demo-label">半选</span>
+        <label class="checkbox-wrap"><span class="checkbox is-indeterminate"></span></label>
+      </div>
+
+      <div class="demo-cell">
+        <span class="demo-label">全选</span>
+        <label class="checkbox-wrap"><span class="checkbox is-checked"></span></label>
+      </div>
+
+      <div class="demo-cell">
+        <span class="demo-label">禁用 · 未选</span>
+        <label class="checkbox-wrap is-disabled"><span class="checkbox"></span></label>
+      </div>
+
+      <div class="demo-cell">
+        <span class="demo-label">禁用 · 半选</span>
+        <label class="checkbox-wrap is-disabled"><span class="checkbox is-indeterminate"></span></label>
+      </div>
+
+      <div class="demo-cell">
+        <span class="demo-label">禁用 · 全选</span>
+        <label class="checkbox-wrap is-disabled"><span class="checkbox is-checked"></span></label>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="demo-block">
+    <div class="spec-block-title">带文字标签</div>
+    <div class="demo-row">
+      <label class="checkbox-wrap"><span class="checkbox"></span>选项一</label>
+      <label class="checkbox-wrap"><span class="checkbox is-checked"></span>选项二</label>
+      <label class="checkbox-wrap"><span class="checkbox is-indeterminate"></span>选项三</label>
+      <label class="checkbox-wrap is-disabled"><span class="checkbox"></span>选项四（禁用）</label>
+      <label class="checkbox-wrap is-disabled"><span class="checkbox is-checked"></span>选项五（禁用全选）</label>
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:160px;">状态</th><th style="width:200px;">边框 / 背景</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>通用</td>
+        <td>—</td>
+        <td>尺寸 <code>16×16px</code>，圆角 <code>4px</code>；与右侧文字间距 <code>8px</code></td>
+      </tr>
+      <tr>
+        <td>默认（未选）</td>
+        <td>边框 <span class="chip"><span class="swatch" style="background:#A8B4C8;"></span><code>#A8B4C8</code></span>；背景 <code>#FFFFFF</code></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Hover</td>
+        <td>边框 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span>；背景不变</td>
+        <td>禁用态不响应 Hover</td>
+      </tr>
+      <tr>
+        <td>半选</td>
+        <td>边框/背景 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td>
+        <td>中间白色横线</td>
+      </tr>
+      <tr>
+        <td>全选</td>
+        <td>边框/背景 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td>
+        <td>中间白色对勾</td>
+      </tr>
+      <tr>
+        <td>禁用（未选）</td>
+        <td>边框 <span class="chip"><span class="swatch" style="background:#DDE1EB;"></span><code>#DDE1EB</code></span>；背景 <span class="chip"><span class="swatch" style="background:#F5F7FA;border-color:#ccc;"></span><code>#F5F7FA</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>禁用（半选 / 全选）</td>
+        <td>边框/背景 <span class="chip"><span class="swatch" style="background:#ADD8FF;"></span><code>#ADD8FF</code></span></td>
+        <td>对勾 / 横线颜色仍为 <code>#FFFFFF</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 卡片复选 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">卡片复选</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">小卡片（角标 32×32px）</div>
+    <div class="demo-row" style="align-items:flex-start;">
+
+      <div class="check-card size-sm">
+        <div class="check-card-title">默认</div>
+        <div class="check-card-desc">边框 #DDE1EB</div>
+      </div>
+
+      <div class="check-card size-sm" style="border-color:#3388FF;">
+        <div class="check-card-title">Hover</div>
+        <div class="check-card-desc">边框 #3388FF</div>
+      </div>
+
+      <div class="check-card size-sm is-checked">
+        <div class="check-card-title">选中（右上）</div>
+        <div class="check-card-desc">32px 蓝色三角 + 白对勾</div>
+        <span class="check-corner check-corner-tr"></span>
+        <span class="check-corner-tr-icon"></span>
+      </div>
+
+      <div class="check-card size-sm is-checked">
+        <div class="check-card-title">选中（左上）</div>
+        <div class="check-card-desc">32px 蓝色三角 + 白对勾</div>
+        <span class="check-corner check-corner-tl"></span>
+        <span class="check-corner-tl-icon"></span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="demo-block">
+    <div class="spec-block-title">大卡片（角标 40×40px）</div>
+    <div class="demo-row" style="align-items:flex-start;">
+
+      <div class="check-card size-lg">
+        <div class="check-card-title">默认</div>
+        <div class="check-card-desc">边框 #DDE1EB，无角标</div>
+      </div>
+
+      <div class="check-card size-lg" style="border-color:#3388FF;">
+        <div class="check-card-title">Hover</div>
+        <div class="check-card-desc">边框 #3388FF</div>
+      </div>
+
+      <div class="check-card size-lg is-checked">
+        <div class="check-card-title">选中（右上）</div>
+        <div class="check-card-desc">40px 蓝色三角 + 白对勾</div>
+        <span class="check-corner check-corner-tr"></span>
+        <span class="check-corner-tr-icon"></span>
+      </div>
+
+      <div class="check-card size-lg is-checked">
+        <div class="check-card-title">选中（左上）</div>
+        <div class="check-card-desc">40px 蓝色三角 + 白对勾</div>
+        <span class="check-corner check-corner-tl"></span>
+        <span class="check-corner-tl-icon"></span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>卡片默认边框</td><td><code>1px solid #DDE1EB</code></td></tr>
+      <tr><td>Hover 边框</td><td><code>1px solid #3388FF</code></td></tr>
+      <tr><td>选中边框</td><td><code>1px solid #3388FF</code></td></tr>
+      <tr><td>角标位置</td><td>左上或右上（二选一），可根据布局选择</td></tr>
+      <tr><td>角标尺寸</td><td>小卡片 <code>32×32px</code>；大卡片 <code>40×40px</code>。背景 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td></tr>
+      <tr><td>对勾</td><td>白色对勾，沿用复选框对勾规范（SVG，stroke 2px，圆润末端）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+xray version: 1.9.11
+download date: 2026-06-16 11:34:47
+
+Installed platforms:
+  - windows_amd64 (copied from D:/tools/xray/)
+
+To download other platforms, run:
+  python install_xray.py --all

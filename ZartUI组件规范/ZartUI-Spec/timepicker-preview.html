@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI TimePicker 时间选择框</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; margin-top: 8px; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px; margin-bottom: 24px; }
+.section-title { font-size: 11px; font-weight: 600; color: #A8B4C8; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 20px; }
+.row { display: flex; align-items: flex-start; gap: 40px; flex-wrap: wrap; }
+.demo-item { display: flex; flex-direction: column; gap: 8px; }
+.demo-item.has-panel { padding-bottom: 320px; }
+.demo-label { font-size: 12px; color: #6B7A99; }
+.demo-wrap { position: relative; display: inline-flex; flex-direction: column; }
+
+/* ===================== TRIGGER ===================== */
+.zt {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  width: 160px;
+  padding: 0 32px 0 8px;
+  border: 1px solid #DDE1EB;
+  border-radius: 4px;
+  background: #FFFFFF;
+  font-size: 14px;
+  color: #223355;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color .15s, box-shadow .15s;
+  white-space: nowrap;
+}
+.zt .z-placeholder { color: #A8B4C8; }
+.zt .z-value       { color: #223355; }
+.zt:hover          { border-color: #3388FF; }
+.zt.is-open        { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+.zt.is-disabled    { background: #F5F7FA; border-color: #E9ECF2; color: #A8B4C8; cursor: not-allowed; pointer-events: none; }
+.zt.is-error       { border-color: #FF4433; }
+
+.zt-icon {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+
+/* range trigger wider */
+.zt.zt-range { width: 240px; }
+.zt-range-sep { color: #A8B4C8; margin: 0 6px; flex-shrink: 0; font-size: 13px; }
+
+/* ===================== PANEL ===================== */
+.zt-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #FFFFFF;
+  border: 1px solid #E9ECF2;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(34,51,85,.10);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 160px;
+}
+
+/* columns wrapper */
+.zt-cols {
+  display: flex;
+  border-bottom: 1px solid #E9ECF2;
+}
+
+/* single column */
+.zt-col {
+  display: flex;
+  flex-direction: column;
+  width: 64px;
+  max-height: 224px;
+  overflow-y: auto;
+  padding: 4px 0;
+  flex-shrink: 0;
+}
+.zt-col::-webkit-scrollbar { width: 0; }
+.zt-col + .zt-col { border-left: 1px solid #E9ECF2; }
+
+/* option row */
+.zt-opt {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #223355;
+  cursor: pointer;
+  border-radius: 4px;
+  margin: 0 12px;
+  transition: background .1s;
+  flex-shrink: 0;
+}
+.zt-opt:hover   { background: #F5F7FA; }
+.zt-opt.is-sel  { background: #F0F9FF; color: #3388FF; font-weight: 500; }
+.zt-opt.is-dis  { color: #A8B4C8; cursor: not-allowed; pointer-events: none; }
+
+/* column header label */
+.zt-col-head {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #A8B4C8;
+  border-bottom: 1px solid #E9ECF2;
+  flex-shrink: 0;
+}
+
+/* footer */
+.zt-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  height: 40px;
+}
+.zt-now {
+  font-size: 13px;
+  color: #3388FF;
+  cursor: pointer;
+}
+.zt-now:hover { color: #2167D9; }
+.zt-confirm {
+  height: 26px;
+  padding: 0 12px;
+  background: #3388FF;
+  color: #FFFFFF;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.zt-confirm:hover { background: #2167D9; }
+
+/* range panel — two sides */
+.zt-range-panel {
+  display: flex;
+}
+.zt-range-side {
+  display: flex;
+  flex-direction: column;
+}
+.zt-range-divider {
+  width: 1px;
+  background: #E9ECF2;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+/* am/pm column narrower */
+.zt-col.zt-ampm { width: 56px; }
+.zt-col.zt-ampm .zt-opt { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>ZartUI — TimePicker 时间选择框</h1>
+<p class="page-desc">时分秒 / 时分 / 时 / 十二小时制 / 范围选择</p>
+
+<!-- ============================================================
+     触发框状态
+============================================================ -->
+<div class="section">
+  <div class="section-title">触发框状态</div>
+  <div class="row">
+    <div class="demo-item">
+      <div class="demo-label">默认</div>
+      <div class="zt"><span class="z-placeholder">请选择时间</span><span class="zt-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#A8B4C8" stroke-width="1.5"/><path d="M8 5V8L10 10" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">悬停</div>
+      <div class="zt" style="border-color:#3388FF;"><span class="z-placeholder">请选择时间</span><span class="zt-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#A8B4C8" stroke-width="1.5"/><path d="M8 5V8L10 10" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">激活</div>
+      <div class="zt is-open"><span class="z-placeholder">请选择时间</span><span class="zt-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#3388FF" stroke-width="1.5"/><path d="M8 5V8L10 10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">完成态</div>
+      <div class="zt"><span class="z-value">14:30:00</span><span class="zt-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#A8B4C8" stroke-width="1.5"/><path d="M8 5V8L10 10" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">禁用</div>
+      <div class="zt is-disabled"><span class="z-placeholder">请选择时间</span><span class="zt-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#A8B4C8" stroke-width="1.5"/><path d="M8 5V8L10 10" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    </div>
+    <div class="demo-item">
+      <div class="demo-label">错误</div>
+      <div class="demo-wrap">
+        <div class="zt is-error"><span class="z-placeholder">请选择时间</span><span class="zt-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#A8B4C8" stroke-width="1.5"/><path d="M8 5V8L10 10" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+        <span style="margin-top:4px;font-size:12px;color:#FF4433;">请选择时间</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     时分秒
+============================================================ -->
+<h2>时分秒</h2>
+<div class="section">
+  <div class="row">
+    <div class="demo-item has-panel">
+      <div class="demo-label">时分秒（激活）</div>
+      <div class="demo-wrap">
+        <div class="zt is-open"><span class="z-value">14:30:00</span><span class="zt-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#3388FF" stroke-width="1.5"/><path d="M8 5V8L10 10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+        <div class="zt-panel" style="display:flex; width:192px;">
+          <div class="zt-cols">
+            <!-- 时 -->
+            <div class="zt-col">
+              <div class="zt-col-head">时</div>
+              <div class="zt-opt">12</div>
+              <div class="zt-opt">13</div>
+              <div class="zt-opt is-sel">14</div>
+              <div class="zt-opt">15</div>
+              <div class="zt-opt">16</div>
+              <div class="zt-opt">17</div>
+            </div>
+            <!-- 分 -->
+            <div class="zt-col">
+              <div class="zt-col-head">分</div>
+              <div class="zt-opt">28</div>
+              <div class="zt-opt">29</div>
+              <div class="zt-opt is-sel">30</div>
+              <div class="zt-opt">31</div>
+              <div class="zt-opt">32</div>
+              <div class="zt-opt">33</div>
+            </div>
+            <!-- 秒 -->
+            <div class="zt-col">
+              <div class="zt-col-head">秒</div>
+              <div class="zt-opt">58</div>
+              <div class="zt-opt">59</div>
+              <div class="zt-opt is-sel">00</div>
+              <div class="zt-opt">01</div>
+              <div class="zt-opt">02</div>
+              <div class="zt-opt">03</div>
+            </div>
+          </div>
+          <div class="zt-footer">
+            <span class="zt-now">此刻</span>
+            <span class="zt-confirm">确定</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     时分
+============================================================ -->
+<h2>时分</h2>
+<div class="section">
+  <div class="row">
+    <div class="demo-item has-panel">
+      <div class="demo-label">时分（激活）</div>
+      <div class="demo-wrap">
+        <div class="zt is-open" style="width:fit-content; min-width:128px;"><span class="z-value">14:30</span><span class="zt-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#3388FF" stroke-width="1.5"/><path d="M8 5V8L10 10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+        <div class="zt-panel" style="display:flex; width:fit-content; min-width:128px;">
+          <div class="zt-cols">
+            <!-- 时 -->
+            <div class="zt-col">
+              <div class="zt-col-head">时</div>
+              <div class="zt-opt">12</div>
+              <div class="zt-opt">13</div>
+              <div class="zt-opt is-sel">14</div>
+              <div class="zt-opt">15</div>
+              <div class="zt-opt">16</div>
+              <div class="zt-opt">17</div>
+            </div>
+            <!-- 分 -->
+            <div class="zt-col">
+              <div class="zt-col-head">分</div>
+              <div class="zt-opt">28</div>
+              <div class="zt-opt">29</div>
+              <div class="zt-opt is-sel">30</div>
+              <div class="zt-opt">31</div>
+              <div class="zt-opt">32</div>
+              <div class="zt-opt">33</div>
+            </div>
+          </div>
+          <div class="zt-footer">
+            <span class="zt-now">此刻</span>
+            <span class="zt-confirm">确定</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     时
+============================================================ -->
+<h2>时</h2>
+<div class="section">
+  <div class="row">
+    <div class="demo-item has-panel">
+      <div class="demo-label">时（激活）</div>
+      <div class="demo-wrap">
+        <div class="zt is-open"><span class="z-value">14:00</span><span class="zt-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#3388FF" stroke-width="1.5"/><path d="M8 5V8L10 10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+        <div class="zt-panel" style="display:flex; width:64px;">
+          <div class="zt-cols">
+            <div class="zt-col" style="width:100%;">
+              <div class="zt-col-head">时</div>
+              <div class="zt-opt">12</div>
+              <div class="zt-opt">13</div>
+              <div class="zt-opt is-sel">14</div>
+              <div class="zt-opt">15</div>
+              <div class="zt-opt">16</div>
+              <div class="zt-opt">17</div>
+            </div>
+          </div>
+          <div class="zt-footer" style="justify-content:center;">
+            <span class="zt-now">此刻</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     十二小时制
+============================================================ -->
+<h2>十二小时制</h2>
+<div class="section">
+  <div class="row">
+    <div class="demo-item has-panel">
+      <div class="demo-label">十二小时制（激活）</div>
+      <div class="demo-wrap">
+        <div class="zt is-open" style="width:180px;"><span class="z-value">02:30:00 PM</span><span class="zt-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#3388FF" stroke-width="1.5"/><path d="M8 5V8L10 10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+        <div class="zt-panel" style="display:flex; width:248px;">
+          <div class="zt-cols">
+            <!-- 时 -->
+            <div class="zt-col">
+              <div class="zt-col-head">时</div>
+              <div class="zt-opt">12</div>
+              <div class="zt-opt">01</div>
+              <div class="zt-opt is-sel">02</div>
+              <div class="zt-opt">03</div>
+              <div class="zt-opt">04</div>
+              <div class="zt-opt">05</div>
+            </div>
+            <!-- 分 -->
+            <div class="zt-col">
+              <div class="zt-col-head">分</div>
+              <div class="zt-opt">28</div>
+              <div class="zt-opt">29</div>
+              <div class="zt-opt is-sel">30</div>
+              <div class="zt-opt">31</div>
+              <div class="zt-opt">32</div>
+              <div class="zt-opt">33</div>
+            </div>
+            <!-- 秒 -->
+            <div class="zt-col">
+              <div class="zt-col-head">秒</div>
+              <div class="zt-opt">58</div>
+              <div class="zt-opt">59</div>
+              <div class="zt-opt is-sel">00</div>
+              <div class="zt-opt">01</div>
+              <div class="zt-opt">02</div>
+              <div class="zt-opt">03</div>
+            </div>
+            <!-- AM/PM -->
+            <div class="zt-col zt-ampm">
+              <div class="zt-col-head">制</div>
+              <div class="zt-opt">AM</div>
+              <div class="zt-opt is-sel">PM</div>
+            </div>
+          </div>
+          <div class="zt-footer">
+            <span class="zt-now">此刻</span>
+            <span class="zt-confirm">确定</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     范围选择
+============================================================ -->
+<h2>范围选择</h2>
+<div class="section">
+  <div class="row">
+    <div class="demo-item has-panel">
+      <div class="demo-label">范围选择（激活）</div>
+      <div class="demo-wrap">
+        <div class="zt zt-range is-open">
+          <span class="z-value">14:30:00</span>
+          <span class="zt-range-sep">—</span>
+          <span class="z-value">16:00:00</span>
+          <span class="zt-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#3388FF" stroke-width="1.5"/><path d="M8 5V8L10 10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zt-panel" style="display:flex; width:385px;">
+          <div class="zt-range-panel" style="border-bottom:1px solid #E9ECF2;">
+            <!-- 左侧：开始时间 -->
+            <div class="zt-range-side">
+              <div class="zt-cols" style="border-bottom:none;">
+                <div class="zt-col">
+                  <div class="zt-col-head">时</div>
+                  <div class="zt-opt">12</div>
+                  <div class="zt-opt">13</div>
+                  <div class="zt-opt is-sel">14</div>
+                  <div class="zt-opt">15</div>
+                  <div class="zt-opt">16</div>
+                  <div class="zt-opt">17</div>
+                </div>
+                <div class="zt-col">
+                  <div class="zt-col-head">分</div>
+                  <div class="zt-opt">28</div>
+                  <div class="zt-opt">29</div>
+                  <div class="zt-opt is-sel">30</div>
+                  <div class="zt-opt">31</div>
+                  <div class="zt-opt">32</div>
+                  <div class="zt-opt">33</div>
+                </div>
+                <div class="zt-col">
+                  <div class="zt-col-head">秒</div>
+                  <div class="zt-opt">58</div>
+                  <div class="zt-opt">59</div>
+                  <div class="zt-opt is-sel">00</div>
+                  <div class="zt-opt">01</div>
+                  <div class="zt-opt">02</div>
+                  <div class="zt-opt">03</div>
+                </div>
+              </div>
+            </div>
+            <!-- 中间分隔线 -->
+            <div class="zt-range-divider"></div>
+            <!-- 右侧：结束时间 -->
+            <div class="zt-range-side">
+              <div class="zt-cols" style="border-bottom:none;">
+                <div class="zt-col">
+                  <div class="zt-col-head">时</div>
+                  <div class="zt-opt">14</div>
+                  <div class="zt-opt">15</div>
+                  <div class="zt-opt is-sel">16</div>
+                  <div class="zt-opt">17</div>
+                  <div class="zt-opt">18</div>
+                  <div class="zt-opt">19</div>
+                </div>
+                <div class="zt-col">
+                  <div class="zt-col-head">分</div>
+                  <div class="zt-opt">58</div>
+                  <div class="zt-opt">59</div>
+                  <div class="zt-opt is-sel">00</div>
+                  <div class="zt-opt">01</div>
+                  <div class="zt-opt">02</div>
+                  <div class="zt-opt">03</div>
+                </div>
+                <div class="zt-col">
+                  <div class="zt-col-head">秒</div>
+                  <div class="zt-opt">58</div>
+                  <div class="zt-opt">59</div>
+                  <div class="zt-opt is-sel">00</div>
+                  <div class="zt-opt">01</div>
+                  <div class="zt-opt">02</div>
+                  <div class="zt-opt">03</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="zt-footer" style="justify-content:flex-end;">
+            <span class="zt-confirm">确定</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

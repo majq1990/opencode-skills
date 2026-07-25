@@ -1,0 +1,4 @@
+---
+# handlers for cetus
+- name: restart cetus
+  service: name=cetus state=restarted enabled=yes

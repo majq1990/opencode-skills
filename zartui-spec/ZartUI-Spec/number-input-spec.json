@@ -1,0 +1,211 @@
+{
+  "name": "number-input-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 数字输入框规范，含三种类型：固定单位、后置单位下拉、加减按钮",
+
+  "common": {
+    "height": "32px",
+    "border_radius": "4px",
+    "border_default": "1px solid #DDE1EB",
+    "border_hover": "1px solid #3388FF",
+    "border_active": "1px solid #3388FF",
+    "border_active_shadow": "0 0 0 2px #D6EDFF",
+    "border_error": "1px solid #FF4433",
+    "border_error_shadow": "0 0 0 2px rgba(255,68,51,0.15)",
+    "border_disabled": "1px solid #DDE1EB",
+    "background_default": "#FFFFFF",
+    "background_disabled": "#F5F7FA",
+    "font_size": "14px",
+    "font_color": "#223355",
+    "placeholder_color": "#A8B4C8",
+    "disabled_color": "#A8B4C8",
+    "input_padding_left": "8px"
+  },
+
+  "type1": {
+    "description": "数字输入 + 上下箭头 + 固定单位，适用于单位固定不变的场景",
+    "layout": "inline-flex，从左到右：数字输入区 | 上下箭头区 | 固定单位区",
+
+    "input_area": {
+      "flex": "1",
+      "padding_left": "8px",
+      "font_size": "14px",
+      "color": "#223355",
+      "border": "none",
+      "outline": "none",
+      "background": "transparent"
+    },
+
+    "arrows": {
+      "width": "20px",
+      "height": "100%",
+      "layout": "flex column",
+      "border": "none",
+      "border_left": "none",
+      "background": "transparent",
+
+      "arrow_btn": {
+        "width": "20px",
+        "height": "50%",
+        "display": "flex center",
+        "icon_size": "10×10px",
+        "icon_viewbox": "0 0 16 16",
+        "icon_stroke": "#6B7A99",
+        "icon_stroke_width": "1.5",
+        "hover_bg": "#F5F7FA",
+        "active_icon_color": "#3388FF",
+        "disabled_icon_color": "#A8B4C8",
+        "note": "点击上箭头：图标变 #3388FF，数值 +1；点击下箭头：图标变 #3388FF，数值 -1"
+      }
+    },
+
+    "unit": {
+      "padding": "0 10px",
+      "font_size": "13px",
+      "color": "#6B7A99",
+      "border_left": "1px solid #E9ECF2",
+      "height": "100%",
+      "display": "flex center",
+      "disabled_color": "#A8B4C8",
+      "note": "单位文字固定，不可交互"
+    }
+  },
+
+  "type2": {
+    "description": "数字输入 + 上下箭头 + 后置单位下拉选择，适用于单位可切换的场景",
+    "layout": "inline-flex，从左到右：数字输入区（含上下箭头） | 单位下拉选择区",
+    "note": "两个区域共用外层边框，单位下拉区通过 margin-left: -1px 消除与输入区的重叠边框",
+
+    "input_section": {
+      "description": "与 Type 1 的数字输入 + 上下箭头完全一致",
+      "flex": "1",
+      "border_right": "none"
+    },
+
+    "unit_dropdown": {
+      "height": "100%",
+      "padding": "0 6px",
+      "background": "#F5F7FA",
+      "border_left": "1px solid #DDE1EB",
+      "border_radius_right": "4px",
+      "font_size": "13px",
+      "color": "#223355",
+      "chevron_size": "12×12px",
+      "chevron_color": "#A8B4C8",
+      "chevron_stroke_width": "1.5",
+      "cursor": "pointer",
+      "hover_bg": "#EEF5FF",
+      "open_bg": "#EEF5FF",
+      "margin_left": "-1px",
+      "z_index_focus": 1
+    },
+
+    "state_sync": {
+      "note": "整体边框状态随输入框状态同步：hover/active/error/disabled 状态下，外层边框颜色统一变化"
+    },
+
+    "dropdown_panel": {
+      "background": "#FFFFFF",
+      "border": "1px solid #E9ECF2",
+      "border_radius": "4px",
+      "box_shadow": "0 4px 12px rgba(34,51,85,0.10)",
+      "offset_top": "4px",
+      "min_width": "触发区域宽度",
+      "item_height": "32px",
+      "item_padding": "0 12px",
+      "item_font_size": "14px",
+      "item_color": "#223355",
+      "item_hover_bg": "#F5F7FA",
+      "item_selected_color": "#3388FF",
+      "item_selected_bg": "#F0F9FF"
+    }
+  },
+
+  "type3": {
+    "description": "减号按钮 | 分隔线 | 数字输入 | 分隔线 | 加号按钮，适用于步进调节场景",
+    "layout": "inline-flex，从左到右：减号按钮 | 1px 分隔线 | 数字输入区 | 1px 分隔线 | 加号按钮",
+    "note": "三个区域共用外层 border，内部用 1px #E9ECF2 分隔线分隔，无独立边框",
+
+    "minus_btn": {
+      "width": "32px",
+      "height": "100%",
+      "display": "flex center",
+      "icon_size": "14×14px",
+      "icon_viewbox": "0 0 16 16",
+      "icon_stroke": "#6B7A99",
+      "icon_stroke_width": "1.5",
+      "background": "transparent",
+      "hover_bg": "#F5F7FA",
+      "active_icon_color": "#3388FF",
+      "disabled_icon_color": "#A8B4C8",
+      "cursor_disabled": "not-allowed"
+    },
+
+    "plus_btn": {
+      "width": "32px",
+      "height": "100%",
+      "display": "flex center",
+      "icon_size": "14×14px",
+      "icon_viewbox": "0 0 16 16",
+      "icon_stroke": "#6B7A99",
+      "icon_stroke_width": "1.5",
+      "background": "transparent",
+      "hover_bg": "#F5F7FA",
+      "active_icon_color": "#3388FF",
+      "disabled_icon_color": "#A8B4C8",
+      "cursor_disabled": "not-allowed"
+    },
+
+    "divider": {
+      "width": "1px",
+      "height": "100%",
+      "background": "#E9ECF2"
+    },
+
+    "input_area": {
+      "flex": "1",
+      "min_width": "48px",
+      "padding_left": "8px",
+      "text_align": "left",
+      "font_size": "14px",
+      "color": "#223355",
+      "border": "none",
+      "outline": "none",
+      "background": "transparent"
+    }
+  },
+
+  "states": {
+    "default": {
+      "border": "1px solid #DDE1EB",
+      "background": "#FFFFFF"
+    },
+    "hover": {
+      "border": "1px solid #3388FF"
+    },
+    "active": {
+      "border": "1px solid #3388FF",
+      "box_shadow": "0 0 0 2px #D6EDFF"
+    },
+    "error": {
+      "border": "1px solid #FF4433",
+      "box_shadow": "0 0 0 2px rgba(255,68,51,0.15)"
+    },
+    "disabled": {
+      "border": "1px solid #DDE1EB",
+      "background": "#F5F7FA",
+      "color": "#A8B4C8",
+      "cursor": "not-allowed",
+      "pointer_events": "none"
+    }
+  },
+
+  "error_message": {
+    "ref": "global-spec.json",
+    "margin_top": "4px",
+    "font_size": "12px",
+    "font_weight": "400",
+    "color": "#FF4433",
+    "layout_note": "错误提示必须与数字输入框包裹在同一个独立 wrapper 容器内，不能暴露在外部 flex/grid gap 环境中，否则 gap 会覆盖 margin-top 导致间距超出 4px"
+  }
+}

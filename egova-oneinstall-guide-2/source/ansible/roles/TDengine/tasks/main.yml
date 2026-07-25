@@ -1,0 +1,101 @@
+---
+# check if TDengine exists
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 检查目标目录
+  stat: path={{ data_dir }}
+  register: TDengine_dir
+
+- name: Fail if TDengine is not empty
+  fail:
+    msg: |
+      检查到已经安装过TDengine,如需卸载请在{{ hostvars[inventory_hostname]['ansible_ssh_host'] }}服务器上执行 mv {{ data_dir }} {{ data_dir }}_backup
+  ignore_errors: true
+  when: TDengine_dir.stat.exists == True
+
+- block:
+
+    - name: Rename /dev/tty to /dev/tty_back
+      shell: mv -f /dev/tty /dev/tty_back
+      ignore_errors: true
+
+    - name: Output newline to /dev/tty
+      shell: echo >> /dev/tty
+      ignore_errors: true
+
+    - name: 准备TDengine目录
+      file: name={{ item.dir }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='{{ item.mode }}'
+      with_items:
+        - { dir: "{{ data_dir }}",mode: "0775" }
+        - { dir: "{{ log_dir }}",mode: "0775" }
+        - { dir: "{{ temp_dir }}",mode: "0775" }
+        - { dir: "{{ deploy_path }}",mode: "0775" }
+
+    - name: Install TDengine package with unarchive module
+      unarchive:
+        src: "{{ src_path }}/TDengine-server-{{ td_version }}.tar.gz"
+        dest: "{{ deploy_path }}"
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: '0755'
+
+    - name: Execute script.sh with a specific user
+      become: true
+      shell:
+        cmd: |
+          cd {{ deploy_path }}/TDengine-server-{{ td_version }}
+          ./install.sh -e no
+
+    - name: Rename /dev/tty_back to /dev/tty
+      shell: mv -f /dev/tty_back /dev/tty
+      ignore_errors: true
+
+    - name: Copy config file template to temp file
+      template:
+        src: taos.cfg.template.j2
+        dest: "{{ conf_file }}"
+
+    - name: Copy configuration file
+      template:
+        src: "{{ item.filename }}.j2"
+        dest: "{{ item.destpath }}/{{ item.filename }}"
+      with_items:
+        - { filename: "taosadapter.service",destpath: "{{ system_service_path }}"}
+        - { filename: "taosd.service",destpath: "{{ system_service_path }}" }
+      when: ansible_pkg_mgr in ['dnf','yum']
+
+
+    - name: Set user and group for taosadapter.service
+      shell: "sed -i '/\\[Service\\]/a\\User=egova\\nGroup=egova' /etc/systemd/system/taosadapter.service"
+
+    - name: Set user and group for taosd.service.j2
+      shell: "sed -i '/\\[Service\\]/a\\User=egova\\nGroup=egova' /etc/systemd/system/taosd.service"
+
+
+    - name: daemon-reload
+      systemd: daemon_reload=yes
+
+    - name: Start taosd and taosadapter services
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - taosd
+        - taosadapter
+
+    - name: Copy Tdengine sql to path
+      copy:
+        src: "{{ playbook_dir }}/roles/TDengine/templates/TDengine.sql"
+        dest: "{{ data_dir }}"
+        mode: '755'
+
+    - name: Set root user password
+      shell: taos -h 127.0.0.1 -uroot -s 'alter user root pass "{{ init_password }}"' >/dev/null 2>&1
+
+    - name: Import table structure
+      shell: taos -h 127.0.0.1 -uroot -p{{ init_password }} -f {{ data_dir }}/TDengine.sql >/dev/null 2>&1
+  when: TDengine_dir.stat.exists == false

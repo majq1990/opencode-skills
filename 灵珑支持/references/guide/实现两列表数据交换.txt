@@ -1,0 +1,157 @@
+实现两列表数据交换
+1 使用场景
+在进行认领等操作时会出现有两个列表，其中一个列表为待认领的数据，另外一个列表为当前选择的认领数据，其中一个列表是基于视图进行查询的，但是另外一个列表在确认操作之前不存入数据表中为临时展示数据。
+2 效果
+左侧为待认领的数据，通过视图查询展示数据，右侧列表展示当前【批量选择】或【选择】的数据，已经被选的数据操作栏的选择按钮被禁用，当点击取消选择后数据在已选社会主体列表被移除。此时数据不存入表中，点击确定后调用接口存储。
+请至钉钉文档查看附件《screen_recording_2025-05-16_15-44-27.mp4》。
+3 配置
+待认领列表配置，实现待认领列表的配置
+顶部【批量选择】配置
+function main(){
+    
+    var self = this; // 作用域
+    var tableComp = self.$$element("table_bqb9q2"); // 获取表格元素
+
+    let unitId = self.$$roots()[0].state.extraParams.unitId;
+
+    // 获取当前表格选中的行
+    var { selectedRows } = tableComp.$$getSelection();
+    
+    console.log(selectedRows);
+
+    var litigants = selectedRows.map(item => {
+        var selector = "tr[data-row-key='" + item.id.value + "']";
+        var rowElements = tableComp.$el.querySelectorAll(selector);
+
+        var btnElement = rowElements.length > 1 ? rowElements[1].querySelector("span").__vue__ : null;
+        
+        btnElement.buttonStatus = 'DISABLE'
+
+        return {
+            unitId: unitId,
+            litilitigantId: item.id.value,
+            litigantName: item.litigant_name.value,
+            btnElement: btnElement
+        };
+    });
+
+    var newLitigants = litigants.filter(litigant => {
+        return !window.unitLitigant.some(existingLitigant => existingLitigant.litilitigantId === litigant.litilitigantId);
+    });
+
+    window.unitLitigant.push(...newLitigants);
+
+    let tableListEle = self.$$("table_er5mbj");
+
+    tableComp.$$refreshData();
+
+    tableListEle.$$refreshData();
+
+}
+说明：
+批量操作需要向window.unitLitigant 中插入当前被选的主体信息（数据需要进行去重）
+将已被选择的主体所对应操作列的选择按钮设置为禁用状态
+操作列【选择】配置
+function main(params) {
+    
+    let self = this;
+    console.log(self);
+    
+    let unitId = self.$$roots()[0].state.extraParams.unitId;
+    let litigantId = params.id.value
+    let litigantName = params.litigant_name.value
+
+    let btnElement = self.$children[0];
+
+    let litigant = { 'unitId': unitId, 'litilitigantId': litigantId, 'litigantName': litigantName, 'btnElement': btnElement };
+    window.unitLitigant.push(litigant);
+
+    let tableListEle = self.$$("table_er5mbj");
+
+    tableListEle.$$refreshData();
+
+    self.$children[0].buttonStatus = 'DISABLED'
+}
+说明：操作与批量操作一致，批量操作为批量
+已选社会主体列表配置
+说明：
+列表的数据来源是使用SELECT 构造的虚拟数据，其目的是为了构建列表部件
+列表的数据来源是来自Hook中，模拟请求数据，加载window.unitLitigant 中的数据（具体见代码注释）
+function main(pageId, param) {
+    return new Promise((resolve, reject) => {
+
+        // 确保 unitLitigants 是数组类型，如果不是则初始化为空数组
+        let unitLitigants = window.unitLitigant || [];  // 默认空数组，避免 undefined 错误
+
+        // 检查 unitLitigants 是否为有效的数组
+        if (!Array.isArray(unitLitigants) || unitLitigants.length === 0) {
+            let nullList = { "hasError": false, "result": [], "message": null, "tag": null, "totalCount": "0", "request_id": "8252sdda6-6988-4ad9-93fe-5b3be2de54b2" };
+            resolve(nullList);
+        }
+
+
+        getResData(unitLitigants).then(resData => {
+            resolve(resData);  // 返回结果
+        });
+
+    });
+}
+
+
+function getResData(unitLitigants) {
+    return new Promise((resolve, reject) => {
+        let resultData = [];
+        for (let i = 0; i < unitLitigants.length; i++) {
+            let litigant = unitLitigants[i];  // 获取当前的 litigant 对象
+            resultData.push({
+                "version": null,
+                "data": {
+                    "id": { "icon": null, "style": null, "value": 1 },
+                    "unit_Id": { "icon": null, "style": null, "value": litigant.unitId },
+                    "litigant_Id": { "icon": null, "style": null, "value": litigant.litilitigantId },
+                    "litigant_name": { "icon": null, "style": null, "value": litigant.litigantName },
+                    "domain_code": { "icon": null, "style": null, "value": "" },
+                    "domain_id": { "icon": null, "style": null, "value": "" },
+                    "domain_name": { "icon": null, "style": null, "value": "" },
+                    "unitLitigantData": { "icon": null, "style": null, "value": 1 }
+                }
+            });
+        }
+
+        let res = {
+            "hasError": false,
+            "result": resultData, // 将构建的数据赋值给 result
+            "message": null,
+            "tag": null,
+            "totalCount": unitLitigants.length.toString(),
+            "request_id": "8252sdda6-6988-4ad9-93fe-5b3be2de54b2"
+        };
+
+        // let jsonString = JSON.stringify(res);  // 将对象转化为 JSON 字符串
+        resolve(res);  // 返回结果
+    })
+}
+【取消选择】需要将取消的数据从 window.unitLitigant 中移除，并将待认领的操作列禁用解除
+function main(params) {
+    
+    let self = this;
+    let unitLitigant = window.unitLitigant;
+
+    let litigantId = params.litigant_Id.value
+
+    window.unitLitigant = unitLitigant.filter(item => item.litilitigantId !== litigantId);
+
+    let tableListEle = self.$$("table_er5mbj");
+
+    tableListEle.$$refreshData();
+
+    setTimeout(res => {
+        let tableListEle = self.$$("table_bqb9q2");
+
+        tableListEle.$$refreshData();
+    },100)
+
+
+}
+4 常见问题
+无

@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 字段设置</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 16px; margin-top: 32px; }
+.section { background: #FFFFFF; border-radius: 8px; margin-bottom: 24px; overflow: hidden; }
+
+/* ===================== 全圆角按钮 ===================== */
+.z-pill-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 16px;
+  border-radius: 100px;
+  border: 1px solid #DDE1EB;
+  background: #FFFFFF;
+  font-size: 14px; color: #223355;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.z-pill-btn:hover { background: #F0F9FF; border-color: #3388FF; color: #3388FF; }
+.z-pill-btn.is-primary { color: #3388FF; }
+.z-pill-btn.is-primary:hover { background: #F0F9FF; border-color: #3388FF; }
+
+/* ===================== 表格工具栏 ===================== */
+.z-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #F5F7FA;
+}
+.z-toolbar-left  { display: flex; align-items: center; gap: 8px; }
+.z-toolbar-right { display: flex; align-items: center; gap: 8px; }
+
+/* 搜索框 */
+.z-search-input {
+  display: inline-flex; align-items: center;
+  height: 32px; padding: 0 0 0 12px;
+  border-radius: 16px;
+  border: 1px solid #DDE1EB;
+  background: #FFFFFF;
+  transition: border-color .15s;
+  position: relative;
+}
+.z-search-input:focus-within { border-color: #3388FF; }
+.z-search-input input {
+  border: none; outline: none;
+  font-size: 14px; color: #223355;
+  background: transparent; width: 344px;
+  padding-right: 44px;
+}
+.z-search-input input::placeholder { color: #A8B4C8; }
+.z-search-divider {
+  position: absolute;
+  right: 44px; top: 0; bottom: 0;
+  width: 1px;
+  background: #DDE1EB;
+}
+.z-search-input svg {
+  position: absolute;
+  right: 15px;
+  color: #A8B4C8; flex-shrink: 0; cursor: pointer;
+}
+
+/* ===================== 简易表格占位 ===================== */
+.z-table-placeholder {
+  padding: 0 20px 20px;
+}
+.z-table-placeholder table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  color: #223355;
+}
+.z-table-placeholder thead tr {
+  height: 40px;
+  background: #F5F7FA;
+  border-top: 1px solid #DDE1EB;
+  border-bottom: 1px solid #DDE1EB;
+}
+.z-table-placeholder thead th {
+  text-align: left; padding: 0 12px;
+  font-size: 14px; font-weight: 400; color: #223355;
+  position: relative;
+}
+.z-table-placeholder thead th:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  left: 4px; top: 50%; transform: translateY(-50%);
+  width: 1px; height: 16px;
+  background: #E9ECF2;
+}
+.z-table-placeholder tbody tr {
+  height: 48px;
+  border-bottom: 1px solid #DDE1EB;
+}
+.z-table-placeholder tbody tr:first-child {
+  border-top: 1px solid #DDE1EB;
+}
+.z-table-placeholder tbody tr:hover { background: #F5F7FA; }
+.z-table-placeholder tbody td { padding: 0 12px; }
+
+/* ===================== 已选条件栏 ===================== */
+.z-filter-bar {
+  display: none;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 20px;
+  border-bottom: 1px solid #F5F7FA;
+}
+.z-filter-bar.is-visible { display: flex; }
+.z-filter-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 10px;
+  background: #F5F7FA;
+  border-radius: 4px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.z-filter-tag-label { color: #6B7A99; }
+.z-filter-tag-val   { color: #223355; }
+.z-filter-tag-del {
+  width: 14px; height: 14px;
+  display: flex; align-items: center; justify-content: center;
+  color: #A8B4C8; cursor: pointer;
+  flex-shrink: 0;
+  transition: color .15s;
+}
+.z-filter-tag-del:hover { color: #FF4433; }
+.z-filter-bar-clear {
+  font-size: 13px; color: #3388FF; cursor: pointer;
+  white-space: nowrap; flex-shrink: 0;
+  transition: color .15s;
+}
+.z-filter-bar-clear:hover { color: #2167D9; }
+
+/* ===================== 抽屉遮罩 ===================== */
+.z-drawer-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 1000;
+}
+.z-drawer-overlay.is-open { display: block; }
+
+/* ===================== 字段设置抽屉 ===================== */
+.z-field-drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 400px;
+  background: #FFFFFF;
+  box-shadow: -4px 0 24px rgba(0,67,202,0.1);
+  display: flex;
+  flex-direction: column;
+  z-index: 1001;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+}
+.z-field-drawer.is-open { transform: translateX(0); }
+
+/* 抽屉标题栏 */
+.z-drawer-header {
+  height: 56px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid #F5F7FA;
+}
+.z-drawer-title {
+  font-size: 14px; font-weight: 500; color: #081126;
+}
+.z-drawer-close {
+  width: 28px; height: 28px;
+  border: none; background: transparent;
+  color: #A8B4C8; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: color .15s, background .15s;
+}
+.z-drawer-close:hover { color: #6B7A99; background: #F5F7FA; }
+
+/* 抽屉内容区 */
+.z-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.z-drawer-body::-webkit-scrollbar { width: 4px; }
+.z-drawer-body::-webkit-scrollbar-track { background: transparent; }
+.z-drawer-body::-webkit-scrollbar-thumb { background: #DDE1EB; border-radius: 2px; }
+
+/* 字段行 */
+.z-field-item {
+  height: 40px;
+  display: flex; align-items: center;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: #FFFFFF;
+  cursor: grab;
+  transition: background .15s;
+  gap: 0;
+  user-select: none;
+}
+.z-field-item:hover { background: #F5F7FA; }
+.z-field-item.is-dragging {
+  background: #F0F9FF;
+  box-shadow: 0 4px 16px rgba(0,67,202,0.12);
+  cursor: grabbing;
+}
+
+/* 拖拽图标 */
+.z-field-drag {
+  width: 16px; height: 16px;
+  color: #A8B4C8;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* 字段名称 */
+.z-field-name {
+  flex: 1;
+  font-size: 14px;
+  color: #223355;
+  margin-left: 4px;
+}
+
+/* ===================== Switch 20px 无文字 ===================== */
+.z-sw {
+  position: relative;
+  display: inline-flex; align-items: center;
+  width: 36px; height: 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.z-sw.is-on  { background: #3388FF; }
+.z-sw.is-off { background: #A8B4C8; }
+.z-sw.is-on:hover  { background: #5CA5FF; }
+.z-sw.is-off:hover { background: #CED4E0; }
+.z-sw-thumb {
+  position: absolute;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  top: 2px;
+  transition: left .2s;
+}
+.z-sw.is-on  .z-sw-thumb { left: calc(100% - 18px); }
+.z-sw.is-off .z-sw-thumb { left: 2px; }
+
+/* ===================== 高级搜索抽屉 ===================== */
+.z-search-drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 400px;
+  background: #FFFFFF;
+  box-shadow: -4px 0 24px rgba(0,67,202,0.1);
+  display: flex; flex-direction: column;
+  z-index: 1001;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+}
+.z-search-drawer.is-open { transform: translateX(0); }
+
+/* 表单区 */
+.z-search-drawer-body {
+  flex: 1; overflow-y: auto; padding: 20px;
+}
+.z-search-drawer-body::-webkit-scrollbar { width: 4px; }
+.z-search-drawer-body::-webkit-scrollbar-track { background: transparent; }
+.z-search-drawer-body::-webkit-scrollbar-thumb { background: #DDE1EB; border-radius: 2px; }
+
+/* 表单项：标题在上，控件在下 */
+.z-form-item {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-bottom: 20px;
+}
+.z-form-item:last-child { margin-bottom: 0; }
+.z-form-label {
+  font-size: 14px; color: #223355; line-height: 1;
+}
+.z-form-label::after { content: '：'; }
+
+/* 输入框 — input-spec 单行五态 */
+.z-form-input {
+  width: 100%; height: 32px;
+  border: 1px solid #DDE1EB; border-radius: 4px;
+  padding: 0 8px; font-size: 14px; color: #223355;
+  background: #FFFFFF; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  box-sizing: border-box;
+}
+.z-form-input::placeholder { color: #A8B4C8; }
+.z-form-input:hover  { border-color: #3388FF; }
+.z-form-input:focus  { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+
+/* 下拉选择框 — select-spec 单选触发框 */
+.z-form-select-wrap {
+  position: relative; width: 100%;
+}
+.z-form-select {
+  width: 100%; height: 32px;
+  border: 1px solid #DDE1EB; border-radius: 4px;
+  padding: 0 32px 0 8px; font-size: 14px; color: #223355;
+  background: #FFFFFF; outline: none; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  transition: border-color .15s, box-shadow .15s;
+  box-sizing: border-box;
+}
+.z-form-select.is-placeholder { color: #A8B4C8; }
+.z-form-select option { color: #223355; }
+.z-form-select:hover  { border-color: #3388FF; }
+.z-form-select:focus  { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+.z-form-chevron {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; color: #A8B4C8;
+  transition: transform .2s, color .15s;
+}
+.z-form-select:focus + .z-form-chevron { color: #3388FF; }
+
+/* 日期范围 — datepicker-spec 时间段触发框 */
+.z-date-range {
+  display: flex; align-items: center; gap: 8px;
+}
+.z-date-range-input {
+  flex: 1; height: 32px;
+  border: 1px solid #DDE1EB; border-radius: 4px;
+  padding: 0 8px 0 12px; font-size: 14px; color: #223355;
+  background: #FFFFFF; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  box-sizing: border-box; min-width: 0;
+}
+.z-date-range-input::placeholder { color: #A8B4C8; }
+.z-date-range-input:hover { border-color: #3388FF; }
+.z-date-range-input:focus { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+.z-date-range-sep { color: #A8B4C8; font-size: 14px; flex-shrink: 0; }
+
+/* 抽屉底部 */
+.z-drawer-footer {
+  flex-shrink: 0;
+  height: 64px;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 20px;
+  gap: 8px;
+  border-top: 1px solid #F5F7FA;
+}
+
+/* ===================== 矩形按钮 ===================== */
+.z-rect-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 32px; padding: 0 16px;
+  border-radius: 4px;
+  border: 1px solid #DDE1EB;
+  background: #FFFFFF;
+  font-size: 14px; color: #223355;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.z-rect-btn:hover { background: #F0F9FF; border-color: #3388FF; color: #3388FF; }
+.z-rect-btn.is-primary {
+  background: #3388FF; border-color: #3388FF; color: #FFFFFF;
+}
+.z-rect-btn.is-primary:hover { background: #5CA5FF; border-color: #5CA5FF; }
+
+.z-pill-btn.z-pill-btn--danger:hover { background: #FFF0EE; border-color: #FF4433; color: #FF4433; }
+
+.z-pill-btn.is-active { background: #F0F9FF; border-color: #3388FF; color: #3388FF; }
+
+/* ===================== 字段筛选 ===================== */
+.z-th-filter {
+  display: inline-flex; align-items: center; gap: 4px;
+  cursor: default;
+}
+.z-filter-icon {
+  width: 14px; height: 14px;
+  color: #A8B4C8;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: color .15s;
+}
+.z-filter-icon:hover { color: #6B7A99; }
+.z-filter-icon.is-active { color: #3388FF; }
+
+.z-table-placeholder thead th.is-filtering {
+  background: #E9ECF2;
+}
+
+/* 下拉面板 */
+.z-filter-dropdown {
+  display: none;
+  position: fixed;
+  background: #FFFFFF;
+  box-shadow: 0 4px 20px 0 rgba(0,67,202,0.07);
+  border-radius: 4px;
+  padding: 8px;
+  z-index: 2000;
+  min-width: 140px;
+}
+.z-filter-dropdown.is-open { display: block; }
+
+/* 面板内即时搜索框 */
+.z-filter-search {
+  display: flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 12px;
+  border-radius: 16px;
+  border: 1px solid #DDE1EB;
+  background: #FFFFFF;
+  margin-bottom: 8px;
+  transition: border-color .15s;
+}
+.z-filter-search:focus-within { border-color: #3388FF; }
+.z-filter-search input {
+  border: none; outline: none;
+  font-size: 14px; color: #223355;
+  background: transparent; width: 100%;
+}
+.z-filter-search input::placeholder { color: #A8B4C8; }
+.z-filter-search svg { color: #A8B4C8; flex-shrink: 0; }
+
+/* 筛选列表 */
+.z-filter-list {
+  max-height: 192px;
+  overflow-y: auto;
+}
+.z-filter-list::-webkit-scrollbar { width: 4px; }
+.z-filter-list::-webkit-scrollbar-track { background: transparent; }
+.z-filter-list::-webkit-scrollbar-thumb { background: #DDE1EB; border-radius: 2px; }
+
+.z-filter-item {
+  height: 32px;
+  display: flex; align-items: center;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 14px; color: #223355;
+  cursor: pointer;
+  transition: background .15s;
+  gap: 8px;
+}
+.z-filter-item:hover { background: #F5F7FA; }
+.z-filter-item.is-checked { background: #F0F9FF; color: #3388FF; }
+.z-filter-item.is-checked .z-filter-check { opacity: 1; }
+.z-filter-check {
+  width: 14px; height: 14px;
+  color: #3388FF;
+  flex-shrink: 0;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.z-field-item.drag-over { border-top: 2px solid #3388FF; }
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 字段设置</h1>
+<p class="page-desc">表格工具栏 + 字段设置抽屉，支持拖拽排序、开关显隐</p>
+
+<h2>表格工具栏 + 字段设置</h2>
+<div class="section">
+
+  <!-- 工具栏 -->
+  <div class="z-table-toolbar">
+    <!-- 左侧操作按钮 -->
+    <div class="z-toolbar-left">
+      <button class="z-pill-btn is-primary">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        新增案件
+      </button>
+
+      <!-- 默认态：只显示批量操作 -->
+      <div id="batchDefault">
+        <button class="z-pill-btn" onclick="enterBatch()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="1" y="1.5" width="5" height="1.3" rx="0.65" fill="currentColor"/>
+            <rect x="1" y="6.35" width="8" height="1.3" rx="0.65" fill="currentColor"/>
+            <rect x="1" y="11.2" width="6" height="1.3" rx="0.65" fill="currentColor"/>
+            <path d="M10 4l2.5 2.5L10 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          批量操作
+        </button>
+      </div>
+
+      <!-- 批量态：展开操作按钮组 -->
+      <div id="batchExpanded" style="display:none; align-items:center; gap:8px;">
+        <button class="z-pill-btn" onclick="exitBatch()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M3 3l8 8M11 3L3 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          取消批量操作
+        </button>
+        <button class="z-pill-btn">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 9V2M4.5 4.5L7 2l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 11h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          批量导出
+        </button>
+        <button class="z-pill-btn">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 5v7M4.5 9.5L7 12l2.5-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 3h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          批量导入
+        </button>
+        <button class="z-pill-btn z-pill-btn--danger">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 4h10M5 4V2.5h4V4M5.5 6v5M8.5 6v5M3 4l.7 7.5A1 1 0 0 0 4.7 12.5h4.6a1 1 0 0 0 1-.95L11 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          批量删除
+        </button>
+      </div>
+
+      <button class="z-pill-btn">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 9V2M4.5 4.5L7 2l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 11h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        导出
+      </button>
+    </div>
+
+    <!-- 右侧工具 -->
+    <div class="z-toolbar-right">
+      <!-- 搜索框 -->
+      <label class="z-search-input">
+        <input type="text" placeholder="请输入关键字搜索">
+        <span class="z-search-divider"></span>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="cursor:pointer;">
+          <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      </label>
+      <button class="z-pill-btn" id="advSearchBtn" onclick="openSearchDrawer()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M1 3h12M3 7h8M5 11h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        高级查询
+      </button>
+      <button class="z-pill-btn" onclick="openDrawer()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M5.6 1.5h2.8l.4 1.4a4 4 0 0 1 1 .6l1.4-.5 1.4 2.4-1 1a4 4 0 0 1 0 1.2l1 1-1.4 2.4-1.4-.5a4 4 0 0 1-1 .6l-.4 1.4H5.6l-.4-1.4a4 4 0 0 1-1-.6l-1.4.5L1.4 9l1-1a4 4 0 0 1 0-1.2l-1-1 1.4-2.4 1.4.5a4 4 0 0 1 1-.6l.4-1.4z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+          <circle cx="7" cy="7" r="1.8" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+        字段设置
+      </button>
+    </div>
+  </div>
+
+  <!-- 已选条件栏 -->
+  <div class="z-filter-bar" id="filterBar"></div>
+
+  <!-- 表格占位 -->
+  <div class="z-table-placeholder">
+    <table>
+      <thead>
+        <tr>
+          <th>案件建立时间</th>
+          <th>案件号</th>
+          <th>举报人</th>
+          <th id="th-status">
+            <span class="z-th-filter">
+              签收状态
+              <svg class="z-filter-icon" viewBox="0 0 14 14" fill="currentColor" onclick="toggleFilter(event,'filter-status','th-status')">
+                <path d="M1.5 2.5C1.2 2.5 1 2.8 1.2 3.1L5.2 7.4C5.4 7.6 5.5 7.9 5.5 8.2v3.3c0 .3.3.5.6.4l2.8-1.4c.2-.1.3-.3.3-.5V8.2c0-.3.1-.6.3-.8l4-4.3c.2-.3 0-.6-.4-.6H1.5z"/>
+              </svg>
+            </span>
+          </th>
+          <th id="th-source">
+            <span class="z-th-filter">
+              问题来源
+              <svg class="z-filter-icon" viewBox="0 0 14 14" fill="currentColor" onclick="toggleFilter(event,'filter-source','th-source')">
+                <path d="M1.5 2.5C1.2 2.5 1 2.8 1.2 3.1L5.2 7.4C5.4 7.6 5.5 7.9 5.5 8.2v3.3c0 .3.3.5.6.4l2.8-1.4c.2-.1.3-.3.3-.5V8.2c0-.3.1-.6.3-.8l4-4.3c.2-.3 0-.6-.4-.6H1.5z"/>
+              </svg>
+            </span>
+          </th>
+          <th id="th-type">
+            <span class="z-th-filter">
+              案件类型
+              <svg class="z-filter-icon" viewBox="0 0 14 14" fill="currentColor" onclick="toggleFilter(event,'filter-type','th-type')">
+                <path d="M1.5 2.5C1.2 2.5 1 2.8 1.2 3.1L5.2 7.4C5.4 7.6 5.5 7.9 5.5 8.2v3.3c0 .3.3.5.6.4l2.8-1.4c.2-.1.3-.3.3-.5V8.2c0-.3.1-.6.3-.8l4-4.3c.2-.3 0-.6-.4-.6H1.5z"/>
+              </svg>
+            </span>
+          </th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2026-05-19 09:32</td>
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260519001</span></td>
+          <td>章小蕙</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#06A17F;display:inline-block;"></span>已签收</span></td>
+          <td>12345热线</td>
+          <td>环境卫生</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+        <tr>
+          <td>2026-05-18 14:20</td>
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260518032</span></td>
+          <td>李建国</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#A8B4C8;display:inline-block;"></span>待签收</span></td>
+          <td>市民投诉</td>
+          <td>道路交通</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+        <tr>
+          <td>2026-05-17 16:08</td>
+          <td><span style="color:#3388FF;cursor:pointer;">AJ20260517018</span></td>
+          <td>王芳</td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#FF4433;display:inline-block;"></span>已拒收</span></td>
+          <td>网格巡查</td>
+          <td>市政设施</td>
+          <td><span style="color:#3388FF;font-size:13px;cursor:pointer;">编辑</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 遮罩（字段设置 & 高级搜索共用） -->
+<div class="z-drawer-overlay" id="drawerOverlay" onclick="closeAllDrawers()"></div>
+
+<!-- 高级搜索抽屉 -->
+<div class="z-search-drawer" id="searchDrawer">
+  <div class="z-drawer-header">
+    <span class="z-drawer-title">高级查询</span>
+    <button class="z-drawer-close" onclick="closeSearchDrawer()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="z-search-drawer-body">
+    <!-- 案件建立时间 -->
+    <div class="z-form-item">
+      <label class="z-form-label">案件建立时间</label>
+      <div class="z-date-range">
+        <input class="z-date-range-input" type="text" id="sq-time-start" placeholder="开始日期">
+        <span class="z-date-range-sep">至</span>
+        <input class="z-date-range-input" type="text" id="sq-time-end" placeholder="结束日期">
+      </div>
+    </div>
+    <!-- 案件号 -->
+    <div class="z-form-item">
+      <label class="z-form-label">案件号</label>
+      <input class="z-form-input" type="text" id="sq-no" placeholder="请输入案件号">
+    </div>
+    <!-- 举报人 -->
+    <div class="z-form-item">
+      <label class="z-form-label">举报人</label>
+      <input class="z-form-input" type="text" id="sq-reporter" placeholder="请输入举报人姓名">
+    </div>
+    <!-- 签收状态 -->
+    <div class="z-form-item">
+      <label class="z-form-label">签收状态</label>
+      <div class="z-form-select-wrap">
+        <select class="z-form-select is-placeholder" id="sq-status" onchange="syncSelectPlaceholder(this)">
+          <option value="">请选择</option>
+          <option value="已签收">已签收</option>
+          <option value="待签收">待签收</option>
+          <option value="已拒收">已拒收</option>
+        </select>
+        <svg class="z-form-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+    <!-- 问题来源 -->
+    <div class="z-form-item">
+      <label class="z-form-label">问题来源</label>
+      <div class="z-form-select-wrap">
+        <select class="z-form-select is-placeholder" id="sq-source" onchange="syncSelectPlaceholder(this)">
+          <option value="">请选择</option>
+          <option value="12345热线">12345热线</option>
+          <option value="市民投诉">市民投诉</option>
+          <option value="网格巡查">网格巡查</option>
+          <option value="领导批示">领导批示</option>
+          <option value="媒体曝光">媒体曝光</option>
+        </select>
+        <svg class="z-form-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+    <!-- 案件类型 -->
+    <div class="z-form-item">
+      <label class="z-form-label">案件类型</label>
+      <div class="z-form-select-wrap">
+        <select class="z-form-select is-placeholder" id="sq-type" onchange="syncSelectPlaceholder(this)">
+          <option value="">请选择</option>
+          <option value="环境卫生">环境卫生</option>
+          <option value="道路交通">道路交通</option>
+          <option value="市政设施">市政设施</option>
+          <option value="城市绿化">城市绿化</option>
+          <option value="违法建设">违法建设</option>
+        </select>
+        <svg class="z-form-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="z-drawer-footer">
+    <button class="z-rect-btn" onclick="closeSearchDrawer()">取消</button>
+    <button class="z-rect-btn" onclick="resetSearchDrawer()">重置</button>
+    <button class="z-rect-btn is-primary" onclick="applySearch()">确定</button>
+  </div>
+</div>
+
+<!-- 筛选下拉：签收状态（3项，无搜索框） -->
+<div class="z-filter-dropdown" id="filter-status">
+  <div class="z-filter-list" id="filter-status-list"></div>
+</div>
+
+<!-- 筛选下拉：问题来源（多项，有搜索框） -->
+<div class="z-filter-dropdown" id="filter-source">
+  <label class="z-filter-search">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+    </svg>
+    <input type="text" placeholder="请输入关键字搜索" oninput="filterSearch('filter-source-list',this.value)">
+  </label>
+  <div class="z-filter-list" id="filter-source-list"></div>
+</div>
+
+<!-- 筛选下拉：案件类型（多项，有搜索框） -->
+<div class="z-filter-dropdown" id="filter-type">
+  <label class="z-filter-search">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+    </svg>
+    <input type="text" placeholder="请输入关键字搜索" oninput="filterSearch('filter-type-list',this.value)">
+  </label>
+  <div class="z-filter-list" id="filter-type-list"></div>
+</div>
+
+<!-- 字段设置抽屉 -->
+<div class="z-field-drawer" id="fieldDrawer">
+
+  <!-- 标题栏 -->
+  <div class="z-drawer-header">
+    <span class="z-drawer-title">字段设置</span>
+    <button class="z-drawer-close" onclick="closeDrawer()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- 字段列表 -->
+  <div class="z-drawer-body" id="fieldList"></div>
+
+  <!-- 底部按钮 -->
+  <div class="z-drawer-footer">
+    <button class="z-rect-btn" onclick="closeDrawer()">取消</button>
+    <button class="z-rect-btn is-primary" onclick="applyFields()">确定</button>
+  </div>
+
+</div>
+
+<script>
+const fields = [
+  { id: 'time',     name: '案件建立时间', visible: true  },
+  { id: 'no',       name: '案件号',       visible: true  },
+  { id: 'reporter', name: '举报人',       visible: true  },
+  { id: 'status',   name: '签收状态',     visible: true  },
+  { id: 'source',   name: '问题来源',     visible: true  },
+  { id: 'type',     name: '案件类型',     visible: true  },
+  { id: 'sub1',     name: '二级分类',     visible: false },
+  { id: 'sub2',     name: '三级分类',     visible: false },
+  { id: 'urgent',   name: '案件紧急程度', visible: false },
+  { id: 'desc',     name: '问题描述',     visible: false },
+];
+
+let dragSrcIndex = null;
+
+function openDrawer() {
+  document.getElementById('drawerOverlay').classList.add('is-open');
+  document.getElementById('fieldDrawer').classList.add('is-open');
+  renderFields();
+}
+function closeDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('is-open');
+  document.getElementById('fieldDrawer').classList.remove('is-open');
+}
+function closeAllDrawers() {
+  closeDrawer();
+  closeSearchDrawer();
+}
+function applyFields() {
+  closeDrawer();
+}
+
+function renderFields() {
+  const list = document.getElementById('fieldList');
+  list.innerHTML = fields.map((f, i) => `
+    <div class="z-field-item"
+         draggable="true"
+         data-index="${i}"
+         ondragstart="onDragStart(event,${i})"
+         ondragover="onDragOver(event,${i})"
+         ondrop="onDrop(event,${i})"
+         ondragend="onDragEnd(event)">
+      <!-- 拖拽图标 -->
+      <div class="z-field-drag">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="5.5" cy="4" r="1.2" fill="#A8B4C8"/>
+          <circle cx="5.5" cy="8" r="1.2" fill="#A8B4C8"/>
+          <circle cx="5.5" cy="12" r="1.2" fill="#A8B4C8"/>
+          <circle cx="10.5" cy="4" r="1.2" fill="#A8B4C8"/>
+          <circle cx="10.5" cy="8" r="1.2" fill="#A8B4C8"/>
+          <circle cx="10.5" cy="12" r="1.2" fill="#A8B4C8"/>
+        </svg>
+      </div>
+      <!-- 字段名 -->
+      <span class="z-field-name">${f.name}</span>
+      <!-- 开关 -->
+      <div class="z-sw ${f.visible ? 'is-on' : 'is-off'}"
+           onclick="toggleField(event,${i})">
+        <div class="z-sw-thumb"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleField(e, i) {
+  e.stopPropagation();
+  fields[i].visible = !fields[i].visible;
+  renderFields();
+}
+
+/* 拖拽排序 */
+function onDragStart(e, i) {
+  dragSrcIndex = i;
+  e.currentTarget.classList.add('is-dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function onDragOver(e, i) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.z-field-item').forEach(el => el.classList.remove('drag-over'));
+  if (i !== dragSrcIndex) e.currentTarget.classList.add('drag-over');
+}
+function onDrop(e, i) {
+  e.preventDefault();
+  if (dragSrcIndex === null || dragSrcIndex === i) return;
+  const moved = fields.splice(dragSrcIndex, 1)[0];
+  fields.splice(i, 0, moved);
+  dragSrcIndex = null;
+  renderFields();
+}
+function onDragEnd(e) {
+  dragSrcIndex = null;
+  document.querySelectorAll('.z-field-item').forEach(el => {
+    el.classList.remove('is-dragging', 'drag-over');
+  });
+}
+/* ===================== 筛选数据 ===================== */
+const filterData = {
+  'filter-status': { thId: 'th-status', items: ['已签收','待签收','已拒收'] },
+  'filter-source': { thId: 'th-source', items: ['12345热线','市民投诉','网格巡查','领导批示','媒体曝光','部门移交','自查发现','其他渠道','微信举报','电话投诉','现场发现'] },
+  'filter-type':   { thId: 'th-type',   items: ['环境卫生','道路交通','市政设施','城市绿化','违法建设','噪音扰民','食品安全','消防隐患','其他类型','水务管理','社会治安'] },
+};
+const filterChecked = { 'filter-status': new Set(), 'filter-source': new Set(), 'filter-type': new Set() };
+let activeFilter = null;
+
+function renderFilterList(dropId, keyword) {
+  const cfg = filterData[dropId];
+  const listEl = document.getElementById(dropId + '-list');
+  if (!listEl) return;
+  const kw = (keyword || '').trim().toLowerCase();
+  const items = cfg.items.filter(v => !kw || v.toLowerCase().includes(kw));
+  listEl.innerHTML = items.map(v => `
+    <div class="z-filter-item${filterChecked[dropId].has(v) ? ' is-checked' : ''}" onclick="toggleCheck('${dropId}','${v}')">
+      ${v}
+      <svg class="z-filter-check" viewBox="0 0 14 14" fill="none">
+        <path d="M2 7l4 4 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  `).join('');
+}
+
+function toggleCheck(dropId, val) {
+  if (filterChecked[dropId].has(val)) filterChecked[dropId].delete(val);
+  else filterChecked[dropId].add(val);
+  renderFilterList(dropId);
+  syncFilterIcon(dropId);
+}
+
+function syncFilterIcon(dropId) {
+  const cfg = filterData[dropId];
+  const th = document.getElementById(cfg.thId);
+  const icon = th && th.querySelector('.z-filter-icon');
+  const hasChecked = filterChecked[dropId].size > 0;
+  if (icon) icon.classList.toggle('is-active', hasChecked || activeFilter === dropId);
+}
+
+function toggleFilter(e, dropId, thId) {
+  e.stopPropagation();
+  const drop = document.getElementById(dropId);
+  const isOpen = drop.classList.contains('is-open');
+
+  closeAllFilters();
+
+  if (!isOpen) {
+    const iconEl = e.currentTarget;
+    const rect = iconEl.getBoundingClientRect();
+    drop.style.top  = (rect.bottom + 4) + 'px';
+    drop.style.left = Math.max(0, rect.left - 100) + 'px';
+    drop.classList.add('is-open');
+    activeFilter = dropId;
+
+    const th = document.getElementById(thId);
+    if (th) th.classList.add('is-filtering');
+    iconEl.classList.add('is-active');
+
+    renderFilterList(dropId);
+
+    setTimeout(() => {
+      document.addEventListener('click', function handler(ev) {
+        if (!drop.contains(ev.target)) {
+          closeAllFilters();
+          document.removeEventListener('click', handler);
+        }
+      });
+    }, 0);
+  }
+}
+
+function closeAllFilters() {
+  Object.keys(filterData).forEach(dropId => {
+    const drop = document.getElementById(dropId);
+    if (drop) drop.classList.remove('is-open');
+    const cfg = filterData[dropId];
+    const th = document.getElementById(cfg.thId);
+    if (th) th.classList.remove('is-filtering');
+    const icon = th && th.querySelector('.z-filter-icon');
+    if (icon) icon.classList.toggle('is-active', filterChecked[dropId].size > 0);
+  });
+  activeFilter = null;
+}
+
+function filterSearch(listId, keyword) {
+  const dropId = listId.replace('-list', '');
+  renderFilterList(dropId, keyword);
+}
+
+function enterBatch() {
+  document.getElementById('batchDefault').style.display = 'none';
+  document.getElementById('batchExpanded').style.display = 'flex';
+}
+function exitBatch() {
+  document.getElementById('batchDefault').style.display = '';
+  document.getElementById('batchExpanded').style.display = 'none';
+}
+
+/* ===================== 高级搜索 ===================== */
+const searchFields = [
+  { id: 'sq-time-start', label: '开始时间', type: 'range-start', rangeKey: 'time' },
+  { id: 'sq-time-end',   label: '结束时间', type: 'range-end',   rangeKey: 'time' },
+  { id: 'sq-no',       label: '案件号',   type: 'input' },
+  { id: 'sq-reporter', label: '举报人',   type: 'input' },
+  { id: 'sq-status',   label: '签收状态', type: 'select' },
+  { id: 'sq-source',   label: '问题来源', type: 'select' },
+  { id: 'sq-type',     label: '案件类型', type: 'select' },
+];
+
+function openSearchDrawer() {
+  document.getElementById('drawerOverlay').classList.add('is-open');
+  document.getElementById('searchDrawer').classList.add('is-open');
+}
+function closeSearchDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('is-open');
+  document.getElementById('searchDrawer').classList.remove('is-open');
+}
+function syncSelectPlaceholder(el) {
+  el.classList.toggle('is-placeholder', el.value === '');
+}
+function resetSearchDrawer() {
+  searchFields.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el) {
+      el.value = '';
+      if (el.tagName === 'SELECT') el.classList.add('is-placeholder');
+    }
+  });
+}
+function applySearch() {
+  const conditions = [];
+  // 时间范围合并为一条
+  const start = document.getElementById('sq-time-start').value.trim();
+  const end   = document.getElementById('sq-time-end').value.trim();
+  if (start || end) {
+    conditions.push({ label: '案件建立时间', value: (start || '…') + ' 至 ' + (end || '…') , ids: ['sq-time-start','sq-time-end'] });
+  }
+  // 其他字段
+  searchFields.filter(f => f.type !== 'range-start' && f.type !== 'range-end').forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el && el.value.trim()) {
+      conditions.push({ label: f.label, value: el.value.trim(), ids: [f.id] });
+    }
+  });
+
+  renderFilterBar(conditions);
+  const btn = document.getElementById('advSearchBtn');
+  btn.classList.toggle('is-active', conditions.length > 0);
+  closeSearchDrawer();
+}
+
+function renderFilterBar(conditions) {
+  const bar = document.getElementById('filterBar');
+  if (!conditions.length) {
+    bar.classList.remove('is-visible');
+    bar.innerHTML = '';
+    return;
+  }
+  bar.classList.add('is-visible');
+  bar.innerHTML = conditions.map((c, i) => `
+    <div class="z-filter-tag" data-index="${i}">
+      <span class="z-filter-tag-label">${c.label}：</span>
+      <span class="z-filter-tag-val">${c.value}</span>
+      <span class="z-filter-tag-del" onclick="removeCondition(${i})">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      </span>
+    </div>
+  `).join('') + `<span class="z-filter-bar-clear" onclick="clearAllConditions()">清空条件</span>`;
+
+  bar._conditions = conditions;
+}
+
+function removeCondition(i) {
+  const bar = document.getElementById('filterBar');
+  const conditions = bar._conditions || [];
+  const removed = conditions.splice(i, 1)[0];
+  // 清空对应表单值
+  if (removed && removed.ids) {
+    removed.ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  }
+  renderFilterBar(conditions);
+  const btn = document.getElementById('advSearchBtn');
+  btn.classList.toggle('is-active', conditions.length > 0);
+}
+
+function clearAllConditions() {
+  resetSearchDrawer();
+  renderFilterBar([]);
+  document.getElementById('advSearchBtn').classList.remove('is-active');
+}
+</script>
+
+</body>
+</html>

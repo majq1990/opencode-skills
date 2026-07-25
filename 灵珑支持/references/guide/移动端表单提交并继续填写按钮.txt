@@ -1,0 +1,19 @@
+移动端表单提交并继续填写按钮
+1 使用场景
+点击提交完成动作后，不执行返回页面，执行重置表单可继续填写下一份数据。
+2 效果
+无。
+3 配置
+代码先执行提交操作后进行页面重置可继续填写。
+function main() {
+    var formPartEle = this.$$element("form_part_7xqdgf");
+    if (formPartEle) {
+        formPartEle.$$getRenderElement().onSave().then((res) => {
+            if (res.result) {
+                 formPartEle.onReset();
+            }
+        });
+    }
+}
+4 常见问题
+无。

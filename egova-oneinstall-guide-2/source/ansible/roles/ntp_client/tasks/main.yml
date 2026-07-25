@@ -1,0 +1,56 @@
+---
+# check if ntp exists
+- name: 检查是否安装NTP服务
+  stat: path=/etc/ntp.conf
+  register: ntp_conf
+
+- name: Fail if ntp is not empty
+  debug:
+    msg: "检查到已安装NTP服务，无需安装客户端"
+  when:
+    - ntp_conf.stat.exists
+
+- name: 检查ntpdate定时任务是否存在
+  shell: grep "ntpdate" /etc/crontab | wc -l
+  register: ntpdate_cron_count
+
+- block:
+    - name: 安装ntpdate
+      package: name=ntpdate state=present
+
+    - name: 设置时区为上海
+      timezone:
+        name: Asia/Shanghai
+
+    - name: 同步时间
+      command: ntpdate {{ ansible_master_ip }}
+      ignore_errors: true
+
+    - name: 添加ntpdate定时任务
+      lineinfile:
+        dest: /etc/crontab
+        line: "55 23 * * * {{ devops_ssh_user }} ntpdate {{ ansible_master_ip }}"
+        insertafter: EOF
+
+    - name: 重启cron服务
+      service:
+        name: cron
+        state: restarted
+      when: ansible_pkg_mgr ==  'apt'
+
+    - name: 重启cron服务
+      service:
+        name: crond
+        state: restarted
+      when: ansible_pkg_mgr ==  'yum'
+
+    - name: 停止ntpd服务并丢弃输出信息
+      shell: systemctl stop ntp
+      ignore_errors: true
+      when: ansible_pkg_mgr ==  'apt'
+
+    - name: 停止ntpd服务并丢弃输出信息
+      shell: systemctl stop ntpd
+      ignore_errors: true
+      when: ansible_pkg_mgr ==  'yum'
+  when: ntpdate_cron_count.stdout == "0"

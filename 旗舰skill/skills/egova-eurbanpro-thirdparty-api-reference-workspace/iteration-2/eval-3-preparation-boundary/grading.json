@@ -1,0 +1,40 @@
+{
+  "with_skill": {
+    "expectations": [
+      {
+        "text": "明确属于接入准备问题",
+        "passed": true,
+        "evidence": "开头即明确'这部分属于接入准备与方案决策'"
+      },
+      {
+        "text": "提示切换 preparation-guide",
+        "passed": true,
+        "evidence": "明确写出'建议切换到 preparation-guide'"
+      },
+      {
+        "text": "不展开 API 参数细节",
+        "passed": true,
+        "evidence": "全文仅一句话确认公钥路径和 token 传递方式，未展开任何 API 参数细节"
+      }
+    ]
+  },
+  "old_skill": {
+    "expectations": [
+      {
+        "text": "明确属于接入准备问题",
+        "passed": true,
+        "evidence": "明确指出用户问题属于'前置配置与实施步骤范畴，不属于本 skill 的职责'"
+      },
+      {
+        "text": "提示切换 preparation-guide",
+        "passed": true,
+        "evidence": "明确指出'请使用 preparation-guide skill 来了解第三方联调所需的前置准备清单'"
+      },
+      {
+        "text": "不展开 API 参数细节",
+        "passed": true,
+        "evidence": "全文为边界判定分析，未展开任何 API 参数细节"
+      }
+    ]
+  }
+}

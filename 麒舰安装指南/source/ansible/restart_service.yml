@@ -1,0 +1,23 @@
+---
+# This playbook restarts a service
+- name: restart service
+  hosts: "{{ host }}"
+  gather_facts: "{{ gather_facts }}"
+  remote_user: root
+  vars_files:
+    - ./group_vars/all.yml
+  tasks:
+    - name: 获取服务状态
+      systemd:
+        name: "{{ service_name }}"
+      register: service_status_before
+
+    - name: 显示重启前服务状态
+      debug:
+        msg: "服务 {{ service_name }} 重启前状态: {{ service_status_before.status.ActiveState }}"
+
+    - name: 重启服务
+      systemd:
+        name: "{{ service_name }}"
+        state: restarted
+      register: service_restart_result

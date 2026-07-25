@@ -1,0 +1,54 @@
+---
+# TDengine3客户端安装任务
+- name: 检查TDengine3客户端包是否存在
+  connection: local
+  stat:
+    path: "{{ src_path }}/{{ client_package }}"
+  register: tdengine_client_package
+
+- name: 如果客户端包不存在，则报错
+  fail:
+    msg: "找不到TDengine3客户端包，请检查 {{ src_path }} 目录下是否存在 {{ client_package }} 文件"
+  when: not tdengine_client_package.stat.exists
+
+- name: 创建临时目录
+  file:
+    path: "{{ temp_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: 解压TDengine3客户端包
+  unarchive:
+    src: "{{ src_path }}/{{ client_package }}"
+    dest: "{{ temp_dir }}"
+    remote_src: no
+
+- name: 获取解压后的目录名
+  shell: ls -d {{ temp_dir }}/tdengine-tsdb-oss-client-*
+  register: client_dir
+
+- name: 安装TDengine3客户端
+  shell: |
+    cd {{ client_dir.stdout }}
+    ./install_client.sh
+  args:
+    executable: /bin/bash
+
+- name: 清理临时目录
+  file:
+    path: "{{ temp_dir }}"
+    state: absent
+
+- name: 验证taos客户端安装
+  shell: which taos
+  register: taos_client_verify
+
+- name: 输出taos客户端安装成功信息
+  debug:
+    msg: "taos客户端安装成功"
+  when: taos_client_verify.rc == 0
+
+- name: 输出taos客户端安装失败信息
+  debug:
+    msg: "taos客户端安装失败，请检查日志"
+  when: taos_client_verify.rc != 0

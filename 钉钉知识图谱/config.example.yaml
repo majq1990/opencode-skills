@@ -1,0 +1,33 @@
+# DingTalk Knowledge Graph Sync - Configuration
+
+# 钉钉认证配置
+DINGTALK_APPKEY=your_appkey
+DINGTALK_APPSECRET=your_appsecret
+
+# 存储路径
+STORAGE_PATH=./dingtalk_data
+
+# 扫描配置
+SCAN_BATCH_SIZE=100
+SCAN_MAX_RETRIES=3
+SCAN_RATE_LIMIT=90
+
+# 知识图谱配置
+GRAPH_ENABLED=true
+GRAPH_EXTRACT_ENTITIES=true
+GRAPH_EXTRACT_RELATIONS=true
+
+# 导出格式
+EXPORT_FORMATS=neo4j,json-ld,graphml
+EXPORT_OUTPUT_DIR=./output
+
+# 日志配置
+LOG_LEVEL=INFO
+LOG_FILE=./logs/sync.log
+LOG_MAX_SIZE=10MB
+LOG_BACKUP_COUNT=5
+
+# 定时任务配置 (可选)
+SCHEDULER_ENABLED=false
+SCHEDULER_CRON=0 2 * * *
+SCHEDULER_TIMEZONE=Asia/Shanghai

@@ -1,0 +1,70 @@
+{
+  "name": "button-pill-spec",
+  "version": "3.0.0",
+  "description": "ZartUI 全圆角按钮规范，含主按钮、次要按钮、危险状态，覆盖所有交互状态与尺寸",
+
+  "shared": {
+    "border_radius": "100px",
+    "padding_horizontal": "16px",
+    "border_width": "1px",
+    "transition": "background 0.15s, border-color 0.15s, color 0.15s"
+  },
+
+  "sizes": [
+    { "id": "md", "height": "32px", "font_size": "14px" },
+    { "id": "sm", "height": "24px", "font_size": "12px" }
+  ],
+
+  "variants": [
+    {
+      "id": "primary",
+      "label": "主按钮",
+      "usage": "新增、创建、添加等全局主操作",
+      "states": {
+        "normal":   { "background": "#FFFFFF", "border_color": "#DDE1EB", "color": "#3388FF" },
+        "hover":    { "background": "#F0F9FF", "border_color": "#3388FF", "color": "#3388FF" },
+        "click":    { "background": "#D6EDFF", "border_color": "#3388FF", "color": "#3388FF" },
+        "disabled": { "background": "#FFFFFF", "border_color": "#F5F7FA", "color": "#ADD8FF" }
+      }
+    },
+    {
+      "id": "secondary",
+      "label": "次要按钮",
+      "usage": "导入、导出、编辑、设置等辅助操作",
+      "states": {
+        "normal":   { "background": "#FFFFFF", "border_color": "#DDE1EB", "color": "#223355" },
+        "hover":    { "background": "#F0F9FF", "border_color": "#3388FF", "color": "#3388FF" },
+        "click":    { "background": "#D6EDFF", "border_color": "#3388FF", "color": "#3388FF" },
+        "disabled": { "background": "#FFFFFF", "border_color": "#F5F7FA", "color": "#CED4E0" }
+      }
+    },
+    {
+      "id": "danger",
+      "label": "危险状态",
+      "usage": "删除、禁用等不可逆操作",
+      "note": "Normal 样式与次要按钮完全一致，仅 hover/click 变为危险红；无独立 disabled 状态",
+      "states": {
+        "normal": { "background": "#FFFFFF", "border_color": "#DDE1EB", "color": "#223355" },
+        "hover":  { "background": "#FFF4F0", "border_color": "#FF4433", "color": "#FF4433" },
+        "click":  { "background": "#FFDFD6", "border_color": "#FF4433", "color": "#FF4433" }
+      }
+    }
+  ],
+
+  "content_variants": [
+    { "id": "text-only",     "label": "仅文字" },
+    { "id": "icon-text",     "label": "图标 + 文字" },
+    { "id": "text-dropdown", "label": "文字 + 下拉箭头" }
+  ],
+
+  "known_pitfalls": [
+    {
+      "issue": "危险状态未从次要按钮继承",
+      "fix": "危险状态是次要按钮的交互变体，Normal 样式与次要按钮完全一致，仅 hover/click 改变颜色"
+    },
+    {
+      "issue": "disabled 状态仍可触发事件",
+      "fix": "需同时设置 cursor: not-allowed 和 pointer-events: none"
+    }
+  ]
+}

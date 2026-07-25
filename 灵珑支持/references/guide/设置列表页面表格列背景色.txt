@@ -1,0 +1,77 @@
+设置列表页面表格列背景色
+1 使用场景
+当列表中展示的字段比较多，且对不同的字段设置分组标题，同一色系不好区分，加上颜色能够区分不同类别的数据列，提升可读性和用户体验。
+2 效果
+3 配置
+找到需要配置背景色的列表页面。
+添加组件加载完成动作，使用以下脚本。
+注意：使用document.querySelector方法需加上唯一ID标识，否则是全局进行匹配。
+function main() {
+    setTimeout(() => {
+        const headerRow = document.querySelector('#table_61t6ov_csshandler_generate tr:first-child');
+        if (!headerRow) { return; }
+        const headers = headerRow.querySelectorAll('th');
+      //定义了一个颜色对象colors，将特定表头标题映射到对应的背景颜色
+        const colors = {
+            '储配站': '#e6f7ff',
+            '配送车辆': '#D1EEFF',
+            '供应站信息': '#fff7e6',
+            '配送人员信息': '#fff0f6',
+            '燃气用户信息': '#f6ffed'
+        };
+
+        // 遍历所有表头单元格
+        headers.forEach((th, index) => {
+            const titleElement = th.querySelector('.ant-table-column-title');
+            if (!titleElement) { return; }
+
+            const title = titleElement.innerText.trim();
+            const color = colors[title];
+
+            if (color) {
+                // 处理合并列的情况
+                const colspan = th.colSpan || 1;
+                for (let i = 0; i < colspan; i++) {
+                    const currentIndex = index + i;
+                    if (currentIndex < headers.length) {
+                        headers[currentIndex].style.backgroundColor = color;
+                    }
+                }
+            }
+        });
+
+        // 第二行
+        const headerSecondRows = document.querySelector('#table_61t6ov_csshandler_generate tr:nth-child(2)').querySelectorAll("th");
+
+        const cols = {
+            "storage_station_name.value": '#e6f7ff',
+            "storage_station_human_name.value": '#e6f7ff',
+            "storage_station_human_phone.value": '#e6f7ff',
+            "storage_station_operating_time.value": '#e6f7ff',
+
+            "car_number.value":"#D1EEFF",
+            "car_operating_date.value":"#D1EEFF",
+
+            "station_name.value":"#fff7e6",
+            "station_human_name.value": "#fff7e6",
+            "station_human_phone.value": "#fff7e6",
+            "station_operating_date.value": "#fff7e6",
+
+            "delivery_human_name.value":"#fff0f6",
+            "delivery_human_phone.value":"#fff0f6",
+            "delivery_human_operating_date.value":"#fff0f6",
+
+            "gas_user_human_name.value":"#f6ffed",
+            "gas_user_human_phone.value": "#f6ffed",
+            "gas_user_operating_date.value": "#f6ffed"
+
+
+        }
+
+        headerSecondRows.forEach(th => {
+            const key = th.getAttribute("key");
+            th.style.backgroundColor= cols[key];
+        })
+
+    }, 300)
+}

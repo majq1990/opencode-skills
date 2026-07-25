@@ -1,0 +1,4 @@
+---
+file_path: "{{ playbook_dir }}/roles/modify_db/files"
+script_path: "/egova/tools/script"
+

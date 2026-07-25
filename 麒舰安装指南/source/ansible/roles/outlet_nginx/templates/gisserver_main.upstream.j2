@@ -1,0 +1,6 @@
+{%- set backends = MS_CONFIG['backends'] %}
+upstream  egovagisserver{
+    {% for bk in backends %}
+     server {{ hostvars[bk['host']]['ansible_ssh_host'] }}:8080 ;
+    {% endfor %}
+}

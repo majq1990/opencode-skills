@@ -1,0 +1,132 @@
+{
+  "name": "main-sidenav-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 主系统侧边导航规范，覆盖容器、Logo、主菜单图标、底部菜单及交互状态",
+
+  "container": {
+    "width": "60px",
+    "height": "1080px",
+    "background": "linear-gradient(0deg, #223355 0%, rgba(52,68,104,0.95) 100%)",
+    "display": "flex",
+    "flex_direction": "column",
+    "align_items": "center",
+    "padding": "16px 0 12px"
+  },
+
+  "logo": {
+    "size": "20×20px",
+    "position": "顶部居中",
+    "margin_bottom": "20px"
+  },
+
+  "menu_item": {
+    "description": "主菜单与底部菜单共用同一菜单项规格",
+    "size": "60×50px",
+    "display": "flex",
+    "align_items": "center",
+    "justify_content": "center",
+    "icon": {
+      "size": "18×18px",
+      "style": "面状（fill）",
+      "color": "#FFFFFF"
+    },
+    "states": {
+      "default": {
+        "background": "transparent"
+      },
+      "hover": {
+        "background": "rgba(255,255,255,0.08)"
+      },
+      "active": {
+        "background": "#3388FF"
+      }
+    }
+  },
+
+  "main_menu": {
+    "description": "主菜单区域，flex: 1 撑满剩余空间",
+    "entries": [
+      {
+        "label": "首页",
+        "icon": "house-fill",
+        "icon_desc": "实心房屋，带门洞镂空"
+      },
+      {
+        "label": "消息",
+        "icon": "chat-dots-fill",
+        "icon_desc": "圆角矩形气泡，内含三个横向圆点"
+      },
+      {
+        "label": "通知公告",
+        "icon": "megaphone-fill",
+        "icon_desc": "扩音喇叭：右侧竖条 + 左侧展开喇叭口 + 底部手持杆"
+      },
+      {
+        "label": "知识库",
+        "icon": "book-open-fill",
+        "icon_desc": "翻开的书：左右两页面状填充 + 中间书脊分隔线"
+      },
+      {
+        "label": "地图",
+        "icon": "map-pin-fill",
+        "icon_desc": "实心定位 Pin，中心镂空圆 r=2.5"
+      },
+      {
+        "label": "通讯录",
+        "icon": "address-book-fill",
+        "icon_desc": "书本外框（圆角 rx=1.5）+ 内嵌人像（头圆 r=2.5 + 弧形身体）"
+      },
+      {
+        "label": "组织架构",
+        "icon": "org-chart-fill",
+        "icon_desc": "4 个圆角矩形节点（rx=1）+ 白色连接线，上方 1 个节点连接下方 3 个节点"
+      },
+      {
+        "label": "督办中心",
+        "icon": "clock-fill",
+        "icon_desc": "实心圆（r=7.5）+ 深色描边时钟指针（12点→9点方向）"
+      }
+    ]
+  },
+
+  "footer": {
+    "description": "底部固定菜单区，位于分隔线下方",
+    "divider": {
+      "width": "32px",
+      "height": "1px",
+      "color": "rgba(255,255,255,0.15)",
+      "margin": "8px 0"
+    },
+    "entries": [
+      {
+        "label": "系统设置",
+        "icon": "gear-fill",
+        "icon_desc": "齿轮外框（fill-rule: evenodd，8 个卡口）+ 中心镂空圆 r=2，几何中心对齐"
+      },
+      {
+        "label": "构建平台",
+        "icon": "grid-fill",
+        "icon_desc": "2×2 四格圆角方块，每格 6.5×6.5px，rx=1.5，间距 1px"
+      }
+    ]
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "选中态直接设置 background 会遮盖渐变背景层级关系",
+      "fix": "选中态直接使用 #3388FF 纯色背景覆盖，因菜单项宽度等于导航栏宽度（60px），可完全覆盖"
+    },
+    {
+      "issue": "组织架构图标连接线用 fill 绘制会导致线条消失",
+      "fix": "连接线使用 stroke: white + fill: none，与节点矩形（fill）分开声明"
+    },
+    {
+      "issue": "督办中心时钟指针颜色用 #FFFFFF 会与圆形背景融合看不清",
+      "fix": "指针 stroke 使用 rgba(34,51,85,0.85)，与导航背景深色形成对比"
+    },
+    {
+      "issue": "系统设置齿轮中心圆偏移不居中",
+      "fix": "外框几何中心在 y=9，中心镂空圆需明确设置 cx=9 cy=9，使用 fill-rule: evenodd 实现镂空"
+    }
+  ]
+}

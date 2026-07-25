@@ -1,0 +1,56 @@
+---
+# default vars for mysql
+mysql_client_check_packages:
+  Ubuntu:
+    - mysql-client-8.0
+  kylin_arm:
+    - mysql-community-client
+  kylin_x86:
+    - mysql-community-client
+  CentOS:
+    - mysql-community-client
+  UOS:
+    - mysql-community-client
+  uos_x86:
+    - mysql-community-client
+  uos_arm:
+    - mysql-community-client
+  anolis_x86:
+    - mysql-community-client
+  anolis_arm:
+    - mysql-community-client
+  Anolis:
+    - mysql-community-client
+
+mysql_client_packages:
+  Ubuntu:
+    - mysql-client-8.0
+  kylin_arm:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  kylin_x86:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  CentOS:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  openEuler:
+    - mysql
+  UOS:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  uos_x86:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  uos_arm:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  anolis_x86:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  anolis_arm:
+    - mysql-community-client-plugins
+    - mysql-community-client
+  Anolis:
+    - mysql-community-client-plugins
+    - mysql-community-client

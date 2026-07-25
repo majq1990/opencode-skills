@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 表格表单</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 16px; margin-top: 32px; }
+h2:first-of-type { margin-top: 0; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; }
+
+/* ===================== 表格 ===================== */
+.zt-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #DDE1EB;
+}
+.zt-table th,
+.zt-table td {
+  padding: 0 12px;
+  height: 48px;
+  border: 1px solid #DDE1EB;
+  font-size: 14px;
+  color: #223355;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.zt-table th {
+  background: #F5F7FA;
+  font-weight: 400;
+  color: #223355;
+  font-size: 14px;
+  text-align: left;
+}
+.zt-table tbody tr:hover td { background: #F5F7FA; }
+.zt-table td { position: relative; }
+.zt-table td input.z-input,
+.zt-table td textarea.z-textarea {
+  position: absolute; inset: 0; height: 100%;
+}
+
+/* 序号列 */
+.col-index { width: 56px; text-align: center; color: #6B7A99; }
+
+/* 操作列 */
+.col-action { width: 72px; text-align: left; }
+.btn-del {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: transparent; cursor: pointer;
+  font-size: 14px; color: #3388FF; padding: 0;
+  transition: color .15s;
+}
+.btn-del:hover { color: #2167D9; }
+
+/* ===================== 输入框 ===================== */
+.z-input {
+  height: 100%; width: 100%; padding: 0 8px;
+  border: none; border-radius: 0;
+  font-size: 14px; color: #223355; background: transparent; outline: none;
+}
+.z-input::placeholder { color: #A8B4C8; }
+
+/* 多行 */
+.z-textarea {
+  width: 100%; height: 100%; min-height: unset; padding: 8px;
+  border: none; border-radius: 0;
+  font-size: 14px; color: #223355; background: transparent; outline: none;
+  resize: none;
+  font-family: inherit;
+}
+.z-textarea::placeholder { color: #A8B4C8; }
+
+/* ===================== 单选 ===================== */
+.z-radio-wrap {
+  display: inline-flex; align-items: center; gap: 6px;
+  cursor: pointer; font-size: 14px; color: #223355; user-select: none;
+}
+.z-radio-group { display: flex; align-items: center; gap: 16px; }
+.z-radio {
+  width: 16px; height: 16px; border: 1px solid #A8B4C8;
+  border-radius: 50%; background: #FFFFFF; flex-shrink: 0;
+  transition: border .15s;
+}
+.z-radio.is-checked { border: 5px solid #3388FF; }
+.z-radio-wrap:hover .z-radio { border-color: #3388FF; }
+.z-radio-wrap:hover .z-radio.is-checked { border: 5px solid #3388FF; }
+
+/* ===================== 下拉选择 ===================== */
+.z-select {
+  position: absolute; inset: 0;
+  display: inline-flex; align-items: center;
+  padding: 0 32px 0 8px;
+  border: none; border-radius: 0;
+  background: transparent; font-size: 14px; color: #223355;
+  cursor: pointer; user-select: none;
+  white-space: nowrap; overflow: hidden;
+}
+.z-select-chevron {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  pointer-events: none;
+}
+.z-select .z-placeholder { color: #A8B4C8; }
+.z-select .z-value       { color: #223355; }
+
+/* ===================== 数字输入框（Type3 加减） ===================== */
+.z-num {
+  position: absolute; inset: 0;
+  display: inline-flex; align-items: center;
+  border: none; border-radius: 0;
+  background: transparent; overflow: hidden;
+}
+.z-num-btn {
+  width: 32px; height: 100%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; cursor: pointer; color: #6B7A99;
+  transition: background .1s, color .1s;
+}
+.z-num-btn:hover { background: #F5F7FA; color: #3388FF; }
+.z-num-divider { width: 1px; height: 100%; background: #E9ECF2; flex-shrink: 0; }
+.z-num-input {
+  flex: 1; min-width: 0; height: 100%; padding: 0 8px;
+  border: none; outline: none; background: transparent;
+  font-size: 14px; color: #223355; text-align: center;
+}
+.z-num-input::placeholder { color: #A8B4C8; }
+
+/* ===================== 开关 ===================== */
+.z-switch {
+  display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+}
+.z-sw-track {
+  position: relative; width: 36px; height: 20px;
+  border-radius: 10px; background: #A8B4C8;
+  transition: background .2s; flex-shrink: 0;
+}
+.z-sw-track.is-on { background: #3388FF; }
+.z-sw-track.is-on:hover { background: #5CA5FF; }
+.z-sw-track:not(.is-on):hover { background: #CED4E0; }
+.z-sw-thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #FFFFFF; transition: left .2s;
+}
+.z-sw-track.is-on .z-sw-thumb { left: 18px; }
+.z-sw-label { font-size: 14px; color: #223355; }
+
+/* ===================== 新增行按钮 ===================== */
+.btn-add-row {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 16px;
+  border: 1px solid #DDE1EB; border-radius: 100px;
+  background: #FFFFFF; font-size: 14px; color: #3388FF;
+  cursor: pointer; transition: background .15s, border-color .15s;
+  margin-bottom: 12px;
+}
+.btn-add-row:hover  { background: #F0F9FF; border-color: #3388FF; }
+.btn-add-row:active { background: #D6EDFF; border-color: #3388FF; }
+.btn-add-row svg { stroke: #3388FF; flex-shrink: 0; }
+/* ===================== 必填标识 ===================== */
+.th-required { color: #FF4433; font-size: 12px; margin-left: 4px; }
+.th-optional { color: #A8B4C8; font-size: 12px; margin-left: 4px; }
+
+/* ===================== 时间选择触发框（全框） ===================== */
+.z-timepicker {
+  position: absolute; inset: 0;
+  display: flex; align-items: center;
+  padding: 0 32px 0 8px;
+  border: none; background: transparent;
+  font-size: 14px; cursor: pointer; user-select: none;
+}
+.z-timepicker .z-placeholder { color: #A8B4C8; }
+.z-timepicker .z-value       { color: #223355; }
+.z-timepicker-icon {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; color: #A8B4C8;
+}
+
+/* ===================== 多选标签触发框（全框） ===================== */
+.z-multisel {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; flex-wrap: nowrap;
+  padding: 0 32px 0 6px; gap: 4px; overflow: hidden;
+  border: none; background: transparent;
+  font-size: 14px; cursor: pointer; user-select: none;
+}
+.z-multisel .z-placeholder { color: #A8B4C8; font-size: 14px; padding: 0 2px; }
+.z-multisel-chevron {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  pointer-events: none;
+}
+.z-tag {
+  display: inline-flex; align-items: center; flex-shrink: 0;
+  height: 22px; padding: 0 6px; gap: 4px;
+  background: #F5F7FA; border-radius: 3px;
+  font-size: 12px; color: #223355; white-space: nowrap;
+}
+.z-tag-x {
+  display: flex; align-items: center; justify-content: center;
+  width: 12px; height: 12px; border-radius: 50%; cursor: pointer;
+}
+.z-tag-x:hover { background: rgba(255,68,51,.10); }
+.z-tag-x:hover path { stroke: #FF4433; }
+.z-overflow {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  height: 22px; padding: 0 6px; border-radius: 3px;
+  font-size: 12px; background: #F0F9FF; color: #3388FF;
+}
+
+/* ===================== 上传图片 ===================== */
+.z-upload-cell {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 8px; flex-wrap: wrap;
+}
+.z-upload-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 12px; flex-shrink: 0;
+  border: 1px solid #DDE1EB; border-radius: 4px;
+  background: #FFFFFF; font-size: 14px; color: #223355;
+  cursor: pointer; transition: border-color .15s, background .15s, color .15s;
+}
+.z-upload-btn:hover { border-color: #3388FF; background: #F0F9FF; color: #3388FF; }
+.z-upload-btn:hover svg path { stroke: #3388FF; }
+.z-img-thumb {
+  position: relative; width: 32px; height: 32px; flex-shrink: 0;
+  border-radius: 4px; overflow: hidden;
+  border: 1px solid #E9ECF2;
+}
+.z-img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.z-img-del {
+  position: absolute; top: 1px; right: 1px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: rgba(34,51,85,0.5); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.z-img-del svg { width: 8px; height: 8px; }
+
+/* 上传列单元格不用 position:relative 覆盖，用正常 padding */
+.col-upload { min-width: 160px; padding: 0 !important; }
+.z-modal-sel {
+  position: absolute; inset: 0;
+  display: flex; align-items: center;
+  padding: 0 0 0 8px;
+  border: none; background: transparent;
+  font-size: 14px; color: #223355;
+}
+.z-modal-sel .z-placeholder { color: #A8B4C8; flex: 1; }
+.z-modal-sel .z-value       { color: #223355; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.z-modal-actions {
+  display: flex; align-items: center; gap: 2px;
+  padding: 0 6px; flex-shrink: 0;
+}
+.z-modal-btn {
+  width: 28px; height: 28px; border-radius: 4px;
+  border: none; background: transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #223355; transition: background .1s, color .1s;
+}
+.z-modal-btn:hover { background: #F5F7FA; color: #3388FF; }
+.z-modal-sep { width: 1px; height: 16px; background: #E9ECF2; margin: 0 2px; flex-shrink: 0; }
+.z-modal-sel-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 0 8px; height: 28px; border-radius: 4px;
+  border: none; background: transparent; cursor: pointer;
+  font-size: 13px; color: #3388FF; flex-shrink: 0;
+  transition: color .15s;
+}
+.z-modal-sel-btn:hover { color: #2167D9; }
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 表格表单</h1>
+<p class="page-desc">常规表格表单，含序号、输入框、单选、下拉、数字输入、开关、长文本、操作列</p>
+
+<h2>常规表格表单</h2>
+<div class="section">
+
+  <button class="btn-add-row" onclick="addRow()">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/></svg>
+    新增一行
+  </button>
+
+  <table class="zt-table" id="common-table">
+    <thead>
+      <tr>
+        <th class="col-index">序号</th>
+        <th style="min-width:120px;">姓名</th>
+        <th style="min-width:140px;">性别</th>
+        <th style="min-width:160px;">班级</th>
+        <th style="min-width:140px;">学分</th>
+        <th style="min-width:120px;">排名</th>
+        <th style="min-width:180px;">备注</th>
+        <th class="col-action">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <!-- 第 1 行 -->
+      <tr>
+        <td class="col-index">1</td>
+        <td>
+          <input class="z-input" placeholder="请输入" value="张三">
+        </td>
+        <td>
+          <div class="z-radio-group">
+            <label class="z-radio-wrap">
+              <span class="z-radio is-checked"></span>男
+            </label>
+            <label class="z-radio-wrap">
+              <span class="z-radio"></span>女
+            </label>
+          </div>
+        </td>
+        <td>
+          <div class="z-select">
+            <span class="z-value">高三(1)班</span>
+            <span class="z-select-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </td>
+        <td>
+          <div class="z-num">
+            <button class="z-num-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+            <div class="z-num-divider"></div>
+            <input class="z-num-input" value="84">
+            <div class="z-num-divider"></div>
+            <button class="z-num-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </td>
+        <td>
+          <label class="z-switch">
+            <span class="z-sw-track is-on"><span class="z-sw-thumb"></span></span>
+          </label>
+        </td>
+        <td>
+          <textarea class="z-textarea" placeholder="请输入备注">表现优秀</textarea>
+        </td>
+        <td class="col-action">
+          <button class="btn-del">删除</button>
+        </td>
+      </tr>
+
+      <!-- 第 2 行 -->
+      <tr>
+        <td class="col-index">2</td>
+        <td>
+          <input class="z-input" placeholder="请输入" value="李四">
+        </td>
+        <td>
+          <div class="z-radio-group">
+            <label class="z-radio-wrap">
+              <span class="z-radio"></span>男
+            </label>
+            <label class="z-radio-wrap">
+              <span class="z-radio is-checked"></span>女
+            </label>
+          </div>
+        </td>
+        <td>
+          <div class="z-select">
+            <span class="z-value">高三(2)班</span>
+            <span class="z-select-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </td>
+        <td>
+          <div class="z-num">
+            <button class="z-num-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+            <div class="z-num-divider"></div>
+            <input class="z-num-input" value="92">
+            <div class="z-num-divider"></div>
+            <button class="z-num-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </td>
+        <td>
+          <label class="z-switch">
+            <span class="z-sw-track"><span class="z-sw-thumb"></span></span>
+          </label>
+        </td>
+        <td>
+          <textarea class="z-textarea" placeholder="请输入备注"></textarea>
+        </td>
+        <td class="col-action">
+          <button class="btn-del">删除</button>
+        </td>
+      </tr>
+
+      <!-- 第 3 行（空行，展示占位符状态） -->
+      <tr>
+        <td class="col-index">3</td>
+        <td>
+          <input class="z-input" placeholder="请输入">
+        </td>
+        <td>
+          <div class="z-radio-group">
+            <label class="z-radio-wrap">
+              <span class="z-radio"></span>男
+            </label>
+            <label class="z-radio-wrap">
+              <span class="z-radio"></span>女
+            </label>
+          </div>
+        </td>
+        <td>
+          <div class="z-select">
+            <span class="z-placeholder">请选择</span>
+            <span class="z-select-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </td>
+        <td>
+          <div class="z-num">
+            <button class="z-num-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+            <div class="z-num-divider"></div>
+            <input class="z-num-input" placeholder="0">
+            <div class="z-num-divider"></div>
+            <button class="z-num-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </td>
+        <td>
+          <label class="z-switch">
+            <span class="z-sw-track"><span class="z-sw-thumb"></span></span>
+          </label>
+        </td>
+        <td>
+          <textarea class="z-textarea" placeholder="请输入备注"></textarea>
+        </td>
+        <td class="col-action">
+          <button class="btn-del">删除</button>
+        </td>
+      </tr>
+
+    </tbody>
+  </table>
+
+</div>
+
+<!-- ============================================================
+     选择类表格表单
+============================================================ -->
+<h2>选择类表格表单</h2>
+<div class="section">
+
+  <button class="btn-add-row" onclick="addSelectRow()">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/></svg>
+    新增一行
+  </button>
+
+  <table class="zt-table" id="select-table">
+    <thead>
+      <tr>
+        <th class="col-index">序号</th>
+        <th style="min-width:140px;">时间选择<span class="th-required">（必填）</span></th>
+        <th style="min-width:200px;">标签选择<span class="th-required">（必填）</span></th>
+        <th style="min-width:200px;">查找带回<span class="th-optional">（非必填）</span></th>
+        <th class="col-action">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <!-- 第 1 行：已选 -->
+      <tr>
+        <td class="col-index">1</td>
+        <td>
+          <div class="z-timepicker">
+            <span class="z-value">14:30:00</span>
+            <span class="z-timepicker-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#A8B4C8" stroke-width="1.4"/><path d="M8 5v3.5l2 1.5" stroke="#A8B4C8" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </td>
+        <td>
+          <div class="z-multisel">
+            <span class="z-tag">语文<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2L8 8M8 2L2 8" stroke="#223355" stroke-width="1.4" stroke-linecap="round"/></svg></span></span>
+            <span class="z-tag">数学<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2L8 8M8 2L2 8" stroke="#223355" stroke-width="1.4" stroke-linecap="round"/></svg></span></span>
+            <span class="z-overflow">+2</span>
+            <span class="z-multisel-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </td>
+        <td>
+          <div class="z-modal-sel">
+            <span class="z-value">高三(1)班 · 张明</span>
+            <span class="z-modal-actions">
+              <span class="z-modal-sep"></span>
+              <button class="z-modal-btn" style="color:#FF4433;"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+              <button class="z-modal-btn"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 7H10a3 3 0 010 6H7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 4L3 7l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <button class="z-modal-sel-btn"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.672 2.672 2 3.5 2H12.5C13.328 2 14 2.672 14 3.5V8" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/><path d="M8 14H3.5C2.672 14 2 13.328 2 12.5V3.5" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/><path d="M4.5 6H9M4.5 9.5H7.5" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/><path d="M12 8.5V15M9 11.75H15" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/></svg>选择</button>
+            </span>
+          </div>
+        </td>
+        <td class="col-action"><button class="btn-del" onclick="deleteRow(this)">删除</button></td>
+      </tr>
+
+      <!-- 第 2 行：部分填写 -->
+      <tr>
+        <td class="col-index">2</td>
+        <td>
+          <div class="z-timepicker">
+            <span class="z-value">09:00:00</span>
+            <span class="z-timepicker-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#A8B4C8" stroke-width="1.4"/><path d="M8 5v3.5l2 1.5" stroke="#A8B4C8" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </td>
+        <td>
+          <div class="z-multisel">
+            <span class="z-tag">英语<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2L8 8M8 2L2 8" stroke="#223355" stroke-width="1.4" stroke-linecap="round"/></svg></span></span>
+            <span class="z-multisel-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </td>
+        <td>
+          <div class="z-modal-sel">
+            <span class="z-placeholder">请选择</span>
+            <span class="z-modal-actions">
+              <span class="z-modal-sep"></span>
+              <button class="z-modal-sel-btn"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.672 2.672 2 3.5 2H12.5C13.328 2 14 2.672 14 3.5V8" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/><path d="M8 14H3.5C2.672 14 2 13.328 2 12.5V3.5" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/><path d="M4.5 6H9M4.5 9.5H7.5" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/><path d="M12 8.5V15M9 11.75H15" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/></svg>选择</button>
+            </span>
+          </div>
+        </td>
+        <td class="col-action"><button class="btn-del" onclick="deleteRow(this)">删除</button></td>
+      </tr>
+
+      <!-- 第 3 行：空行 -->
+      <tr>
+        <td class="col-index">3</td>
+        <td>
+          <div class="z-timepicker">
+            <span class="z-placeholder">请选择时间</span>
+            <span class="z-timepicker-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#A8B4C8" stroke-width="1.4"/><path d="M8 5v3.5l2 1.5" stroke="#A8B4C8" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </td>
+        <td>
+          <div class="z-multisel">
+            <span class="z-placeholder">请选择</span>
+            <span class="z-multisel-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </td>
+        <td>
+          <div class="z-modal-sel">
+            <span class="z-placeholder">请选择</span>
+            <span class="z-modal-actions">
+              <span class="z-modal-sep"></span>
+              <button class="z-modal-sel-btn"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.672 2.672 2 3.5 2H12.5C13.328 2 14 2.672 14 3.5V8" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/><path d="M8 14H3.5C2.672 14 2 13.328 2 12.5V3.5" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/><path d="M4.5 6H9M4.5 9.5H7.5" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/><path d="M12 8.5V15M9 11.75H15" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/></svg>选择</button>
+            </span>
+          </div>
+        </td>
+        <td class="col-action"><button class="btn-del" onclick="deleteRow(this)">删除</button></td>
+      </tr>
+
+    </tbody>
+  </table>
+
+</div>
+
+<script>
+function addRow() {
+  const tbody = document.querySelector('#common-table tbody');
+  const newRow = document.createElement('tr');
+  newRow.innerHTML = `
+    <td class="col-index">-</td>
+    <td><input class="z-input" placeholder="请输入"></td>
+    <td>
+      <div class="z-radio-group">
+        <label class="z-radio-wrap"><span class="z-radio"></span>男</label>
+        <label class="z-radio-wrap"><span class="z-radio"></span>女</label>
+      </div>
+    </td>
+    <td>
+      <div class="z-select">
+        <span class="z-placeholder">请选择</span>
+        <span class="z-select-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </div>
+    </td>
+    <td>
+      <div class="z-num">
+        <button class="z-num-btn"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+        <div class="z-num-divider"></div>
+        <input class="z-num-input" placeholder="0">
+        <div class="z-num-divider"></div>
+        <button class="z-num-btn"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      </div>
+    </td>
+    <td><label class="z-switch"><span class="z-sw-track"><span class="z-sw-thumb"></span></span></label></td>
+    <td><textarea class="z-textarea" placeholder="请输入备注"></textarea></td>
+    <td class="col-action"><button class="btn-del" onclick="deleteRow(this)">删除</button></td>
+  `;
+  tbody.insertBefore(newRow, tbody.firstChild);
+  updateIndex('#common-table');
+}
+
+function addSelectRow() {
+  const tbody = document.querySelector('#select-table tbody');
+  const newRow = document.createElement('tr');
+  newRow.innerHTML = `
+    <td class="col-index">-</td>
+    <td>
+      <div class="z-timepicker">
+        <span class="z-placeholder">请选择时间</span>
+        <span class="z-timepicker-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#A8B4C8" stroke-width="1.4"/><path d="M8 5v3.5l2 1.5" stroke="#A8B4C8" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </div>
+    </td>
+    <td>
+      <div class="z-multisel">
+        <span class="z-placeholder">请选择</span>
+        <span class="z-multisel-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </div>
+    </td>
+    <td>
+      <div class="z-modal-sel">
+        <span class="z-placeholder">请选择</span>
+        <span class="z-modal-actions">
+          <span class="z-modal-sep"></span>
+          <button class="z-modal-sel-btn"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.672 2.672 2 3.5 2H12.5C13.328 2 14 2.672 14 3.5V8" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/><path d="M8 14H3.5C2.672 14 2 13.328 2 12.5V3.5" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/><path d="M4.5 6H9M4.5 9.5H7.5" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/><path d="M12 8.5V15M9 11.75H15" stroke="#3388FF" stroke-width="1.4" stroke-linecap="round"/></svg>选择</button>
+        </span>
+      </div>
+    </td>
+    <td class="col-action"><button class="btn-del" onclick="deleteRow(this)">删除</button></td>
+  `;
+  tbody.insertBefore(newRow, tbody.firstChild);
+  updateIndex('#select-table');
+}
+
+function deleteRow(btn) {
+  const tr = btn.closest('tr');
+  const table = tr.closest('table');
+  tr.remove();
+  updateIndex('#' + table.id);
+}
+
+function updateIndex(sel) {
+  document.querySelectorAll(sel + ' tbody tr').forEach((tr, i) => {
+    tr.querySelector('.col-index').textContent = i + 1;
+  });
+}
+
+document.querySelectorAll('.btn-del').forEach(btn => {
+  btn.addEventListener('click', () => deleteRow(btn));
+});
+</script>
+
+<!-- ============================================================
+     上传附件展示表格
+============================================================ -->
+<h2>上传图片 / 附件</h2>
+<style>
+.zt-table tr.row-upload td { height: 70px; vertical-align: middle; }
+
+/* 上传操作格 / 缩略格 */
+.z-up-item {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 60px; height: 60px; flex-shrink: 0;
+  border: 1px solid #DDE1EB; border-radius: 4px;
+  background: #F5F7FA; cursor: pointer; position: relative;
+  transition: border-color .15s;
+}
+.z-up-add:hover { border-color: #3388FF; background: #F0F9FF; }
+.z-up-add:hover svg path { stroke: #3388FF; }
+
+/* + 号触发 */
+.z-up-add svg { width: 16px; height: 16px; display: block; }
+
+/* 图片缩略图 */
+.z-up-img img {
+  width: 100%; height: 100%; object-fit: cover;
+  display: block; border-radius: 3px;
+}
+.z-up-img-del {
+  position: absolute; top: 2px; right: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: rgba(34,51,85,0.45); border: none; cursor: pointer;
+  display: none; align-items: center; justify-content: center;
+}
+.z-up-img:hover .z-up-img-del { display: flex; }
+.z-up-img-del svg { width: 8px; height: 8px; }
+
+/* 文件类型格 */
+.z-up-file {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+}
+.z-up-file-icon {
+  width: 28px; height: 28px; border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 600; letter-spacing: 0;
+  color: #FFFFFF;
+}
+.z-up-file-name {
+  font-size: 11px; color: #6B7A99;
+  max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-align: center;
+}
+
+/* 附件卡片（左图标 + 右文件名 + 右删除，横向） */
+.z-up-file-row {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 60px; padding: 0 8px; border-radius: 4px;
+  border: 1px solid #DDE1EB; background: #F5F7FA;
+  flex-shrink: 0; min-width: 140px; max-width: 180px;
+}
+.z-up-file-row .z-up-file-icon {
+  width: 40px; height: 40px; border-radius: 4px; flex-shrink: 0;
+  font-size: 11px; font-weight: 600; color: #FFFFFF;
+  display: flex; align-items: center; justify-content: center;
+}
+.z-up-file-row .z-up-file-label {
+  flex: 1; font-size: 12px; color: #223355; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.z-up-file-row .z-up-file-del {
+  flex-shrink: 0; width: 20px; height: 20px; border-radius: 4px;
+  border: none; background: transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  opacity: 0; transition: opacity .12s;
+}
+.z-up-file-row:hover .z-up-file-del { opacity: 1; }
+.z-up-file-row .z-up-file-del:hover svg path { stroke: #FF4433; }
+.z-up-file-row .z-up-file-del svg { width: 16px; height: 16px; }
+
+/* 附件列单元格横向排列，可滚动 */
+.z-up-attach-cell {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 8px; overflow-x: auto; flex-wrap: nowrap;
+  height: 70px;
+}
+.z-up-attach-cell::-webkit-scrollbar { height: 4px; }
+.z-up-attach-cell::-webkit-scrollbar-thumb { background: #E9ECF2; border-radius: 2px; }
+
+/* 图片列单元格横向排列 */
+.z-up-cell {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 8px; flex-wrap: wrap;
+}
+/* 上传表格中含 z-up-cell / z-up-attach-cell 的 td 不加自身 padding */
+#upload-table td:has(.z-up-cell),
+#upload-table td:has(.z-up-attach-cell) { padding: 0; }
+</style>
+
+<div class="section">
+  <table class="zt-table" id="upload-table">
+    <thead>
+      <tr>
+        <th class="col-index">序号</th>
+        <th style="min-width:300px;">上传图片<span class="th-optional">（非必填）</span></th>
+        <th style="min-width:360px;">上传附件<span class="th-optional">（非必填）</span></th>
+        <th class="col-action">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <!-- 第 1 行：图片+附件均有内容 -->
+      <tr class="row-upload">
+        <td class="col-index">1</td>
+        <!-- 上传图片：上传按钮在第一个 + 2张已上传 -->
+        <td>
+          <div class="z-up-cell">
+            <div class="z-up-item z-up-add">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="z-up-item z-up-img">
+              <img src="https://picsum.photos/seed/lake/60/60" alt="图片1">
+              <button class="z-up-img-del"><svg viewBox="0 0 8 8" fill="none"><path d="M1.5 1.5l5 5M6.5 1.5l-5 5" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round"/></svg></button>
+            </div>
+            <div class="z-up-item z-up-img">
+              <img src="https://picsum.photos/seed/mountain/60/60" alt="图片2">
+              <button class="z-up-img-del"><svg viewBox="0 0 8 8" fill="none"><path d="M1.5 1.5l5 5M6.5 1.5l-5 5" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round"/></svg></button>
+            </div>
+          </div>
+        </td>
+        <!-- 上传附件：上传按钮在第一个 + Word / PDF / Excel / PPT 横向排列 -->
+        <td>
+          <div class="z-up-attach-cell">
+            <div class="z-up-item z-up-add">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="z-up-file-row">
+              <div class="z-up-file-icon" style="background:#2B579A;">DOC</div>
+              <span class="z-up-file-label">报告.docx</span>
+              <button class="z-up-file-del"><svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v8a1 1 0 001 1h4a1 1 0 001-1V4" stroke="#A8B4C8" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7v4M9 7v4" stroke="#A8B4C8" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+            </div>
+            <div class="z-up-file-row">
+              <div class="z-up-file-icon" style="background:#E84B3A;">PDF</div>
+              <span class="z-up-file-label">说明.pdf</span>
+              <button class="z-up-file-del"><svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v8a1 1 0 001 1h4a1 1 0 001-1V4" stroke="#A8B4C8" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7v4M9 7v4" stroke="#A8B4C8" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+            </div>
+            <div class="z-up-file-row">
+              <div class="z-up-file-icon" style="background:#217346;">XLS</div>
+              <span class="z-up-file-label">数据.xlsx</span>
+              <button class="z-up-file-del"><svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v8a1 1 0 001 1h4a1 1 0 001-1V4" stroke="#A8B4C8" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7v4M9 7v4" stroke="#A8B4C8" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+            </div>
+            <div class="z-up-file-row">
+              <div class="z-up-file-icon" style="background:#D24726;">PPT</div>
+              <span class="z-up-file-label">演示.pptx</span>
+              <button class="z-up-file-del"><svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v8a1 1 0 001 1h4a1 1 0 001-1V4" stroke="#A8B4C8" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7v4M9 7v4" stroke="#A8B4C8" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+            </div>
+          </div>
+        </td>
+        <td class="col-action"><button class="btn-del" onclick="deleteRow(this)">删除</button></td>
+      </tr>
+
+      <!-- 第 2 行：空状态，仅显示上传按钮 -->
+      <tr class="row-upload">
+        <td class="col-index">2</td>
+        <td>
+          <div class="z-up-cell">
+            <div class="z-up-item z-up-add">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="z-up-attach-cell">
+            <div class="z-up-item z-up-add">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+          </div>
+        </td>
+        <td class="col-action"><button class="btn-del" onclick="deleteRow(this)">删除</button></td>
+      </tr>
+
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

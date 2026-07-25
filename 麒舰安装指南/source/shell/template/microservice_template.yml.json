@@ -1,0 +1,552 @@
+{
+  "linglong": {
+    "name": "灵珑",
+    "server_port": 10000,
+    "base_path": "/egova/apps/basic/linglong",
+    "jar_name": "magic-world.jar",
+    "frontend_path": "/egova/apps/basic/linglong/webApps",
+    "url": {
+      "backend": "linglong-api",
+      "frontend": "linglong"
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx4096m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "sub_type": "biz",
+        "name": "mysql业务库",
+        "database": "linglong"
+      },
+      {
+        "type": "redis",
+        "sub_type": null,
+        "name": "redis",
+        "database": 2
+      },
+      {
+        "type": "minio",
+        "name": "minio",
+        "bucket_name": "linglong"
+      }
+    ]
+  },
+  "wukong": {
+    "name": "悟空",
+    "server_port": 10010,
+    "base_path": "/egova/apps/basic/wukong",
+    "jar_name": "egova-wukong.jar",
+    "frontend_path": "/egova/apps/basic/wukong/webApps",
+    "url": {
+      "backend": "wukong-api",
+      "frontend": "wukong"
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx2048m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "wukong",
+        "sub_type": "biz"
+      },
+      {
+        "type": "redis",
+        "name": "redis",
+        "database": 11
+      }
+    ]
+  },
+  "dex": {
+    "name": "星桥",
+    "server_port": 10020,
+    "base_path": "/egova/apps/basic/dex",
+    "jar_name": "data-exchange.jar",
+    "frontend_path": "/egova/apps/basic/dex/webApps",
+    "url": {
+      "backend": "dex-api",
+      "frontend": "dex"
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx2048m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "data_exchange",
+        "sub_type": "biz"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 7
+      }
+    ]
+  },
+  "bigdata": {
+    "name": "大数据中心(包含星桥)",
+    "server_port": 10030,
+    "base_path": "/egova/apps/basic/bigdata",
+    "jar_name": "egova-bigdata-all.jar",
+    "frontend_path": "/egova/apps/basic/bigdata/webApps",
+    "url": {
+      "backend": "bigdata-api",
+      "frontend": "bigdata"
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx2048m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "datacenter2",
+        "sub_type": "biz"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 15
+      },
+      {
+        "type": "kafka",
+        "name": "消息队列"
+      },
+      {
+        "type": "elasticsearch",
+        "name": "es索引数据库"
+      }
+    ],
+    "flink_job": {
+      "name": "flink任务",
+      "depends": [
+        "kafka",
+        "elasticsearch"
+      ],
+      "parallelism": 8,
+      "max_parallelism": 8,
+      "kafka_group": "catalog_index",
+      "jvm_options": "-Xmx1g -Xms1g",
+      "jar_name": "catalog-index-flink.jar"
+    }
+  },
+  "fac": {
+    "name": "市政V22",
+    "server_port": 14010,
+    "base_path": "/egova/apps/fac/fac",
+    "jar_name": "facilities-facv22-service-1.0.0-SNAPSHOT.jar",
+    "frontend_path": "/egova/apps/fac/fac/webApps",
+    "url": {
+      "backend": "fac-api",
+      "frontend": "fac"
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx4096m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "sub_type": "biz",
+        "name": "业务库",
+        "database": "cgdb"
+      },
+      {
+        "type": "redis",
+        "name": "redis",
+        "database": 5
+      },
+      {
+        "type": "minio",
+        "name": "minio",
+        "bucket_name": "fac"
+      }
+    ]
+  },
+  "eUrbanFac": {
+    "name": "市政V20",
+    "server_port": 14000,
+    "base_path": "/egova/apps/fac/eUrbanFac",
+    "jar_name": "facilities-facv20-service-1.0.0-SNAPSHOT.jar",
+    "frontend_path": "/egova/apps/fac/eUrbanFac/webApps",
+    "url": {
+      "backend": "eUrbanFac-api",
+      "frontend": "eUrbanFac"
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx4096m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "sub_type": "biz",
+        "name": "业务库",
+        "database": "cgdb"
+      },
+      {
+        "type": "redis",
+        "name": "redis",
+        "database": 0
+      },
+      {
+        "type": "minio",
+        "name": "minio",
+        "bucket_name": "fac"
+      }
+    ]
+  },
+  "eureka": {
+    "name": "中台-eureka服务注册中心",
+    "server_port": 10100,
+    "base_path": "/egova/apps/springcloud/eureka",
+    "jar_name": "egova-eureka-1.1.0-SNAPSHOT.jar",
+    "frontend_path": null,
+    "url": {
+      "backend": null,
+      "frontend": null
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx512m"
+    },
+    "depends": []
+  },
+  "media": {
+    "name": "中台-media多媒体服务",
+    "server_port": 10130,
+    "base_path": "/egova/apps/basic/media",
+    "jar_name": "egova-service-media-1.1.0-SNAPSHOT.jar",
+    "frontend_path": null,
+    "url": {
+      "backend": null,
+      "frontend": null
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx512m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      },
+      {
+        "type": "microservice",
+        "sub_type": "eureka",
+        "name": "eureka注册中心"
+      }
+    ]
+  },
+  "export": {
+    "name": "中台-export2.0导出服务",
+    "server_port": 10110,
+    "base_path": "/egova/apps/basic/export",
+    "jar_name": "egova-service-export-2.0.0-SNAPSHOT.jar",
+    "frontend_path": null,
+    "url": {
+      "backend": null,
+      "frontend": null
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx2024m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      },
+      {
+        "type": "mysql",
+        "name": "统计库",
+        "database": "cgdbstat",
+        "sub_type": "stat"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      },
+      {
+        "type": "microservice",
+        "sub_type": "eureka",
+        "name": "eureka注册中心"
+      }
+    ]
+  },
+  "dsscp": {
+    "name": "中台-dsscp加密服务",
+    "server_port": 10140,
+    "base_path": "/egova/apps/basic/dsscp",
+    "jar_name": "egova-service-dsscp-1.0.0-SNAPSHOT.jar",
+    "frontend_path": null,
+    "url": {
+      "backend": null,
+      "frontend": null
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx512m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "dsscp",
+        "sub_type": "biz"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      },
+      {
+        "type": "microservice",
+        "sub_type": "eureka",
+        "name": "eureka注册中心"
+      }
+    ]
+  },
+  "datamgr": {
+    "name": "社会治理-在线采集",
+    "server_port": 12000,
+    "base_path": "/egova/apps/sg/datamgr",
+    "jar_name": "egova-service-datamgr-1.0.0-SNAPSHOT.jar",
+    "frontend_path": "/egova/apps/sg/datamgr/webApps",
+    "url": {
+      "backend": "datamgr-api",
+      "frontend": "usdm"
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx4096m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      },
+      {
+        "type": "microservice",
+        "sub_type": "eureka",
+        "name": "eureka注册中心"
+      },
+      {
+        "type": "zookeeper",
+        "name": "zookeeper"
+      }
+    ]
+  },
+  "check": {
+    "name": "社会治理-通用检查平台",
+    "server_port": 12020,
+    "base_path": "/egova/apps/sg/check",
+    "jar_name": "egova-check-platform-1.0.0-SNAPSHOT.jar",
+    "frontend_path": "/egova/apps/sg/check/webApps",
+    "url": {
+      "backend": "check-api",
+      "frontend": "egovasgkpm"
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx2048m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      },
+      {
+        "type": "microservice",
+        "sub_type": "eureka",
+        "name": "eureka注册中心"
+      },
+      {
+        "type": "zookeeper",
+        "name": "zookeeper"
+      }
+    ]
+  },
+  "spm": {
+    "name": "社会治理-重点人管控",
+    "server_port": 12040,
+    "base_path": "/egova/apps/sg/spm",
+    "jar_name": "egova-service-spm.jar",
+    "frontend_path": "/egova/apps/sg/spm/webApps",
+    "url": {
+      "backend": "spm-api",
+      "frontend": "egovasgspm"
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx1024m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      },
+      {
+        "type": "microservice",
+        "sub_type": "eureka",
+        "name": "eureka注册中心"
+      },
+      {
+        "type": "zookeeper",
+        "name": "zookeeper"
+      }
+    ]
+  },
+  "tms": {
+    "name": "社会治理-千分制106项",
+    "server_port": 12060,
+    "base_path": "/egova/apps/sg/tms",
+    "jar_name": "egova-service-tms.jar",
+    "frontend_path": "/egova/apps/sg/tms/webApps",
+    "url": {
+      "backend": "tms-api",
+      "frontend": "egovasgtms"
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx512m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      },
+      {
+        "type": "microservice",
+        "sub_type": "eureka",
+        "name": "eureka注册中心"
+      },
+      {
+        "type": "zookeeper",
+        "name": "zookeeper"
+      }
+    ]
+  },
+  "screen": {
+    "name": "社会治理-综治大屏对接",
+    "server_port": 12070,
+    "base_path": "/egova/apps/sg/screen",
+    "jar_name": "egova-screen-interface.jar",
+    "frontend_path": null,
+    "url": {
+      "backend": "screen-api",
+      "frontend": null
+    },
+    "environment": {
+      "jvm_opts": "-Xms128m -Xmx512m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      },
+      {
+        "type": "microservice",
+        "sub_type": "eureka",
+        "name": "eureka注册中心"
+      }
+    ]
+  },
+  "evaluation": {
+    "name": "毕升",
+    "server_port": 10040,
+    "base_path": "/egova/apps/basic/evaluation",
+    "jar_name": "egova-stat-service-1.0.0-SNAPSHOT.jar",
+    "frontend_path": "/egova/apps/basic/evaluation/webApps",
+    "url": {
+      "backend": "bi-api",
+      "frontend": "evaluation"
+    },
+    "environment": {
+      "jvm_opts": "-Xms1024m -Xmx4096m"
+    },
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      },
+      {
+        "type": "mysql",
+        "name": "统计库",
+        "database": "cgdbstat",
+        "sub_type": "stat"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      },
+      {
+        "type": "microservice",
+        "sub_type": "eureka",
+        "name": "eureka注册中心"
+      }
+    ]
+  },
+  "HttpFileServer": {
+    "name": "共享目录服务",
+    "server_port": 8086,
+    "base_path": "/egova/web/HttpFileServer",
+    "jar_name": "egova-httpfileserver-netty-1.0.0.jar",
+    "frontend_path": null,
+    "url": {
+      "backend": null,
+      "frontend": null
+    },
+    "environment": {
+      "jvm_opts": "-Xms26m -Xmx512m"
+    },
+    "depends": [
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      }
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "with_skill": {
+    "expectations": [
+      {
+        "text": "明确命中 REPORT 或上报接口",
+        "passed": true,
+        "evidence": "标题和命中接口部分明确写出 'action: REPORT'，接口用途为'工单上报，第三方向我方系统推送新工单'"
+      },
+      {
+        "text": "包含最小请求示例",
+        "passed": true,
+        "evidence": "第3节提供了完整的 JSON 最小请求示例，包含 uid, data, action, senderCode 等字段"
+      },
+      {
+        "text": "不展开完整参数表",
+        "passed": true,
+        "evidence": "只列出了顶层必传4个字段和 data 中高频必传7个字段，未包含 medias 等完整子结构字段表"
+      }
+    ]
+  },
+  "old_skill": {
+    "expectations": [
+      {
+        "text": "明确命中 REPORT 或上报接口",
+        "passed": true,
+        "evidence": "命中接口部分明确写出 'action: REPORT'，用途为'工单上报'"
+      },
+      {
+        "text": "包含最小请求示例",
+        "passed": true,
+        "evidence": "提供了完整的 JSON 最小请求示例，包含 data, action, senderCode, uid 等字段"
+      },
+      {
+        "text": "不展开完整参数表",
+        "passed": false,
+        "evidence": "展开了 medias 子结构的字段表（mediaName, mediaUsage, mediaTypeId, mediaPath/content），属于展开完整参数表"
+      }
+    ]
+  }
+}

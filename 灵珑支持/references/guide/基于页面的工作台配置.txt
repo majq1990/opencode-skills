@@ -1,0 +1,212 @@
+基于页面的工作台配置
+1 使用场景
+适用于需要在统一工作台页面中集成多种信息模块的场景，并可与业务系统进行交互，例如：无地图模式的综合统计面板；数据概览型“一张图”工作台；
+2 效果
+工作台一：纯数据卡片 + 图表布局，无地图背景；
+工作台二：以地图为底图，叠加统计卡片与交互图表；
+3 配置
+3.1页面布局配置
+添加容器组件
+在页面画布中拖入一个“容器”组件，用于承载后续内容。
+设置网格布局（简）
+在上容器中，拖入“网格布局（简）”组件；
+将页面划分为三列（或其他所需分区），如左-中-右结构。
+细化子区域布局
+在每个网格项中，可再次嵌套“网格布局（简）”，形成多级区块；
+调整各区块尺寸，以匹配设计稿或业务需求。
+3.2 内容填充方式
+根据内容类型，选择以下方式之一：
+根据每块的设计内容选择合适的方式。
+3.3统计汇总卡片
+配置方式多样，列表、表单、详情部件都可进行配置
+《列表页上方的统计卡片列表统计列表数据》
+《PC卡片列表展示统计页面》
+效果如下：
+统计卡片部件配置好后直接拖入相应区块即可。
+基于上面两种方法之外还可以使用容器来配置效果：
+第一步：拉一个容器，预留每个卡片位置
+横向的卡片：开启弹性模式，选择横向排列，主轴对称排布
+竖向卡片：可用网格布局用比例布局好
+第二步：每个卡片配置为一个容器设置容器的宽高和背景图片
+第三步：向容器卡片中拖入图片组件上传logo图片，拖入文本组件来展示卡片数据设置需要的样式：
+第四步：给文本数据赋值：通过调用接口数据给数据文本赋值
+var self = this;
+api.DATA_SOURCE_EXECUTE("ds_mod_4a01c63b-3417-4d44-94a6-a9ef01bafbf2", "ddcat", [], [], "").then(res => {
+    //console.log("res5", res);
+    if (res.result && !res.hasError) {
+        const data = res.result;
+        self.$$('text_7lxzjn').$$setValue(data[0].totalNum);
+        self.$$('text_64ualc').$$setValue(data[0].planNum);
+        self.$$('text_fw5xdq').$$setValue(data[0].buildingNum);
+        self.$$('text_687kgm').$$setValue(data[0].finishedNum);
+        self.$$('text_bwbyfq').$$setValue(data[0].projectInvestNum);
+        self.$$('text_a3pz5d').$$setValue(data[0].spongeInvestNum);
+    }
+}).catch(err => {
+    console.error('接口请求失败：', err);
+});
+注：做好一个容器卡片后，对容器卡片复制操作，即可同步配置其他卡片，只用更换样式
+交互拓展：
+若卡片需要绑定点击事件：
+可将文本组件换成自定义按钮组件，设置同样的样式：
+在自定义按钮中添加需要跳转的页面动作
+3.4列表类卡片
+直接使用列表部件，有表格列表和卡片列表两类，其中卡片列表配置可参照
+《PC卡片列表》
+《公告消息卡片列表展示》
+效果如下：
+列表部件配置好后直接拖入相应区块即可。
+3.5图表类配置（ECharts）
+前提条件
+页面中必须配置一个echarts类型的组件（否则系统不会自动加载 ECharts 库），随意选择一个拖入页面，比如环形图，隐藏其不显示即可。
+注：该组件没有直接隐藏的功能需先拉一个容器将组件拉入容器中，给容器设置默认状态为隐藏开启强制渲染模式：
+操作流程
+a.在目标区域拖入一个“容器”组件，可在组件属性中查看其唯一标识（如 container_f3r5gg）；
+b.编写初始化脚本，步骤说明详见如下脚本注释
+其中ECharts 官方示例库：https://echarts.apache.org/examples/zh/index.html
+function initleft3(self) {
+  // 1. 获取页面上id为container_f3r5gg_csshandler_generate的DOM容器元素，用于渲染图表
+  var chartDom = document.getElementById('container_f3r5gg_csshandler_generate');
+  // 2. 基于获取的DOM元素，初始化ECharts图表实例
+  var myChart = echarts.init(chartDom);
+  // 声明变量，用于存储ECharts的配置项
+  var option;
+
+  // 3. 调用平台API接口，获取图表需要的数据源
+  api.DATA_SOURCE_EXECUTE("cf143076-d722-4e39-a64f-a8b223cacef7", "api", [], [], "").then(res => {
+    // 打印接口返回的原始数据，方便调试
+    console.log(res);
+    // 解析接口返回的JSON字符串数据，转为JS对象
+    var result = JSON.parse(res['result']);
+    
+    // 判断数据是否存在且没有错误
+    if (result && !result.hasError) {
+      // 取出接口返回的真正业务数据
+      var obj = result.result
+      // 定义数组，存储【有效证件数】
+      const dat = [];
+      // 定义数组，存储【到期证件数】
+  const ove = [];
+
+      // 循环遍历业务数据对象的每一个key
+      for (const key in obj) {
+        // 判断当前属性是否属于对象自身（避免继承属性干扰）
+        if (obj.hasOwnProperty(key)) {
+          // 将当前项的有效证件数量推入dat数组
+          dat.push(obj[key].eff_count)
+          // 将当前项的到期证件数量推入ove数组
+  ove.push(obj[key].over_count)
+        }
+      }
+
+      // 4. 开始配置ECharts图表的显示样式与数据
+      option = {
+        // 鼠标悬浮提示框配置
+        tooltip: {
+          // 触发方式：坐标轴触发
+          trigger: 'axis',
+          // 坐标轴指示器：使用阴影样式
+          axisPointer: {
+            type: 'shadow'
+          }
+        },
+        // 图例组件（显示“有效证件数”“到期证件数”标签）
+        legend: {},
+        // 图表网格间距配置
+        grid: {
+          left: '3%',      // 左边距
+          right: '4%',     // 右边距
+          bottom: '3%',    // 下边距
+          containLabel: true // 包含标签在内计算间距
+        },
+        // X轴配置：数值轴
+        xAxis: {
+          type: 'value',
+          boundaryGap: [0, 0.01] // 坐标轴两端留白
+        },
+        // Y轴配置：类目轴（文字）
+        yAxis: {
+          type: 'category',
+          data: ['排放', '受纳', '运输'] // Y轴显示的三个分类
+        },
+        // 系列数据（柱状图）
+        series: [
+          // 第一组柱子：有效证件数
+          {
+            name: '有效证件数',
+            type: 'bar', // 图表类型：柱状图
+            data: dat    // 绑定有效证件数数组
+          },
+          // 第二组柱子：到期证件数
+  {
+            name: '到期证件数',
+            type: 'bar',
+            data: ove    // 绑定到期证件数数组
+          }
+        ]
+      };
+
+      // 5. 如果配置项存在，将配置应用到图表上进行渲染
+      option && myChart.setOption(option);
+
+      // 6. 给图表绑定柱子点击事件
+  myChart.on('click', function (params) {
+        // 默认弹窗页面ID
+var pageId='a472fbaa-46cf-44a5-adf9-0f1a2610b933';
+        // 判断点击的分类名称是否存在
+if(params && params.name){
+            // 如果点击的是【排放】，切换对应页面ID
+if(params.name == '排放'){
+            // 如果点击的是【受纳】，切换对应页面ID
+}else if(params.name == '受纳'){
+pageId = '0e535647-fba9-4df0-9229-99e8e1e48063';
+            // 如果点击的是【运输】，切换对应页面ID
+}else if(params.name == '运输'){
+pageId = '0eeac6a9-a1ea-486d-9a43-04e3b8c31cb2';
+}
+
+            // 调用平台API，打开详情弹窗
+api.WIDGET_DIALOG(this, "LIST", pageId, {
+                linkAction: {
+                    moduleModalTitle: "详情",        // 弹窗标题
+                    moduleModalPosition: "middle",   // 弹窗居中显示
+                    moduleModalSize: "custom",       // 使用自定义尺寸
+                    moduleModalWidth: 1200,          // 弹窗宽度
+                    moduleModalHeight: 760,          // 弹窗高度
+                    moduleOpenMask: true,            // 显示遮罩层
+                    isDetail: false                  // 非详情模式（可编辑）
+                },
+                // 弹窗关闭/操作后的回调函数（当前为空）
+                callback: (actionType, params) => {
+                },
+})
+}
+  });
+    } else {
+      // 如果数据返回错误，弹出错误提示
+      self.$message.error(result.message || '数据加载失败');
+    }
+  }).catch(err => {
+    // 接口调用失败时，在控制台打印错误信息
+    console.error('API调用异常:', err);
+  });
+}
+c.在页面加载完成时调用该脚本方法
+效果如下：
+3.6“一张图”工作台
+同上的区别主要是在布局上，需要先加入地图组件，详细可参考：
+《如何配置地图底图的工作台》
+3.7带有查询条件的工作台
+《查询条件联动图表配置》
+4 常见问题
+成品参考：
+无地图模式的综合统计面板： 页面管理
+数据概览型“一张图”工作台:  页面管理
+5 视频讲解
+请至钉钉文档查看附件《《基于页面的工作台配置》讲解.mp4》。
+
+[表格0]
+内容类型 | 推荐方式 | 说明
+统计汇总数据 | 列表部件 / 表单部件 / 详情部件 | 可展示汇总数值
+列表类信息 | 列表部件（表格或卡片） | 可展示实时报警、消息等
+动态统计图表（ECharts） | 自定义脚本 + 容器 | 需手动编写初始化与数据绑定逻辑，包括折线图、柱状图、饼状图、仪表盘等

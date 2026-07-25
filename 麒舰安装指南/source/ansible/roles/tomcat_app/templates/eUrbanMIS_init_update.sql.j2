@@ -1,0 +1,79 @@
+-- 此文件应该放在 eurbanMIS-db.tar 中，此处为备份
+{% macro get_ip(host_info) %}
+{%- set master = host_info.hosts.master if host_info is defined and host_info.hosts is defined else None %}
+{%- set ip = hostvars[master]['ansible_ssh_host'] if master and master in hostvars and 'ansible_ssh_host' in hostvars[master] else '127.0.0.1'  %}
+{{ ip }}
+{%- endmacro -%}
+
+{%- set usercenter_ip = get_ip(ip_web_usercenter|default({})) %}
+
+{%- set nginx_main_node = ip_nginx_main.hosts.master %}
+{%- set media_node = ip_web_media.hosts.master %}
+{%- set face_node = ip_web_face_server.hosts.master %}
+{%- set export_node = ip_web_export.hosts.master %}
+
+-- 修正大屏幕配置ii
+update tc_nav_item set nav_view='',url='screen.htm' where nav_item_id=19;
+
+-- 地图服务地址修改：
+update tc_gis_base_layer set service_url='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanGIS/tilemap/stdcgtile/Layers/_alllayers/${level}/${col}/${row}.png' where layer_type=16;
+update tc_gis_base_layer set service_url='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanGIS/tilemap/stdcg/Layers/_alllayers/${level}/${row}/${col}.png' where layer_type=17;
+update tc_gis_base_layer set service_url='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/egovagisserver/service/urbanlayer/' where layer_type=102;
+-- GIS地址
+update tc_sys_config_item set item_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanGIS/' where config_item_name='GIS_SERVER_URL';
+update tc_sys_config_item set item_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanGIS/' where config_item_name='COMMON_INNER_GIS_SERVER_URL';
+-- MIS地址
+update tc_sys_config_item set item_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanMIS/' where config_item_name='GIS_MAP_MISURL';
+update tc_sys_config_item set item_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanMIS/' where config_item_name='MIS_LOGIN_MIS_DISTRIBUTE_PATH';
+update tc_sys_config_item set item_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanMIS/mediadl/media/getdata' where config_item_name='COMMON_INNER_MEDIA_SERVER_URL';
+-- 实景配置地址
+update tc_sys_config_item set item_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eGovaMMS/library/mms/api/MMSAPI.js' where config_item_name='MMS_API_URL';
+update tc_sys_config_item set item_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eGovaMMS' where config_item_name='MMS_SERVER_URL';
+update tc_sys_config_item set item_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eGovaMMS/mmspic/Image' where config_item_name='MMS_CCDPIC_URL';
+update tc_sys_config_item set item_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eGovaMMS/symbol' where config_item_name='MMS_SYMBOL_URL';
+update tc_sys_config_item set item_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eGovaMMS/services/MMSInspector?wsdl' where config_item_name='MMS_WSDL_URL';
+-- 修改即时通讯地址
+-- update tc_sys_config_item set item_value='ws://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/IMserver/im/web' where config_item_name='WEBIM_H5_SOCKET_URL';
+update tc_sys_config_item set item_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/IMserver/' where config_item_name='WEBIM_H5_SOCKET_URL';
+update tc_sys_config_item set item_value='{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:5222' where config_item_name='MOBILE_IM_SOCKET_ADDRESS';
+-- 共享目录地址修改
+update tc_sys_config_item set item_value=4 where config_item_name='COMMON_MEDIA_STORE_TYPE';
+update tc_sys_config_item_detail set item_value='mediadl/media/getdata/,http://{{ hostvars[media_node]['ansible_ssh_host'] }}:8087/HttpFileServer,egovahttp,Http@123EgoVe' where key_value='Media2';
+-- 智信即时通讯等地址修改
+update to_mi_config set config_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanMIS' where config_name='MOBILE_CLIENT_MISSERVER';
+update to_mi_config set config_value='{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}' where config_name='MOBILE_CLIENT_IM_SERVER';
+update to_mi_config set config_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanMIS' where config_name=' MOBILE_IM_SEVER_URL';
+
+-- 地图配置文件
+update to_mi_version set file_path = CONCAT('mediadl/media/getdata/Media2/mobileDataUpdate/',file_name) where  ver_type='data';
+
+-- MIS服务端地址
+update to_mi_config set config_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanMIS' where config_name='MOBILE_CLIENT_MISSERVER';
+-- 即时通讯
+update to_mi_config set config_value='5222' where config_name='MOBILE_CLIENT_IM_SERVERPORT';
+update to_mi_config set config_value='{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}' where config_name='MOBILE_CLIENT_IM_SERVER';
+update to_mi_config set config_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/IMserver' where config_name='MOBILE_IM_SEVER_URL';
+-- 使用在线地图
+update to_mi_config set config_value=1 where config_name='MOBILE_CLIENT_USEONLINEMAP';
+update to_mi_config set config_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanGIS/home/gis/map/getbundletile.htm?layer=stdcg&level={level}&col={xIndex}&row={yIndex}' where config_name='MOBILE_CLIENT_MAPSERVER';
+update to_mi_config set config_value='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanGIS' where config_name='MOBILE_CLIENT_MAPSERVERPART';
+
+{% if face_node %}
+-- 修改算法组人脸识别服务地址
+update to_mi_config set config_value='http://{{ hostvars[face_node]['ansible_ssh_host'] }}:8099' where config_name='MOBILE_CLIENT_EGOVA_OCR_SERVER_URL';
+{% endif %}
+
+-- 修改导出微服务服务地址
+update tc_sys_config_item set item_value='http://{{ hostvars[export_node]['ansible_ssh_host'] }}:10110' where config_item_name='STAT_EXPORT_BY_MICRO_SERVICE';
+
+-- 修改轨迹存储方式
+update tc_sys_config_item set item_value='3' where config_item_name='PATROL_POS_WRITE_TO_FILE';
+update tc_sys_config_item set item_value='3' where config_item_name='VEHICLE_POS_WRITE_TO_FILE';
+
+update auth_client_config set client_id ='7205f502-04ae-4c80-a79b-0787715f94d6';
+update auth_client_config set secret ='4025e4dc7a';
+
+-- 用户中心
+update auth_client_config set endpoint='http://{{ usercenter_ip }}:10050/usercenter-api' where id=1;
+-- MIS
+update auth_client_config set redirect_url='http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/eUrbanMIS/commonauth.htm' where id=1;

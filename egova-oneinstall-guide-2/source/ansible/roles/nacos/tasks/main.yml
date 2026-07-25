@@ -1,0 +1,64 @@
+---
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 判断nacos目录是否为空
+  shell: ls "{{ deploy_path }}/nacos" 2>/dev/null |wc -l
+  ignore_errors: yes
+  register: file_count
+
+- block:
+    - name: 准备nacos目录
+      file: name={{ item.dir }} state=directory owner=egova group=egova mode='{{ item.mode }}'
+      with_items:
+        - { dir: "{{ deploy_path }}/nacos",mode: "0775" }
+
+    - name: 解压nacos
+      unarchive:
+        src: "{{ src_path }}/nacos-server.tar.gz"
+        dest: "{{ deploy_path }}"
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: '0755'
+
+    - name: 遍历 nacos 目录
+      find:
+        path: "{{ deploy_path }}/nacos"
+        file_type: directory
+      register: nacos_files
+
+    - name: 修改内部文件夹权限
+      file: name={{ item.path }} state=directory owner=egova group=egova mode=775
+      with_items: "{{nacos_files.files}}"
+
+
+    - name: 修改配置文件
+      template: src=nacos.application.properties.j2 dest={{ deploy_path }}/nacos/conf/application.properties
+
+    - name: config system service
+      template: src=nacos.service.template.j2 dest=/etc/systemd/system/nacos.service
+
+    - name: daemon-reload
+      systemd: daemon_reload=yes
+
+    - name: 启动 nacos
+      service: name=nacos state=restarted enabled=yes
+
+    - name: config nginx upstream
+      template: src=nacos.upstream.template.j2 dest=/etc/nginx/conf.d/nacos.upstream
+
+    - name: config nginx location
+      template: src=nacos.location.template.j2 dest=/etc/nginx/conf.d/nacos.location
+
+    - name: reload nginx
+      shell: nginx -s reload
+
+  when: file_count.stdout == '0'
+
+- name: Skip if nacos directory is not empty
+  debug:
+    msg: |
+      检查到 {{ deploy_path }}/nacos 目录不为空，不可以再次安装 nacos
+  when: file_count.stdout > '0'

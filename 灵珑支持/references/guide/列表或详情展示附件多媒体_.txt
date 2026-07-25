@@ -1,0 +1,120 @@
+列表或详情展示附件多媒体
+本文档示例多媒体展示路径为：
+https://{域名}//linglongZT-api//unity/establish/file/附件id/preview?appId=2061264891226980352&serviceType=PanFileService&{token}
+http://10.250.1.50:8080/linglongZT-api//unity/establish/file/ma_file_02f9b573333c42fbbdee35669ddd0ca7/preview?appId=2061264891226980352&serviceType=PanFileService&access_token=OeA6Pz1oAjnj95Vbi2U4d_LFC7E
+域名：自动从当前页面获取（window.location.origin）
+token：api.APP_TOKEN
+动态部分：附件id
+实际地址以自己现场环境的多媒体地址为准
+一、公式方法
+通过平台内置字符串函数，批量生成标准媒体文件路径，自动处理多文件分隔符，无需编写脚本。
+http://10.250.1.50:8080/linglongZT/design.html#/detail-design/fcfee10b-fca9-4b1c-a722-04770db108e6
+基础路径拼接：CONCATENATE函数将固定前缀、文件名拼接成完整路径
+转换成多媒体：TO_MEDIA_FILE_FORMAT传入图片等文件的下载地址url，将其转换成列表设计器中能展示的图片等附件样式的数据格式。
+二、详情/列表 图标-自定义配置
+在表格列中直接渲染图片缩略图，支持多图片横向排列、自动换行
+与公式方法相比，此方法可以在多个附件的情况下，让每个附件都能显示附件名称
+function render(h, value, rows) {
+    const origin = window.location.origin;
+    const apiPrefix = '/linglongZT-api/unity/establish/file';
+    const baseUrl = origin + apiPrefix;
+
+    const appId = '2061264891226980352';
+    const accessToken = api.APP_TOKEN();
+    const linkList = [];
+
+    if (Array.isArray(value) && value.length > 0) {
+        value.forEach((item) => {
+            const fileId = item.fileId;
+            const serviceType = item.serviceType;
+            const fileName = item.fileName;
+            if (fileId && serviceType) {
+                const previewUrl = `${baseUrl}/${fileId}/preview?appId=${appId}&serviceType=${serviceType}&access_token=${accessToken}`;
+                console.log('previewUrl: ', previewUrl);
+
+                linkList.push(
+                    h('img', {
+                        attrs: {
+                            src: previewUrl,
+                            alt: '附件',
+                            style: 'width: 100px; height:100px; object-fit: contain;',
+                        },
+                    }),
+                );
+            }
+        });
+        return h(
+            'div',
+            {
+                style: 'display: flex;flex-wrap: wrap;align-items: center; gap:8px',
+            },
+            linkList
+        );
+    }
+
+    return h('div', '暂无');
+}
+http://10.250.1.50:8080/linglongZT/design.html#/list-design/1f1293bc-47fc-46b3-934d-e07147d31427
+三、详情/列表  状态控制
+在组件渲染前执行，将后端返回的相对路径转换为完整可访问 URL，格式化数据结构适配平台多媒体组件，并在无媒体时自动隐藏组件。
+适用场景：需要根据数据动态显示 / 隐藏组件
+1.首先开启图标显示
+2.状态控制编写脚本  (一定要打开 控制开关)
+function main(params) 
+    // params 为当前卡片数据
+    // NORMAL 普通状态
+    // HIDDEN 隐藏状态
+    console.log("params =>", params);
+
+    
+    if (params && params["多媒体"] && params["多媒体"].value) {
+        const origin = window.location.origin;
+        const apiPrefix = '/linglongZT-api/unity/establish/file';
+        const baseUrl = origin + apiPrefix;
+
+        const appId = '2061264891226980352';
+        const accessToken = api.APP_TOKEN();
+
+        // 直接取单个文件对象
+        const fileObj = params["多媒体"].value;
+
+        const fileId = fileObj.fileId;
+        const serviceType = fileObj.serviceType;
+
+
+        // 拼接预览地址
+        const previewUrl = `${baseUrl}/${fileId}/preview?appId=${appId}&serviceType=${serviceType}&access_token=${accessToken}`;
+        console.log("previewUrl", previewUrl)
+        params["多媒体"].value = [
+            {
+                url: previewUrl,
+                mediaType: '1',     
+            }
+        ];
+    }
+
+    // 无数据隐藏
+    if (
+        params &&
+        params["多媒体"] &&
+        (!params["多媒体"].value || params["多媒体"].value.length === 0)
+    ) {
+        return "HIDDEN";
+    }
+    return "NORMAL";
+}
+http://10.250.1.50:8080/linglongZT/design.html#/detail-design/7516d210-659c-4374-8f86-dca442e10d28
+四、常见问题与排查指南
+4.1 图片无法加载
+打开浏览器控制台（F12），查看Network面板中图片请求的 URL 是否正确
+检查接口前缀是否与当前环境匹配
+确认后端返回的media_url是否为相对路径（不含域名和前缀）
+排查是否存在跨域问题
+4.2 组件不显示 / 不隐藏
+检查组件绑定的字段名是否与代码中一致
+确认后端返回的数据结构是否符合要求
+查看控制台是否有 JS 报错，重点检查数组遍历相关的错误
+4.3 多文件渲染异常
+确认多文件分隔符为英文逗号 ,，而非中文逗号
+检查每个文件的media_url是否都不为空
+若使用公式生成路径，确认REPLACE_TO函数的替换逻辑正确

@@ -1,0 +1,66 @@
+新增数据后向子表插入多条数据
+1 使用场景
+当表单数据提交时同时向子表插入多条对应的数据。
+2 效果
+当点击下发按钮时子表分别以下拉多选-指派人员字段的多个人员生成对应的多条数据。
+3 配置
+1）通过遍历下拉多选指派人员数组的值，每得到一条人员信息，执行一次插入子表操作。
+function main() {
+    let self = this;
+    let formPartEle = this.$$element("form_part_ddijxj");
+    //获取表单指派人员的值
+    let humanname = formPartEle.$$("multiple_select_cq43to").$$getValue();
+    console.log("humanname", humanname)
+    if (formPartEle) {
+        formPartEle.$$getRenderElement().onSave().then((res) => {
+            if (res.result) {
+                let id = res.result.documentNo;
+                let currentTime = formatDate(new Date()).toString();
+                //对指派人员数据进行遍历得到每一条人员的信息
+                humanname.forEach(function (personValue) {
+                    console.log(personValue);
+                    //每次遍历出的人员信息执行一次向子表的插入数据操作
+                    api.EXEC_FORMULA(`UPSERT('t_497c83293ae942a5a0828f85671577a7', ENTITY_QUERY_EQ('t_497c83293ae942a5a0828f85671577a7', 'id',${id}), '', ['id', UUID(),'human_id','${personValue}','task_id','${id}'],[])`).then(() => {
+                        // then() 为调用成功的回调
+                        self.$message.success("下发成功");
+                        window["isSave"] = "save";
+                        self.$route.query.refresh = "1";
+                        self.$router.back();
+
+                    }).catch(err => {
+                        self.$message.error(err.message); // 显示错误提示信息
+                    });
+                });
+                //对该信息的状态值和时间信息修改
+                api.EXEC_FORMULA(`UPDATE('t_76b313bef0c04f90844daf8e04df3c1e', ENTITY_QUERY_EQ('t_76b313bef0c04f90844daf8e04df3c1e', 'id',${id}), '', ['task_status',2,'distribution_time','${currentTime}'])`).then(() => {
+                    // then() 为调用成功的回调
+                    //self.$message.success("下发成功");
+                    window["isSave"] = "save";
+                    //self.$route.query.refresh = "1";
+                    //self.$router.back();
+
+                }).catch(err => {
+                    self.$message.error(err.message); // 显示错误提示信息
+                });
+            }
+        });
+    }
+}
+//得到当前时间
+function formatDate(date) {
+    let year = date.getFullYear();
+    let month = date.getMonth() + 1;
+    let day = date.getDate();
+    let hour = date.getHours();
+    let minute = date.getMinutes();
+    let second = date.getSeconds();
+    month = month >= 10 ? month : ("0" + month);
+    day = day >= 10 ? day : ("0" + day);
+    hour = hour >= 10 ? hour : ("0" + hour);
+    minute = minute >= 10 ? minute : ("0" + minute);
+    second = second >= 10 ? second : ("0" + second);
+    let newdate = year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second;
+    return newdate;
+}
+4 常见问题
+无。

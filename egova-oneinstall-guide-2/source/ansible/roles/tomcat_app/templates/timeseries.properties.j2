@@ -1,0 +1,27 @@
+{% for depend in service[app_type][app_name].depends %}
+{% if depend.type == 'TDengine' %}
+tdengine.enable=true
+
+# tdengine
+tdengine.url=jdbc:TAOS-RS://{{ TDengine[depend.depend_key].ip }}:{{ TDengine[depend.depend_key].port }}/{{ depend.database }}
+tdengine.username={{ TDengine[depend.depend_key].username }}
+tdengine.cryptogram={{ TDengine[depend.depend_key].password }}
+tdengine.driverClassName=com.taosdata.jdbc.rs.RestfulDriver
+
+#
+tdengine.initialSize=10
+tdengine.maxActive=100
+tdengine.maxIdle=20
+tdengine.minIdle=5
+tdengine.maxWait=30000
+tdengine.removeAbandonedTimeout=100
+tdengine.removeAbandoned=true
+tdengine.testWhileIdle=true
+tdengine.testOnBorrow=false
+tdengine.testOnReturn=false
+tdengine.validationQuery=select server_status()
+tdengine.validationQueryTimeout=1
+tdengine.timeBetweenEvictionRunsMillis=30000
+tdengine.numTestsPerEvictionRun=100
+{% endif %}
+{% endfor %}

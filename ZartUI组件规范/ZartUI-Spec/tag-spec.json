@@ -1,0 +1,126 @@
+{
+  "name": "tag-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 标签规范，覆盖基础标签、重要提示、一般提示、弱提示、icon 类标签、标签组",
+
+  "size": {
+    "md": {
+      "height": "24px",
+      "padding": "0 6px",
+      "font_size": "14px",
+      "font_weight": "400",
+      "border_radius": "4px"
+    },
+    "sm": {
+      "height": "20px",
+      "padding": "0 6px",
+      "font_size": "12px",
+      "font_weight": "400",
+      "border_radius": "4px",
+      "description": "其余样式与 24px 一致"
+    }
+  },
+
+  "basic": {
+    "description": "基础标签四种类型（沿用 size 规格）",
+    "types": [
+      { "name": "标签1", "background": "#3388FF", "color": "#FFFFFF", "desc": "主品牌色实心" },
+      { "name": "标签2", "background": "#F0F9FF", "color": "#3388FF", "desc": "浅色品牌" },
+      { "name": "标签3", "background": "#F5F7FA", "color": "#223355", "desc": "右侧关闭图标 12×12px，颜色 #223355" },
+      { "name": "标签4", "background": "#F5F7FA", "color": "#223355", "desc": "左侧图标 12×12px + 文字，图标和文字同色 #223355，间距 4px" }
+    ]
+  },
+
+  "important_solid": {
+    "description": "重要提示标签（实色背景），文字色统一 #FFFFFF",
+    "types": [
+      { "name": "主要", "default": "#3388FF", "hover": "#5CA5FF", "active": "#2167D9" },
+      { "name": "警示", "default": "#FF6600", "hover": "#FF8629", "active": "#D94F00" },
+      { "name": "错误", "default": "#FF4433", "hover": "#FF6F5C", "active": "#D92A21" },
+      { "name": "成功", "default": "#06A17F", "hover": "#11C79B", "active": "#007A64" },
+      { "name": "默认", "default": "#6B7A99", "hover": "#C3CAD9", "active": "#223355" }
+    ]
+  },
+
+  "general_soft": {
+    "description": "一般提示（浅色背景），背景固定，文字颜色随状态变化",
+    "types": [
+      { "name": "主要", "background": "#F0F9FF", "default_text": "#3388FF", "hover_text": "#5CA5FF", "active_text": "#2167D9" },
+      { "name": "警示", "background": "#FFD4A3", "default_text": "#D94F00", "hover_text": "#FF6600", "active_text": "#B33B00" },
+      { "name": "错误", "background": "#FFF4F0", "default_text": "#FF4433", "hover_text": "#FF6F5C", "active_text": "#D92A21" },
+      { "name": "成功", "background": "#B6FAE0", "default_text": "#06A17F", "hover_text": "#11C79B", "active_text": "#007A64" },
+      { "name": "默认", "background": "#F5F7FA", "default_text": "#223355", "hover_text": "#6B7A99", "active_text": "#081126" }
+    ]
+  },
+
+  "weak": {
+    "description": "弱提示（描边 + 同色文字 + 透明背景）",
+    "border_width": "1px",
+    "background": "transparent",
+    "types": [
+      { "name": "主要", "color": "#3388FF" },
+      { "name": "警示", "color": "#D94F00" },
+      { "name": "错误", "color": "#FF4433" },
+      { "name": "失败", "color": "#FF4433" },
+      { "name": "默认", "color": "#223355" }
+    ]
+  },
+
+  "icon": {
+    "description": "icon 类标签（描边 + 图标 + 文字同色）",
+    "border_width": "1px",
+    "background": "transparent",
+    "icon": {
+      "size": "12×12px",
+      "position": "文字左侧",
+      "gap_to_text": "4px",
+      "color_same_as_text": true
+    },
+    "types": [
+      { "name": "主要", "color": "#3388FF" },
+      { "name": "警示", "color": "#D94F00" },
+      { "name": "错误", "color": "#FF4433" },
+      { "name": "失败", "color": "#FF4433" },
+      { "name": "默认", "color": "#223355" }
+    ]
+  },
+
+  "tag_group": {
+    "description": "标签组：4~5 个可关闭标签 + 末尾新增按钮（可切换为输入框）",
+    "item": {
+      "background_default": "#F5F7FA",
+      "background_hover": "#E9ECF2",
+      "color": "#223355",
+      "close_icon": {
+        "size": "12×12px",
+        "color": "#223355"
+      }
+    },
+    "add_button": {
+      "icon": "+",
+      "label": "新增",
+      "color": "#3388FF",
+      "icon_color": "#3388FF",
+      "behavior": "点击后变为输入框（高 32px，边框 1px solid #DDE1EB，圆角 4px），回车或失焦后生成新标签；ESC 取消"
+    }
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "tag-icon 容器未显式设置宽高，svg 用 width:100% 会被父级文本基线撑开",
+      "fix": "tag-icon 显式设置 width: 12px; height: 12px"
+    },
+    {
+      "issue": "重要提示标签的 hover/active 文字色容易被错配为 #FFFFFF 之外的颜色",
+      "fix": "实色背景下文字色固定为 #FFFFFF，仅切换背景色"
+    },
+    {
+      "issue": "一般提示标签的 hover/active 误改背景色",
+      "fix": "一般提示背景固定，仅文字色随状态变化"
+    },
+    {
+      "issue": "标签组新增按钮点击后输入框无法关闭",
+      "fix": "input 监听 blur 与 Enter 触发完成；Escape 清空并取消"
+    }
+  ]
+}

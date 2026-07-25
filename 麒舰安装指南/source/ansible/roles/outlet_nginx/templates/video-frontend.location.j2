@@ -1,0 +1,55 @@
+location ^~ /video/static/ {
+    proxy_pass http://srvs_video_frontend;
+    charset utf-8;
+
+    add_header Cache-Control max-age=3600;
+    if ( $uri ~ "\.(gif|jpg|jpeg|bmp|png|ico|zip|pdf|svg|mp3|swf|cur|woff|woff2|eot|ttf|mp3|mp4|swf)$" ){
+        add_header Cache-Control max-age=3600000;
+    }
+
+    proxy_redirect default;
+    proxy_connect_timeout 5;
+    send_timeout 10;
+
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+
+    proxy_set_header Host $http_host;
+    proxy_set_header Cookie $new_cookie;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    proxy_hide_header X-Powered-By;
+    proxy_hide_header Server;
+}
+
+location  "/video/" {
+    proxy_pass http://srvs_video_frontend;
+    charset utf-8;
+
+    if ($uri !~ "\.html$"){
+        add_header Cache-Control max-age=3600;
+    }
+    if ( $uri ~ "\.(gif|jpg|jpeg|bmp|png|ico|zip|pdf|svg|mp3|swf|cur|woff|woff2|eot|ttf|mp3|mp4|swf)$" ){
+        add_header Cache-Control max-age=3600000;
+    }
+
+    proxy_redirect default;
+    proxy_connect_timeout 5;
+    send_timeout 10;
+
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+
+    proxy_set_header Host $http_host;
+    proxy_set_header Cookie $new_cookie;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    proxy_hide_header X-Powered-By;
+    proxy_hide_header Server;
+}

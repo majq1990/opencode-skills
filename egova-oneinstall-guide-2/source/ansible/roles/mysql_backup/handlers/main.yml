@@ -1,0 +1,12 @@
+---
+- name: restart crond
+  service: name=cron state=restarted enabled=yes
+  when: ansible_distribution in ['openEuler', 'kylin_arm','Ubuntu','kylin_x86']
+
+- name: restart crond
+  command: service crond restart
+  when: ansible_distribution == 'CentOS'
+
+#- name: restart iptables
+#  service: name=iptables state=restarted
+

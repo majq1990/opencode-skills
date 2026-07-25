@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZartUI · SideNav 侧边导航 规范预览</title>
+<style>
+:root {
+  --color-bg-page:      #F5F7FA;
+  --color-bg-panel:     #FFFFFF;
+  --color-text-primary: #081126;
+  --color-text-body:    #223355;
+  --color-text-muted:   #6B7A99;
+  --color-primary:      #3388FF;
+  --color-primary-soft: #F0F9FF;
+  --color-bg-hover:     #F5F7FA;
+  --color-border:       #E9ECF2;
+  --font-family:        'PingFang SC','Microsoft YaHei',sans-serif;
+  --radius-m: 8px;
+  --radius-s: 4px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-body);
+  background: var(--color-bg-page);
+  padding: 40px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 32px;
+}
+
+.spec-section {
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-m);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.spec-section-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 24px;
+}
+
+.spec-block-title {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.demo-block { margin-bottom: 32px; }
+.demo-row { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+.demo-col { display: flex; flex-direction: column; }
+.demo-label { font-size: 12px; color: var(--color-text-muted); margin-bottom: 8px; }
+
+/* ── 规格参数表 ── */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.spec-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: #F5F7FA;
+}
+.spec-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td code {
+  font-family: 'SF Mono','Consolas',monospace;
+  font-size: 12px;
+  background: #F5F7FA;
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  color: var(--color-primary);
+}
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 14px; height: 14px; border-radius: var(--radius-s); border: 1px solid var(--color-border); flex-shrink: 0; }
+
+/* ══════════════════════════════════════
+   侧边导航
+   ══════════════════════════════════════ */
+.sidenav {
+  min-width: 200px;
+  width: fit-content;
+  background: #FFFFFF;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── 通用菜单项 ── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+/* 菜单间距 8px：用 margin-top 实现，首项不加 */
+.nav-item + .nav-item,
+.nav-submenu + .nav-item,
+.nav-item + .nav-submenu > .nav-item:first-child {
+  margin-top: 0;
+}
+
+/* 所有同级 nav-item 之间间距 8px */
+.sidenav > .nav-item + .nav-item,
+.sidenav > .nav-group + .nav-group {
+  margin-top: 8px;
+}
+
+.nav-item:hover { background: #F5F7FA; }
+.nav-item.is-active { background: #F0F9FF; }
+
+/* ── 图标（线状，仅一级） ── */
+.nav-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: #223355;
+  fill: none;
+  stroke: currentColor;
+}
+.nav-item.is-active .nav-icon { color: #3388FF; }
+
+/* ── 文字 ── */
+.nav-text {
+  font-size: 14px;
+  flex: 1;
+}
+
+/* 一级文字色 */
+.nav-item.level-1 .nav-text { color: #223355; }
+.nav-item.level-1.is-active .nav-text { color: #3388FF; }
+
+/* 二级文字色，缩进 = 一级padding(8) + 图标(16) + gap(8) + 后缩(8) = 40px，但二级无图标，
+   规范要求"相比一级文字位置后缩8px"，一级文字起始 = 8(padding)+16(icon)+8(gap) = 32px，
+   二级文字起始 = 32 + 8 = 40px，用 padding-left 实现 */
+.nav-item.level-2 { padding-left: 40px; }
+.nav-item.level-2 .nav-text { color: #6B7A99; }
+.nav-item.level-2.is-active .nav-text { color: #3388FF; }
+
+/* 三级文字色，相比二级再后缩 8px：40 + 8 = 48px */
+.nav-item.level-3 { padding-left: 48px; }
+.nav-item.level-3 .nav-text { color: #6B7A99; }
+.nav-item.level-3.is-active .nav-text { color: #3388FF; }
+
+/* ── 展开箭头 ── */
+.nav-arrow {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: #6B7A99;
+  transition: transform 0.2s;
+  fill: none;
+  stroke: currentColor;
+}
+.nav-item.is-open .nav-arrow { transform: rotate(180deg); }
+
+/* ── 子菜单容器 ── */
+.nav-submenu {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+.nav-submenu.is-open {
+  max-height: 600px;
+}
+
+/* 所有层级菜单项之间统一 8px 间距，用相邻兄弟选择器实现 */
+.nav-submenu.is-open > .nav-item + .nav-item,
+.nav-submenu.is-open > .nav-item + .nav-submenu,
+.nav-submenu.is-open > .nav-submenu + .nav-item {
+  margin-top: 8px;
+}
+
+/* 子菜单展开后与父级菜单项的间距 */
+.nav-item + .nav-submenu.is-open {
+  margin-top: 8px;
+}
+
+/* ── nav-group：一级菜单 + 其子菜单的包裹层，用于控制组间距 ── */
+.nav-group {
+  display: flex;
+  flex-direction: column;
+}
+.nav-group + .nav-group { margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · SideNav 侧边导航 规范预览</h1>
+
+<div class="spec-section">
+  <h2 class="spec-section-title">组件演示</h2>
+
+  <div class="demo-block">
+    <div class="demo-row">
+
+      <!-- 完整结构 -->
+      <div class="demo-col">
+        <div class="demo-label">完整结构（一 / 二 / 三级）</div>
+        <div class="sidenav">
+
+          <div class="nav-group">
+            <div class="nav-item level-1 is-open" onclick="toggle(this)">
+              <!-- 线状图标：仪表盘 -->
+              <svg class="nav-icon" viewBox="0 0 16 16" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="5" height="5" rx="1"/>
+                <rect x="9" y="2" width="5" height="5" rx="1"/>
+                <rect x="2" y="9" width="5" height="5" rx="1"/>
+                <rect x="9" y="9" width="5" height="5" rx="1"/>
+              </svg>
+              <span class="nav-text">工作台</span>
+              <svg class="nav-arrow" viewBox="0 0 16 16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 6l4 4 4-4"/>
+              </svg>
+            </div>
+            <div class="nav-submenu is-open">
+              <!-- 二级有子菜单 -->
+              <div class="nav-item level-2 is-open" onclick="toggle(this)">
+                <span class="nav-text">任务管理</span>
+                <svg class="nav-arrow" viewBox="0 0 16 16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 6l4 4 4-4"/>
+                </svg>
+              </div>
+              <div class="nav-submenu is-open">
+                <div class="nav-item level-3 is-active"><span class="nav-text">我的任务</span></div>
+                <div class="nav-item level-3"><span class="nav-text">团队任务</span></div>
+                <div class="nav-item level-3"><span class="nav-text">已完成</span></div>
+              </div>
+              <!-- 二级无子菜单 -->
+              <div class="nav-item level-2"><span class="nav-text">日程安排</span></div>
+              <div class="nav-item level-2"><span class="nav-text">工作报告</span></div>
+            </div>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-item level-1" onclick="toggle(this)">
+              <!-- 线状图标：项目 -->
+              <svg class="nav-icon" viewBox="0 0 16 16" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 4h12M2 8h8M2 12h5"/>
+              </svg>
+              <span class="nav-text">项目管理</span>
+              <svg class="nav-arrow" viewBox="0 0 16 16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 6l4 4 4-4"/>
+              </svg>
+            </div>
+            <div class="nav-submenu">
+              <div class="nav-item level-2"><span class="nav-text">项目列表</span></div>
+              <div class="nav-item level-2"><span class="nav-text">里程碑</span></div>
+            </div>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-item level-1">
+              <!-- 线状图标：文档 -->
+              <svg class="nav-icon" viewBox="0 0 16 16" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 2h5l3 3v9H4V2z"/>
+                <path d="M9 2v3h3"/>
+                <path d="M6 8h4M6 11h3"/>
+              </svg>
+              <span class="nav-text">文档中心</span>
+            </div>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-item level-1">
+              <!-- 线状图标：设置 -->
+              <svg class="nav-icon" viewBox="0 0 16 16" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="8" cy="8" r="2.5"/>
+                <path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.4 3.4l.85.85M11.75 11.75l.85.85M3.4 12.6l.85-.85M11.75 4.25l.85-.85"/>
+              </svg>
+              <span class="nav-text">系统设置</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 状态对比 -->
+      <div class="demo-col">
+        <div class="demo-label">状态对比</div>
+        <div class="sidenav">
+          <div class="nav-group">
+            <div class="nav-item level-1">
+              <svg class="nav-icon" viewBox="0 0 16 16" stroke-width="1.3" stroke-linecap="round">
+                <rect x="2" y="2" width="5" height="5" rx="1"/>
+                <rect x="9" y="2" width="5" height="5" rx="1"/>
+                <rect x="2" y="9" width="5" height="5" rx="1"/>
+                <rect x="9" y="9" width="5" height="5" rx="1"/>
+              </svg>
+              <span class="nav-text">一级默认</span>
+            </div>
+          </div>
+          <div class="nav-group">
+            <div class="nav-item level-1" style="background:#F5F7FA;">
+              <svg class="nav-icon" viewBox="0 0 16 16" stroke-width="1.3" stroke-linecap="round">
+                <rect x="2" y="2" width="5" height="5" rx="1"/>
+                <rect x="9" y="2" width="5" height="5" rx="1"/>
+                <rect x="2" y="9" width="5" height="5" rx="1"/>
+                <rect x="9" y="9" width="5" height="5" rx="1"/>
+              </svg>
+              <span class="nav-text">一级悬停</span>
+            </div>
+          </div>
+          <div class="nav-group">
+            <div class="nav-item level-1 is-active">
+              <svg class="nav-icon" viewBox="0 0 16 16" stroke-width="1.3" stroke-linecap="round">
+                <rect x="2" y="2" width="5" height="5" rx="1"/>
+                <rect x="9" y="2" width="5" height="5" rx="1"/>
+                <rect x="2" y="9" width="5" height="5" rx="1"/>
+                <rect x="9" y="9" width="5" height="5" rx="1"/>
+              </svg>
+              <span class="nav-text">一级选中</span>
+            </div>
+          </div>
+          <div class="nav-group">
+            <div class="nav-item level-2"><span class="nav-text">二级默认</span></div>
+          </div>
+          <div class="nav-group">
+            <div class="nav-item level-2" style="background:#F5F7FA;"><span class="nav-text">二级悬停</span></div>
+          </div>
+          <div class="nav-group">
+            <div class="nav-item level-2 is-active"><span class="nav-text">二级选中</span></div>
+          </div>
+          <div class="nav-group">
+            <div class="nav-item level-3"><span class="nav-text">三级默认</span></div>
+          </div>
+          <div class="nav-group">
+            <div class="nav-item level-3 is-active"><span class="nav-text">三级选中</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 箭头状态 -->
+      <div class="demo-col">
+        <div class="demo-label">箭头状态</div>
+        <div class="sidenav">
+          <div class="nav-group">
+            <div class="nav-item level-1">
+              <svg class="nav-icon" viewBox="0 0 16 16" stroke-width="1.3" stroke-linecap="round">
+                <path d="M2 4h12M2 8h8M2 12h5"/>
+              </svg>
+              <span class="nav-text">子菜单折叠</span>
+              <svg class="nav-arrow" viewBox="0 0 16 16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 6l4 4 4-4"/>
+              </svg>
+            </div>
+          </div>
+          <div class="nav-group">
+            <div class="nav-item level-1 is-open">
+              <svg class="nav-icon" viewBox="0 0 16 16" stroke-width="1.3" stroke-linecap="round">
+                <path d="M2 4h12M2 8h8M2 12h5"/>
+              </svg>
+              <span class="nav-text">子菜单展开</span>
+              <svg class="nav-arrow" viewBox="0 0 16 16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 6l4 4 4-4"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 规格参数 -->
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">层级</th><th style="width:140px;">属性</th><th style="width:220px;">规格值</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="5">一级菜单</td>
+        <td>侧边栏宽度</td>
+        <td><code>min-width: 200px</code></td>
+        <td>随文字内容自动撑宽</td>
+      </tr>
+      <tr><td>容器内边距</td><td><code>8px</code>（四周）</td><td></td></tr>
+      <tr><td>字号 / 图标</td><td><code>14px</code> · 图标 <code>16×16px</code></td><td>线状图标，图标与文字间距 <code>8px</code></td></tr>
+      <tr>
+        <td>默认颜色</td>
+        <td><span class="chip"><span class="swatch" style="background:#223355;"></span><code>#223355</code></span></td>
+        <td>图标与文字同色</td>
+      </tr>
+      <tr><td>文字起始位置</td><td><code>padding-left: 8px</code> 后，图标占 16px + gap 8px</td><td>文字从第 32px 开始</td></tr>
+      <tr>
+        <td rowspan="3">二级菜单</td>
+        <td>文字缩进</td>
+        <td><code>padding-left: 40px</code></td>
+        <td>相比一级文字位置后缩 8px（32+8），无图标</td>
+      </tr>
+      <tr>
+        <td>默认颜色</td>
+        <td><span class="chip"><span class="swatch" style="background:#6B7A99;"></span><code>#6B7A99</code></span></td>
+        <td></td>
+      </tr>
+      <tr><td>图标</td><td>无</td><td></td></tr>
+      <tr>
+        <td rowspan="3">三级菜单</td>
+        <td>文字缩进</td>
+        <td><code>padding-left: 48px</code></td>
+        <td>相比二级文字位置再后缩 8px（40+8），无图标</td>
+      </tr>
+      <tr>
+        <td>默认颜色</td>
+        <td><span class="chip"><span class="swatch" style="background:#6B7A99;"></span><code>#6B7A99</code></span></td>
+        <td></td>
+      </tr>
+      <tr><td>图标</td><td>无</td><td></td></tr>
+      <tr>
+        <td rowspan="4">所有层级</td>
+        <td>菜单项高度</td>
+        <td><code>36px</code></td>
+        <td></td>
+      </tr>
+      <tr><td>菜单间距</td><td><code>8px</code></td><td>相邻菜单项之间，无分隔线</td></tr>
+      <tr>
+        <td>Hover 背景</td>
+        <td><span class="chip"><span class="swatch" style="background:#F5F7FA;border-color:#ccc;"></span><code>#F5F7FA</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>选中背景 / 颜色</td>
+        <td><span class="chip"><span class="swatch" style="background:#F0F9FF;border-color:#ccc;"></span><code>#F0F9FF</code></span></td>
+        <td>图标与文字变为 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td>
+      </tr>
+      <tr>
+        <td rowspan="2">展开箭头</td>
+        <td>折叠状态</td>
+        <td>朝下 ↓（默认）</td>
+        <td>有子菜单时显示，靠右对齐</td>
+      </tr>
+      <tr>
+        <td>展开状态</td>
+        <td>朝上 ↑（rotate 180°）</td>
+        <td>子菜单展开时翻转</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+function toggle(el) {
+  const sub = el.nextElementSibling;
+  if (!sub || !sub.classList.contains('nav-submenu')) return;
+  const open = sub.classList.contains('is-open');
+  sub.classList.toggle('is-open', !open);
+  el.classList.toggle('is-open', !open);
+}
+</script>
+</body>
+</html>

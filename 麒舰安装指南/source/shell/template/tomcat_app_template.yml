@@ -1,0 +1,268 @@
+eUrbanMIS:
+  name: eUrbanMIS
+  desc: 一网统管
+  biz_type: MIS
+  server_port: 8081
+  base_path: /egova/web
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+      jdbc_type: default
+    - type: mysql
+      name: 统计库
+      database: cgdbstat
+      sub_type: stat
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: TDengine
+      name: 时序数据库
+      database: trace
+    - type: zookeeper
+      name: zookeeper
+    - type: microservice
+      sub_type: httpfileservice
+      name: http共享目录服务
+    - type: microservice
+      sub_type: export
+      name: export导出服务
+    - type: kafka
+      name: kafka消息队列
+
+
+eUrbanUMA:
+  name: eUrbanUMA
+  desc: 运管服
+  biz_type: UMA
+  server_port: 8082
+  base_path: /egova/web
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+      jdbc_type: default
+    - type: mysql
+      name: 统计库
+      database: cgdbstat
+      sub_type: stat
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: TDengine
+      name: 时序数据库
+      database: trace
+    - type: zookeeper
+      name: zookeeper
+    - type: microservice
+      sub_type: httpfileservice
+      name: http共享目录服务
+    - type: microservice
+      sub_type: export
+      name: export导出服务
+    - type: kafka
+      name: kafka消息队列
+
+
+eUrbanMF:
+  name: eUrbanMF
+  desc: 市政
+  biz_type: MF
+  server_port: 8083
+  base_path: /egova/web
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+      jdbc_type: default
+    - type: mysql
+      name: 统计库
+      database: cgdbstat
+      sub_type: stat
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: TDengine
+      name: 时序数据库
+      database: trace
+    - type: zookeeper
+      name: zookeeper
+    - type: microservice
+      sub_type: httpfileservice
+      name: http共享目录服务
+    - type: microservice
+      sub_type: export
+      name: export导出服务
+    - type: postgresql
+      name: PG数据库
+      database: giscenter
+    - type: kafka
+      name: kafka消息队列
+
+eUrbanSG:
+  name: eUrbanSG
+  desc: 社会治理
+  biz_type: SG
+  server_port: 8084
+  base_path: /egova/web
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+      jdbc_type: default
+    - type: mysql
+      name: 统计库
+      database: cgdbstat
+      sub_type: stat
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: TDengine
+      name: 时序数据库
+      database: trace
+    - type: zookeeper
+      name: zookeeper
+    - type: microservice
+      sub_type: httpfileservice
+      name: http共享目录服务
+    - type: microservice
+      sub_type: export
+      name: export导出服务
+
+eUrbanGIS:
+  name: eUrbanGIS
+  desc: GIS
+  biz_type: GIS
+  server_port: 8085
+  base_path: /egova/web
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+      jdbc_type: gis
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: postgresql
+      name: PG数据库
+      database: giscenter
+    - type: TDengine
+      name: 时序数据库
+      database: trace
+    - type: minio
+      name: minio
+      bucket_name: egova
+    - type: microservice
+      sub_type: gisserver
+      name: 通图平台
+
+eGovaMMS:
+  name: eGovaMMS
+  desc: 实景
+  biz_type: GIS
+  server_port: 8085
+  base_path: /egova/web
+  depends:
+    - type: mysql
+      name: 业务库
+      database: mms
+      sub_type: biz
+      jdbc_type: mms
+
+eGovaPublic:
+  name: eGovaPublic
+  desc: 市民通
+  biz_type: other
+  server_port: 18081
+  base_path: /egova/web
+  depends:
+    - type: mysql
+      name: 业务库
+      database: public
+      sub_type: biz
+      jdbc_type: public
+    - type: redis
+      name: redis内存数据库
+      database: 0
+
+IMserver:
+  name: IMserver
+  desc: 即时通讯
+  biz_type: other
+  server_port: 18081
+  base_path: /egova/web
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+      jdbc_type: default
+    - type: redis
+      name: redis内存数据库
+      database: 0
+
+faceserver:
+  name: faceserver
+  desc: 人脸识别
+  biz_type:
+  server_port: 8099
+  base_path: /egova/web
+  depends:
+    - type: mysql
+      name: 业务库
+      database: facedb
+      sub_type: biz
+      jdbc_type: default
+
+statgather:
+  name: statgather
+  desc: 统计采集
+  biz_type:
+  server_port:
+  base_path: /egova/web
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+      jdbc_type: default
+    - type: mysql
+      name: 统计库
+      database: cgdbstat
+      sub_type: stat
+    - type: redis
+      name: redis内存数据库
+      database: 0
+
+eurbanpro_eUrbanMIS:
+  name: eUrbanMIS
+  desc: 一网统管
+  biz_type: MIS
+  server_port: 8086
+  base_path: /egova/web
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+      jdbc_type: default
+    - type: mysql
+      name: 统计库
+      database: cgdbstat
+      sub_type: stat
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: TDengine
+      name: 时序数据库
+      database: trace
+    - type: zookeeper
+      name: zookeeper
+    - type: microservice
+      sub_type: export
+      name: export导出服务

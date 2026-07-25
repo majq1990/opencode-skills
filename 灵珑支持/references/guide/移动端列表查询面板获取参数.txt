@@ -1,0 +1,111 @@
+移动端列表查询面板获取参数
+1 使用场景
+在某些移动端业务场景下，用户通过一级页面跳转到列表页面时，要携带一级页面的参数到列表页面的查询面板中，具体如下：
+一级页面显示的是本月的参数，那么用户跳转至案件列表时，也应筛选展示本月的数据。
+2 效果
+3 配置
+step1：用户跳转页面时，传递需要的参数，需要时间或区域参数，具体步骤如下：
+（1）脚本直接跳转页面
+编写入口：
+function main() {
+  const params = {
+    startTime: '2024-09-01 00:00:00',
+    endTime: '2024-09-30 23:59:59',
+    regionCode: '11',
+    regionArr: ['', '1', '11'] // 级联选择情况
+  }; // 跳转参数
+  this.$router.push({
+        name: "page-preview",// 页面
+        query: {
+            title: "案件列表",
+            pageId: '1774679672873394176', // 对应页面id
+            showHeader: this.$route.query.showHeader,
+            isFromAction: 1,
+            _t: new Date().getTime() + "",
+        },
+        params: params
+    });
+}
+（2）内置动作跳转内部页面传参
+跳转动作配置：
+自定义参数：
+function main(params) {
+    // console.log(params)
+    const that = this;
+    const start = that.$$m('csdn_form_custom_date_dr0da6').props.currentTime.start.format("YYYY-MM-DD");
+    const end = that.$$m('csdn_form_custom_date_dr0da6').props.currentTime.end.format("YYYY-MM-DD");
+
+    const result = {
+        createTimeStart: start,
+        createTimeEnd: end
+    };
+
+    return result;
+}
+如何获取看板自身参数：
+点击指标看板，携带看板参数到下一页面：
+直接在参数传递时继承参数：
+step2
+（1）列表数据源为视图
+修改视图添加动态参数：
+列表接收参数：
+（2）列表数据来源为hook：
+列表页面hook方法中获取传递的参数，并找到查询面板中筛选字段的唯一标识，具体操作和脚本如下：
+编写入口：
+if (param.condition.tableConditionDescriptor) {function main(pageId, param) {
+    let self = this;
+    let route = this.$route;
+    let params = route.params; // 拿到跳转传递的参数
+
+    if (params) {
+        this.$$('query_field_wrapper_a3hwdq').queryField.props.startTime.defaultValue.value = params.startTime;
+        this.$$('query_field_wrapper_a3hwdq').queryField.props.endTime.defaultValue.value = params.endTime;
+        this.$$('query_field_wrapper_epzevg').queryField.props.defaultValue.value = params.regionArr;
+    }
+
+    return new Promise((resolve, reject) => {
+        Vue.nextTick(() => {
+            param.condition.params = {
+              startTime: '',
+              endTime: '',
+              regionCode: '',
+              ...默认接口参数
+            };
+            if (params) {
+                Object.assign(param.condition.params, params) // 把跳转的参数和接口参数进行拼接汇总
+            }
+
+            /** 若查询面板存在筛选条件, 函数的param.condition参数中会存在tableConditionDescriptor 这里判断tableConditionDescriptor是否存在，
+            若存在接口参数就在这个判断里面更新, 若查询字段未选择或未输入任何值, tableConditionDescriptor.members中就没有这个查询字段对象
+            每个查询字段都有自己的field标识, 需要自己打印出来查看 **/
+            if (param.condition.tableConditionDescriptor) {
+                let queryParams = param.condition.tableConditionDescriptor.members;
+                queryParams.map(item => {
+                    if (item.field === "542648d4-54dc-4eb5-ba2d-c99c1074c747") {
+                        param.condition.params.startTime = item.values[0] ? item.values[0] + ' 00:00:00' : params.startTime;
+                        param.condition.params.endTime = item.values[1] ? item.values[1] + ' 23:59:59' : params.endTime;
+                    }
+                    if (item.field === "d872a1f2-0898-4213-89a0-9ff3f808956a") {
+                        param.condition.params.regionCode = item.values[item.values.length - 1];
+                    } else {
+                        param.condition.params.regionCode = '';
+                    }
+                })
+            }
+
+            api.API_DATA_EXECUTE("7adcc63a-137d-437f-81c4-af56fba1afca", "BUNCHES", param, { lostAbility: "00" })
+                .then((res) => {
+                    let newRes = res;
+                    resolve(newRes);
+                }).catch(() => {
+                    reject();
+                })
+        })
+    })
+}
+4 常见问题
+问题1：使用列表hook时，需要携带一级页面的筛选条件到列表页面，并赋值给列表的查询面板中。
+解决方法：拿到跳转传递的参数，例如时间参数，然后给查询字段赋值。
+this.$$('query_field_wrapper_a3hwdq').queryField.props.startTime.defaultValue.value = params.startTime;  // 时间选择-起始时间
+this.$$('query_field_wrapper_a3hwdq').queryField.props.endTime.defaultValue.value = params.endTime;  // 时间选择-结束时间
+this.$$('query_field_wrapper_epzevg').queryField.props.defaultValue.value = params.regionArr;  // 级联选择

@@ -1,0 +1,68 @@
+使用视图查询节点下的数据且父节点统计子节点下的数据条数
+1 使用场景
+在树+列表的形式展示数据时，会存在树节点统计该节点下的数据个数，并且父节点统计所有子节点的数据量
+2 效果
+例如：电子行业下存在晶元加工生产类（15）和封装测试类（7），数字代表该类型下的守法清单的数据条数。电子行业父类会统计这两个子节点的总数据条数即为22
+3 配置
+效果图：
+配置：
+根据业务编写查询视图(复杂视图研发编写)
+WITH RECURSIVE ComplianceTypeHierarchy AS (
+    -- 基础查询，选择所有类型作为初始层次
+    SELECT 
+        id,
+        senior_id,
+        type_name,
+        delete_flag,
+        id AS root_id,
+        0 AS level
+    FROM 
+        tc_compliance_type
+    WHERE 
+        delete_flag = 0
+
+    UNION ALL
+
+    -- 递归查询，找到每个节点的子节点
+    SELECT 
+        c.id,
+        c.senior_id,
+        c.type_name,
+        c.delete_flag,
+        h.root_id,
+        h.level + 1
+    FROM 
+        tc_compliance_type c
+    INNER JOIN 
+        ComplianceTypeHierarchy h ON c.senior_id = h.id
+    WHERE 
+        c.delete_flag = 0
+)
+, ComplianceListCount AS (
+    -- 统计每个根节点的list_count
+    SELECT 
+        h.root_id,
+        COUNT(l.id) AS list_count
+    FROM 
+        ComplianceTypeHierarchy h
+    LEFT JOIN 
+        tc_compliance_list l ON h.id = l.catalog_id
+    WHERE l.delete_flag = 0 AND l.type_id = 1
+    GROUP BY 
+        h.root_id
+)
+-- 最终查询，合并结果
+SELECT 
+    t.id AS type_id,
+    t.type_name,
+    COALESCE(c.list_count, 0) AS list_count,
+    t.senior_id
+FROM 
+    tc_compliance_type t
+LEFT JOIN 
+    ComplianceListCount c ON t.id = c.root_id
+ORDER BY 
+    t.id
+创建树部件，将展示的节点放到节点名称中，计数节点list_count放在计数字段中
+4 常见问题
+注意在添加列表数据时一般情况需要刷新树面板

@@ -1,0 +1,70 @@
+{
+  "name": "back-to-top-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 回到顶部规范，覆盖容器、显示逻辑、图标及气泡提示",
+
+  "container": {
+    "size": "40×40px",
+    "shape": "circle",
+    "background": "#FFFFFF",
+    "box_shadow": "0 4px 12px 1px #00000014",
+    "filter": "blur(0)",
+    "position": "fixed · right: 40px · bottom: 40px"
+  },
+
+  "visibility": {
+    "default": {
+      "opacity": "0",
+      "pointer_events": "none",
+      "description": "未滚动时不显示、不可点击"
+    },
+    "visible": {
+      "opacity": "1",
+      "pointer_events": "auto",
+      "trigger": "页面或容器滚动超过 100px 后显示"
+    },
+    "transition": "opacity 0.25s"
+  },
+
+  "icon": {
+    "size": "16×16px",
+    "style": "线状（stroke，无 fill）",
+    "shape": "向上箭头 + 竖线，箭头顶点 (8,3)，竖线从 y=3 延伸至 y=16",
+    "stroke_width": "2",
+    "stroke_linecap": "round",
+    "stroke_linejoin": "round",
+    "states": {
+      "default": { "color": "#223355" },
+      "hover": { "color": "#3388FF", "transition": "color 0.15s" }
+    }
+  },
+
+  "tooltip": {
+    "description": "鼠标悬停时显示气泡提示",
+    "trigger": "mouseenter",
+    "position": "按钮左侧，垂直居中",
+    "background": "rgba(0,0,0,0.8)",
+    "text": "回到顶部",
+    "font_size": "12px",
+    "font_weight": "400",
+    "color": "#FFFFFF",
+    "padding": "5px 10px",
+    "border_radius": "4px",
+    "arrow": {
+      "position": "右侧三角，指向按钮",
+      "color": "rgba(0,0,0,0.8)"
+    },
+    "transition": "opacity 0.15s"
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "按钮用 display:none 切换会导致过渡动画失效",
+      "fix": "使用 opacity + pointer-events 控制显隐，保留过渡效果"
+    },
+    {
+      "issue": "气泡 tooltip 在按钮隐藏时仍可能触发",
+      "fix": "tooltip 挂载在按钮内部，按钮 pointer-events:none 时自动屏蔽悬停事件"
+    }
+  ]
+}

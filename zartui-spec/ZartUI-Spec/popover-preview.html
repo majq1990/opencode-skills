@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 气泡卡片</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; margin-top: 32px; }
+h2:first-of-type { margin-top: 0; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; }
+.demo-label { font-size: 12px; color: #A8B4C8; margin-bottom: 12px; }
+
+/* ===================== 气泡卡片 ===================== */
+.z-popover {
+  position: absolute;
+  width: 242px;
+  background: #FFFFFF;
+  box-shadow: 0 2px 50px 0 rgba(0, 67, 202, 0.16);
+  border-radius: 4px;
+  padding: 12px 16px;
+  z-index: 1000;
+}
+
+.z-popover-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #081126;
+  margin-bottom: 6px;
+}
+
+.z-popover-content {
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  line-height: 1.6;
+}
+
+/* 箭头公共样式 */
+.z-popover::before {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 7px solid transparent;
+}
+
+/* 上方弹出 — 箭头朝下 */
+.z-popover.is-bottom::before {
+  top: -14px; left: 50%; transform: translateX(-50%);
+  border-bottom-color: #FFFFFF;
+  filter: drop-shadow(0 -1px 2px #0043ca18);
+}
+/* 下方弹出 — 箭头朝上 */
+.z-popover.is-top::before {
+  bottom: -14px; left: 50%; transform: translateX(-50%);
+  border-top-color: #FFFFFF;
+  filter: drop-shadow(0 1px 2px #0043ca18);
+}
+/* 左侧弹出 — 箭头朝右 */
+.z-popover.is-right::before {
+  right: -14px; top: 50%; transform: translateY(-50%);
+  border-left-color: #FFFFFF;
+}
+/* 右侧弹出 — 箭头朝左 */
+.z-popover.is-left::before {
+  left: -14px; top: 50%; transform: translateY(-50%);
+  border-right-color: #FFFFFF;
+}
+
+/* 左上方向箭头 */
+.z-popover.is-bottom-start::before {
+  top: -14px; left: 20px;
+  border-bottom-color: #FFFFFF;
+  filter: drop-shadow(0 -1px 2px #0043ca18);
+}
+/* 右上方向箭头 */
+.z-popover.is-bottom-end::before {
+  top: -14px; right: 20px;
+  border-bottom-color: #FFFFFF;
+  filter: drop-shadow(0 -1px 2px #0043ca18);
+}
+/* 左下方向箭头 */
+.z-popover.is-top-start::before {
+  bottom: -14px; left: 20px;
+  border-top-color: #FFFFFF;
+}
+/* 右下方向箭头 */
+.z-popover.is-top-end::before {
+  bottom: -14px; right: 20px;
+  border-top-color: #FFFFFF;
+}
+/* 左上（左侧上对齐） */
+.z-popover.is-right-start::before {
+  right: -14px; top: 14px;
+  border-left-color: #FFFFFF;
+}
+/* 左下（左侧下对齐） */
+.z-popover.is-right-end::before {
+  right: -14px; bottom: 14px;
+  border-left-color: #FFFFFF;
+}
+/* 右上（右侧上对齐） */
+.z-popover.is-left-start::before {
+  left: -14px; top: 14px;
+  border-right-color: #FFFFFF;
+}
+/* 右下（右侧下对齐） */
+.z-popover.is-left-end::before {
+  left: -14px; bottom: 14px;
+  border-right-color: #FFFFFF;
+}
+
+/* ===================== 触发按钮 ===================== */
+.trigger-btn {
+  display: inline-flex; align-items: center;
+  height: 32px; padding: 0 16px; border-radius: 4px;
+  border: 1px solid #DDE1EB; background: #FFFFFF;
+  font-size: 14px; color: #223355; cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.trigger-btn:hover { border-color: #3388FF; background: #F0F9FF; color: #3388FF; }
+
+/* ===================== 方向演示布局 ===================== */
+.placement-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 60px 40px;
+  padding: 20px;
+}
+
+.placement-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.placement-item .z-popover {
+  position: relative;
+}
+
+/* 内容卡片里的链接 */
+.z-popover-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #3388FF;
+  cursor: pointer;
+  text-decoration: none;
+}
+.z-popover-link:hover { text-decoration: underline; }
+
+/* 内容卡片里的操作行 */
+.z-popover-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: flex-end;
+}
+
+/* 危险提示标题行 */
+.z-popover-title-danger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #081126;
+  margin-bottom: 6px;
+}
+.z-popover-title-danger svg {
+  flex-shrink: 0;
+}
+.z-popover-btn {
+  height: 28px; padding: 0 12px; border-radius: 4px;
+  border: 1px solid #DDE1EB; background: #FFFFFF;
+  font-size: 13px; color: #223355; cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.z-popover-btn:hover { border-color: #3388FF; background: #F0F9FF; color: #3388FF; }
+.z-popover-btn.is-primary {
+  background: #3388FF; border-color: #3388FF; color: #FFFFFF;
+}
+.z-popover-btn.is-primary:hover { background: #2167D9; border-color: #2167D9; }
+.z-popover-btn.is-danger {
+  background: #FF4433; border-color: #FF4433; color: #FFFFFF;
+}
+.z-popover-btn.is-danger:hover { background: #D93020; border-color: #D93020; }
+
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 气泡卡片 Popover</h1>
+<p class="page-desc">作为容器承载文本、图片、表单、数据等复杂内容；支持点击或 Hover 触发；可承载可操作元素（链接、按钮），区别于 Tooltip 的纯提示展示</p>
+
+<!-- ============================================================
+     基础气泡卡片
+============================================================ -->
+<h2>基础气泡卡片</h2>
+<div class="section">
+
+  <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start;">
+
+    <div>
+      <div class="demo-label">仅标题</div>
+      <div class="z-popover is-bottom" style="position:relative;">
+        <div class="z-popover-title">气泡卡片标题</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="demo-label">仅内容（多行）</div>
+      <div class="z-popover is-bottom" style="position:relative;">
+        <div class="z-popover-content">这里是气泡卡片的内容区域，没有标题，只展示正文内容。内容可以有多行，字号 14px，颜色 #223355，行高 1.6，宽度固定为 242px，高度随内容自适应增长，不限制最大高度。</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="demo-label">标题 + 内容</div>
+      <div class="z-popover is-bottom" style="position:relative;">
+        <div class="z-popover-title">气泡卡片标题</div>
+        <div class="z-popover-content">这里是气泡卡片的补充说明内容，可以是多行文字描述。</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="demo-label">含链接</div>
+      <div class="z-popover is-bottom" style="position:relative;">
+        <div class="z-popover-title">气泡卡片标题</div>
+        <div class="z-popover-content">这里是气泡卡片的补充说明内容。</div>
+        <a class="z-popover-link">查看详情 →</a>
+      </div>
+    </div>
+
+    <div>
+      <div class="demo-label">含操作按钮</div>
+      <div class="z-popover is-bottom" style="position:relative;">
+        <div class="z-popover-title">气泡卡片标题</div>
+        <div class="z-popover-content">确认要执行此操作吗？该操作不可撤销。</div>
+        <div class="z-popover-actions">
+          <button class="z-popover-btn">取消</button>
+          <button class="z-popover-btn is-primary">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="demo-label">危险提示</div>
+      <div class="z-popover is-bottom" style="position:relative;">
+        <div class="z-popover-title-danger">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="7" fill="#FF4433"/>
+            <rect x="7.2" y="4" width="1.6" height="5" rx="0.8" fill="#FFFFFF"/>
+            <circle cx="8" cy="11.5" r="0.9" fill="#FFFFFF"/>
+          </svg>
+          确认删除
+        </div>
+        <div class="z-popover-content">此操作不可撤销，删除后数据将无法恢复。</div>
+        <div class="z-popover-actions">
+          <button class="z-popover-btn is-danger">确定</button>
+          <button class="z-popover-btn">取消</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ============================================================
+     八个方向
+============================================================ -->
+<h2>弹出方向</h2>
+<div class="section">
+
+  <!-- 上方三种 -->
+  <div class="demo-label">上方（top-start / top / top-end）</div>
+  <div style="display:flex;gap:40px;flex-wrap:wrap;margin-bottom:36px;">
+    <div>
+      <div class="z-popover is-bottom-start" style="position:relative;margin-bottom:8px;">
+        <div class="z-popover-title">左上弹出</div>
+        <div class="z-popover-content">箭头位于卡片左侧。</div>
+      </div>
+      <div style="font-size:12px;color:#A8B4C8;text-align:center;">top-start</div>
+    </div>
+    <div>
+      <div class="z-popover is-bottom" style="position:relative;margin-bottom:8px;">
+        <div class="z-popover-title">上方弹出</div>
+        <div class="z-popover-content">箭头位于卡片中央。</div>
+      </div>
+      <div style="font-size:12px;color:#A8B4C8;text-align:center;">top</div>
+    </div>
+    <div>
+      <div class="z-popover is-bottom-end" style="position:relative;margin-bottom:8px;">
+        <div class="z-popover-title">右上弹出</div>
+        <div class="z-popover-content">箭头位于卡片右侧。</div>
+      </div>
+      <div style="font-size:12px;color:#A8B4C8;text-align:center;">top-end</div>
+    </div>
+  </div>
+
+  <!-- 下方三种 -->
+  <div class="demo-label">下方（bottom-start / bottom / bottom-end）</div>
+  <div style="display:flex;gap:40px;flex-wrap:wrap;margin-bottom:36px;">
+    <div>
+      <div class="z-popover is-top-start" style="position:relative;margin-bottom:8px;">
+        <div class="z-popover-title">左下弹出</div>
+        <div class="z-popover-content">箭头位于卡片左侧。</div>
+      </div>
+      <div style="font-size:12px;color:#A8B4C8;text-align:center;">bottom-start</div>
+    </div>
+    <div>
+      <div class="z-popover is-top" style="position:relative;margin-bottom:8px;">
+        <div class="z-popover-title">下方弹出</div>
+        <div class="z-popover-content">箭头位于卡片中央。</div>
+      </div>
+      <div style="font-size:12px;color:#A8B4C8;text-align:center;">bottom</div>
+    </div>
+    <div>
+      <div class="z-popover is-top-end" style="position:relative;margin-bottom:8px;">
+        <div class="z-popover-title">右下弹出</div>
+        <div class="z-popover-content">箭头位于卡片右侧。</div>
+      </div>
+      <div style="font-size:12px;color:#A8B4C8;text-align:center;">bottom-end</div>
+    </div>
+  </div>
+
+  <!-- 左侧三种 -->
+  <div class="demo-label">左侧（left-start / left / left-end）</div>
+  <div style="display:flex;gap:40px;flex-wrap:wrap;margin-bottom:36px;">
+    <div>
+      <div class="z-popover is-right-start" style="position:relative;margin-bottom:8px;">
+        <div class="z-popover-title">左上对齐弹出</div>
+        <div class="z-popover-content">箭头位于卡片上侧。</div>
+      </div>
+      <div style="font-size:12px;color:#A8B4C8;text-align:center;">left-start</div>
+    </div>
+    <div>
+      <div class="z-popover is-right" style="position:relative;margin-bottom:8px;">
+        <div class="z-popover-title">左侧弹出</div>
+        <div class="z-popover-content">箭头位于卡片中央。</div>
+      </div>
+      <div style="font-size:12px;color:#A8B4C8;text-align:center;">left</div>
+    </div>
+    <div>
+      <div class="z-popover is-right-end" style="position:relative;margin-bottom:8px;">
+        <div class="z-popover-title">左下对齐弹出</div>
+        <div class="z-popover-content">箭头位于卡片下侧。</div>
+      </div>
+      <div style="font-size:12px;color:#A8B4C8;text-align:center;">left-end</div>
+    </div>
+  </div>
+
+  <!-- 右侧三种 -->
+  <div class="demo-label">右侧（right-start / right / right-end）</div>
+  <div style="display:flex;gap:40px;flex-wrap:wrap;">
+    <div>
+      <div class="z-popover is-left-start" style="position:relative;margin-bottom:8px;">
+        <div class="z-popover-title">右上对齐弹出</div>
+        <div class="z-popover-content">箭头位于卡片上侧。</div>
+      </div>
+      <div style="font-size:12px;color:#A8B4C8;text-align:center;">right-start</div>
+    </div>
+    <div>
+      <div class="z-popover is-left" style="position:relative;margin-bottom:8px;">
+        <div class="z-popover-title">右侧弹出</div>
+        <div class="z-popover-content">箭头位于卡片中央。</div>
+      </div>
+      <div style="font-size:12px;color:#A8B4C8;text-align:center;">right</div>
+    </div>
+    <div>
+      <div class="z-popover is-left-end" style="position:relative;margin-bottom:8px;">
+        <div class="z-popover-title">右下对齐弹出</div>
+        <div class="z-popover-content">箭头位于卡片下侧。</div>
+      </div>
+      <div style="font-size:12px;color:#A8B4C8;text-align:center;">right-end</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     交互触发示例
+============================================================ -->
+<h2>交互触发</h2>
+<div class="section">
+
+  <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start;">
+
+    <div>
+      <div class="demo-label">Hover 触发</div>
+      <div style="position:relative;display:inline-block;">
+        <button class="trigger-btn" id="hover-trigger"
+          onmouseenter="document.getElementById('hover-pop').style.display='block'"
+          onmouseleave="document.getElementById('hover-pop').style.display='none'">
+          鼠标悬停
+        </button>
+        <div id="hover-pop" class="z-popover is-bottom-start"
+          style="display:none;position:absolute;top:calc(100% + 10px);left:0;z-index:1000;">
+          <div class="z-popover-title">悬停触发</div>
+          <div class="z-popover-content">鼠标移入触发，移出自动关闭。</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="demo-label">点击触发</div>
+      <div style="position:relative;display:inline-block;">
+        <button class="trigger-btn" onclick="togglePop('click-pop')">点击触发</button>
+        <div id="click-pop" class="z-popover is-bottom-start"
+          style="display:none;position:absolute;top:calc(100% + 10px);left:0;z-index:1000;">
+          <div class="z-popover-title">点击触发</div>
+          <div class="z-popover-content">点击触发弹出，再次点击或点击外部关闭。</div>
+          <div class="z-popover-actions">
+            <button class="z-popover-btn" onclick="togglePop('click-pop')">关闭</button>
+            <button class="z-popover-btn is-primary" onclick="togglePop('click-pop')">确认</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+function togglePop(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', function(e) {
+  const pop = document.getElementById('click-pop');
+  if (!pop) return;
+  if (!pop.contains(e.target) && !e.target.closest('[onclick*="click-pop"]')) {
+    pop.style.display = 'none';
+  }
+});
+</script>
+
+</body>
+</html>

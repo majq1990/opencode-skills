@@ -1,0 +1,9 @@
+---
+# variables for install
+src_path: "{{ src_env_package_path }}/python"
+temp_dir: /egova/temp/python
+log_dir: "{{ log_root_dir }}/python"
+
+setuptools_dir: setuptools-40.5.0
+pip_dir: pip-18.1
+package_dir: require-package

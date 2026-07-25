@@ -1,0 +1,93 @@
+列表状态停用启用效果
+1 使用场景
+在列表页面的操作栏中会出现根据列表中的某一字段来控制操作列中按钮的显示对应的操作内容，如在列表信息为停用时显示启用。
+2 效果
+当列表信息为停用时，显示启用按钮，点击启用按钮可以使列表状态为启用状态；当列表信息为启用时，显示停用按钮，点击停用按钮可以使列表状态为停用状态。
+3 配置
+1、停用功能实现：视图设定停用为0，启用为1；
+function main(defaultParams) {
+    var self = this; // 重置作用域
+    var tableComp = self.$$element("table_7bo7mn"); // 获取表格元素
+    let params = [{
+        name: "documentNos", //列表id唯一标识
+        valueContent: defaultParams["0744ac1d-c699-447f-b852-84f2f5dd994e"]
+    },
+    {
+        name: "tableId",  //实体表唯一标识
+        valueContent: "t_078f22faa2bd4b72aa810cdb5d2cb4ee"
+    }
+    ];
+    //var currentDate = new Date();
+
+    let columnData = {
+        "columnDataList": [
+            {  //实体表里启用状态字段的唯一标识
+                "columnId": "t_c2476b309ebf4c9b975cac2b5dbb69fe",
+                "value": "0"
+            }
+            // { 
+            //     "columnId": "t_8836941b613e4d699968eff9ab39cca1",
+            //     "value": currentDate.getFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate() + ' ' + currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds()
+            // }
+        ]
+    }
+
+    self.$$confirm({
+        content: "确定停用该垃圾处置场吗？",
+        type: "danger",  // danger info warning
+        headerTitle: "告警", //确认框头部标题 提示、警告、告警
+        showOkBtn: true, // 是否展示确认按钮
+        showCancelBtn: true, // 是否展示取消按钮
+        cancelText: "取消", //取消按钮 展示文字
+        okText: "确定",  //确认按钮 展示文字      
+        onOk: () => {
+            api.DATA_SOURCE_EXECUTE("64fa51a3-799c-4be0-b91d-5f3761531520", "api", params, [], JSON.stringify(columnData)).then((res) => {
+                // then() 为调用成功的回调
+                if (IsJsonString(res.result) && !JSON.parse(res.result).hasError) {
+                    self.$message.success("停用成功！");
+                    tableComp.loading = false; // 将表格置为非loading状态
+                    tableComp.onRefresh(); // 调用表格的数据刷新动作
+                } else {
+                    self.$message.error(res.result); // 显示错误提示信息
+                    tableComp.loading = false; // 将表格置为非loading状态
+                }
+            }).catch(err => {
+                self.$message.error(err.message); // 显示错误提示信息
+                tableComp.loading = false; // 将表格置为非loading状态
+            });
+
+        },
+        onCancel: () => {
+            return
+        }
+    });
+}
+
+// 通过返回值来判断：如果true 则是JSON格式，否则，不是JSON格式
+function IsJsonString(str) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true
+}
+2、操作列中同时设置停用和启用的按钮，用JS脚本控制按钮的显隐
+function main(context) {
+    // NORMAL 普通状态
+    // HIDDEN 隐藏状态
+    // DISABLED 禁用状态
+    let currentDatas = context.currentDatas || [];
+    // 拿到当前行数据
+    let row = currentDatas[0];
+    // 找到当前行中字段名为state的数据
+    let idData = row.find(r => r.name === 'enable_flag');
+    //判断state字段为0则显示按钮，否则不显示按钮
+    if (idData.value == '启用') {
+        return 'NORMAL';
+    } else {
+
+        return "HIDDEN";
+    }
+}
+3、启用按钮同上

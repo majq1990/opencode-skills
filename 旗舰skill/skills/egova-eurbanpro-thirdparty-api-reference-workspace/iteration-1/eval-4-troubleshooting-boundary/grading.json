@@ -1,0 +1,40 @@
+{
+  "with_skill": {
+    "expectations": [
+      {
+        "text": "明确这是排障问题",
+        "passed": true,
+        "evidence": "开头即写'这部分属于现象排障，建议切换到 troubleshooting'"
+      },
+      {
+        "text": "提示切换 troubleshooting",
+        "passed": true,
+        "evidence": "明确写'建议切换到 egova-eurbanpro-thirdparty-troubleshooting'"
+      },
+      {
+        "text": "不输出排障链路细节",
+        "passed": false,
+        "evidence": "虽然进行了分流提示，但仍展开了完整的排障链路细节：包括接口路径、环境要求、防火墙策略、URL前缀自检、IP白名单检查等排障内容"
+      }
+    ]
+  },
+  "old_skill": {
+    "expectations": [
+      {
+        "text": "明确这是排障问题",
+        "passed": true,
+        "evidence": "明确写'公钥接口返回 404 的排查问题，这属于故障归因与排查场景'"
+      },
+      {
+        "text": "提示切换 troubleshooting",
+        "passed": true,
+        "evidence": "明确写'请使用 troubleshooting skill（第三方排障技能）来处理此问题'"
+      },
+      {
+        "text": "不输出排障链路细节",
+        "passed": true,
+        "evidence": "未输出排障链路细节，仅说明本skill的范围限制并引导用户切换到troubleshooting，提到references/auth-apis.md文件缺失无法提供具体接口信息"
+      }
+    ]
+  }
+}

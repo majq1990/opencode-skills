@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI Select 下拉选择框</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; }
+
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 28px 32px; margin-bottom: 24px; }
+.section-title { font-size: 11px; font-weight: 600; color: #A8B4C8; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 20px; }
+
+.row { display: flex; align-items: flex-start; gap: 28px; flex-wrap: wrap; }
+.demo-item { display: flex; flex-direction: column; gap: 8px; }
+.demo-item.has-panel { padding-bottom: 220px; }
+.demo-label { font-size: 12px; color: #6B7A99; }
+.demo-wrap { position: relative; display: inline-flex; flex-direction: column; }
+
+/* ================================================================
+   SHARED: Chevron & Clear SVGs
+================================================================ */
+.z-chevron {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;
+  pointer-events: none; transition: transform .2s;
+}
+.z-chevron svg { display: block; }
+.is-open .z-chevron,
+.is-reopen .z-chevron { transform: translateY(-50%) rotate(180deg); }
+
+/* ================================================================
+   SINGLE SELECT — Trigger
+================================================================ */
+.zs {
+  position: relative; display: inline-flex; align-items: center;
+  height: 32px; width: 200px; padding: 0 32px 0 8px;
+  border: 1px solid #DDE1EB; border-radius: 4px;
+  background: #FFFFFF; font-size: 14px; color: #223355;
+  cursor: pointer; user-select: none;
+  transition: border-color .15s, box-shadow .15s;
+  white-space: nowrap; overflow: hidden;
+}
+.zs .z-placeholder { color: #A8B4C8; }
+.zs .z-value       { color: #223355; }
+.zs:hover                     { border-color: #3388FF; }
+.zs.is-open, .zs.is-reopen    { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+.zs.is-error                  { border-color: #FF4433; }
+.zs.is-error:hover            { border-color: #FF4433; }
+.zs.is-disabled {
+  background: #F5F7FA; border-color: #E9ECF2;
+  color: #A8B4C8; cursor: not-allowed; pointer-events: none;
+}
+
+/* clear icon — shown on rehover (has value + hover) */
+.zs .z-clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; display: none;
+  align-items: center; justify-content: center; cursor: pointer;
+}
+.zs.is-rehover .z-clear   { display: flex; }
+.zs.is-rehover .z-chevron { display: none; }
+
+/* chevron color when open */
+.zs.is-open .z-chevron path,
+.zs.is-reopen .z-chevron path { stroke: #3388FF; }
+
+/* error message */
+.z-err { margin-top: 4px; font-size: 12px; font-weight: 400; color: #FF4433; }
+
+/* ================================================================
+   SINGLE SELECT — Panel
+================================================================ */
+.zs-panel {
+  position: absolute; top: calc(100% + 4px); left: 0; width: 200px;
+  background: #FFFFFF; border-radius: 8px;
+  box-shadow: 0 2px 20px 0 rgba(34,51,85,0.16);
+  padding: 8px; z-index: 100; display: none; flex-direction: column;
+}
+.zs-panel.is-open { display: flex; }
+
+.z-opt {
+  display: flex; align-items: center; height: 40px; padding: 0 8px;
+  border-radius: 4px; font-size: 14px; color: #223355; cursor: pointer;
+  transition: background .1s; margin: 0 8px;
+}
+.z-opt:hover            { background: #F5F7FA; }
+.z-opt.is-sel           { color: #3388FF; background: #F0F9FF; }
+.z-opt.is-dis           { color: #A8B4C8; cursor: not-allowed; pointer-events: none; }
+
+/* loading */
+.z-loading {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 40px; padding: 0 12px; gap: 8px; color: #A8B4C8; font-size: 13px;
+}
+.z-spinner {
+  width: 16px; height: 16px;
+  border: 2px solid #E9ECF2; border-top-color: #3388FF;
+  border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ================================================================
+   MULTI SELECT — Trigger
+================================================================ */
+.zm {
+  position: relative; display: inline-flex; align-items: center;
+  flex-wrap: nowrap; overflow: hidden;
+  min-height: 32px; width: 260px; padding: 4px 32px 4px 6px; gap: 4px;
+  border: 1px solid #DDE1EB; border-radius: 4px;
+  background: #FFFFFF; cursor: pointer; user-select: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.zm:hover               { border-color: #3388FF; }
+.zm.is-open             { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+.zm.is-error            { border-color: #FF4433; }
+.zm.is-disabled {
+  background: #F5F7FA; border-color: #E9ECF2;
+  cursor: not-allowed; pointer-events: none;
+}
+
+.zm .z-placeholder { font-size: 14px; color: #A8B4C8; white-space: nowrap; padding: 0 2px; }
+
+/* tag */
+.z-tag {
+  display: inline-flex; align-items: center; flex-shrink: 0;
+  height: 22px; padding: 0 6px; gap: 4px;
+  background: #F5F7FA; border-radius: 3px;
+  font-size: 12px; color: #223355; white-space: nowrap;
+}
+.zm.is-disabled .z-tag { background: #F5F7FA; color: #A8B4C8; }
+
+.z-tag-x { display: flex; align-items: center; justify-content: center;
+  width: 12px; height: 12px; border-radius: 50%; cursor: pointer; }
+.z-tag-x:hover { background: rgba(255,68,51,.10); }
+.z-tag-x:hover path { stroke: #FF4433; }
+.zm.is-disabled .z-tag-x { pointer-events: none; }
+
+/* overflow badge */
+.z-overflow {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  height: 22px; padding: 0 6px;
+  background: #F0F9FF; border-radius: 3px; font-size: 12px; color: #3388FF; white-space: nowrap;
+}
+
+/* inline search input */
+.z-inline-input {
+  flex: 1; min-width: 50px; border: none; outline: none;
+  font-size: 14px; color: #223355; background: transparent;
+  padding: 0 2px;
+}
+.z-inline-input::placeholder { color: #A8B4C8; }
+
+/* ================================================================
+   MULTI SELECT — Panel
+================================================================ */
+.zm-panel {
+  position: absolute; top: calc(100% + 4px); left: 0; width: 260px;
+  background: #FFFFFF; border-radius: 8px;
+  box-shadow: 0 2px 20px 0 rgba(34,51,85,0.16);
+  z-index: 100; display: none; flex-direction: column; overflow: hidden;
+}
+.zm-panel.is-open { display: flex; }
+
+/* search bar */
+.zm-search { padding: 8px 8px 0; }
+.zm-search-wrap {
+  display: flex; align-items: center; height: 32px;
+  border: 1px solid #DDE1EB; border-radius: 16px; padding: 0 10px; gap: 6px;
+}
+.zm-search-wrap input {
+  flex: 1; border: none; outline: none;
+  font-size: 13px; color: #223355; background: transparent;
+}
+.zm-search-wrap input::placeholder { color: #A8B4C8; }
+
+/* option list */
+.zm-list {
+  padding: 8px; max-height: 192px; overflow-y: auto;
+}
+.zm-list::-webkit-scrollbar { width: 4px; }
+.zm-list::-webkit-scrollbar-thumb { background: #DDE1EB; border-radius: 2px; }
+
+.zm-opt {
+  display: flex; align-items: center; height: 40px; padding: 0 8px;
+  border-radius: 4px; font-size: 14px; color: #223355;
+  cursor: pointer; gap: 8px; transition: background .1s; margin: 0 8px;
+}
+.zm-opt:hover     { background: #F5F7FA; }
+.zm-opt.is-sel    { color: #223355; }
+.zm-opt.is-dis    { color: #A8B4C8; cursor: not-allowed; pointer-events: none; }
+
+/* checkbox */
+.z-cb {
+  width: 14px; height: 14px; flex-shrink: 0;
+  border: 1px solid #DDE1EB; border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  background: #FFFFFF;
+}
+.zm-opt.is-sel .z-cb,
+.zm-opt.is-ind .z-cb { background: #3388FF; border-color: #3388FF; }
+
+/* divider */
+.zm-divider { height: 1px; background: #E9ECF2; margin: 0 8px; }
+
+/* footer: select-all */
+.zm-footer { padding: 6px 8px; }
+.zm-all {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; color: #223355; cursor: pointer;
+}
+.zm-all:hover { color: #3388FF; }
+.zm-all.is-all { color: #223355; }
+.zm-all .z-cb-all {
+  width: 14px; height: 14px; flex-shrink: 0;
+  border: 1px solid #DDE1EB; border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  background: #FFFFFF;
+}
+.zm-all.is-ind .z-cb-all,
+.zm-all.is-all .z-cb-all { background: #3388FF; border-color: #3388FF; }
+
+/* add row */
+.zm-add {
+  padding: 6px 8px 8px; display: flex; align-items: center; gap: 6px;
+  border-top: 1px solid #E9ECF2;
+}
+.zm-add-input {
+  flex: 1; height: 28px; border: 1px solid #DDE1EB; border-radius: 4px;
+  padding: 0 8px; font-size: 13px; color: #223355; outline: none;
+}
+.zm-add-input:focus { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+.zm-add-input::placeholder { color: #A8B4C8; }
+.zm-add-btn { font-size: 13px; color: #3388FF; cursor: pointer; white-space: nowrap; padding: 0 4px; }
+.zm-add-btn:hover { color: #2167D9; }
+
+/* SVG helpers */
+svg { display: block; }
+
+/* ================================================================
+   MODAL SELECT — Trigger & Actions
+================================================================ */
+.zpop {
+  position: relative; display: inline-flex; align-items: center;
+  height: 32px; width: 260px; padding: 0 8px;
+  border: 1px solid #DDE1EB; border-radius: 4px;
+  background: #FFFFFF; font-size: 14px; color: #223355;
+  user-select: none; transition: border-color .15s, box-shadow .15s;
+  white-space: nowrap; overflow: hidden;
+}
+.zpop .z-placeholder { color: #A8B4C8; flex: 1; }
+.zpop .z-value       { color: #223355; flex: 1; }
+.zpop:hover          { border-color: #3388FF; }
+.zpop.is-active      { border-color: #3388FF; box-shadow: 0 0 0 2px #D6EDFF; }
+.zpop.is-filled      { border-color: #DDE1EB; }
+.zpop.is-disabled    { background: #F5F7FA; border-color: #E9ECF2; color: #A8B4C8; cursor: not-allowed; pointer-events: none; }
+.zpop.is-error       { border-color: #FF4433; }
+
+/* trigger action area (right side) */
+.zpop-actions {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; margin-left: 4px;
+}
+
+/* scheme 1: icon + text button */
+.zpop-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 13px; color: #3388FF; cursor: pointer; white-space: nowrap;
+}
+.zpop-btn:hover { color: #2167D9; }
+.zpop-btn svg path, .zpop-btn svg rect, .zpop-btn svg circle { stroke: #3388FF; }
+.zpop-btn:hover svg path, .zpop-btn:hover svg rect { stroke: #2167D9; }
+
+/* scheme 2: icon only */
+.zpop-icon {
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; cursor: pointer; flex-shrink: 0;
+}
+.zpop-icon:hover { background: #F5F7FA; }
+.zpop-icon.is-danger:hover { background: rgba(255,68,51,.08); }
+.zpop-icon.is-danger:hover svg path { stroke: #FF4433; }
+.zpop-icon.is-back:hover svg path   { stroke: #3388FF; }
+
+/* vertical divider between trigger and actions (scheme 2 filled) */
+.zpop-sep { width: 1px; height: 16px; background: #E9ECF2; margin: 0 2px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<h1>ZartUI — Select 下拉选择框</h1>
+<p class="page-desc">单选 / 多选（方案一·方案二）</p>
+
+<!-- ================================================================
+     单选下拉框
+================================================================ -->
+<h2>单选下拉框</h2>
+
+<!-- 基础状态 -->
+<div class="section">
+  <div class="section-title">基础状态</div>
+  <div class="row">
+
+    <!-- 1 默认 -->
+    <div class="demo-item">
+      <div class="demo-label">默认</div>
+      <div class="demo-wrap">
+        <div class="zs">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 禁用 -->
+    <div class="demo-item">
+      <div class="demo-label">禁用</div>
+      <div class="demo-wrap">
+        <div class="zs is-disabled">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 错误 -->
+    <div class="demo-item">
+      <div class="demo-label">错误</div>
+      <div class="demo-wrap">
+        <div class="zs is-error">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <span class="z-err">请选择一个选项</span>
+      </div>
+    </div>
+
+    <!-- 4 悬停 -->
+    <div class="demo-item">
+      <div class="demo-label">悬停</div>
+      <div class="demo-wrap">
+        <div class="zs" style="border-color:#3388FF;">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 激活状态 -->
+<div class="section">
+  <div class="section-title">激活状态</div>
+  <div class="row">
+
+    <!-- 5 激活·显示选项 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">激活（显示选项）</div>
+      <div class="demo-wrap" style="z-index:30;">
+        <div class="zs is-open">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zs-panel is-open">
+          <div class="z-opt">选项一</div>
+          <div class="z-opt">选项二</div>
+          <div class="z-opt">选项三</div>
+          <div class="z-opt">选项四</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 激活·加载中 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">激活（加载中）</div>
+      <div class="demo-wrap" style="z-index:29;">
+        <div class="zs is-open">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zs-panel is-open">
+          <div class="z-loading"><span>加载中…</span><div class="z-spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7 激活·含禁用选项 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">激活（含禁用选项）</div>
+      <div class="demo-wrap" style="z-index:28;">
+        <div class="zs is-open">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zs-panel is-open">
+          <div class="z-opt">选项一</div>
+          <div class="z-opt is-dis">选项二（禁用）</div>
+          <div class="z-opt">选项三</div>
+          <div class="z-opt is-dis">选项四（禁用）</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 有值状态 -->
+<div class="section">
+  <div class="section-title">有值状态</div>
+  <div class="row">
+
+    <!-- 8 再次悬停（有值，显示清除） -->
+    <div class="demo-item">
+      <div class="demo-label">再次悬停</div>
+      <div class="demo-wrap">
+        <div class="zs is-rehover">
+          <span class="z-value">选项一</span>
+          <span class="z-clear">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" fill="#A8B4C8"/>
+              <path d="M5.5 5.5L10.5 10.5M10.5 5.5L5.5 10.5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9 再次激活（有值，再次展开，已选高亮） -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">再次激活</div>
+      <div class="demo-wrap" style="z-index:27;">
+        <div class="zs is-reopen">
+          <span class="z-value">选项一</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zs-panel is-open">
+          <div class="z-opt is-sel">选项一</div>
+          <div class="z-opt">选项二</div>
+          <div class="z-opt">选项三</div>
+          <div class="z-opt">选项四</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10 完成态（已选，面板关闭） -->
+    <div class="demo-item">
+      <div class="demo-label">完成态</div>
+      <div class="demo-wrap">
+        <div class="zs">
+          <span class="z-value">选项一</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     多选下拉框
+================================================================ -->
+<h2 style="margin-top:16px;">多选下拉框</h2>
+
+<!-- 触发框状态 -->
+<div class="section">
+  <div class="section-title">触发框状态</div>
+  <div class="row">
+
+    <!-- 默认 -->
+    <div class="demo-item">
+      <div class="demo-label">默认</div>
+      <div class="demo-wrap">
+        <div class="zm">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 禁用 -->
+    <div class="demo-item">
+      <div class="demo-label">禁用</div>
+      <div class="demo-wrap">
+        <div class="zm is-disabled">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="demo-item">
+      <div class="demo-label">错误</div>
+      <div class="demo-wrap">
+        <div class="zm is-error">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <span class="z-err">请至少选择一项</span>
+      </div>
+    </div>
+
+    <!-- 完成态（标签全显） -->
+    <div class="demo-item">
+      <div class="demo-label">完成态（标签全显）</div>
+      <div class="demo-wrap">
+        <div class="zm">
+          <span class="z-tag">选项一<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#223355" stroke-width="1.3" stroke-linecap="round"/></svg></span></span>
+          <span class="z-tag">选项二<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#223355" stroke-width="1.3" stroke-linecap="round"/></svg></span></span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 完成态（溢出 +N） -->
+    <div class="demo-item">
+      <div class="demo-label">完成态（溢出 +N）</div>
+      <div class="demo-wrap">
+        <div class="zm">
+          <span class="z-tag">选项一<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#223355" stroke-width="1.3" stroke-linecap="round"/></svg></span></span>
+          <span class="z-tag">选项二<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#223355" stroke-width="1.3" stroke-linecap="round"/></svg></span></span>
+          <span class="z-overflow">+3</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 完成态（禁用） -->
+    <div class="demo-item">
+      <div class="demo-label">完成态（禁用）</div>
+      <div class="demo-wrap">
+        <div class="zm is-disabled">
+          <span class="z-tag">选项一<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#A8B4C8" stroke-width="1.3" stroke-linecap="round"/></svg></span></span>
+          <span class="z-tag">选项二<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#A8B4C8" stroke-width="1.3" stroke-linecap="round"/></svg></span></span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 方案一：顶部搜索框 -->
+<div class="section">
+  <div class="section-title">方案一：顶部搜索框</div>
+  <div class="row">
+
+    <!-- 选项较少，无搜索框 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">选项较少（无搜索框）</div>
+      <div class="demo-wrap" style="z-index:22;">
+        <div class="zm is-open">
+          <span class="z-tag">选项一<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#223355" stroke-width="1.3" stroke-linecap="round"/></svg></span></span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zm-panel is-open">
+          <div class="zm-list" style="padding-top:8px;">
+            <div class="zm-opt is-sel"><span class="z-cb"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#FFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>选项一</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项二</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项三</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项四</div>
+          </div>
+          <div class="zm-add">
+            <input class="zm-add-input" placeholder="输入新选项名称">
+            <span class="zm-add-btn">新增</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 选项较多，显示搜索框 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">选项较多（显示搜索框）</div>
+      <div class="demo-wrap" style="z-index:21;">
+        <div class="zm is-open">
+          <span class="z-tag">选项一<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#223355" stroke-width="1.3" stroke-linecap="round"/></svg></span></span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zm-panel is-open">
+          <div class="zm-search">
+            <div class="zm-search-wrap">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#A8B4C8" stroke-width="1.5"/><path d="M11 11L14 14" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <input placeholder="请输入关键字">
+            </div>
+          </div>
+          <div class="zm-list">
+            <div class="zm-opt is-sel"><span class="z-cb"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#FFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>选项一</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项二</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项三</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项四</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项五</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项六</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项七</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项八</div>
+          </div>
+          <div class="zm-divider"></div>
+          <div class="zm-footer">
+            <div class="zm-all is-ind">
+              <span class="z-cb-all"><svg width="10" height="2" viewBox="0 0 10 2" fill="none"><path d="M1 1H9" stroke="#FFF" stroke-width="1.5" stroke-linecap="round"/></svg></span>全选
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 全选状态 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">全选状态</div>
+      <div class="demo-wrap" style="z-index:20;">
+        <div class="zm is-open">
+          <span class="z-tag">选项一<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#223355" stroke-width="1.3" stroke-linecap="round"/></svg></span></span>
+          <span class="z-overflow">+3</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zm-panel is-open">
+          <div class="zm-list" style="padding-top:8px;">
+            <div class="zm-opt is-sel"><span class="z-cb"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#FFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>选项一</div>
+            <div class="zm-opt is-sel"><span class="z-cb"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#FFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>选项二</div>
+            <div class="zm-opt is-sel"><span class="z-cb"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#FFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>选项三</div>
+            <div class="zm-opt is-sel"><span class="z-cb"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#FFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>选项四</div>
+          </div>
+          <div class="zm-divider"></div>
+          <div class="zm-footer">
+            <div class="zm-all is-all">
+              <span class="z-cb-all"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#FFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>全选
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 方案二：框内输入搜索 -->
+<div class="section">
+  <div class="section-title">方案二：框内输入搜索</div>
+  <div class="row">
+
+    <!-- 激活（框内输入） -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">激活（框内输入）</div>
+      <div class="demo-wrap" style="z-index:12;">
+        <div class="zm is-open" style="flex-wrap:wrap; padding:4px 32px 4px 6px;">
+          <span class="z-tag">选项一<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#223355" stroke-width="1.3" stroke-linecap="round"/></svg></span></span>
+          <input class="z-inline-input" placeholder="输入搜索内容">
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zm-panel is-open">
+          <div class="zm-list" style="padding-top:8px;">
+            <div class="zm-opt is-sel"><span class="z-cb"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#FFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>选项一</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项二</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项三</div>
+            <div class="zm-opt"><span class="z-cb"></span>选项四</div>
+          </div>
+          <div class="zm-divider"></div>
+          <div class="zm-footer">
+            <div class="zm-all is-ind">
+              <span class="z-cb-all"><svg width="10" height="2" viewBox="0 0 10 2" fill="none"><path d="M1 1H9" stroke="#FFF" stroke-width="1.5" stroke-linecap="round"/></svg></span>全选
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 搜索过滤结果 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">搜索过滤结果</div>
+      <div class="demo-wrap" style="z-index:11;">
+        <div class="zm is-open" style="flex-wrap:wrap; padding:4px 32px 4px 6px;">
+          <span class="z-tag">选项一<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#223355" stroke-width="1.3" stroke-linecap="round"/></svg></span></span>
+          <input class="z-inline-input" value="三" style="width:24px;">
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zm-panel is-open">
+          <div class="zm-list" style="padding-top:8px;">
+            <div class="zm-opt"><span class="z-cb"></span>选项三</div>
+          </div>
+          <div class="zm-divider"></div>
+          <div class="zm-footer">
+            <div class="zm-all">
+              <span class="z-cb-all"></span>全选
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ================================================================
+     弹窗选择
+================================================================ -->
+<h2 style="margin-top:16px;">弹窗选择</h2>
+
+<!-- 第一种：图标 + 文字按钮 -->
+<div class="section">
+  <div class="section-title">第一种情况：图标 + 文字按钮</div>
+  <div class="row">
+
+    <!-- 默认 -->
+    <div class="demo-item">
+      <div class="demo-label">默认</div>
+      <div class="demo-wrap">
+        <div class="zpop">
+          <span class="z-placeholder">请选择</span>
+          <span class="zpop-actions">
+            <span class="zpop-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4H10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 7H10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 10H7" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 13H7" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M11 10V14M9 12H13" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/></svg>
+              选择
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 禁用 -->
+    <div class="demo-item">
+      <div class="demo-label">禁用</div>
+      <div class="demo-wrap">
+        <div class="zpop is-disabled">
+          <span class="z-placeholder">请选择</span>
+          <span class="zpop-actions">
+            <span class="zpop-btn" style="color:#A8B4C8; pointer-events:none;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4H10" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/><path d="M2 7H10" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/><path d="M2 10H7" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/><path d="M2 13H7" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/><path d="M11 10V14M9 12H13" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/></svg>
+              选择
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 悬停 -->
+    <div class="demo-item">
+      <div class="demo-label">悬停</div>
+      <div class="demo-wrap">
+        <div class="zpop" style="border-color:#3388FF;">
+          <span class="z-placeholder">请选择</span>
+          <span class="zpop-actions">
+            <span class="zpop-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4H10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 7H10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 10H7" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 13H7" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M11 10V14M9 12H13" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/></svg>
+              选择
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 激活（弹窗已打开） -->
+    <div class="demo-item">
+      <div class="demo-label">激活（弹窗已打开）</div>
+      <div class="demo-wrap">
+        <div class="zpop is-active">
+          <span class="z-placeholder">请选择</span>
+          <span class="zpop-actions">
+            <span class="zpop-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4H10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 7H10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 10H7" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 13H7" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M11 10V14M9 12H13" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/></svg>
+              选择
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 完成态（已选中） -->
+    <div class="demo-item">
+      <div class="demo-label">完成态</div>
+      <div class="demo-wrap">
+        <div class="zpop is-filled">
+          <span class="z-value">已选项目名称</span>
+          <span class="zpop-actions">
+            <span class="zpop-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4H10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 7H10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 10H7" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 13H7" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M11 10V14M9 12H13" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/></svg>
+              选择
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="demo-item">
+      <div class="demo-label">错误</div>
+      <div class="demo-wrap">
+        <div class="zpop is-error">
+          <span class="z-placeholder">请选择</span>
+          <span class="zpop-actions">
+            <span class="zpop-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4H10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 7H10" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 10H7" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M2 13H7" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M11 10V14M9 12H13" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/></svg>
+              选择
+            </span>
+          </span>
+        </div>
+        <span class="z-err">请选择一项</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 第二种：纯图标 -->
+<div class="section">
+  <div class="section-title">第二种情况：纯图标</div>
+  <div class="row">
+
+    <!-- 默认 -->
+    <div class="demo-item">
+      <div class="demo-label">默认</div>
+      <div class="demo-wrap">
+        <div class="zpop">
+          <span class="z-placeholder">请选择</span>
+          <span class="zpop-actions">
+            <!-- 选择图标 -->
+            <span class="zpop-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.672 2.672 2 3.5 2H12.5C13.328 2 14 2.672 14 3.5V8" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14H3.5C2.672 14 2 13.328 2 12.5V3.5" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 6H9" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 9.5H7.5" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M12 8.5V15M9 11.75H15" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 禁用 -->
+    <div class="demo-item">
+      <div class="demo-label">禁用</div>
+      <div class="demo-wrap">
+        <div class="zpop is-disabled">
+          <span class="z-placeholder">请选择</span>
+          <span class="zpop-actions">
+            <span class="zpop-icon" style="pointer-events:none;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.672 2.672 2 3.5 2H12.5C13.328 2 14 2.672 14 3.5V8" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14H3.5C2.672 14 2 13.328 2 12.5V3.5" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 6H9" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 9.5H7.5" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/><path d="M12 8.5V15M9 11.75H15" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 悬停 -->
+    <div class="demo-item">
+      <div class="demo-label">悬停</div>
+      <div class="demo-wrap">
+        <div class="zpop" style="border-color:#3388FF;">
+          <span class="z-placeholder">请选择</span>
+          <span class="zpop-actions">
+            <span class="zpop-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.672 2.672 2 3.5 2H12.5C13.328 2 14 2.672 14 3.5V8" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14H3.5C2.672 14 2 13.328 2 12.5V3.5" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 6H9" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 9.5H7.5" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M12 8.5V15M9 11.75H15" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 激活 -->
+    <div class="demo-item">
+      <div class="demo-label">激活（弹窗已打开）</div>
+      <div class="demo-wrap">
+        <div class="zpop is-active">
+          <span class="z-placeholder">请选择</span>
+          <span class="zpop-actions">
+            <span class="zpop-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.672 2.672 2 3.5 2H12.5C13.328 2 14 2.672 14 3.5V8" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14H3.5C2.672 14 2 13.328 2 12.5V3.5" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 6H9" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 9.5H7.5" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/><path d="M12 8.5V15M9 11.75H15" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 完成态（已选，显示清空+撤回+选择） -->
+    <div class="demo-item">
+      <div class="demo-label">完成态</div>
+      <div class="demo-wrap">
+        <div class="zpop is-filled">
+          <span class="z-value">已选项目名称</span>
+          <span class="zpop-sep"></span>
+          <span class="zpop-actions">
+            <!-- 清空 -->
+            <span class="zpop-icon is-danger" title="清空">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 4.5H13" stroke="#FF4433" stroke-width="1.5" stroke-linecap="round"/><path d="M6 4.5V3H10V4.5" stroke="#FF4433" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 4.5L5.5 13H10.5L11.5 4.5" stroke="#FF4433" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7.5V10.5M9 7.5V10.5" stroke="#FF4433" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            <!-- 撤回 -->
+            <span class="zpop-icon is-back" title="撤回">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 6.5C5 4 7.5 3 10 3.5C12.5 4 14 6 14 8.5C14 11 12 13.5 9 13.5C6 13.5 4 11.5 3.5 9.5" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M3.5 3V6.5H7" stroke="#223355" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <!-- 选择 -->
+            <span class="zpop-icon" title="选择">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.672 2.672 2 3.5 2H12.5C13.328 2 14 2.672 14 3.5V8" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14H3.5C2.672 14 2 13.328 2 12.5V3.5" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 6H9" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 9.5H7.5" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M12 8.5V15M9 11.75H15" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="demo-item">
+      <div class="demo-label">错误</div>
+      <div class="demo-wrap">
+        <div class="zpop is-error">
+          <span class="z-placeholder">请选择</span>
+          <span class="zpop-actions">
+            <span class="zpop-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.672 2.672 2 3.5 2H12.5C13.328 2 14 2.672 14 3.5V8" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14H3.5C2.672 14 2 13.328 2 12.5V3.5" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 6H9" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 9.5H7.5" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/><path d="M12 8.5V15M9 11.75H15" stroke="#223355" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+          </span>
+        </div>
+        <span class="z-err">请选择一项</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     下拉树选择（单选）
+================================================================ -->
+<h2 style="margin-top:16px;">下拉树选择</h2>
+
+<style>
+/* ── 树面板容器 ── */
+.zs-tree-panel {
+  position: absolute; top: calc(100% + 4px); left: 0; width: 240px;
+  background: #FFFFFF; border-radius: 8px;
+  box-shadow: 0 2px 20px 0 rgba(34,51,85,0.16);
+  padding: 4px 0; z-index: 100;
+}
+
+/* ── 树节点行 ── */
+.zt-row {
+  display: flex; align-items: center; height: 40px;
+  padding: 0 8px; gap: 4px; margin: 0 8px;
+  border-radius: 4px; font-size: 14px; color: #223355; cursor: pointer;
+  transition: background .1s;
+}
+.zt-row:hover    { background: #F5F7FA; }
+.zt-row.is-sel   { background: #F0F9FF; }
+.zt-row.is-sel .zt-icon { color: #3388FF; }
+
+/* 展开箭头 */
+.zt-toggle {
+  width: 16px; height: 16px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #A8B4C8; transition: transform .15s;
+}
+.zt-toggle svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.zt-toggle.is-open { transform: rotate(90deg); }
+.zt-toggle.is-leaf { visibility: hidden; }
+
+/* 节点图标（蓝色） */
+.zt-icon {
+  width: 16px; height: 16px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #3388FF;
+}
+.zt-icon svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+.zt-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 子节点缩进 */
+.zt-children { padding-left: 20px; }
+
+/* 加载状态行 */
+.zt-loading {
+  display: flex; align-items: center; justify-content: space-between; height: 40px;
+  padding: 0 12px; gap: 8px; font-size: 13px; color: #A8B4C8;
+}
+.zt-spinner {
+  width: 16px; height: 16px; flex-shrink: 0;
+  border: 2px solid #E9ECF2; border-top-color: #3388FF;
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+</style>
+
+<div class="section">
+  <div class="section-title">触发框状态 + 树形下拉面板</div>
+  <div class="row">
+
+    <!-- 1 展开态（树面板已展开） -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">展开 · 树选择</div>
+      <div class="demo-wrap">
+        <div class="zs is-open" style="width:240px;">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zs-tree-panel" style="display:block;">
+          <!-- 父节点 A（展开） -->
+          <div class="zt-row">
+            <span class="zt-toggle is-open"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+            <span class="zt-icon"><svg viewBox="0 0 14 14"><path d="M2 4h10M2 7h7M2 10h5" /></svg></span>
+            <span class="zt-label">一级分类 A</span>
+          </div>
+          <div class="zt-children">
+            <div class="zt-row">
+              <span class="zt-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="zt-icon"><svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="8" rx="1"/><path d="M5 3V2M9 3V2"/></svg></span>
+              <span class="zt-label">子项 A-1</span>
+            </div>
+            <div class="zt-row is-sel">
+              <span class="zt-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="zt-icon"><svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="8" rx="1"/><path d="M5 3V2M9 3V2"/></svg></span>
+              <span class="zt-label">子项 A-2（选中）</span>
+            </div>
+            <div class="zt-row">
+              <span class="zt-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="zt-icon"><svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="8" rx="1"/><path d="M5 3V2M9 3V2"/></svg></span>
+              <span class="zt-label">子项 A-3</span>
+            </div>
+          </div>
+          <!-- 父节点 B（折叠） -->
+          <div class="zt-row">
+            <span class="zt-toggle"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+            <span class="zt-icon"><svg viewBox="0 0 14 14"><path d="M2 4h10M2 7h7M2 10h5" /></svg></span>
+            <span class="zt-label">一级分类 B</span>
+          </div>
+          <!-- 父节点 C（折叠） -->
+          <div class="zt-row">
+            <span class="zt-toggle"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+            <span class="zt-icon"><svg viewBox="0 0 14 14"><path d="M2 4h10M2 7h7M2 10h5" /></svg></span>
+            <span class="zt-label">一级分类 C</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 数据加载中 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">数据加载中</div>
+      <div class="demo-wrap">
+        <div class="zs is-open" style="width:240px;">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zs-tree-panel" style="display:block;">
+          <div class="zt-loading">
+            <span>数据加载中...</span>
+            <span class="zt-spinner"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 完成态 -->
+    <div class="demo-item">
+      <div class="demo-label">完成态</div>
+      <div class="demo-wrap">
+        <div class="zs" style="width:240px;">
+          <span class="z-value">子项 A-2</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     下拉树多选
+================================================================ -->
+<h2 style="margin-top:16px;">下拉树多选</h2>
+
+<style>
+/* ── 树多选触发框（复用 .zm，宽度覆盖） ── */
+
+/* ── 树节点行内复选框 ── */
+.zt-cb {
+  width: 14px; height: 14px; flex-shrink: 0;
+  border: 1px solid #A8B4C8; border-radius: 3px;
+  background: #FFFFFF; display: inline-flex; align-items: center; justify-content: center;
+}
+.zt-cb.is-checked   { border-color: #3388FF; background: #3388FF; }
+.zt-cb.is-indeterminate { border-color: #3388FF; background: #3388FF; }
+.zt-cb svg { width: 10px; height: 8px; }
+</style>
+
+<div class="section">
+  <div class="section-title">多选触发框 + 树形下拉面板（含复选框）</div>
+  <div class="row">
+
+    <!-- 1 展开态·部分选中 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">展开 · 树多选</div>
+      <div class="demo-wrap">
+        <div class="zm is-open" style="width:240px;">
+          <span class="z-tag">子项 A-1<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2L8 8M8 2L2 8" stroke="#223355" stroke-width="1.4" stroke-linecap="round"/></svg></span></span>
+          <span class="z-tag">子项 A-2<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2L8 8M8 2L2 8" stroke="#223355" stroke-width="1.4" stroke-linecap="round"/></svg></span></span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zs-tree-panel" style="display:block;">
+          <!-- 父节点 A（展开，半选） -->
+          <div class="zt-row">
+            <span class="zt-toggle is-open"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+            <span class="zt-cb is-indeterminate"><svg viewBox="0 0 10 2" fill="none"><rect width="10" height="2" rx="1" fill="#FFFFFF"/></svg></span>
+            <span class="zt-icon"><svg viewBox="0 0 14 14"><path d="M2 4h10M2 7h7M2 10h5"/></svg></span>
+            <span class="zt-label">一级分类 A</span>
+          </div>
+          <div class="zt-children">
+            <div class="zt-row">
+              <span class="zt-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="zt-cb is-checked"><svg viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="zt-icon"><svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="8" rx="1"/><path d="M5 3V2M9 3V2"/></svg></span>
+              <span class="zt-label">子项 A-1</span>
+            </div>
+            <div class="zt-row">
+              <span class="zt-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="zt-cb is-checked"><svg viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="zt-icon"><svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="8" rx="1"/><path d="M5 3V2M9 3V2"/></svg></span>
+              <span class="zt-label">子项 A-2</span>
+            </div>
+            <div class="zt-row">
+              <span class="zt-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="zt-cb"></span>
+              <span class="zt-icon"><svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="8" rx="1"/><path d="M5 3V2M9 3V2"/></svg></span>
+              <span class="zt-label">子项 A-3</span>
+            </div>
+          </div>
+          <!-- 父节点 B（折叠，未选） -->
+          <div class="zt-row">
+            <span class="zt-toggle"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+            <span class="zt-cb"></span>
+            <span class="zt-icon"><svg viewBox="0 0 14 14"><path d="M2 4h10M2 7h7M2 10h5"/></svg></span>
+            <span class="zt-label">一级分类 B</span>
+          </div>
+          <!-- 父节点 C（折叠，未选） -->
+          <div class="zt-row">
+            <span class="zt-toggle"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+            <span class="zt-cb"></span>
+            <span class="zt-icon"><svg viewBox="0 0 14 14"><path d="M2 4h10M2 7h7M2 10h5"/></svg></span>
+            <span class="zt-label">一级分类 C</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 数据加载中 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">数据加载中</div>
+      <div class="demo-wrap">
+        <div class="zm is-open" style="width:240px;">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zs-tree-panel" style="display:block;">
+          <div class="zt-loading">
+            <span>数据加载中...</span>
+            <span class="zt-spinner"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 完成态 -->
+    <div class="demo-item">
+      <div class="demo-label">完成态</div>
+      <div class="demo-wrap">
+        <div class="zm" style="width:240px;">
+          <span class="z-tag">子项 A-1<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2L8 8M8 2L2 8" stroke="#223355" stroke-width="1.4" stroke-linecap="round"/></svg></span></span>
+          <span class="z-tag">子项 A-2<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2L8 8M8 2L2 8" stroke="#223355" stroke-width="1.4" stroke-linecap="round"/></svg></span></span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#A8B4C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     下拉树带搜索
+================================================================ -->
+<h2 style="margin-top:16px;">下拉树带搜索</h2>
+
+<style>
+/* 树面板内搜索框 */
+.zt-search-wrap {
+  display: flex; align-items: center; gap: 6px;
+  height: 32px; margin: 8px 8px 4px;
+  border: 1px solid #DDE1EB; border-radius: 16px;
+  padding: 0 12px; background: #FFFFFF; flex-shrink: 0;
+}
+.zt-search-wrap svg { width: 14px; height: 14px; fill: none; stroke: #A8B4C8; stroke-width: 1.6; stroke-linecap: round; flex-shrink: 0; }
+.zt-search-wrap input { flex: 1; border: none; background: transparent; font-size: 14px; color: #223355; outline: none; min-width: 0; }
+.zt-search-wrap input::placeholder { color: #A8B4C8; }
+
+/* 搜索结果高亮 */
+.zt-highlight { color: #3388FF; }
+
+/* 树列表滚动区 */
+.zt-scroll { max-height: 200px; overflow-y: auto; }
+.zt-scroll::-webkit-scrollbar { width: 4px; }
+.zt-scroll::-webkit-scrollbar-thumb { background: #E9ECF2; border-radius: 2px; }
+</style>
+
+<div class="section">
+  <div class="section-title">面板顶部含搜索框，支持单选和多选两种形态</div>
+  <div class="row">
+
+    <!-- 1 带搜索·单选 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">带搜索 · 单选</div>
+      <div class="demo-wrap">
+        <div class="zs is-open" style="width:240px;">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zs-tree-panel" style="display:block; padding: 0 0 4px;">
+          <div class="zt-search-wrap">
+            <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5" stroke-width="1.3"/><path d="M9.5 9.5L12 12" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <input placeholder="搜索节点" value="A-">
+          </div>
+          <div class="zt-scroll">
+            <div class="zt-row">
+              <span class="zt-toggle is-open"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="zt-icon"><svg viewBox="0 0 14 14"><path d="M2 4h10M2 7h7M2 10h5"/></svg></span>
+              <span class="zt-label">一级分类 <span class="zt-highlight">A</span></span>
+            </div>
+            <div class="zt-children">
+              <div class="zt-row">
+                <span class="zt-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+                <span class="zt-icon"><svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="8" rx="1"/><path d="M5 3V2M9 3V2"/></svg></span>
+                <span class="zt-label">子项 <span class="zt-highlight">A-</span>1</span>
+              </div>
+              <div class="zt-row is-sel">
+                <span class="zt-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+                <span class="zt-icon"><svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="8" rx="1"/><path d="M5 3V2M9 3V2"/></svg></span>
+                <span class="zt-label">子项 <span class="zt-highlight">A-</span>2（选中）</span>
+              </div>
+              <div class="zt-row">
+                <span class="zt-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+                <span class="zt-icon"><svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="8" rx="1"/><path d="M5 3V2M9 3V2"/></svg></span>
+                <span class="zt-label">子项 <span class="zt-highlight">A-</span>3</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 带搜索·多选 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">带搜索 · 多选</div>
+      <div class="demo-wrap">
+        <div class="zm is-open" style="width:240px;">
+          <span class="z-tag">子项 A-1<span class="z-tag-x"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2L8 8M8 2L2 8" stroke="#223355" stroke-width="1.4" stroke-linecap="round"/></svg></span></span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zs-tree-panel" style="display:block; padding: 0 0 4px;">
+          <div class="zt-search-wrap">
+            <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5" stroke-width="1.3"/><path d="M9.5 9.5L12 12" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <input placeholder="搜索节点" value="A-">
+          </div>
+          <div class="zt-scroll">
+            <div class="zt-row">
+              <span class="zt-toggle is-open"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="zt-cb is-indeterminate"><svg viewBox="0 0 10 2" fill="none"><rect width="10" height="2" rx="1" fill="#FFFFFF"/></svg></span>
+              <span class="zt-icon"><svg viewBox="0 0 14 14"><path d="M2 4h10M2 7h7M2 10h5"/></svg></span>
+              <span class="zt-label">一级分类 <span class="zt-highlight">A</span></span>
+            </div>
+            <div class="zt-children">
+              <div class="zt-row">
+                <span class="zt-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+                <span class="zt-cb is-checked"><svg viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="zt-icon"><svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="8" rx="1"/><path d="M5 3V2M9 3V2"/></svg></span>
+                <span class="zt-label">子项 <span class="zt-highlight">A-</span>1</span>
+              </div>
+              <div class="zt-row">
+                <span class="zt-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+                <span class="zt-cb"></span>
+                <span class="zt-icon"><svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="8" rx="1"/><path d="M5 3V2M9 3V2"/></svg></span>
+                <span class="zt-label">子项 <span class="zt-highlight">A-</span>2</span>
+              </div>
+              <div class="zt-row">
+                <span class="zt-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+                <span class="zt-cb"></span>
+                <span class="zt-icon"><svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="8" rx="1"/><path d="M5 3V2M9 3V2"/></svg></span>
+                <span class="zt-label">子项 <span class="zt-highlight">A-</span>3</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 搜索无结果 -->
+    <div class="demo-item has-panel">
+      <div class="demo-label">搜索无结果</div>
+      <div class="demo-wrap">
+        <div class="zs is-open" style="width:240px;">
+          <span class="z-placeholder">请选择</span>
+          <span class="z-chevron"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="#3388FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </div>
+        <div class="zs-tree-panel" style="display:block; padding: 0 0 4px;">
+          <div class="zt-search-wrap">
+            <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5" stroke-width="1.3"/><path d="M9.5 9.5L12 12" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <input placeholder="搜索节点" value="xyz">
+          </div>
+          <div class="zt-scroll" style="display:flex; align-items:center; justify-content:center; height:80px; font-size:14px; color:#A8B4C8;">
+            暂无匹配数据
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+redis:
+  redis_1:
+    port: "6380"
+    password: Wk2uBTeyp6
+    dir: /egova/data/redis
+    ip: 127.0.0.1

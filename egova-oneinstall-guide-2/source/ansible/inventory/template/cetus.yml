@@ -1,0 +1,8 @@
+# cetus代理配置模板
+# 部署场景下，host和ip根据部署节点的host自动生成注入
+# host: node1
+port: "3307"
+username: cetus
+password: Wk2uBTeyp6
+ip: 127.0.0.1
+db_type: biz

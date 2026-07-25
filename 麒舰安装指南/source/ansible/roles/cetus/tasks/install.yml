@@ -1,0 +1,74 @@
+---
+# 安装MySQL代理(cetus)
+
+- name: 准备cetus目录
+  file: name={{ item.dir }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='{{ item.mode }}'
+  with_items:
+    - { dir: "{{ deploy_path }}",mode: "0775" }
+    - { dir: "{{ log_path }}",mode: "0775" }
+    - { dir: "{{ temp_conf_path }}",mode: "0775" }
+
+- name: Add cetus user
+  become: true
+  user:
+    name: cetus
+    shell: /bin/false
+
+- name: 安装 cetus依赖
+  package:
+    name:
+      - gcc
+      - libglib2.0-dev
+      - zlib1g-dev
+      - flex
+      - libmysqlclient21
+      - libgoogle-perftools4
+      - libevent-dev
+      - libpcre3-dev
+      - cmake
+      - pkg-config
+    state: present
+    update_cache: yes
+  when: ansible_pkg_mgr ==  'apt'
+
+- name: 解压cetus
+  unarchive:
+    src: "{{ src_path }}/cetus-{{ cetus_version }}.tar.gz"
+    dest: "{{ deploy_path }}"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    mode: '0755'
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Append cetus to PATH in .bashrc
+  shell: |
+    echo 'export PATH="/usr/local/cetus/bin:$PATH"' >> ~/.bashrc
+    bash -c "source ~/.bashrc"
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Install cetus package with package module
+  package:
+    name: cetus
+    state: 'present'
+  when: ansible_distribution in ['openEuler','CentOS','kylin_arm','kylin_x86','UOS','uos_x86','uos_arm','anolis_x86','anolis_arm']
+
+
+- name: Create symbolic link for libtcmalloc
+  become: true
+  file:
+    src: /usr/lib/x86_64-linux-gnu/libtcmalloc.so.4
+    dest: /usr/lib64/libtcmalloc.so
+    state: link
+  when: ansible_pkg_mgr ==  'apt'
+
+- name: Add cetus library path to ld.so.conf.d
+  become: true
+  copy:
+    content: "/usr/local/cetus/lib"
+    dest: /etc/ld.so.conf.d/cetus.conf
+
+- name: Refresh shared library cache
+  become: true
+  command: ldconfig
+
+

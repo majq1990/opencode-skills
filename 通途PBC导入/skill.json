@@ -1,0 +1,18 @@
+{
+  "name": "tongtu-pbc",
+  "version": "1.0.0",
+  "description": "通途工程PBC表数据导入工具",
+  "skills": [
+    {
+      "name": "tongtu-pbc",
+      "path": "SKILL.md"
+    }
+  ],
+  "tools": [
+    {
+      "name": "import_pbc.py",
+      "description": "PBC数据导入脚本",
+      "usage": "python import_pbc.py <excel_file> [--year 2025] [--clear] [--dry-run]"
+    }
+  ]
+}

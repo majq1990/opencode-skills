@@ -1,0 +1,134 @@
+{
+  "name": "rating-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 评分组件规范，含星星/心形/火焰/闪电/点赞手五种图标形状及表情样式，覆盖所有分值状态与交互",
+
+  "basic": {
+    "count": 5,
+    "direction": "horizontal",
+    "gap": "6px",
+    "item_size": "24px",
+    "hover_scale": "1.15",
+    "hover_transition": "0.1s",
+    "color_inactive": "#DDE1EB",
+    "color_disabled_active": "#FFD580"
+  },
+
+  "label": {
+    "font_size": "13px",
+    "color": "#223355",
+    "margin_left": "4px",
+    "min_width": "56px",
+    "values": {
+      "1": "极差",
+      "2": "较差",
+      "3": "中等",
+      "4": "满意",
+      "5": "非常满意"
+    }
+  },
+
+  "shapes": [
+    {
+      "id": "star",
+      "label": "星星",
+      "color_active": "#FFAA00",
+      "description": "圆润五角星，贝塞尔曲线路径，角部饱满"
+    },
+    {
+      "id": "heart",
+      "label": "心形",
+      "color_active": "#FF4433",
+      "description": "标准爱心路径"
+    },
+    {
+      "id": "fire",
+      "label": "火焰",
+      "color_active": "#FF4433",
+      "description": "宽体火焰，底部大圆弧收口，顶部尖锐，整体饱满"
+    },
+    {
+      "id": "bolt",
+      "label": "闪电",
+      "color_active": "#3388FF",
+      "description": "实心雷电形，占满图标区域"
+    },
+    {
+      "id": "thumb",
+      "label": "点赞手",
+      "color_active": "#FF6600",
+      "description": "手掌主体（path）与手臂（圆角矩形 rect，radius 1.5px）两个独立路径，间距 1px，手形宽体饱满"
+    }
+  ],
+
+  "active_rule": "1～N 分时，前 N 个图标点亮为对应激活色，其余保持 color_inactive",
+
+  "emoji_style": {
+    "item_size": "28px",
+    "description": "5 个独立表情，每个分值对应不同表情形态与颜色，悬停时所有图标同步切换为该分值对应形态",
+    "color_active_red": "#FF4433",
+    "color_active_yellow": "#FFAA00",
+    "color_inactive": "#DDE1EB",
+    "levels": [
+      {
+        "value": 1,
+        "label": "极差",
+        "face": "发怒脸",
+        "face_detail": "皱眉（向上斜线眉）+ 圆眼 + 向下弧线嘴角",
+        "color_active": "#FF4433",
+        "count_lit": 1
+      },
+      {
+        "value": 2,
+        "label": "较差",
+        "face": "伤心哭脸",
+        "face_detail": "闭眼（弧线）+ 泪水线 + 向下弧线嘴角",
+        "color_active": "#FFAA00",
+        "count_lit": 2
+      },
+      {
+        "value": 3,
+        "label": "中等",
+        "face": "无表情平脸",
+        "face_detail": "圆眼 + 水平直线嘴",
+        "color_active": "#FFAA00",
+        "count_lit": 3
+      },
+      {
+        "value": 4,
+        "label": "满意",
+        "face": "微笑脸",
+        "face_detail": "圆眼 + 向上弧线嘴",
+        "color_active": "#FFAA00",
+        "count_lit": 4
+      },
+      {
+        "value": 5,
+        "label": "非常满意",
+        "face": "大笑脸",
+        "face_detail": "眯眼（向上弧线）+ 大开口笑嘴 + 半透明白色牙齿区域",
+        "color_active": "#FFAA00",
+        "count_lit": 5
+      }
+    ]
+  },
+
+  "states": {
+    "default":  { "description": "全部图标显示 color_inactive" },
+    "hover":    { "description": "第 1～N 个图标变为激活色，标签显示对应文字，图标 scale(1.15)" },
+    "selected": { "description": "保持激活状态，鼠标离开后维持" },
+    "cancel":   { "description": "点击当前已选分值可取消，回到默认态" },
+    "disabled": { "cursor": "not-allowed", "pointer_events": "none", "active_color": "#FFD580" }
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "表情样式悬停时形态未同步切换",
+      "fix": "悬停时需根据 hover 分值重新渲染全部 5 个表情的 SVG，而非仅切换颜色"
+    },
+    {
+      "issue": "点赞手激活色未覆盖 g 标签内子元素",
+      "fix": "手形使用 g.icon-off 包裹两个子路径，CSS 需同时设置 g.icon-off path 和 g.icon-off rect 的 fill"
+    }
+  ]
+}

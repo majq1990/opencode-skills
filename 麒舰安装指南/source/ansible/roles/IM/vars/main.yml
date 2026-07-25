@@ -1,0 +1,17 @@
+---
+# 名称根据metadata.yml里生成的key传入，如linglong.linglong_1
+# 可加一级type, 如type=linglong
+#app_type: linglong
+#app_name: linglong_1
+app_type: "{{ app_type }}"
+app_name: "{{ app_name }}"
+
+
+# src_path可直接写死，根据在主控节点上解压安装包的路径确定
+src_path: "{{ src_web_package_path }}/{{ app_type }}"
+# 此路径为部署节点上存放web安装包的路径，安装包包含前端和后端两个
+dest_path: "{{ dest_package_root_path }}/microservice"
+# 前端部署路径
+frontend_path: "{{ app_type.app_name.frontend_path }}"
+
+

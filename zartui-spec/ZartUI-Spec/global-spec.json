@@ -1,0 +1,16 @@
+{
+  "name": "global-spec",
+  "version": "1.1.0",
+  "description": "ZartUI 全局规范，适用于所有组件的通用设计规则",
+
+  "error_message": {
+    "description": "所有组件的错误提示文字样式与间距",
+    "position": "组件下方",
+    "margin_top": "4px",
+    "font_size": "12px",
+    "font_weight": "400",
+    "color": "#FF4433",
+    "layout_note": "错误提示必须与其对应的表单组件包裹在同一个容器内（独立 wrapper），不能暴露在外部 flex/grid gap 环境中，否则间距会被 gap 覆盖而超出 4px",
+    "note": "适用范围：输入框、数字输入框、下拉选择、日期选择器等一切带错误状态的表单组件"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "skill_name": "xray-security-scanner",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我想对网站 http://test.example.com 进行安全扫描，检测 SQL 注入和 XSS 漏洞",
+      "expected_output": "生成 xray 扫描命令，包含 --plugins sqldet,xss 参数，输出为 HTML 报告",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "如何使用 xray 进行被动代理扫描？请给出完整的配置步骤",
+      "expected_output": "提供被动扫描的配置步骤，包括：1) 启动代理命令 2) 浏览器设置 3) HTTPS 证书安装",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "我有一个 targets.txt 文件包含 10 个 URL，想用 xray 批量扫描这些目标，要求并发数为 3，输出 JSON 格式",
+      "expected_output": "推荐使用 batch_scan.py 脚本，并给出具体命令参数",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "xray 扫描完成后，我得到了一个 JSON 格式的报告，想把它转换成漂亮的 HTML 报告并查看统计信息",
+      "expected_output": "推荐使用 report_generator.py 脚本，给出转换命令和预期输出",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "我想编写一个检测特定漏洞的自定义 POC，xray 的 POC 格式是什么样的？",
+      "expected_output": "提供 POC YAML 格式示例，包含 name、rules、detail 等必要字段的说明",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "如何在 Windows 上安装 xray？",
+      "expected_output": "提供 install_xray.py 脚本的使用方法，或手动安装步骤",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "xray 有哪些内置插件？哪些是可以免费使用的？",
+      "expected_output": "列出所有插件，区分社区版和高级版，说明常用插件功能",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "我怀疑某个网站有命令注入漏洞，想用 xray 只检测这个类型的漏洞",
+      "expected_output": "给出只启用 cmd-injection 插件的扫描命令",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "xray 扫描时发现了很多误报，如何减少误报？",
+      "expected_output": "提供减少误报的建议：调整插件、修改配置、使用 POC 等",
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "如何验证我编写的 POC 语法是否正确？",
+      "expected_output": "推荐使用 poc_manager.py validate 命令进行验证",
+      "files": []
+    }
+  ]
+}

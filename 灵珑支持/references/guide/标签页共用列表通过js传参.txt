@@ -1,0 +1,85 @@
+标签页共用列表通过js传参
+1 使用场景
+在页面中会存在使用标签页来存放列表，以便于用户查看不同标签下的内容，如在审批中会存在待审批、审批通过、已处理和审批不通过等情况。这些标签使用同一个列表，所以在进行点击标签页的时候需要根据审批类型对数据进行筛选过滤，因此需要用个js进行参数传递以便达到点击不同标签出现不同的数据这一情况
+2 效果
+点击审核通过、已处理或审核不通过标签页，标签切换时刷新列表，并且展示对应标签的数据
+3 配置
+配置：
+标签上配置onTabClicktab
+同时需要开启“是否强制渲染”
+获取每个标签页的区域，进行传参刷新
+function onTabClick(tab) {
+    console.log("选中tab序号", tab)
+    debugger
+    var self = this; // 重置作用域
+    if (tab === 1) { // 点击第一个tab页签
+        // 获取页面列表组件 page_widget_list_1ris5q 页面列表组件id
+        var pageListEle = self.$$("page_widget_list_f5psvt");
+        // 获取列表渲染页实例
+        var listRenderView = pageListEle.$$getRenderElement();
+        // 获取当前显示的组件，表格或者卡片
+        var currentListEle = listRenderView.$$getListElement();
+        // 调用刷新方法
+        currentListEle.$$refreshData();
+
+    }
+    if (tab === 2) { // 点击第二个tab页签       
+        //获取标签页区域
+        const pageTableList2 = this.$$("page_widget_list_f2ypob");
+        if (pageTableList2) {
+            if (pageTableList2.dataEngine && pageTableList2.dataEngine.state) {
+                // 给列表组件设置参数，参数名meter_id为要过滤列表中的列名，后面为参数值，取自树节点参数
+                pageTableList2.$children[0].$$setExtraParams({
+                    approve_flag: 1 ,
+                    process_flag: 0
+                })
+                // 找到列表部件中的表格组件元素
+                let tableComp2 = pageTableList2.dataEngine.state.getElement("table_h6hl3k");
+                if (tableComp2) {
+                    //执行列表刷新
+                    tableComp2.$$refreshData();
+                }
+            }
+        }
+
+
+    }
+
+    if (tab === 3) { // 点击第三个tab页签   
+        const pageTableList3 = this.$$("page_widget_list_93k4ds");
+        if (pageTableList3) {
+            if (pageTableList3.dataEngine && pageTableList3.dataEngine.state) {
+                // 给列表组件设置参数，参数名meter_id为要过滤列表中的列名，后面为参数值，取自树节点参数
+                pageTableList3.$children[0].$$setExtraParams({
+                    approve_flag: 1,
+                    process_flag: 1
+                })
+                // 找到列表部件中的表格组件元素
+                let tableComp3 = pageTableList3.dataEngine.state.getElement("table_h6hl3k");
+                if (tableComp3) {
+                    //执行列表刷新
+                    tableComp3.$$refreshData();
+                }
+            }
+        }
+
+    }
+    if (tab === 4) {
+        const pageTableList4 = this.$$("page_widget_list_5e7uyp");
+        if (pageTableList4) {
+            if (pageTableList4.dataEngine && pageTableList4.dataEngine.state) {
+                // 给列表组件设置参数，参数名meter_id为要过滤列表中的列名，后面为参数值，取自树节点参数
+                pageTableList4.$children[0].$$setExtraParams({
+                    process_flag: 2
+                })
+                // 找到列表部件中的表格组件元素
+                let tableComp4 = pageTableList4.dataEngine.state.getElement("table_h6hl3k");
+                if (tableComp4) {
+                    //执行列表刷新
+                    tableComp4.$$refreshData();
+                }
+            }
+        }
+    }
+
+}

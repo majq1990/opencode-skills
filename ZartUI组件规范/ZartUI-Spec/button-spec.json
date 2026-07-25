@@ -1,0 +1,58 @@
+{
+  "name": "button-rect-spec",
+  "version": "2.0.0",
+  "description": "ZartUI 矩形按钮规范，含面状按钮和线状按钮，覆盖所有交互状态与尺寸",
+
+  "shared": {
+    "border_radius": "4px",
+    "padding_horizontal": "16px",
+    "border_width": "1px",
+    "transition": "background 0.15s, border-color 0.15s, color 0.15s"
+  },
+
+  "sizes": [
+    { "id": "md", "height": "32px", "font_size": "14px" },
+    { "id": "sm", "height": "24px", "font_size": "12px" }
+  ],
+
+  "variants": [
+    {
+      "id": "solid",
+      "label": "面状按钮",
+      "usage": "提交、保存、确定等主要提交类操作",
+      "states": {
+        "normal":   { "background": "#3388FF", "border_color": "#3388FF", "color": "#FFFFFF" },
+        "hover":    { "background": "#5CA5FF", "border_color": "#5CA5FF", "color": "#FFFFFF" },
+        "click":    { "background": "#2167D9", "border_color": "#2167D9", "color": "#FFFFFF" },
+        "disabled": { "background": "#ADD8FF", "border_color": "#ADD8FF", "color": "#FFFFFF" }
+      }
+    },
+    {
+      "id": "outline",
+      "label": "线状按钮",
+      "usage": "取消、重置、重新编辑等提交按钮旁的次要操作",
+      "states": {
+        "normal":   { "background": "#FFFFFF", "border_color": "#DDE1EB", "color": "#223355" },
+        "hover":    { "background": "#F0F9FF", "border_color": "#3388FF", "color": "#3388FF" },
+        "click":    { "background": "#D6EDFF", "border_color": "#3388FF", "color": "#3388FF" },
+        "disabled": { "background": "#FFFFFF", "border_color": "#F5F7FA", "color": "#CED4E0" }
+      }
+    }
+  ],
+
+  "content_variants": [
+    { "id": "text-only",  "label": "仅文字" },
+    { "id": "icon-text",  "label": "图标 + 文字" }
+  ],
+
+  "known_pitfalls": [
+    {
+      "issue": "面状按钮用于非提交场景",
+      "fix": "面状按钮视觉权重最高，仅用于提交/保存/确定，不应用于导出、编辑等辅助操作"
+    },
+    {
+      "issue": "disabled 状态仍可触发事件",
+      "fix": "需同时设置 cursor: not-allowed 和 pointer-events: none"
+    }
+  ]
+}

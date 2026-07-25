@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZartUI · TopNav 顶部导航 规范预览</title>
+<style>
+:root {
+  --color-bg-page:      #F5F7FA;
+  --color-bg-panel:     #FFFFFF;
+  --color-text-primary: #081126;
+  --color-text-body:    #223355;
+  --color-text-muted:   #6B7A99;
+  --color-primary:      #3388FF;
+  --color-border:       #E9ECF2;
+  --font-family:        'PingFang SC','Microsoft YaHei',sans-serif;
+  --radius-m: 8px;
+  --radius-s: 4px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+button { font: inherit; border: none; background: none; cursor: pointer; }
+body {
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-body);
+  background: var(--color-bg-page);
+  padding: 40px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  margin-bottom: 32px;
+}
+
+.spec-section {
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-m);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.spec-section-title {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 24px;
+}
+
+.spec-block-title {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.demo-block { margin-bottom: 32px; }
+
+/* ── 规格参数表 ── */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.spec-table th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: #F5F7FA;
+}
+.spec-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td code {
+  font-family: 'SF Mono','Consolas',monospace;
+  font-size: 12px;
+  background: #F5F7FA;
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  color: var(--color-primary);
+}
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 14px; height: 14px; border-radius: var(--radius-s); border: 1px solid var(--color-border); flex-shrink: 0; }
+
+/* ══════════════════════════════════════
+   顶部导航
+   ══════════════════════════════════════ */
+.topnav {
+  height: 60px;
+  background: linear-gradient(to right, #2167D9, #3388FF);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  border-radius: var(--radius-m);
+  position: relative;
+  user-select: none;
+}
+
+/* ── Logo 区 ── */
+.topnav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.topnav-logo-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.topnav-title {
+  font-size: 18px;
+  font-weight: 400;
+  color: #FFFFFF;
+  white-space: nowrap;
+}
+
+/* ── 一级菜单 ── */
+.topnav-menu {
+  display: flex;
+  align-items: center;
+  margin-left: 80px;
+  height: 100%;
+}
+
+.topnav-menu-item {
+  height: 60px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  color: #FFFFFF;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.topnav-menu-item:hover {
+  background: rgba(0,0,0,0.08);
+}
+
+/* 选中：叠加 #000000 10% 透明度背景 */
+.topnav-menu-item.is-active {
+  background: rgba(0,0,0,0.10);
+  font-weight: 400;
+}
+
+/* ── 右侧工具区 ── */
+.topnav-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* 图标按钮 */
+.topnav-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+.topnav-icon-btn:hover { background: rgba(255,255,255,0.15); }
+.topnav-icon-btn svg {
+  width: 24px;
+  height: 24px;
+  color: #FFFFFF;
+  flex-shrink: 0;
+}
+
+/* 通知红点 */
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: #FF4433;
+  border-radius: 50%;
+  border: 1.5px solid #3388FF;
+}
+
+/* 分隔线 */
+.topnav-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255,255,255,0.25);
+  margin: 0 8px;
+}
+
+/* ── 用户信息 ── */
+.topnav-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 0 8px;
+  height: 60px;
+  transition: background 0.15s;
+  position: relative;
+}
+.topnav-user:hover { background: rgba(255,255,255,0.12); }
+
+.topnav-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 400;
+  color: #FFFFFF;
+  flex-shrink: 0;
+}
+
+.topnav-user-info {
+  display: flex;
+  flex-direction: column;
+}
+.topnav-user-name {
+  font-size: 14px;
+  color: #FFFFFF;
+  font-weight: 400;
+  line-height: 18px;
+}
+.topnav-user-dept {
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+  line-height: 16px;
+}
+
+.topnav-user-arrow {
+  flex-shrink: 0;
+}
+.topnav-user.is-open .topnav-user-arrow { transform: none; }
+
+/* ── 下拉菜单 ── */
+.topnav-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: 168px;
+  background: #FFFFFF;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);   /* 下拉菜单背景圆角 8px */
+  box-shadow: 0 8px 24px rgba(18,74,180,0.16);
+  display: none;
+  z-index: 100;
+  padding: 8px;                     /* 菜单背景边距 8px */
+}
+.topnav-user.is-open .topnav-dropdown { display: block; }
+
+.dropdown-item {
+  height: 36px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #223355;
+  cursor: pointer;
+  border-radius: var(--radius-s);
+  transition: background 0.15s;
+}
+.dropdown-item:hover { background: #F5F7FA; }
+/* 线状图标 */
+.dropdown-item svg {
+  width: 16px;
+  height: 16px;
+  color: #6B7A99;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dropdown-divider { height: 1px; background: var(--color-border); margin: 4px 0; }
+.dropdown-item.danger { color: #FF4433; }
+.dropdown-item.danger svg { color: #FF4433; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · TopNav 顶部导航 规范预览</h1>
+
+<div class="spec-section">
+  <h2 class="spec-section-title">组件演示</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">完整导航栏（点击用户名可展开下拉菜单）</div>
+    <div class="topnav">
+
+      <!-- Logo -->
+      <div class="topnav-logo">
+        <div class="topnav-logo-img">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3L3 8v8l9 5 9-5V8L12 3z" fill="rgba(255,255,255,0.9)"/>
+            <path d="M12 3v13M3 8l9 5 9-5" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+          </svg>
+        </div>
+        <span class="topnav-title">智慧城市管理平台</span>
+      </div>
+
+      <!-- 一级菜单 -->
+      <nav class="topnav-menu">
+        <div class="topnav-menu-item is-active">工作台</div>
+        <div class="topnav-menu-item">项目管理</div>
+        <div class="topnav-menu-item">数据中心</div>
+        <div class="topnav-menu-item">运维监控</div>
+        <div class="topnav-menu-item">系统管理</div>
+      </nav>
+
+      <!-- 右侧工具区 -->
+      <div class="topnav-right">
+
+        <!-- 更多（面状图标） -->
+        <div class="topnav-icon-btn" title="更多">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="5" cy="12" r="2"/>
+            <circle cx="12" cy="12" r="2"/>
+            <circle cx="19" cy="12" r="2"/>
+          </svg>
+        </div>
+
+        <!-- 帮助（面状图标） -->
+        <div class="topnav-icon-btn" title="帮助">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 15.5a1 1 0 110-2 1 1 0 010 2zm1-4.5v.5a1 1 0 01-2 0v-1a1 1 0 011-1 1.5 1.5 0 10-1.5-1.5 1 1 0 01-2 0 3.5 3.5 0 114.5 3.5z"/>
+          </svg>
+        </div>
+
+        <!-- 通知（面状图标） -->
+        <div class="topnav-icon-btn" title="通知">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 22a2 2 0 001.995-1.85L14 20h-4a2 2 0 001.85 1.995L12 22zM12 2a7 7 0 00-7 7v1.586l-1.707 1.707A1 1 0 003 13v1a1 1 0 001 1h16a1 1 0 001-1v-1a1 1 0 00-.293-.707L19 10.586V9a7 7 0 00-7-7z"/>
+          </svg>
+          <span class="badge"></span>
+        </div>
+
+        <div class="topnav-divider"></div>
+
+        <!-- 用户信息 -->
+        <div class="topnav-user" onclick="toggleDropdown(this)">
+          <div class="topnav-avatar">林</div>
+          <div class="topnav-user-info">
+            <span class="topnav-user-name">林晓勇</span>
+            <span class="topnav-user-dept">产品设计部</span>
+          </div>
+          <svg class="topnav-user-arrow" viewBox="0 0 20 20" width="20" height="20" fill="none">
+            <circle cx="2.5" cy="4.5" r="1.5" fill="rgba(255,255,255,0.7)"/>
+            <circle cx="2.5" cy="10" r="1.5" fill="rgba(255,255,255,0.7)"/>
+            <circle cx="2.5" cy="15.5" r="1.5" fill="rgba(255,255,255,0.7)"/>
+            <line x1="7" y1="4.5" x2="19" y2="4.5" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="7" y1="10" x2="19" y2="10" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="7" y1="15.5" x2="19" y2="15.5" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+
+          <!-- 下拉菜单 -->
+          <div class="topnav-dropdown">
+            <div class="dropdown-item">
+              <svg viewBox="0 0 16 16">
+                <circle cx="8" cy="6" r="3"/>
+                <path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/>
+              </svg>
+              个人中心
+            </div>
+            <div class="dropdown-item">
+              <svg viewBox="0 0 16 16">
+                <path d="M11 2l3 3-8 8H3v-3L11 2z"/>
+              </svg>
+              编辑资料
+            </div>
+            <div class="dropdown-item">
+              <svg viewBox="0 0 16 16">
+                <circle cx="8" cy="8" r="2.5"/>
+                <path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.4 3.4l.85.85M11.75 11.75l.85.85M3.4 12.6l.85-.85M11.75 4.25l.85-.85"/>
+              </svg>
+              系统设置
+            </div>
+            <div class="dropdown-item">
+              <svg viewBox="0 0 16 16">
+                <circle cx="8" cy="8" r="6"/>
+                <path d="M8 5v3l2 1.5"/>
+              </svg>
+              关于我们
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item danger">
+              <svg viewBox="0 0 16 16">
+                <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6"/>
+              </svg>
+              退出登录
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 菜单状态对比 -->
+  <div class="demo-block">
+    <div class="spec-block-title">菜单项状态对比</div>
+    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+      <!-- 默认 -->
+      <div style="text-align:center;">
+        <div style="font-size:12px;color:#6B7A99;margin-bottom:8px;">默认</div>
+        <div style="background:linear-gradient(to right,#2167D9,#3388FF);border-radius:4px;">
+          <div style="height:60px;padding:0 20px;display:flex;align-items:center;font-size:16px;color:#FFFFFF;">工作台</div>
+        </div>
+      </div>
+      <!-- 悬停 -->
+      <div style="text-align:center;">
+        <div style="font-size:12px;color:#6B7A99;margin-bottom:8px;">悬停 (Hover)</div>
+        <div style="background:linear-gradient(to right,#2167D9,#3388FF);border-radius:4px;">
+          <div style="height:60px;padding:0 20px;display:flex;align-items:center;font-size:16px;color:#FFFFFF;background:rgba(0,0,0,0.08);">工作台</div>
+        </div>
+      </div>
+      <!-- 选中 -->
+      <div style="text-align:center;">
+        <div style="font-size:12px;color:#6B7A99;margin-bottom:8px;">选中 (Active)</div>
+        <div style="background:linear-gradient(to right,#2167D9,#3388FF);border-radius:4px;">
+          <div style="height:60px;padding:0 20px;display:flex;align-items:center;font-size:16px;color:#FFFFFF;font-weight:400;background:rgba(0,0,0,0.10);">工作台</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 规格参数 -->
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">区域</th><th style="width:140px;">属性</th><th style="width:260px;">规格值</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="3">导航栏</td>
+        <td>高度</td>
+        <td><code>60px</code></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>背景</td>
+        <td><code>linear-gradient(→, #2167D9, #3388FF)</code></td>
+        <td>从左到右线性渐变</td>
+      </tr>
+      <tr><td>左侧内边距</td><td><code>20px</code></td><td></td></tr>
+      <tr>
+        <td rowspan="2">Logo</td>
+        <td>位置</td>
+        <td><code>left: 20px</code></td>
+        <td></td>
+      </tr>
+      <tr><td>尺寸</td><td><code>40×40px</code></td><td></td></tr>
+      <tr>
+        <td rowspan="2">导航标题</td>
+        <td>字号</td>
+        <td><code>18px · 400</code></td>
+        <td>Logo 右侧，间距 10px</td>
+      </tr>
+      <tr>
+        <td>颜色</td>
+        <td><span class="chip"><span class="swatch" style="background:#FFFFFF;border-color:#ccc;"></span><code>#FFFFFF</code></span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td rowspan="4">一级菜单</td>
+        <td>与标题间距</td>
+        <td><code>80px</code></td>
+        <td>标题右侧到第一个菜单项左边缘</td>
+      </tr>
+      <tr><td>字号</td><td><code>16px</code></td><td></td></tr>
+      <tr><td>两端边距</td><td><code>padding: 0 20px</code></td><td>单侧 20px</td></tr>
+      <tr>
+        <td>颜色 / 背景</td>
+        <td>颜色 <code>#FFFFFF</code></td>
+        <td>默认透明；Hover <code>rgba(0,0,0,0.08)</code>；选中 <code>rgba(0,0,0,0.10)</code></td>
+      </tr>
+      <tr>
+        <td rowspan="3">右侧图标</td>
+        <td>图标尺寸</td>
+        <td><code>24×24px</code></td>
+        <td>更多、帮助、通知，面状图标</td>
+      </tr>
+      <tr>
+        <td>颜色</td>
+        <td><span class="chip"><span class="swatch" style="background:#FFFFFF;border-color:#ccc;"></span><code>#FFFFFF</code></span></td>
+        <td></td>
+      </tr>
+      <tr><td>通知红点</td><td><code>8×8px · #FF4433</code></td><td>右上角角标</td></tr>
+      <tr>
+        <td rowspan="3">用户信息</td>
+        <td>头像</td>
+        <td><code>32×32px</code> 圆形</td>
+        <td>通知图标右侧，分隔线后</td>
+      </tr>
+      <tr><td>姓名</td><td><code>14px · 400 · #FFFFFF</code></td><td></td></tr>
+      <tr><td>部门</td><td><code>12px · rgba(255,255,255,0.7)</code></td><td></td></tr>
+      <tr>
+        <td rowspan="2">下拉菜单</td>
+        <td>宽度 / 位置</td>
+        <td><code>160px</code>，右对齐，距导航底部 <code>4px</code></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>菜单项</td>
+        <td>个人中心 / 编辑资料 / 系统设置 / 关于我们 / 退出登录</td>
+        <td>退出登录 <code>#FF4433</code>，上方加分隔线</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+function toggleDropdown(el) {
+  el.classList.toggle('is-open');
+  function close(e) {
+    if (!el.contains(e.target)) {
+      el.classList.remove('is-open');
+      document.removeEventListener('click', close);
+    }
+  }
+  setTimeout(() => document.addEventListener('click', close), 0);
+}
+</script>
+</body>
+</html>

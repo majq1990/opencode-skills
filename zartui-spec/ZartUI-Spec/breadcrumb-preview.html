@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZartUI · 面包屑 规范预览</title>
+<style>
+:root {
+  --color-bg-page:      #F5F7FA;
+  --color-bg-panel:     #FFFFFF;
+  --color-text-primary: #081126;
+  --color-text-body:    #223355;
+  --color-text-muted:   #6B7A99;
+  --color-primary:      #3388FF;
+  --color-border:       #E9ECF2;
+  --font-family:        'PingFang SC','Microsoft YaHei',sans-serif;
+  --radius-m: 8px;
+  --radius-s: 4px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-body);
+  background: var(--color-bg-page);
+  padding: 40px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  margin-bottom: 32px;
+}
+
+.spec-section {
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-m);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.spec-section-title {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 24px;
+}
+
+.spec-block-title {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.demo-block { margin-bottom: 32px; }
+
+/* 规格参数表 */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.spec-table th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: #F5F7FA;
+}
+.spec-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td code {
+  font-family: 'SF Mono','Consolas',monospace;
+  font-size: 12px;
+  background: #F5F7FA;
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  color: var(--color-primary);
+}
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 14px; height: 14px; border-radius: var(--radius-s); border: 1px solid var(--color-border); flex-shrink: 0; }
+
+/* ══════════════════════════════════════
+   面包屑
+   ══════════════════════════════════════ */
+.breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+}
+
+/* 可点击的上级节点 */
+.bc-item {
+  color: #6B7A99;
+  cursor: pointer;
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+.bc-item:hover { color: #3388FF; }
+
+/* 当前页面节点 */
+.bc-item.is-current {
+  color: #223355;
+  cursor: default;
+}
+.bc-item.is-current:hover { color: #223355; }
+
+/* 分隔符 */
+.bc-sep {
+  color: #6B7A99;
+  margin: 0 8px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* 省略号节点 */
+.bc-ellipsis {
+  color: #6B7A99;
+  cursor: default;
+  white-space: nowrap;
+  position: relative;
+}
+
+/* 带下拉的节点 */
+.bc-dropdown-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.bc-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #6B7A99;
+  cursor: pointer;
+  transition: color 0.15s;
+  white-space: nowrap;
+  user-select: none;
+}
+.bc-dropdown-trigger:hover { color: #3388FF; }
+.bc-dropdown-trigger:hover svg { stroke: #3388FF; }
+
+.bc-dropdown-trigger svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: #6B7A99;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.15s, transform 0.2s;
+  flex-shrink: 0;
+}
+.bc-dropdown-wrap.is-open .bc-dropdown-trigger svg {
+  transform: rotate(180deg);
+}
+
+/* 下拉菜单 */
+.bc-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 140px;
+  background: #FFFFFF;
+  border: 1px solid #E9ECF2;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(18,74,180,0.12);
+  padding: 8px;
+  z-index: 100;
+}
+.bc-dropdown-wrap.is-open .bc-dropdown-menu { display: block; }
+
+.bc-dropdown-item {
+  height: 36px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.bc-dropdown-item:hover { background: #F5F7FA; color: #3388FF; }
+.bc-dropdown-item.is-active { color: #3388FF; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · 面包屑 规范预览</h1>
+
+<div class="spec-section">
+  <h2 class="spec-section-title">组件演示</h2>
+
+  <!-- 带下拉切换的面包屑 -->
+  <div class="demo-block">
+    <div class="spec-block-title">二级导航可下拉切换</div>
+    <div class="breadcrumb">
+      <span class="bc-item">Home</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-item">一级导航</span>
+      <span class="bc-sep">/</span>
+
+      <!-- 带下拉的二级导航 -->
+      <div class="bc-dropdown-wrap" id="bcDrop1">
+        <div class="bc-dropdown-trigger" onclick="toggleBcDrop('bcDrop1')">
+          二级导航A
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </div>
+        <div class="bc-dropdown-menu">
+          <div class="bc-dropdown-item is-active">二级导航A</div>
+          <div class="bc-dropdown-item">二级导航B</div>
+          <div class="bc-dropdown-item">二级导航C</div>
+          <div class="bc-dropdown-item">二级导航D</div>
+        </div>
+      </div>
+
+      <span class="bc-sep">/</span>
+      <span class="bc-item is-current">当前页面</span>
+    </div>
+  </div>
+
+  <!-- 带下拉 + 省略 -->
+  <div class="demo-block">
+    <div class="spec-block-title">层级过多 + 下拉切换</div>
+    <div class="breadcrumb">
+      <span class="bc-item">Home</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-item">一级导航</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-ellipsis">···</span>
+      <span class="bc-sep">/</span>
+
+      <div class="bc-dropdown-wrap" id="bcDrop2">
+        <div class="bc-dropdown-trigger" onclick="toggleBcDrop('bcDrop2')">
+          四级导航B
+          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+        </div>
+        <div class="bc-dropdown-menu">
+          <div class="bc-dropdown-item">四级导航A</div>
+          <div class="bc-dropdown-item is-active">四级导航B</div>
+          <div class="bc-dropdown-item">四级导航C</div>
+        </div>
+      </div>
+
+      <span class="bc-sep">/</span>
+      <span class="bc-item is-current">当前页面</span>
+    </div>
+  </div>
+
+  <!-- 基础示例 -->
+  <div class="demo-block">
+    <div class="spec-block-title">基础面包屑</div>
+    <div class="breadcrumb">
+      <span class="bc-item">Home</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-item">一级导航</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-item">二级导航</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-item is-current">当前页面</span>
+    </div>
+  </div>
+
+  <!-- 悬停状态 -->
+  <div class="demo-block">
+    <div class="spec-block-title">悬停状态</div>
+    <div class="breadcrumb">
+      <span class="bc-item">Home</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-item" style="color:#3388FF;">一级导航</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-item">二级导航</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-item is-current">当前页面</span>
+    </div>
+  </div>
+
+  <!-- 层级过多省略 -->
+  <div class="demo-block">
+    <div class="spec-block-title">层级过多（中间省略）</div>
+    <div class="breadcrumb">
+      <span class="bc-item">Home</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-item">一级导航</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-ellipsis">···</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-item">四级导航</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-item is-current">当前页面</span>
+    </div>
+  </div>
+
+  <!-- 规格参数 -->
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:140px;">元素</th><th style="width:200px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="3">上级页面节点</td>
+        <td>字号 / 字重</td>
+        <td><code>14px · 400</code></td>
+      </tr>
+      <tr>
+        <td>默认颜色</td>
+        <td><span class="chip"><span class="swatch" style="background:#6B7A99;"></span><code>#6B7A99</code></span></td>
+      </tr>
+      <tr>
+        <td>Hover 颜色</td>
+        <td><span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span>，过渡 <code>0.15s</code>，可点击跳转</td>
+      </tr>
+      <tr>
+        <td rowspan="2">当前页面节点</td>
+        <td>颜色</td>
+        <td><span class="chip"><span class="swatch" style="background:#223355;"></span><code>#223355</code></span></td>
+      </tr>
+      <tr>
+        <td>Hover</td>
+        <td>无变化，不可点击</td>
+      </tr>
+      <tr>
+        <td>分隔符</td>
+        <td>样式 / 间距</td>
+        <td><code>/</code>，颜色 <code>#6B7A99</code>，左右各 <code>8px</code></td>
+      </tr>
+      <tr>
+        <td>省略号</td>
+        <td>样式</td>
+        <td><code>···</code>，颜色 <code>#6B7A99</code>，层级过多时替换中间节点</td>
+      </tr>
+      <tr>
+        <td rowspan="5">下拉切换</td>
+        <td>触发</td>
+        <td>节点右侧显示下拉箭头 <code>12×12px</code>，点击展开</td>
+      </tr>
+      <tr>
+        <td>箭头展开态</td>
+        <td>rotate <code>180deg</code>，过渡 <code>0.2s</code></td>
+      </tr>
+      <tr>
+        <td>下拉菜单宽度</td>
+        <td><code>min-width: 140px</code>，距节点底部 <code>6px</code></td>
+      </tr>
+      <tr>
+        <td>菜单样式</td>
+        <td>白底，<code>1px solid #E9ECF2</code>，圆角 <code>8px</code>，内边距 <code>8px</code>，阴影 <code>0 8px 24px rgba(18,74,180,0.12)</code></td>
+      </tr>
+      <tr>
+        <td>菜单项</td>
+        <td>高度 <code>36px</code>，圆角 <code>4px</code>；默认 <code>#223355</code>；Hover 背景 <code>#F5F7FA</code> + 文字 <code>#3388FF</code>；当前选中文字 <code>#3388FF</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+function toggleBcDrop(id) {
+  const wrap = document.getElementById(id);
+  const isOpen = wrap.classList.contains('is-open');
+  document.querySelectorAll('.bc-dropdown-wrap').forEach(el => el.classList.remove('is-open'));
+  if (!isOpen) wrap.classList.add('is-open');
+  function close(e) {
+    if (!wrap.contains(e.target)) {
+      wrap.classList.remove('is-open');
+      document.removeEventListener('click', close);
+    }
+  }
+  if (!isOpen) setTimeout(() => document.addEventListener('click', close), 0);
+}
+</script>
+</body>
+</html>

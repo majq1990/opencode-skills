@@ -1,0 +1,273 @@
+---
+#check if PostgreSQL exists
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 检查目标目录
+  stat: path={{ deploy_path }}/data
+  register: postgresql_dir_result
+
+- name: Fail if PostgreSQL is not empty
+  fail:
+    msg: |
+      检查到已经安装过postgresql,如需卸载请在{{ hostvars[inventory_hostname]['ansible_ssh_host'] }}服务器上执行 rm -rf  {{ deploy_path }}/data
+  ignore_errors: yes
+  when: postgresql_dir_result.stat.exists == True
+
+- name: Check if postgis image exists
+  shell: docker images  | grep  "postgis"
+  register: postgis_image_check
+  ignore_errors: true
+
+- name: Print message if postgis image exists
+  debug:
+    msg: "{{ postgis_image_check }}"
+
+- block:
+    - name: 准备postgresql目录
+      file: name={{ item.dir }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='{{ item.mode }}'
+      with_items:
+        - { dir: "{{ dest_path }}",mode: "0775" }
+        - { dir: "{{ deploy_path }}",mode: "0775" }
+    - name: copy package
+      copy: src={{ src_path }}/postgis.tar dest={{ deploy_path }}
+
+    - name: 镜像导入
+      shell: "docker load -i {{ deploy_path }}/postgis.tar"
+
+    - name: Copy docker-compose file
+      become: true
+      template:
+        src: docker-compose.yaml.j2
+        dest: "{{ deploy_path }}/docker-compose.yml"
+        force: yes
+
+    - name: Start postgis service with Docker Compose
+      become: true
+      command: docker-compose up -d
+      args:
+        chdir: "{{ deploy_path }}"
+
+    - name: Set PostgreSQL config
+      become: yes
+      shell: |
+        docker exec -i postgis35_13 su - postgres -c '
+        sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /var/lib/postgresql/data/postgresql.conf
+        '
+    - name: 修改配置
+      template:
+        src: "{{ item.filename }}.j2"
+        dest: "{{ item.destpath }}"
+        mode: '0644'
+      with_items:
+        - { filename: "pg_hba.conf",destpath: "{{ deploy_path }}/data/pg_hba.conf" }
+      when: ansible_pkg_mgr in  ['dnf','yum']
+
+    - name: Copy SQL script to Docker container
+      shell: >
+        docker cp {{ deploy_path }}/data/pg_hba.conf postgis35_13:/var/lib/postgresql/data
+
+    - name: Restart the Docker container
+      shell: docker restart postgis35_13
+      become: true
+
+  when: postgis_image_check.rc != 0 and ansible_distribution in ['Ubuntu','CentOS','UOS','openEuler','kylin_arm','kylin_x86','uos_x86','uos_arm','anolis_x86','anolis_arm']
+
+#- block:
+#    - name: 准备postgresql目录
+#      file: name={{ item.dir }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='{{ item.mode }}'
+#      with_items:
+#        - { dir: "{{ dest_path }}",mode: "0775" }
+#        - { dir: "{{ deploy_path }}",mode: "0775" }
+#    - name: 安装PostgreSQL
+#      package:
+#        name: "{{ postgresql_packages[ansible_pkg_mgr] }}"
+#        state: present
+#        update_cache: yes
+#
+#    - name: Get PostgreSQL version
+#      shell: psql --version | awk -F'[ .]' '{print $3}'
+#      register: pg_version_output
+#
+#    - set_fact:
+#        global_pg_version: "{{ pg_version_output.stdout }}"
+#
+#
+#    - name: Initialize PostgreSQL database
+#      command: sudo -u {{ ops_user }} /usr/lib/postgresql/{{ pg_version_output.stdout }}/bin/initdb -D {{ deploy_path }}/data
+#      environment:
+#        PGSETUP_INITDB_OPTIONS: "-D {{ deploy_path }}/data"
+#      when: not postgresql_dir_result.stat.exists and ansible_pkg_mgr == 'apt'
+#
+#    - name: Initialize PostgreSQL database
+#      command: sudo -u {{ ops_user }} /usr/pgsql-{{ pg_version_output.stdout }}/bin/initdb -D {{ deploy_path }}/data
+#      environment:
+#        PGSETUP_INITDB_OPTIONS: "-D {{ deploy_path }}/data"
+#      when: not postgresql_dir_result.stat.exists and ansible_distribution in ['CentOS','kylin_x86']
+#
+#    - name: 修改配置
+#      template:
+#        src: "{{ item.filename }}.j2"
+#        dest: "{{ item.destpath }}/{{ item.filename }}"
+#        mode: '0644'
+#      with_items:
+#        - { filename: "pg_hba.conf",destpath: "{{ deploy_path }}/data" }
+#        - { filename: "pg_hba.conf",destpath: "/etc/postgresql/{{ pg_version_output.stdout }}/main" }
+#        - { filename: "postgresql.service",destpath: "{{ usr_system_service_path }}/" }
+#      when: ansible_pkg_mgr == 'apt'
+#
+#    - name: 修改配置
+#      template:
+#        src: "{{ item.filename }}.j2"
+#        dest: "{{ item.destpath }}"
+#        mode: '0644'
+#      with_items:
+#        - { filename: "pg_hba.conf",destpath: "{{ deploy_path }}/data/pg_hba.conf" }
+#        - { filename: "postgresql-13.service",destpath: "{{ usr_system_service_path }}/postgresql.service" }
+#      when: ansible_pkg_mgr in  ['dnf','yum']
+#
+#
+#    - name: 修改pg.service中的内容
+#      become: yes
+#      shell: sed -i '15a Environment=PGDATA={{ deploy_path }}/data' {{ usr_system_service_path }}/postgresql.service
+#      when: ansible_pkg_mgr == 'apt'
+#
+#    - name: daemon-reload
+#      systemd: daemon_reload=yes
+#
+#    - name: 自启动
+#      service: name=postgresql state=restarted enabled=yes
+#
+#    - name: Set PostgreSQL user password
+#      become: yes
+#      shell: |
+#        su - postgres <<EOF
+#        psql --command "alter user postgres with password '{{ password }}'"
+#        EOF
+#
+#    - name: 修改postgresql.conf中的内容
+#      become: true
+#      shell: |
+#         sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" {{ deploy_path }}/data/postgresql.conf
+#         sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /etc/postgresql/{{ pg_version_output.stdout }}/main/postgresql.conf
+#      notify: restart postgresql
+#      when: ansible_pkg_mgr == 'apt'
+#
+#    - name: 修改postgresql.conf中的内容
+#      become: true
+#      shell: |
+#        sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" {{ deploy_path }}/data/postgresql.conf
+#      notify: restart postgresql
+#      when: ansible_pkg_mgr in  ['dnf','yum']
+#  when: postgresql_dir_result.stat.exists == false and ansible_distribution in ['Ubuntu','CentOS']
+
+- name: 创建{{ dest_path }}目录
+  file:
+    path: "{{ dest_postgisdb_path }}"
+    state: directory
+    mode: '0755'
+
+- name: Extract postgresdb.tar.gz
+  unarchive:
+    src: "{{ src_postgis_path }}/postgresdb.tar"
+    dest: "{{ dest_postgisdb_path }}/"
+    mode: '0755'
+
+#- block:
+#    - name: Get PostgreSQL version
+#      shell: psql --version | awk -F'[ .]' '{print $3}'
+#      register: pg_version_output
+#
+#    - set_fact:
+#        global_pg_version: "{{ pg_version_output.stdout }}"
+#
+#    - name: Install PostGIS in {{ ansible_distribution }}
+#      package:
+#        name: "{{ postgis_packages[ansible_pkg_mgr] }}"
+#        state: present
+#        update_cache: yes
+#      when: ansible_distribution != 'openEuler'
+#
+#    - name: Create giscenter database
+#      become: yes
+#      become_user: postgres
+#      postgresql_db:
+#        name: giscenter
+#        state: present
+#      vars:
+#        ansible_python_interpreter: "/usr/bin/python3" # 指定使用 Python3 解释器
+#      when: ansible_distribution != 'CentOS'
+#
+#    - name: Create giscenter database
+#      become: yes
+#      become_user: postgres
+#      postgresql_db:
+#        name: giscenter
+#        state: present
+#      when: ansible_distribution == 'CentOS'
+#
+#    - name: Install PostGIS extensions
+#      become: true
+#      become_user: postgres
+#      command: >
+#        psql --dbname="giscenter" --command "
+#        CREATE EXTENSION IF NOT EXISTS postgis;
+#        CREATE EXTENSION IF NOT EXISTS postgis_topology;
+#        CREATE EXTENSION IF NOT EXISTS postgis_sfcgal;
+#        CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+#        CREATE EXTENSION IF NOT EXISTS address_standardizer;
+#        CREATE EXTENSION IF NOT EXISTS address_standardizer_data_us;
+#        CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder;
+#        CREATE EXTENSION IF NOT EXISTS pgrouting;
+#        "
+#
+#
+#    - name: Execute SQL script
+#      become: yes
+#      shell: |
+#        su - postgres <<EOF
+#          PGPASSWORD='{{ password }}' psql -h 127.0.0.1 --username=postgres -d giscenter -f {{ dest_postgisdb_path }}/giscenter.sql
+#        EOF
+#  when: postgresql_dir_result.stat.exists == false and ansible_distribution  in ['Ubuntu','CentOS']
+
+- block:
+    - name: Install PostGIS extensions
+      become: true
+      shell: >
+        docker exec -i postgis35_13 su - postgres -c '
+        createdb giscenter;
+        psql --dbname="giscenter" --command "
+        CREATE EXTENSION IF NOT EXISTS postgis;
+        CREATE EXTENSION IF NOT EXISTS postgis_topology;
+        CREATE EXTENSION IF NOT EXISTS postgis_sfcgal;
+        CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+        CREATE EXTENSION IF NOT EXISTS address_standardizer;
+        CREATE EXTENSION IF NOT EXISTS address_standardizer_data_us;
+        CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder;
+        CREATE EXTENSION IF NOT EXISTS pgrouting;
+        "'
+    - name: Copy SQL script to Docker container
+      shell: >
+        docker cp {{ dest_postgisdb_path }}/giscenter.sql postgis35_13:/tmp/giscenter.sql
+
+    - name: Set PostgreSQL user password
+      become: yes
+      shell: |
+        docker exec -i postgis35_13 su - postgres -c '
+        psql --command "alter user postgres with password '\''{{ password }}'\'' ";
+        '
+
+    - name: Execute SQL script inside Docker container
+      become: yes
+      shell: |
+        docker exec -i postgis35_13 su - postgres -c 'PGPASSWORD='{{ password }}' psql -h 127.0.0.1 --username=postgres -d giscenter -f /tmp/giscenter.sql'
+
+  when: postgis_image_check.rc != 0 and ansible_distribution in ['Ubuntu','CentOS','UOS','openEuler','kylin_arm','kylin_x86','uos_x86','uos_arm','anolis_x86','anolis_arm']
+
+
+
+
+
+  

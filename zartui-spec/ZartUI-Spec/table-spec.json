@@ -1,0 +1,284 @@
+{
+  "name": "table-spec",
+  "version": "1.1.0",
+  "description": "ZartUI 表格规范，含单行表格、双行表格、表格锁定、删除二次确认四种形态",
+
+  "header": {
+    "height": "40px",
+    "background": "#F5F7FA",
+    "border_top": "1px solid #DDE1EB",
+    "border_bottom": "1px solid #DDE1EB",
+    "font_size": "14px",
+    "font_weight": "400",
+    "color": "#223355",
+    "text_align": "left",
+    "padding": "0 12px",
+    "column_divider": {
+      "height": "16px",
+      "color": "#E9ECF2",
+      "position": "left: 4px，垂直居中（::before 伪元素）",
+      "note": "末列不显示列间隔线"
+    }
+  },
+
+  "row": {
+    "single_line": {
+      "height": "48px",
+      "border": "1px solid #DDE1EB",
+      "border_note": "上下均有，相邻行合并只显示一条",
+      "hover_background": "#F5F7FA",
+      "text_align": "left",
+      "overflow": "hidden; text-overflow: ellipsis; white-space: nowrap"
+    },
+    "double_line": {
+      "height": "70px",
+      "white_space": "normal",
+      "word_break": "break-all",
+      "note": "其余样式与单行表格完全一致"
+    }
+  },
+
+  "cell_types": {
+    "link": {
+      "color": "#3388FF",
+      "hover_color": "#2167D9",
+      "text_decoration": "none"
+    },
+    "status": {
+      "dot_size": "6px",
+      "gap": "6px",
+      "variants": [
+        { "id": "success", "label": "已签收", "color": "#06A17F" },
+        { "id": "default", "label": "待签收", "color": "#A8B4C8" },
+        { "id": "danger",  "label": "已拒收", "color": "#FF4433" }
+      ]
+    },
+    "creator": {
+      "avatar": {
+        "size": "24px",
+        "shape": "圆形",
+        "background": "#3388FF",
+        "color": "#FFFFFF",
+        "font_size": "11px",
+        "font_weight": "500",
+        "z_index": 1
+      },
+      "name_tag": {
+        "height": "24px",
+        "background": "#F5F7FA",
+        "border_radius": "100px",
+        "font_size": "13px",
+        "color": "#223355",
+        "padding": "0 8px 0 14px",
+        "margin_left": "-10px",
+        "note": "左侧圆角压在头像下方，z-index 头像高于标签"
+      }
+    },
+    "actions": {
+      "font_size": "13px",
+      "color_default": "#3388FF",
+      "hover_color": "#2167D9",
+      "delete_color_default": "#3388FF",
+      "delete_color_hover": "#FF4433",
+      "divider": {
+        "width": "1px",
+        "height": "16px",
+        "color": "#E9ECF2"
+      },
+      "delete_confirm": "点击删除触发气泡二次确认（见 delete_confirm 节）"
+    },
+    "photo_column": {
+      "description": "双行表格建筑照片列",
+      "item_size": "54px × 54px",
+      "border_radius": "4px",
+      "object_fit": "cover",
+      "gap": "4px",
+      "max_visible": 3,
+      "overflow_slot": {
+        "size": "54px × 54px",
+        "border_radius": "4px",
+        "background": "#E9ECF2",
+        "icon": "三个横向圆点，直径 4px，颜色 #A8B4C8，间距 3px",
+        "hover_behavior": "向下弹出下拉缩略图网格"
+      },
+      "dropdown": {
+        "position": "fixed（绕过 td overflow:hidden 裁剪，JS getBoundingClientRect 定位）",
+        "background": "#FFFFFF",
+        "border_radius": "4px",
+        "box_shadow": "0 2px 50px 0 rgba(0,67,202,0.16)",
+        "padding": "8px",
+        "grid_max_width": "180px",
+        "item_size": "54px × 54px",
+        "item_border_radius": "4px",
+        "gap": "4px",
+        "arrow": "顶部居中向上，颜色 #FFFFFF"
+      }
+    }
+  },
+
+  "sticky": {
+    "description": "表格锁定，上下滚动时表头固定，左右滚动时首列与操作列固定",
+    "border_collapse": "separate",
+    "border_spacing": "0",
+    "note": "必须使用 border-collapse: separate，collapse 模式会裁剪 sticky 列的阴影",
+    "scroll_container_max_height": "320px",
+
+    "z_index": {
+      "normal_thead_th": 3,
+      "sticky_tbody_td": 4,
+      "sticky_thead_th": 5
+    },
+
+    "shadow": {
+      "implementation": "position: fixed，JS 监听 scroll 事件，每次用 getBoundingClientRect() 重新计算位置，完全脱离父元素 overflow: hidden 裁剪",
+      "width_height": "8px",
+      "transition": "opacity 0.2s",
+      "default_opacity": 0,
+      "active_opacity": 1,
+      "variants": [
+        {
+          "id": "left",
+          "label": "首列右侧阴影",
+          "position": "首列右边缘（wrap.left + firstTh.offsetWidth）",
+          "gradient": "linear-gradient(to right, rgba(34,51,85,0.08), transparent)",
+          "show_when": "scrollLeft > 0"
+        },
+        {
+          "id": "right",
+          "label": "操作列左侧阴影",
+          "position": "操作列左边缘（wrap.right - lastTh.offsetWidth - 8）",
+          "gradient": "linear-gradient(to left, rgba(34,51,85,0.08), transparent)",
+          "show_when": "scrollLeft < maxScrollLeft"
+        },
+        {
+          "id": "top",
+          "label": "表头下方阴影",
+          "position": "表头底部（wrap.top + thead高度）",
+          "height": "8px",
+          "gradient": "linear-gradient(to bottom, rgba(34,51,85,0.06), transparent)",
+          "show_when": "scrollTop > 0"
+        }
+      ]
+    }
+  },
+
+  "delete_confirm": {
+    "description": "点击操作列删除按钮后弹出的气泡二次确认卡片",
+    "position": "fixed（JS getBoundingClientRect 定位，绕过 td overflow:hidden 裁剪）",
+    "anchor": "触发按钮上方居中，间距 10px",
+    "width": "242px",
+    "border_radius": "4px",
+    "box_shadow": "0 2px 50px 0 rgba(0,67,202,0.16)",
+    "padding": "12px 16px",
+    "arrow": {
+      "position": "底部居中",
+      "direction": "向下",
+      "color": "#FFFFFF"
+    },
+    "title": {
+      "icon": "红色圆形感叹号 SVG，16px，fill #FF4433",
+      "text": "确认删除",
+      "font_size": "14px",
+      "font_weight": "500",
+      "color": "#081126",
+      "icon_gap": "6px",
+      "margin_bottom": "6px"
+    },
+    "content": {
+      "font_size": "14px",
+      "font_weight": "400",
+      "color": "#223355",
+      "line_height": "1.6"
+    },
+    "actions": {
+      "layout": "右对齐，gap 8px",
+      "order": "确定在左，取消在右",
+      "confirm_btn": {
+        "label": "确定",
+        "height": "28px",
+        "padding": "0 12px",
+        "border_radius": "4px",
+        "background": "#FF4433",
+        "color": "#FFFFFF",
+        "hover_background": "#D93020"
+      },
+      "cancel_btn": {
+        "label": "取消",
+        "height": "28px",
+        "padding": "0 12px",
+        "border_radius": "4px",
+        "border": "1px solid #DDE1EB",
+        "background": "#FFFFFF",
+        "color": "#223355",
+        "hover_border": "#3388FF",
+        "hover_background": "#F0F9FF",
+        "hover_color": "#3388FF"
+      }
+    },
+    "close_trigger": "点击确定或取消按钮；点击气泡外任意区域"
+  },
+
+  "column_filter": {
+    "description": "表头字段筛选，适用于类型、来源等枚举类字段",
+
+    "trigger_icon": {
+      "size": "14×14px",
+      "shape": "实心圆润漏斗形（面状，fill currentColor）",
+      "color_default": "#A8B4C8",
+      "color_active": "#3388FF",
+      "color_hover": "#6B7A99",
+      "position": "字段标题文字右侧，gap 4px"
+    },
+
+    "header_active_state": {
+      "background": "#E9ECF2",
+      "note": "点击筛选图标后，该列 th 背景变为 #E9ECF2，关闭后恢复"
+    },
+
+    "dropdown": {
+      "position": "fixed（JS getBoundingClientRect 定位，绕过 th overflow:hidden 裁剪）",
+      "anchor": "筛选图标下方 4px",
+      "background": "#FFFFFF",
+      "border_radius": "4px",
+      "box_shadow": "0 4px 20px 0 rgba(0,67,202,0.07)",
+      "padding": "8px",
+      "min_width": "140px",
+      "z_index": 2000,
+      "close_trigger": "点击面板外任意区域"
+    },
+
+    "search_box": {
+      "condition": "选项数量较多时，面板顶部显示即时搜索框",
+      "ref": "input-spec.json#search_variants.instant_search",
+      "margin_bottom": "8px"
+    },
+
+    "filter_item": {
+      "height": "32px",
+      "padding": "0 8px",
+      "border_radius": "4px",
+      "font_size": "14px",
+      "gap": "8px",
+      "states": {
+        "default": { "background": "#FFFFFF", "color": "#223355" },
+        "hover":   { "background": "#F5F7FA", "color": "#223355" },
+        "checked": { "background": "#F0F9FF", "color": "#3388FF" }
+      },
+      "check_icon": {
+        "size": "14×14px",
+        "color": "#3388FF",
+        "position": "行右侧 margin-left: auto",
+        "visibility": "未选中时 opacity:0，选中时 opacity:1"
+      }
+    },
+
+    "list": {
+      "max_height": "192px",
+      "overflow_y": "auto",
+      "scrollbar_width": "4px",
+      "scrollbar_color": "#DDE1EB"
+    },
+
+    "icon_persist": "有选项被勾选时，即使关闭面板筛选图标仍保持 #3388FF；清空所有勾选后恢复 #A8B4C8"
+  }
+}

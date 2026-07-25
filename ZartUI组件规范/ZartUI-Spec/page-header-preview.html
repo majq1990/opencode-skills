@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZartUI · 页头（按钮+搜索栏） 规范预览</title>
+<style>
+:root {
+  --color-bg-page:      #F5F7FA;
+  --color-bg-panel:     #FFFFFF;
+  --color-text-primary: #081126;
+  --color-text-body:    #223355;
+  --color-text-muted:   #6B7A99;
+  --color-text-light:   #A8B4C8;
+  --color-primary:      #3388FF;
+  --color-primary-hover:#2167D9;
+  --color-border:       #DDE1EB;
+  --color-border-soft:  #E9ECF2;
+  --font-family:        'PingFang SC','Microsoft YaHei',sans-serif;
+  --radius-m: 8px;
+  --radius-s: 4px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+button { font: inherit; border: none; background: none; cursor: pointer; }
+input { font: inherit; outline: none; }
+body {
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-body);
+  background: var(--color-bg-page);
+  padding: 40px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  margin-bottom: 32px;
+}
+
+.spec-section {
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-m);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.spec-section-title {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-soft);
+  margin-bottom: 24px;
+}
+
+.spec-block-title {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.demo-block { margin-bottom: 32px; }
+
+/* 规格参数表 */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.spec-table th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border-soft);
+  background: #F5F7FA;
+}
+.spec-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border-soft);
+  vertical-align: middle;
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td code {
+  font-family: 'SF Mono','Consolas',monospace;
+  font-size: 12px;
+  background: #F5F7FA;
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  color: var(--color-primary);
+}
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 14px; height: 14px; border-radius: var(--radius-s); border: 1px solid var(--color-border-soft); flex-shrink: 0; }
+
+/* ══════════════════════════════════════
+   页头（按钮 + 搜索栏）
+   ══════════════════════════════════════ */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #FFFFFF;
+  padding: 12px 16px;
+  border-radius: var(--radius-m);
+  flex-wrap: wrap;
+}
+
+.ph-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ph-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 全圆角按钮基础 */
+.btn-pill {
+  height: 32px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 400;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  user-select: none;
+  flex-shrink: 0;
+}
+.btn-pill svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* 主按钮（新增）：白底 + #DDE1EB 描边 + #3388FF 图标和文字 */
+.btn-pill.is-primary {
+  background: #FFFFFF;
+  border: 1px solid #DDE1EB;
+  color: #3388FF;
+}
+.btn-pill.is-primary:hover { border-color: #3388FF; color: #3388FF; }
+
+/* 次要按钮（其余 + 高级搜索 + 设置） */
+.btn-pill.is-secondary {
+  background: #FFFFFF;
+  border: 1px solid #DDE1EB;
+  color: #223355;
+}
+.btn-pill.is-secondary:hover {
+  border-color: #3388FF;
+  color: #3388FF;
+}
+
+/* 设置按钮（仅图标） */
+.btn-pill.is-icon-only {
+  width: 32px;
+  padding: 0;
+  justify-content: center;
+}
+
+/* 搜索框 */
+.ph-search {
+  display: inline-flex;
+  align-items: stretch;
+  height: 32px;
+  width: 280px;
+  flex-shrink: 0;
+}
+.ph-search-input {
+  flex: 1;
+  height: 100%;
+  background: #FFFFFF;
+  border: 1px solid #DDE1EB;
+  border-right: none;
+  border-radius: 16px 0 0 16px;
+  padding: 0 16px;
+  font-size: 14px;
+  color: #223355;
+  transition: border-color 0.15s;
+  min-width: 0;
+}
+.ph-search-input::placeholder { color: #A8B4C8; }
+.ph-search-input:focus { border-color: #3388FF; }
+.ph-search-btn {
+  width: 40px;
+  height: 100%;
+  background: #FFFFFF;
+  border: 1px solid #DDE1EB;
+  border-radius: 0 16px 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+  color: #A8B4C8;
+}
+.ph-search-btn:hover { border-color: #3388FF; color: #3388FF; }
+.ph-search-input:focus + .ph-search-btn { border-color: #3388FF; }
+.ph-search-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  flex-shrink: 0;
+}
+
+/* 变体五：双行容器 + 二级标签 */
+.btn-rect {
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+  user-select: none;
+  flex-shrink: 0;
+}
+.btn-rect-default {
+  background: #FFFFFF;
+  border: 1px solid #DDE1EB;
+  color: #223355;
+}
+.btn-rect-default:hover { border-color: #3388FF; color: #3388FF; }
+.btn-rect-primary {
+  background: #3388FF;
+  border: 1px solid #3388FF;
+  color: #FFFFFF;
+}
+.btn-rect-primary:hover { background: #2167D9; border-color: #2167D9; }
+
+/* 二级页头：返回箭头按钮 */
+.ph-back-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  color: #6B7A99;
+  flex-shrink: 0;
+}
+.ph-back-btn:hover { color: #3388FF; }
+.ph-back-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 二级页头：图标按钮（说明 / 关闭） */
+.ph-icon-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  color: #A8B4C8;
+  flex-shrink: 0;
+}
+.ph-icon-btn:hover { color: #3388FF; background: #F5F7FA; }
+.ph-icon-btn.ph-icon-btn-close:hover { color: #FF4433; background: #F5F7FA; }
+.ph-icon-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 变体五：双行容器 + 二级标签 */
+.page-header-stack {
+  height: 96px;
+  background: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #E9ECF2;
+}
+.ph-stack-row1 {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+}
+.ph-stack-tabs {
+  height: 40px;
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+  flex-shrink: 0;
+}
+.ph-tab-item {
+  height: 40px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.ph-tab-item:hover { background: #F5F7FA; }
+.ph-tab-item.is-active {
+  color: #3388FF;
+  font-weight: 500;
+}
+.ph-tab-item.is-active span {
+  position: relative;
+  display: inline-block;
+}
+.ph-tab-item.is-active span::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+  height: 2px;
+  background: #3388FF;
+  border-radius: 1px;
+}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · 页头 规范预览</h1>
+
+<div class="spec-section">
+  <h2 class="spec-section-title">变体一：按钮 + 搜索栏</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">完整页头</div>
+    <div class="page-header">
+
+      <!-- 左侧按钮组 -->
+      <div class="ph-left">
+        <button class="btn-pill is-primary">
+          <svg viewBox="0 0 14 14"><path d="M7 2v10M2 7h10"/></svg>
+          新增
+        </button>
+        <button class="btn-pill is-secondary">
+          <svg viewBox="0 0 14 14"><path d="M2 9v2.5h10V9M7 8.5v-7M4 4.5L7 1.5l3 3"/></svg>
+          导出
+        </button>
+        <button class="btn-pill is-secondary">
+          <svg viewBox="0 0 14 14"><path d="M2 9v2.5h10V9M7 1.5v7M4 5.5L7 8.5l3-3"/></svg>
+          导入
+        </button>
+        <button class="btn-pill is-secondary">
+          <svg viewBox="0 0 14 14"><path d="M5 2h4l3 3v7H2V2z"/><path d="M9 2v3h3"/></svg>
+          下载模板
+        </button>
+        <button class="btn-pill is-secondary">
+          <svg viewBox="0 0 14 14"><path d="M3 4h8M5 4V2.5h4V4M3 4l.7 8h6.6L11 4M5.5 6.5v3.5M8.5 6.5v3.5"/></svg>
+          批量删除
+        </button>
+        <button class="btn-pill is-secondary">
+          <svg viewBox="0 0 14 14"><rect x="2" y="3" width="10" height="2.5" rx="0.5"/><path d="M3 5.5v6h8v-6M5.5 8h3"/></svg>
+          归档
+        </button>
+      </div>
+
+      <!-- 右侧搜索栏 -->
+      <div class="ph-right">
+        <div class="ph-search">
+          <input class="ph-search-input" type="text" placeholder="请输入关键字搜索"/>
+          <button class="ph-search-btn" title="搜索">
+            <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5"/><path d="M9.5 9.5L12.5 12.5"/></svg>
+          </button>
+        </div>
+        <button class="btn-pill is-secondary">
+          <svg viewBox="0 0 14 14"><path d="M2 3h10M3.5 7h7M5 11h4"/></svg>
+          高级搜索
+        </button>
+        <button class="btn-pill is-secondary" title="设置">
+          <svg viewBox="0 0 14 14">
+            <path d="M7 1.2L11.5 3.6v4.8L7 10.8 2.5 8.4V3.6L7 1.2z"/>
+            <circle cx="7" cy="6" r="1.8"/>
+          </svg>
+          设置
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 按钮状态对比 -->
+  <div class="demo-block">
+    <div class="spec-block-title">按钮状态对比</div>
+    <div style="display:flex; gap:32px; flex-wrap:wrap;">
+      <div>
+        <div style="font-size:12px;color:#6B7A99;margin-bottom:8px;">主按钮（默认 / Hover）</div>
+        <div style="display:flex; gap:16px; align-items:center;">
+          <button class="btn-pill is-primary">
+            <svg viewBox="0 0 14 14"><path d="M7 2v10M2 7h10"/></svg>
+            新增
+          </button>
+          <button class="btn-pill is-primary" style="border-color:#3388FF;">
+            <svg viewBox="0 0 14 14"><path d="M7 2v10M2 7h10"/></svg>
+            新增
+          </button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:#6B7A99;margin-bottom:8px;">次要按钮（默认 / Hover）</div>
+        <div style="display:flex; gap:16px; align-items:center;">
+          <button class="btn-pill is-secondary">
+            <svg viewBox="0 0 14 14"><path d="M2 9v2.5h10V9M7 8.5v-7M4 4.5L7 1.5l3 3"/></svg>
+            导出
+          </button>
+          <button class="btn-pill is-secondary" style="border-color:#3388FF;color:#3388FF;">
+            <svg viewBox="0 0 14 14"><path d="M2 9v2.5h10V9M7 8.5v-7M4 4.5L7 1.5l3 3"/></svg>
+            导出
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 规格参数 -->
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">区域</th><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="3">容器</td>
+        <td>背景</td>
+        <td><code>#FFFFFF</code></td>
+      </tr>
+      <tr><td>内边距</td><td><code>12px 16px</code></td></tr>
+      <tr><td>布局</td><td>左侧按钮组 + 右侧搜索栏，左右两端对齐</td></tr>
+      <tr>
+        <td rowspan="3">主按钮（新增）</td>
+        <td>尺寸 / 圆角</td>
+        <td><code>32px</code> 高，左右内边距 <code>16px</code>，全圆角 <code>16px</code></td>
+      </tr>
+      <tr>
+        <td>颜色</td>
+        <td>背景 <code>#FFFFFF</code>，边框 <span class="chip"><span class="swatch" style="background:#DDE1EB;"></span><code>#DDE1EB</code></span>，图标与文字 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td>
+      </tr>
+      <tr>
+        <td>Hover</td>
+        <td>边框变为 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td>
+      </tr>
+      <tr>
+        <td rowspan="3">次要按钮（导出/导入/下载模板/批量删除/归档/高级搜索/设置）</td>
+        <td>尺寸 / 圆角</td>
+        <td><code>32px</code> 高，全圆角 <code>16px</code></td>
+      </tr>
+      <tr>
+        <td>颜色</td>
+        <td>背景 <code>#FFFFFF</code>，边框 <span class="chip"><span class="swatch" style="background:#DDE1EB;"></span><code>#DDE1EB</code></span>，文字 <code>#223355</code></td>
+      </tr>
+      <tr>
+        <td>Hover</td>
+        <td>边框与文字色 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td>
+      </tr>
+      <tr>
+        <td>按钮间距</td>
+        <td>gap</td>
+        <td><code>8px</code></td>
+      </tr>
+      <tr>
+        <td rowspan="5">搜索框</td>
+        <td>整体尺寸</td>
+        <td>高 <code>32px</code>，宽 <code>280px</code>（输入框 + 搜索按钮）</td>
+      </tr>
+      <tr>
+        <td>输入框</td>
+        <td>左侧全圆角 <code>16px 0 0 16px</code>，边框 <code>1px solid #DDE1EB</code>，右边框去除避免双线</td>
+      </tr>
+      <tr>
+        <td>搜索按钮</td>
+        <td>宽 <code>40px</code>，右侧全圆角 <code>0 16px 16px 0</code>，边框同输入框</td>
+      </tr>
+      <tr>
+        <td>搜索图标 / 占位文字</td>
+        <td>颜色 <span class="chip"><span class="swatch" style="background:#A8B4C8;"></span><code>#A8B4C8</code></span></td>
+      </tr>
+      <tr>
+        <td>占位文字</td>
+        <td>"请输入关键字搜索"</td>
+      </tr>
+      <tr>
+        <td>设置按钮</td>
+        <td>图标 + 文字</td>
+        <td>六边形外框 + 中心圆圈的设置图标 + "设置"文字，规格同次要按钮</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     变体二：标题 + 搜索栏
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">变体二：标题 + 搜索栏</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">完整页头</div>
+    <div class="page-header" style="height:56px; padding:0 16px; border-radius:0; border-bottom:1px solid #E9ECF2;">
+
+      <!-- 左侧标题 -->
+      <div class="ph-left">
+        <h3 style="font-size:18px; font-weight:500; color:#081126; margin:0;">页面标题</h3>
+      </div>
+
+      <!-- 右侧搜索栏 -->
+      <div class="ph-right">
+        <div class="ph-search">
+          <input class="ph-search-input" type="text" placeholder="请输入关键字搜索"/>
+          <button class="ph-search-btn" title="搜索">
+            <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5"/><path d="M9.5 9.5L12.5 12.5"/></svg>
+          </button>
+        </div>
+        <button class="btn-pill is-secondary">
+          <svg viewBox="0 0 14 14"><path d="M2 3h10M3.5 7h7M5 11h4"/></svg>
+          高级搜索
+        </button>
+        <button class="btn-pill is-secondary" title="设置">
+          <svg viewBox="0 0 14 14">
+            <path d="M7 1.2L11.5 3.6v4.8L7 10.8 2.5 8.4V3.6L7 1.2z"/>
+            <circle cx="7" cy="6" r="1.8"/>
+          </svg>
+          设置
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">区域</th><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="2">容器</td>
+        <td>高度</td>
+        <td><code>56px</code></td>
+      </tr>
+      <tr>
+        <td>底部分隔线</td>
+        <td><code>1px solid #E9ECF2</code></td>
+      </tr>
+      <tr>
+        <td rowspan="3">左侧标题</td>
+        <td>字号</td>
+        <td><code>18px</code></td>
+      </tr>
+      <tr><td>字重</td><td><code>500</code></td></tr>
+      <tr><td>颜色</td><td><span class="chip"><span class="swatch" style="background:#081126;"></span><code>#081126</code></span></td></tr>
+      <tr>
+        <td>右侧</td>
+        <td>组件</td>
+        <td>常规搜索框 + 高级搜索按钮 + 设置按钮，规格同变体一右侧</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     变体三：标题 + 取消/重置/确定
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">变体三：标题 + 操作按钮</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">完整页头</div>
+    <div class="page-header" style="height:56px; padding:0 16px; border-radius:0; border-bottom:1px solid #E9ECF2;">
+
+      <!-- 左侧标题 -->
+      <div class="ph-left">
+        <h3 style="font-size:18px; font-weight:500; color:#081126; margin:0;">页面标题</h3>
+      </div>
+
+      <!-- 右侧操作按钮 -->
+      <div class="ph-right">
+        <button class="btn-rect btn-rect-default">取消</button>
+        <button class="btn-rect btn-rect-default">重置</button>
+        <button class="btn-rect btn-rect-primary">确定</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">区域</th><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="2">容器</td>
+        <td>高度</td>
+        <td><code>56px</code></td>
+      </tr>
+      <tr>
+        <td>底部分隔线</td>
+        <td><code>1px solid #E9ECF2</code></td>
+      </tr>
+      <tr>
+        <td rowspan="3">左侧标题</td>
+        <td>字号</td>
+        <td><code>18px</code></td>
+      </tr>
+      <tr><td>字重</td><td><code>500</code></td></tr>
+      <tr><td>颜色</td><td><span class="chip"><span class="swatch" style="background:#081126;"></span><code>#081126</code></span></td></tr>
+      <tr>
+        <td rowspan="3">取消 / 重置（次要）</td>
+        <td>尺寸 / 圆角</td>
+        <td>高 <code>32px</code>，左右内边距 <code>16px</code>，圆角 <code>4px</code>（矩形按钮）</td>
+      </tr>
+      <tr>
+        <td>颜色</td>
+        <td>背景 <code>#FFFFFF</code>，边框 <span class="chip"><span class="swatch" style="background:#DDE1EB;"></span><code>#DDE1EB</code></span>，文字 <code>#223355</code></td>
+      </tr>
+      <tr>
+        <td>Hover</td>
+        <td>边框与文字 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span></td>
+      </tr>
+      <tr>
+        <td rowspan="3">确定（主按钮）</td>
+        <td>尺寸 / 圆角</td>
+        <td>高 <code>32px</code>，左右内边距 <code>16px</code>，圆角 <code>4px</code></td>
+      </tr>
+      <tr>
+        <td>颜色</td>
+        <td>背景 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span>，文字 <code>#FFFFFF</code></td>
+      </tr>
+      <tr>
+        <td>Hover</td>
+        <td>背景 <span class="chip"><span class="swatch" style="background:#2167D9;"></span><code>#2167D9</code></span></td>
+      </tr>
+      <tr>
+        <td>按钮间距</td>
+        <td>gap</td>
+        <td><code>8px</code>，按钮顺序：取消 → 重置 → 确定</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     变体四：仅标题
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">变体四：仅标题</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">完整页头</div>
+    <div class="page-header" style="height:56px; padding:0 16px; border-radius:0; border-bottom:1px solid #E9ECF2;">
+      <div class="ph-left">
+        <h3 style="font-size:18px; font-weight:500; color:#081126; margin:0;">页面标题</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">区域</th><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="2">容器</td>
+        <td>高度</td>
+        <td><code>56px</code></td>
+      </tr>
+      <tr>
+        <td>底部分隔线</td>
+        <td><code>1px solid #E9ECF2</code></td>
+      </tr>
+      <tr>
+        <td rowspan="3">左侧标题</td>
+        <td>字号</td>
+        <td><code>18px</code></td>
+      </tr>
+      <tr><td>字重</td><td><code>500</code></td></tr>
+      <tr><td>颜色</td><td><span class="chip"><span class="swatch" style="background:#081126;"></span><code>#081126</code></span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     变体五：标题+按钮 + 二级标签
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">变体五：标题+操作按钮 + 二级标签</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">完整页头（高 96px）</div>
+    <div class="page-header-stack">
+
+      <!-- 第一行：标题 + 按钮 -->
+      <div class="ph-stack-row1">
+        <div class="ph-left">
+          <h3 style="font-size:18px; font-weight:500; color:#081126; margin:0;">页面标题</h3>
+        </div>
+        <div class="ph-right">
+          <button class="btn-rect btn-rect-default">取消</button>
+          <button class="btn-rect btn-rect-default">重置</button>
+          <button class="btn-rect btn-rect-primary">确定</button>
+        </div>
+      </div>
+
+      <!-- 第二行：二级标签 -->
+      <div class="ph-stack-tabs">
+        <div class="ph-tab-item is-active"><span>基本信息</span></div>
+        <div class="ph-tab-item"><span>扩展属性</span></div>
+        <div class="ph-tab-item"><span>关联记录</span></div>
+        <div class="ph-tab-item"><span>操作日志</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">区域</th><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="2">容器</td>
+        <td>总高度</td>
+        <td><code>96px</code>（56px 标题行 + 40px 标签行）</td>
+      </tr>
+      <tr>
+        <td>底部分隔线</td>
+        <td><code>1px solid #E9ECF2</code></td>
+      </tr>
+      <tr>
+        <td rowspan="3">第一行</td>
+        <td>高度</td>
+        <td><code>56px</code></td>
+      </tr>
+      <tr>
+        <td>左侧标题</td>
+        <td><code>18px · 500 · #081126</code></td>
+      </tr>
+      <tr>
+        <td>右侧按钮</td>
+        <td>取消 / 重置（矩形次要） + 确定（矩形主），规格同变体三</td>
+      </tr>
+      <tr>
+        <td rowspan="4">第二行（二级标签）</td>
+        <td>高度</td>
+        <td><code>40px</code></td>
+      </tr>
+      <tr>
+        <td>标签项</td>
+        <td>内边距 <code>0 20px</code>，字号 <code>14px</code></td>
+      </tr>
+      <tr>
+        <td>默认 / Hover</td>
+        <td>文字 <code>#223355</code>；Hover 背景 <code>#F5F7FA</code></td>
+      </tr>
+      <tr>
+        <td>选中</td>
+        <td>文字 <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span>，字重 <code>500</code>；底部 <code>2px</code> 指示线，宽度等于文字宽度</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     二级页头 · 变体一：返回箭头 + 标题 + 操作按钮
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">二级页头 · 变体一：返回箭头 + 标题 + 操作按钮</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">完整页头</div>
+    <div class="page-header" style="height:48px; padding:0 16px; border-radius:0; border-bottom:1px solid #E9ECF2;">
+
+      <!-- 左侧返回 + 标题 -->
+      <div class="ph-left" style="gap:8px;">
+        <button class="ph-back-btn" title="返回">
+          <svg viewBox="0 0 16 16"><path d="M10 4L6 8l4 4"/></svg>
+        </button>
+        <h3 style="font-size:14px; font-weight:500; color:#081126; margin:0;">二级页面标题</h3>
+      </div>
+
+      <!-- 右侧操作按钮 -->
+      <div class="ph-right">
+        <button class="btn-rect btn-rect-default">取消</button>
+        <button class="btn-rect btn-rect-default">重置</button>
+        <button class="btn-rect btn-rect-primary">确定</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">区域</th><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>容器</td>
+        <td>底部分隔线</td>
+        <td><code>1px solid #E9ECF2</code></td>
+      </tr>
+      <tr>
+        <td rowspan="3">左侧</td>
+        <td>返回箭头</td>
+        <td>线状图标 <code>16×16px</code>，颜色 <span class="chip"><span class="swatch" style="background:#6B7A99;"></span><code>#6B7A99</code></span>，Hover <code>#3388FF</code>，可点击</td>
+      </tr>
+      <tr>
+        <td>标题</td>
+        <td><code>14px · 500</code>，颜色 <span class="chip"><span class="swatch" style="background:#081126;"></span><code>#081126</code></span></td>
+      </tr>
+      <tr>
+        <td>箭头与标题间距</td>
+        <td><code>8px</code></td>
+      </tr>
+      <tr>
+        <td rowspan="2">右侧按钮</td>
+        <td>取消 / 重置</td>
+        <td>矩形次要按钮，规格同变体三</td>
+      </tr>
+      <tr>
+        <td>确定</td>
+        <td>矩形主按钮，背景 <code>#3388FF</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     二级页头 · 变体二：二级标签 + 说明/关闭
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">二级页头 · 变体二：二级标签 + 说明/关闭</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">完整页头（高 40px）</div>
+    <div class="page-header" style="height:40px; padding:0 16px 0 0; border-radius:0; border-bottom:1px solid #E9ECF2;">
+
+      <!-- 左侧：7 个二级标签 -->
+      <div class="ph-stack-tabs" style="padding:0;">
+        <div class="ph-tab-item is-active"><span>基本信息</span></div>
+        <div class="ph-tab-item"><span>扩展属性</span></div>
+        <div class="ph-tab-item"><span>关联记录</span></div>
+        <div class="ph-tab-item"><span>操作日志</span></div>
+        <div class="ph-tab-item"><span>权限配置</span></div>
+        <div class="ph-tab-item"><span>历史版本</span></div>
+        <div class="ph-tab-item"><span>评论讨论</span></div>
+      </div>
+
+      <!-- 右侧：说明 + 关闭 -->
+      <div class="ph-right">
+        <button class="ph-icon-btn" title="说明">
+          <svg viewBox="0 0 16 16">
+            <circle cx="8" cy="8" r="6"/>
+            <path d="M8 11.5v-3M8 5.5h.01" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button class="ph-icon-btn ph-icon-btn-close" title="关闭">
+          <svg viewBox="0 0 16 16">
+            <path d="M4 4l8 8M12 4l-8 8"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">区域</th><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="2">容器</td>
+        <td>高度</td>
+        <td><code>40px</code></td>
+      </tr>
+      <tr>
+        <td>底部分隔线</td>
+        <td><code>1px solid #E9ECF2</code></td>
+      </tr>
+      <tr>
+        <td>左侧</td>
+        <td>二级标签</td>
+        <td>7 个二级标签，左侧边距为 <code>0</code>，样式同二级标签规范</td>
+      </tr>
+      <tr>
+        <td rowspan="3">右侧图标按钮</td>
+        <td>按钮尺寸</td>
+        <td><code>32×32px</code></td>
+      </tr>
+      <tr>
+        <td>图标</td>
+        <td><code>16×16px</code>，线状（说明 / 关闭）</td>
+      </tr>
+      <tr>
+        <td>图标颜色</td>
+        <td><span class="chip"><span class="swatch" style="background:#A8B4C8;"></span><code>#A8B4C8</code></span>；说明 Hover <span class="chip"><span class="swatch" style="background:#3388FF;"></span><code>#3388FF</code></span>；关闭 Hover <span class="chip"><span class="swatch" style="background:#FF4433;"></span><code>#FF4433</code></span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     二级页头 · 变体三：标题 + 取消/重置/保存
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">二级页头 · 变体三：标题 + 取消/重置/保存</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">完整页头</div>
+    <div class="page-header" style="height:48px; padding:0 16px; border-radius:0; border-bottom:1px solid #E9ECF2;">
+
+      <!-- 左侧标题 -->
+      <div class="ph-left">
+        <h3 style="font-size:14px; font-weight:500; color:#081126; margin:0;">二级页面标题</h3>
+      </div>
+
+      <!-- 右侧操作按钮 -->
+      <div class="ph-right">
+        <button class="btn-rect btn-rect-default">取消</button>
+        <button class="btn-rect btn-rect-default">重置</button>
+        <button class="btn-rect btn-rect-primary">保存</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">区域</th><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>容器</td>
+        <td>底部分隔线</td>
+        <td><code>1px solid #E9ECF2</code></td>
+      </tr>
+      <tr>
+        <td>左侧标题</td>
+        <td>样式</td>
+        <td><code>14px · 500</code>，颜色 <span class="chip"><span class="swatch" style="background:#081126;"></span><code>#081126</code></span></td>
+      </tr>
+      <tr>
+        <td rowspan="2">右侧按钮</td>
+        <td>取消 / 重置</td>
+        <td>矩形次要按钮</td>
+      </tr>
+      <tr>
+        <td>保存</td>
+        <td>矩形主按钮，背景 <code>#3388FF</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     二级页头 · 变体四：标题 + 搜索/高级搜索/设置
+     ══════════════════════════════════════ -->
+<div class="spec-section">
+  <h2 class="spec-section-title">二级页头 · 变体四：标题 + 搜索/高级搜索/设置</h2>
+
+  <div class="demo-block">
+    <div class="spec-block-title">完整页头</div>
+    <div class="page-header" style="height:48px; padding:0 16px; border-radius:0; border-bottom:1px solid #E9ECF2;">
+
+      <!-- 左侧标题 -->
+      <div class="ph-left">
+        <h3 style="font-size:14px; font-weight:500; color:#081126; margin:0;">二级页面标题</h3>
+      </div>
+
+      <!-- 右侧搜索栏 -->
+      <div class="ph-right">
+        <div class="ph-search">
+          <input class="ph-search-input" type="text" placeholder="请输入关键字搜索"/>
+          <button class="ph-search-btn" title="搜索">
+            <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5"/><path d="M9.5 9.5L12.5 12.5"/></svg>
+          </button>
+        </div>
+        <button class="btn-pill is-secondary">
+          <svg viewBox="0 0 14 14"><path d="M2 3h10M3.5 7h7M5 11h4"/></svg>
+          高级搜索
+        </button>
+        <button class="btn-pill is-secondary" title="设置">
+          <svg viewBox="0 0 14 14">
+            <path d="M7 1.2L11.5 3.6v4.8L7 10.8 2.5 8.4V3.6L7 1.2z"/>
+            <circle cx="7" cy="6" r="1.8"/>
+          </svg>
+          设置
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <thead>
+      <tr><th style="width:120px;">区域</th><th style="width:160px;">属性</th><th>规格值</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>容器</td>
+        <td>底部分隔线</td>
+        <td><code>1px solid #E9ECF2</code></td>
+      </tr>
+      <tr>
+        <td>左侧标题</td>
+        <td>样式</td>
+        <td><code>14px · 500</code>，颜色 <span class="chip"><span class="swatch" style="background:#081126;"></span><code>#081126</code></span></td>
+      </tr>
+      <tr>
+        <td>右侧</td>
+        <td>组件</td>
+        <td>常规搜索框 + 高级搜索 + 设置（全圆角次要按钮），规格同变体二右侧</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,9 @@
+grant system_user on *.* to 'root';
+create user if not exists "cetus"@"%" identified by "{{ password }}";
+GRANT ALL PRIVILEGES ON *.* TO `cetus`@`%` ;
+FLUSH PRIVILEGES;
+CREATE DATABASE if not exists proxy_heart_beat;
+
+USE proxy_heart_beat;
+
+CREATE TABLE if not exists tb_heartbeat ( p_id varchar(128) NOT NULL, p_ts timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), PRIMARY KEY (p_id) ) ENGINE = InnoDB DEFAULT CHARSET = utf8;

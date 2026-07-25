@@ -1,0 +1,16 @@
+---
+# This playbook deploys the mysql
+- name: deploy and configure the nacos
+  hosts: "{{ host }}"
+  gather_facts: "{{ gather_facts }}"
+  remote_user: root
+  # 优先级小于role/vars下定义的变量
+  vars_files:
+    - ./group_vars/all.yml
+    - ./inventory/hosts.yml
+  roles:
+    - common
+    - nginx
+    - jdk
+    - nacos
+    - logrotate

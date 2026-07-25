@@ -1,0 +1,100 @@
+{
+  "name": "steps-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 步骤条规范，覆盖横向/纵向/上下三种结构，含已完成/进行中/未完成三态",
+
+  "circle": {
+    "description": "步骤节点圆形",
+    "size": "24×24px",
+    "border_radius": "50%",
+    "font_size": "12px",
+    "states": {
+      "pending": {
+        "background": "#F5F7FA",
+        "color": "#6B7A99",
+        "description": "未完成，显示数字"
+      },
+      "active": {
+        "background": "#3388FF",
+        "color": "#FFFFFF",
+        "description": "进行中，显示数字"
+      },
+      "done": {
+        "background": "#F0F9FF",
+        "color": "#3388FF",
+        "icon": "对勾（SVG，stroke 2px，stroke-linecap: round）",
+        "description": "已完成，显示对勾图标"
+      }
+    }
+  },
+
+  "line": {
+    "description": "进度连接线，连接相邻两个节点圆",
+    "thickness": "1px",
+    "states": {
+      "pending": "#E9ECF2",
+      "active": "#3388FF",
+      "done": "#3388FF"
+    }
+  },
+
+  "label": {
+    "description": "节点名称与描述文本",
+    "title": {
+      "font_size": "14px",
+      "color_default": "#223355",
+      "color_active": "#3388FF",
+      "color_pending": "#6B7A99"
+    },
+    "desc": {
+      "font_size": "12px",
+      "color": "#6B7A99",
+      "margin_top": "4px"
+    }
+  },
+
+  "horizontal": {
+    "description": "横向结构（左右排列）",
+    "no_description": {
+      "layout": "圆 + 横线（在节点之间），节点垂直居中对齐",
+      "line_position": "节点圆中心，flex: 1 撑满"
+    },
+    "with_description": {
+      "layout": "圆 + 名称 + 描述纵向叠放；连接线需对齐圆心",
+      "line_alignment": "线添加 align-self: flex-start + margin-top: 11px（=（24 - 1）/ 2）使其与圆心水平对齐"
+    }
+  },
+
+  "vertical": {
+    "description": "纵向结构（上下排列）",
+    "layout": "圆 + 文字横向排列；圆下方为竖线连接到下一节点",
+    "line_alignment": "竖线 margin-left: 11px（=（24 - 1）/ 2）使其与圆心水平对齐",
+    "line_spacing": "竖线 margin-top: 4px / margin-bottom: 4px，与圆形边缘留间距"
+  },
+
+  "top_bottom": {
+    "description": "上下结构（圆在上，文字在下，水平连接）",
+    "layout": "圆 + 横线（在节点之间）+ 圆 ... 节点居顶对齐（align-items: flex-start）",
+    "line_position": "横线 margin-top: 11px 与圆心对齐",
+    "label_position": "圆下方，居中对齐"
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "横向带描述结构中，连接线偏向节点底部不与圆心对齐",
+      "fix": "线节点设置 align-self: flex-start + margin-top: 11px（圆半径 12 - 线高 0.5 = 11.5，取 11）"
+    },
+    {
+      "issue": "纵向竖线偏离圆心",
+      "fix": "竖线 margin-left: 11px（=（24 - 1）/ 2），上下各留 4px 间距"
+    },
+    {
+      "issue": "上下结构横线居中对齐时与圆心错位",
+      "fix": "容器改为 align-items: flex-start，线本身 margin: 11px 8px 0 与圆心对齐"
+    },
+    {
+      "issue": "完成态用主色填充导致与进行中无法区分",
+      "fix": "完成态用浅色背景 #F0F9FF + 主色对勾，进行中用主色背景 + 白色数字"
+    }
+  ]
+}

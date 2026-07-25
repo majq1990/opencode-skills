@@ -1,0 +1,5 @@
+# TDengine配置模板
+port: "6041"
+username: root
+password: eGova@td2023
+ip: 127.0.0.1

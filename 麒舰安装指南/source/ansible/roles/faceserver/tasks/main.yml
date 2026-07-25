@@ -1,0 +1,97 @@
+---
+# check if faceserver exists
+- set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 检查目标目录
+  stat: path={{ deploy_path }}
+  register: faceserver_dir
+
+
+- name: Fail if faceserver is not empty
+  fail:
+    msg: |
+      检查到已经安装过faceserver,如需卸载请在{{ hostvars[inventory_hostname]['ansible_ssh_host'] }}服务器上执行 mv {{ deploy_path }} {{ deploy_path }}_backup
+  ignore_errors: yes
+  when: faceserver_dir.stat.exists == True
+
+- block:
+    - name: 准备目录
+      file: name={{ item.dir }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='{{ item.mode }}'
+      with_items:
+        - { dir: "{{ log_path }}",mode: "0775" }
+        - { dir: "{{ web_root_dir }}",mode: "0775" }
+        - { dir: "{{ tools_root_dir }}",mode: "0775" }
+
+    - name: 检查 faceserver.tar 是否存在
+      connection: local
+      stat:
+        path: "../src/web/{{ app_type }}/faceserver.tar"
+      register: faceserver_tar
+
+    - name: Fail if faceserver.tar is  empty
+      fail:
+        msg: |
+          待安装的faceserver服务，web包不存在,如需安装服务{{ ansible_master_ip }}服务器上执行 dl_v2.sh 下載待安裝的服务!!!
+          若ll /egova/onekey_install/oneinstall_v2/src/web |grep faceserver|wc -l 大于0 则表示待安装的服务已存在
+      when: faceserver_tar.stat.exists == False
+
+    - name: copy package
+      copy: src={{ src_path }}/faceserver.tar dest={{ web_root_dir }}/
+      when: faceserver_tar.stat.exists == True
+
+    - name: 解压faceserver
+      unarchive:
+        src: "{{ src_path }}/faceserver.tar"
+        dest: "{{ web_root_dir }}"
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: '0755'
+      when: faceserver_tar.stat.exists == True
+
+    - name: 提取依赖的mysql值
+      set_fact:
+        depend_key: "{{ {'data': service[app_type][app_name].depends,'type_value': 'mysql', 'sub_type_value': None} | custom_json_query }}"
+
+    - name: 修改配置
+      template:
+        src: "{{ item.filename }}.j2"
+        dest: "{{ item.destpath }}/{{ item.filename }}"
+        mode: '0644'
+      with_items:
+        - { filename: "mysql.json",destpath: "{{ deploy_path }}" }
+        - { filename: "faceserver.service",destpath: "{{ system_service_path }}" }
+        - { filename: "cron_check_faceserver.sh",destpath: "{{ tools_root_dir }}" }
+
+    - name: 修改文件目录及权限
+      shell: |
+        chown -R {{ ops_user }}:{{ ops_user }} {{ deploy_path }}
+        chmod +x -R {{ deploy_path }}/*
+        chmod +x {{ tools_root_dir }}/cron_check_faceserver.sh
+
+    - name: daemon-reload
+      systemd: daemon_reload=yes
+
+    - name: 启动faceserver
+      service: name=faceserver state=restarted enabled=yes
+
+    - name: 更新metadata状态
+      connection: local
+      shell: |
+        yq -i '.service.'{{ app_type }}'.'{{ app_name }}'.status="'success'"' inventory/metadata.yml
+        yq -i '.service.'{{ app_type }}'.'{{ app_name }}'.ip="'{{ all.hosts[inventory_hostname].ansible_ssh_host }}'"' inventory/metadata.yml
+        yq -i '.service.'{{ app_type }}'.'{{ app_name }}'.host="'{{ inventory_hostname }}'"' inventory/metadata.yml
+
+    - name: 检查人脸服务定时任务是否存在
+      shell: grep "cron_check_faceserver" /etc/crontab | wc -l
+      register: faceserver_cron_count
+
+    - name: 添加人脸服务定时任务
+      lineinfile:
+        dest: /etc/crontab
+        line: "*/5 * * * * {{ devops_ssh_user }} {{ tools_root_dir }}/cron_check_faceserver.sh"
+        insertafter: EOF
+      notify: restart crond
+      when: faceserver_cron_count.stdout == "0"
+  when: faceserver_dir.stat.exists == False

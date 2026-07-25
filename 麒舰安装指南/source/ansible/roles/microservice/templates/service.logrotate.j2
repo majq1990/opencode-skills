@@ -1,0 +1,12 @@
+{{ log_out_path }}/*.log {
+  dateext
+  dateformat .%Y-%m-%d
+  extension .log
+  daily
+  missingok
+  rotate 15
+  nocompress
+  notifempty
+  sharedscripts
+  copytruncate
+}

@@ -1,0 +1,41 @@
+{
+  "skill_name": "egova-eurbanpro-thirdparty-api-reference",
+  "iteration": 1,
+  "timestamp": "2026-04-22",
+  "configurations": [
+    {
+      "name": "with_skill",
+      "total_passed": 16,
+      "total_assertions": 18,
+      "pass_rate": 0.889,
+      "evals": [
+        {"eval_id": 0, "passed": 3, "total": 3},
+        {"eval_id": 1, "passed": 3, "total": 3},
+        {"eval_id": 2, "passed": 3, "total": 3},
+        {"eval_id": 3, "passed": 2, "total": 3},
+        {"eval_id": 4, "passed": 2, "total": 3},
+        {"eval_id": 5, "passed": 3, "total": 3}
+      ]
+    },
+    {
+      "name": "old_skill",
+      "total_passed": 17,
+      "total_assertions": 18,
+      "pass_rate": 0.944,
+      "evals": [
+        {"eval_id": 0, "passed": 2, "total": 3},
+        {"eval_id": 1, "passed": 3, "total": 3},
+        {"eval_id": 2, "passed": 3, "total": 3},
+        {"eval_id": 3, "passed": 3, "total": 3},
+        {"eval_id": 4, "passed": 3, "total": 3},
+        {"eval_id": 5, "passed": 3, "total": 3}
+      ]
+    }
+  ],
+  "delta": {
+    "pass_rate": -0.056,
+    "improved_evals": [0],
+    "regressed_evals": [3, 4],
+    "unchanged_evals": [1, 2, 5]
+  }
+}

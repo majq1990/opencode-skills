@@ -1,0 +1,134 @@
+---
+# check if nginx exists
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: get nginx version
+  shell: nginx -v
+  register: nginx_version_output
+  ignore_errors: yes
+
+
+- block:
+    - name: 安装依赖库
+      package:
+        name: "{{ nginx_packages[ansible_distribution] }}"
+        state: 'present'
+        update_cache: yes
+      when: ansible_distribution in ['CentOS','openEuler','kylin_x86','UOS','uos_x86','uos_arm','anolis_x86','anolis_arm']
+
+    # install openresty
+    - name: install openresty
+      unarchive:
+        src: "{{ src_path }}/openresty.tar.gz"
+        dest: /usr/local
+      when: ansible_distribution in ['Ubuntu','kylin_arm']
+
+      # copy nginx conf
+    - name: copy nginx conf
+      copy: src=openresty_nginx.conf dest=/usr/local/openresty/nginx/conf/nginx.conf
+
+      # create dest dir
+    - name: create nginx conf dir
+      file:
+        path: /etc/nginx/conf.d/
+        state: directory
+        mode: '0755'
+
+    - name: 拷贝配置
+      template:
+        src: "{{ item.filename }}.j2"
+        dest: "{{ item.destpath }}/{{ item.filename }}"
+        mode: '0644'
+      with_items:
+        - { filename: "default.conf",destpath: "/etc/nginx/conf.d" }
+        - { filename: "openresty.service",destpath: "/usr/lib/systemd/system" }
+
+    - name: create user
+      shell: |
+        groupadd -f nginx
+        if ! grep -q nginx /etc/passwd;then useradd -M -s /sbin/nologin -g nginx nginx;fi
+
+    - name: 准备nginx目录
+      file: name={{ item.dir }} state=directory owner=nginx group=nginx mode='{{ item.mode }}'
+      with_items:
+        - { dir: "/etc/nginx/conf.d/",mode: "0775" }
+        - { dir: "{{ log_path }}",mode: "0775" }
+
+    - name: nginx配置
+      shell: |
+        ln -s /usr/local/openresty/nginx/conf/nginx.conf /etc/nginx/nginx.conf
+        ln -s /usr/lib/systemd/system/openresty.service /usr/lib/systemd/system/nginx.service
+        ln -s /usr/local/openresty/nginx/sbin/nginx /usr/sbin/nginx
+        /usr/local/openresty/nginx/sbin/nginx  -t
+        # 解决pid文件报错问题
+        sed -i "/ExecStartPost=/d" /usr/lib/systemd/system/openresty.service
+        sed -i "/\[Service]/a\ExecStartPost=/bin/sleep 0.1" /usr/lib/systemd/system/openresty.service
+        
+        systemctl daemon-reload
+        systemctl enable openresty
+        systemctl start openresty
+
+    - name: nginx授权给{{ ops_user }}(双向授权解决nginx403问题)
+      user: name="{{ ops_user }}" groups=nginx append=true
+      with_items:
+        - { user: "{{ ops_user }}",group: "nginx" }
+        - { user: "nginx",group: "{{ ops_user }}" }
+      notify: lock user and group files
+  when: nginx_version_output.rc >0
+
+- name: 检查waf配置是否存在
+  stat:
+    path: "{{ nginx_path }}/wafconf"
+  register: waf_file_exists
+
+- block:
+    - name: 准备目录
+      file: name={{ openresty_path }} state=directory owner=root group=root mode='0755'
+
+    - name: 解压缩lua-resty-egova.tar.gz
+      unarchive:
+        src: "{{ src_tools_path }}/lua-resty-egova.tar.gz"
+        dest: "{{ openresty_path }}"
+        mode: '0755'
+
+    - name: 建立软链接
+      file: src={{ openresty_path }}/nginx/conf/{{ item }} dest={{ nginx_path }}/{{ item }} state=link force=true
+      with_items:
+        - wafconf
+        - include
+
+    - name: 删除已存在的http.include配置
+      lineinfile:
+        path: "{{ conf_file }}"
+        state: absent
+        regexp: "^\\s*include\\s+/etc/nginx/conf.d/include/http.include;"
+
+    - name: 修改nginx.conf配置
+      lineinfile:
+        path: "{{ conf_file }}"
+        state: present
+        line: "    include /etc/nginx/conf.d/include/http.include;"
+        insertafter: '^http\s*{'
+
+    - name: 删除已存在的server.include配置
+      lineinfile:
+        path: "{{ default_conf }}"
+        state: absent
+        regexp: "^\\s*include\\s+/etc/nginx/conf.d/include/server.include;"
+
+    - name: 修改default.conf配置
+      lineinfile:
+        path: "{{ default_conf }}"
+        state: present
+        line: "    include /etc/nginx/conf.d/include/server.include;"
+        insertafter: '^server\s*{'
+  when: not waf_file_exists.stat.exists
+
+
+- name: lock user and group files
+  command: /bin/true
+  notify:
+    - lock user and group files

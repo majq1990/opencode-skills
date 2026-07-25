@@ -1,0 +1,49 @@
+列表删除校验是否有关联数据，判断是否能删除
+1 使用场景
+列表页面中删除数据时，需要判断该数据下是否有关联的其他数据，如果有关联数据则不允许删除。
+具体场景：小区列表页面中进行删除操作，需要判断该小区下是否有其他关联数据，如果有楼栋数据关联了该小区，则不允许删除。
+2 效果
+删除提示失败，因为有关联的数据
+3 配置
+在列表的删除按钮中自定义动作中添加如下脚本
+function main(defaultParams, event) {
+    let self = this; // 重置作用域
+    //定义变量获取列表中的community_id值
+    let id = defaultParams.community_id.value;
+    let tableComp = self.$$element("table_1wgd74"); // 获取表格元素
+    self.$$confirm({
+        content: "确定删除？",
+        type: "danger",  // danger info warning
+        headerTitle: "告警", //确认框头部标题 提示、警告、告警
+        showOkBtn: true, // 是否展示确认按钮
+        showCancelBtn: true, // 是否展示取消按钮
+        cancelText: "取消", //取消按钮 展示文字
+        okText: "确定",  //确认按钮 展示文字      
+        onOk: () => {
+            tableComp.loading = true; // 使表格置于loading状态
+            //调用api的查询方法，第一个参数为查询的实体id。building_id为返回的列名，QUERY_EQ中为查询条件
+            api.EXEC_FORMULA(`ENTITY_SELECT_ONE('t_6a93b6dd639b43c7a947eb70fef50c92','building_id',QUERY_EQ('community_id','${id}'))`).then((res) => {
+            if (!res) {
+            // 调用api的删除方法，第一个参数为待删除的实体id，第二个参数为删除条件、指定实体中的列名和列的值
+            api.ENTITY_DELETE("t_94d54e43f74644cf8929848b44646e44",
+                { community_id: defaultParams.community_id.value }).then((res) => {
+                    // then() 为调用成功的回调
+                    console.log(res);
+                    self.$message.success("删除成功！");
+                    tableComp.loading = false; // 将表格置为非loading状态
+                    tableComp.onRefresh(); // 调用表格的数据刷新动作
+                }).catch(err => {
+                    self.$message.error(err.message); // 显示错误提示信息
+                    tableComp.loading = false; // 将表格置为非loading状态
+                });}
+            else{
+                self.$message.error("删除失败，该小区下有关联的楼栋！");
+                tableComp.loading = false; // 将表格置为非loading状态
+            }})
+        },
+        onCancel: () => {
+            return
+        }
+    });
+}
+关键代码已注释

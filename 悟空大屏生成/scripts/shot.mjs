@@ -1,0 +1,18 @@
+import { chromium } from 'playwright';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+const pageId = process.argv[2];
+const out = process.argv[3] || '/opt/wk-kg-mcp/verify/' + pageId + '.png';
+const waitMs = Number(process.argv[4] || 9000);
+const VIEW = 'http://wk.egova.com.cn:8042/wukong/index.html#/view?id=' + pageId;
+mkdirSync(dirname(out), { recursive: true });
+const browser = await chromium.launch({ headless: true, args: ['--no-sandbox','--disable-gpu'] });
+const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+const page = await ctx.newPage();
+await page.goto(VIEW, { waitUntil: 'networkidle', timeout: 30000 }).catch(()=>{});
+await page.waitForTimeout(waitMs);
+const info = await page.evaluate(()=>({title:document.title,canvas:document.querySelectorAll('canvas').length,textLen:(document.body.innerText||'').length}));
+console.log('RENDER='+JSON.stringify(info));
+await page.screenshot({ path: out, fullPage: false });
+console.log('SAVED='+out);
+await browser.close();

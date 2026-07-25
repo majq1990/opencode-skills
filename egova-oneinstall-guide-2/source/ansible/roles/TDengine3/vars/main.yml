@@ -1,0 +1,23 @@
+---
+# TDengine3 Docker 安装变量
+src_path: "{{ src_env_package_path }}/TDengine"
+data_dir: "{{ data_root_dir }}/TDengine3"
+temp_dir: "/egova/temp/TDengine3"
+log_dir: "{{ log_root_dir }}/TDengine3"
+deploy_path: "/egova/deploy/TDengine3"
+
+# 版本配置
+td_version: "3.3.7.5"
+
+# 端口配置
+server_port: 6030
+http_port: 6041
+
+# 初始化配置
+init_password: eGova@td2023
+
+# docker 配置
+container_name: tdengine
+
+# 根据 sql 来确定需要最小的VNode数量
+min_vnode: 14

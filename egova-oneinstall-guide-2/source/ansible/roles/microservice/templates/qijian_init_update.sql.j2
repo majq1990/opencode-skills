@@ -1,0 +1,22 @@
+{%- set nginx_main_node = ip_nginx_main.hosts.master  %}
+{%- set media_node = ip_web_media.hosts.master if ip_web_media.hosts.master != '' else '127.0.0.1'  %}
+
+{% if nginx_main_node is not none %}
+-- 灵珑
+update sys_server_config_item set value = 'http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/linglong-api' where name = 'LINGLONG_INNER_SERVER_URL';
+-- 玄藏
+update sys_gis_map_config set INNER_URL = 'http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/xuanzang-api' where name = 'default';
+{% else %}
+-- 灵珑
+update sys_server_config_item set value = 'http://127.0.0.1:8080/linglong-api' where name = 'LINGLONG_INNER_SERVER_URL';
+-- 玄藏
+update sys_gis_map_config set INNER_URL = 'http://127.0.0.1:8080/xuanzang-api' where name = 'default';
+{% endif %}
+
+
+{% if media_node is not none %}
+-- 多媒体
+update sys_media_config set endpoint = 'http://{{ hostvars[media_node]['ansible_ssh_host'] }}:8087/HttpFileServer' where name = 'HttpFileServer';
+{% else %}
+update sys_media_config set endpoint = 'http://127.0.0.1:8087/HttpFileServer' where name = 'HttpFileServer';
+{% endif %}

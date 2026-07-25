@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI Transfer 穿梭框</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 16px; margin-top: 32px; }
+h2:first-of-type { margin-top: 0; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; }
+.section-title { font-size: 11px; font-weight: 600; color: #A8B4C8; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 20px; }
+
+/* ===================== 穿梭框容器 ===================== */
+.transfer {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* ===================== 面板 ===================== */
+.tr-panel {
+  width: 240px;
+  border: 1px solid #DDE1EB;
+  border-radius: 4px;
+  background: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 头部 */
+.tr-header {
+  height: 40px;
+  padding: 0 12px;
+  border-bottom: 1px solid #E9ECF2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.tr-header-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #223355;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tr-header-count {
+  font-size: 12px;
+  color: #6B7A99;
+  white-space: nowrap;
+}
+
+/* 全选复选框 */
+.tr-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid #A8B4C8;
+  background: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.tr-checkbox.is-checked {
+  border-color: #3388FF;
+  background: #3388FF;
+}
+.tr-checkbox.is-indeterminate {
+  border-color: #3388FF;
+  background: #3388FF;
+}
+
+/* 搜索框 */
+.tr-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  margin: 8px 12px;
+  border: 1px solid #DDE1EB;
+  border-radius: 16px;
+  padding: 0 12px;
+  flex-shrink: 0;
+  background: #FFFFFF;
+}
+.tr-search-wrap svg {
+  width: 14px;
+  height: 14px;
+  color: #A8B4C8;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  flex-shrink: 0;
+}
+.tr-search {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: #223355;
+  width: 0;
+  min-width: 0;
+  outline: none;
+}
+.tr-search::placeholder { color: #A8B4C8; }
+
+/* 列表区 */
+.tr-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+  min-height: 200px;
+  max-height: 200px;
+}
+.tr-list::-webkit-scrollbar { width: 4px; }
+.tr-list::-webkit-scrollbar-thumb { background: #E9ECF2; border-radius: 2px; }
+
+/* 选项行 */
+.tr-item {
+  height: 40px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #223355;
+  cursor: pointer;
+  transition: background .1s;
+}
+.tr-item:hover { background: #F5F7FA; margin: 0 8px; border-radius: 4px; padding: 0 12px; }
+.tr-item.is-checked { background: transparent; }
+.tr-item.is-disabled { color: #A8B4C8; cursor: not-allowed; }
+.tr-item.is-disabled:hover { background: transparent; margin: 0; border-radius: 0; padding: 0 20px; }
+.tr-item-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 空状态 */
+.tr-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 200px;
+  font-size: 14px;
+  color: #A8B4C8;
+}
+
+/* 底部分页 */
+.tr-footer {
+  height: 44px;
+  padding: 0 12px;
+  border-top: 1px solid #E9ECF2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+/* 迷你分页（复用规范样式） */
+.pagination-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.pg-mini-item {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #223355;
+  flex-shrink: 0;
+}
+.pg-mini-item.is-disabled { color: #C0C7D6; cursor: not-allowed; }
+.pg-mini-item svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pg-mini-input {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #DDE1EB;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #3388FF;
+  text-align: center;
+  outline: none;
+  padding: 0;
+}
+.pg-mini-input:focus { border-color: #3388FF; }
+.pg-mini-sep { font-size: 14px; color: #6B7A99; }
+.pg-mini-total { font-size: 14px; color: #223355; }
+
+/* 树节点 */
+.tr-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+  min-height: 200px;
+  max-height: 200px;
+}
+.tr-tree::-webkit-scrollbar { width: 4px; }
+.tr-tree::-webkit-scrollbar-thumb { background: #E9ECF2; border-radius: 2px; }
+
+.tr-tree-node {
+  display: flex;
+  flex-direction: column;
+}
+.tr-tree-row {
+  height: 40px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #223355;
+  cursor: pointer;
+  transition: background .1s;
+}
+.tr-tree-row:hover { background: #F5F7FA; margin: 0 8px; border-radius: 4px; padding: 0 12px; }
+.tr-tree-row.is-checked { background: transparent; }
+
+.tr-tree-toggle {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #A8B4C8;
+  transition: transform .15s;
+}
+.tr-tree-toggle.is-open { transform: rotate(90deg); }
+.tr-tree-toggle svg {
+  width: 12px; height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tr-tree-toggle.is-leaf { visibility: hidden; }
+
+.tr-tree-children {
+  padding-left: 20px;
+}
+
+.tr-arrows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 40px;
+  align-self: center;
+}
+.tr-arrow-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: color .15s, background .15s;
+  color: #A8B4C8;
+}
+.tr-arrow-btn:hover {
+  background: #F0F9FF;
+  color: #3388FF;
+}
+.tr-arrow-btn:active {
+  background: #3388FF;
+  color: #FFFFFF;
+}
+.tr-arrow-btn.is-disabled {
+  color: #C0C7D6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<h1>ZartUI — Transfer 穿梭框</h1>
+<p class="page-desc">左侧待选列表 + 中间穿梭箭头 + 右侧已选列表，两侧含统计和迷你分页</p>
+
+<!-- ============================================================
+     基础穿梭框
+============================================================ -->
+<h2>基础穿梭框</h2>
+<div class="section">
+  <div class="section-title">默认状态，左侧有部分选中，右侧有已选项</div>
+
+  <div class="transfer">
+
+    <!-- 左侧：待选 -->
+    <div class="tr-panel">
+      <div class="tr-header">
+        <div class="tr-header-title">
+          <span class="tr-checkbox is-indeterminate">
+            <svg width="8" height="2" viewBox="0 0 8 2" fill="none"><rect width="8" height="2" rx="1" fill="#FFFFFF"/></svg>
+          </span>
+          待选
+        </div>
+        <span class="tr-header-count">已选 3 / 共 12 项</span>
+      </div>
+      <div class="tr-search-wrap">
+        <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5" stroke-width="1.3"/><path d="M9.5 9.5L12 12" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <input class="tr-search" placeholder="搜索">
+      </div>
+      <div class="tr-list">
+        <div class="tr-item is-checked">
+          <span class="tr-checkbox is-checked"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="tr-item-label">选项一</span>
+        </div>
+        <div class="tr-item is-checked">
+          <span class="tr-checkbox is-checked"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="tr-item-label">选项二</span>
+        </div>
+        <div class="tr-item">
+          <span class="tr-checkbox"></span>
+          <span class="tr-item-label">选项三</span>
+        </div>
+        <div class="tr-item is-checked">
+          <span class="tr-checkbox is-checked"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="tr-item-label">选项四</span>
+        </div>
+        <div class="tr-item">
+          <span class="tr-checkbox"></span>
+          <span class="tr-item-label">选项五</span>
+        </div>
+        <div class="tr-item">
+          <span class="tr-checkbox"></span>
+          <span class="tr-item-label">选项六</span>
+        </div>
+        <div class="tr-item is-disabled">
+          <span class="tr-checkbox" style="border-color:#DDE1EB; background:#F5F7FA;"></span>
+          <span class="tr-item-label">选项七（禁用）</span>
+        </div>
+      </div>
+      <div class="tr-footer">
+        <div class="pagination-mini">
+          <div class="pg-mini-item is-disabled"><svg viewBox="0 0 12 12"><path d="M8 10L4 6L8 2"/></svg></div>
+          <input class="pg-mini-input" type="text" value="1">
+          <span class="pg-mini-sep">/</span>
+          <span class="pg-mini-total">2</span>
+          <div class="pg-mini-item"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 中间箭头 -->
+    <div class="tr-arrows">
+      <button class="tr-arrow-btn">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7H11M8 4L11 7L8 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="tr-arrow-btn is-disabled">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 7H3M6 10L3 7L6 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <!-- 右侧：已选 -->
+    <div class="tr-panel">
+      <div class="tr-header">
+        <div class="tr-header-title">
+          <span class="tr-checkbox is-checked">
+            <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          已选
+        </div>
+        <span class="tr-header-count">已选 4 / 共 4 项</span>
+      </div>
+      <div class="tr-search-wrap">
+        <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5" stroke-width="1.3"/><path d="M9.5 9.5L12 12" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <input class="tr-search" placeholder="搜索">
+      </div>
+      <div class="tr-list">
+        <div class="tr-item is-checked">
+          <span class="tr-checkbox is-checked"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="tr-item-label">选项 A</span>
+        </div>
+        <div class="tr-item is-checked">
+          <span class="tr-checkbox is-checked"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="tr-item-label">选项 B</span>
+        </div>
+        <div class="tr-item is-checked">
+          <span class="tr-checkbox is-checked"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="tr-item-label">选项 C</span>
+        </div>
+        <div class="tr-item is-checked">
+          <span class="tr-checkbox is-checked"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="tr-item-label">选项 D</span>
+        </div>
+      </div>
+      <div class="tr-footer">
+        <div class="pagination-mini">
+          <div class="pg-mini-item is-disabled"><svg viewBox="0 0 12 12"><path d="M8 10L4 6L8 2"/></svg></div>
+          <input class="pg-mini-input" type="text" value="1">
+          <span class="pg-mini-sep">/</span>
+          <span class="pg-mini-total">1</span>
+          <div class="pg-mini-item is-disabled"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     空状态
+============================================================ -->
+<h2>空状态</h2>
+<div class="section">
+  <div class="section-title">右侧列表为空</div>
+
+  <div class="transfer">
+
+    <!-- 左侧 -->
+    <div class="tr-panel">
+      <div class="tr-header">
+        <div class="tr-header-title">
+          <span class="tr-checkbox"></span>
+          待选
+        </div>
+        <span class="tr-header-count">已选 0 / 共 6 项</span>
+      </div>
+      <div class="tr-search-wrap">
+        <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5" stroke-width="1.3"/><path d="M9.5 9.5L12 12" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <input class="tr-search" placeholder="搜索">
+      </div>
+      <div class="tr-list">
+        <div class="tr-item"><span class="tr-checkbox"></span><span class="tr-item-label">选项一</span></div>
+        <div class="tr-item"><span class="tr-checkbox"></span><span class="tr-item-label">选项二</span></div>
+        <div class="tr-item"><span class="tr-checkbox"></span><span class="tr-item-label">选项三</span></div>
+        <div class="tr-item"><span class="tr-checkbox"></span><span class="tr-item-label">选项四</span></div>
+        <div class="tr-item"><span class="tr-checkbox"></span><span class="tr-item-label">选项五</span></div>
+        <div class="tr-item"><span class="tr-checkbox"></span><span class="tr-item-label">选项六</span></div>
+      </div>
+      <div class="tr-footer">
+        <div class="pagination-mini">
+          <div class="pg-mini-item is-disabled"><svg viewBox="0 0 12 12"><path d="M8 10L4 6L8 2"/></svg></div>
+          <input class="pg-mini-input" type="text" value="1">
+          <span class="pg-mini-sep">/</span>
+          <span class="pg-mini-total">1</span>
+          <div class="pg-mini-item is-disabled"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 中间箭头 -->
+    <div class="tr-arrows">
+      <button class="tr-arrow-btn is-disabled">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7H11M8 4L11 7L8 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="tr-arrow-btn is-disabled">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 7H3M6 10L3 7L6 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <!-- 右侧：空 -->
+    <div class="tr-panel">
+      <div class="tr-header">
+        <div class="tr-header-title">
+          <span class="tr-checkbox"></span>
+          已选
+        </div>
+        <span class="tr-header-count">已选 0 / 共 0 项</span>
+      </div>
+      <div class="tr-search-wrap">
+        <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5" stroke-width="1.3"/><path d="M9.5 9.5L12 12" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <input class="tr-search" placeholder="搜索">
+      </div>
+      <div class="tr-list">
+        <div class="tr-empty">暂无数据</div>
+      </div>
+      <div class="tr-footer">
+        <div class="pagination-mini">
+          <div class="pg-mini-item is-disabled"><svg viewBox="0 0 12 12"><path d="M8 10L4 6L8 2"/></svg></div>
+          <input class="pg-mini-input" type="text" value="1">
+          <span class="pg-mini-sep">/</span>
+          <span class="pg-mini-total">1</span>
+          <div class="pg-mini-item is-disabled"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     树列表穿梭框
+============================================================ -->
+<h2>树列表穿梭框</h2>
+<div class="section">
+  <div class="section-title">左侧为树形结构，支持展开/收起节点，可选叶子节点或父节点</div>
+
+  <div class="transfer">
+
+    <!-- 左侧：树形待选 -->
+    <div class="tr-panel">
+      <div class="tr-header">
+        <div class="tr-header-title">
+          <span class="tr-checkbox is-indeterminate">
+            <svg width="8" height="2" viewBox="0 0 8 2" fill="none"><rect width="8" height="2" rx="1" fill="#FFFFFF"/></svg>
+          </span>
+          待选
+        </div>
+        <span class="tr-header-count">已选 2 / 共 9 项</span>
+      </div>
+      <div class="tr-search-wrap">
+        <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5" stroke-width="1.3"/><path d="M9.5 9.5L12 12" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <input class="tr-search" placeholder="搜索">
+      </div>
+      <div class="tr-tree">
+
+        <!-- 节点一（展开，部分选中） -->
+        <div class="tr-tree-node">
+          <div class="tr-tree-row">
+            <span class="tr-tree-toggle is-open"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+            <span class="tr-checkbox is-indeterminate"><svg width="8" height="2" viewBox="0 0 8 2" fill="none"><rect width="8" height="2" rx="1" fill="#FFFFFF"/></svg></span>
+            <span class="tr-item-label">一级分类 A</span>
+          </div>
+          <div class="tr-tree-children">
+            <div class="tr-tree-row is-checked">
+              <span class="tr-tree-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="tr-checkbox is-checked"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="tr-item-label">子项 A-1</span>
+            </div>
+            <div class="tr-tree-row is-checked">
+              <span class="tr-tree-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="tr-checkbox is-checked"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="tr-item-label">子项 A-2</span>
+            </div>
+            <div class="tr-tree-row">
+              <span class="tr-tree-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="tr-checkbox"></span>
+              <span class="tr-item-label">子项 A-3</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 节点二（展开，未选） -->
+        <div class="tr-tree-node">
+          <div class="tr-tree-row">
+            <span class="tr-tree-toggle is-open"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+            <span class="tr-checkbox"></span>
+            <span class="tr-item-label">一级分类 B</span>
+          </div>
+          <div class="tr-tree-children">
+            <div class="tr-tree-row">
+              <span class="tr-tree-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="tr-checkbox"></span>
+              <span class="tr-item-label">子项 B-1</span>
+            </div>
+            <div class="tr-tree-row">
+              <span class="tr-tree-toggle is-leaf"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+              <span class="tr-checkbox"></span>
+              <span class="tr-item-label">子项 B-2</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 节点三（折叠） -->
+        <div class="tr-tree-node">
+          <div class="tr-tree-row">
+            <span class="tr-tree-toggle"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></span>
+            <span class="tr-checkbox"></span>
+            <span class="tr-item-label">一级分类 C（已折叠）</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="tr-footer">
+        <div class="pagination-mini">
+          <div class="pg-mini-item is-disabled"><svg viewBox="0 0 12 12"><path d="M8 10L4 6L8 2"/></svg></div>
+          <input class="pg-mini-input" type="text" value="1">
+          <span class="pg-mini-sep">/</span>
+          <span class="pg-mini-total">1</span>
+          <div class="pg-mini-item is-disabled"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 中间箭头 -->
+    <div class="tr-arrows">
+      <button class="tr-arrow-btn">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7H11M8 4L11 7L8 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="tr-arrow-btn is-disabled">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 7H3M6 10L3 7L6 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <!-- 右侧：已选（平铺列表） -->
+    <div class="tr-panel">
+      <div class="tr-header">
+        <div class="tr-header-title">
+          <span class="tr-checkbox is-checked">
+            <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          已选
+        </div>
+        <span class="tr-header-count">已选 2 / 共 2 项</span>
+      </div>
+      <div class="tr-search-wrap">
+        <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5" stroke-width="1.3"/><path d="M9.5 9.5L12 12" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <input class="tr-search" placeholder="搜索">
+      </div>
+      <div class="tr-list">
+        <div class="tr-item is-checked">
+          <span class="tr-checkbox is-checked"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="tr-item-label">子项 A-1</span>
+        </div>
+        <div class="tr-item is-checked">
+          <span class="tr-checkbox is-checked"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 4L4 6.5L8.5 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="tr-item-label">子项 A-2</span>
+        </div>
+      </div>
+      <div class="tr-footer">
+        <div class="pagination-mini">
+          <div class="pg-mini-item is-disabled"><svg viewBox="0 0 12 12"><path d="M8 10L4 6L8 2"/></svg></div>
+          <input class="pg-mini-input" type="text" value="1">
+          <span class="pg-mini-sep">/</span>
+          <span class="pg-mini-total">1</span>
+          <div class="pg-mini-item is-disabled"><svg viewBox="0 0 12 12"><path d="M4 2L8 6L4 10"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

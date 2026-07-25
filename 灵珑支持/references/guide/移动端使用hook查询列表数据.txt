@@ -1,0 +1,163 @@
+移动端使用hook查询列表数据
+1 使用场景
+使用接口查询列表数据时可编写hook查询数据。
+2 效果图
+3 配置
+点击列表->卡片容器->高级->Hook配置->打开数据查询，并设置方法，如下：
+hook脚本调用接口的方法：api.API_DATA_EXECUTE(apiId, "BUNCHES", param, { lostAbility: "11" });
+参数介绍： 接口Id（apiId）, "BUNCHES"（默认即可）, 接口参数（param）, { lostAbility: "11" }（默认即可）
+注意：param参数的格式必须为 -> param.condition.params = { // 此处为参数，正常格式！！！// 键值对形式 };
+function main(pageId, param) {
+  // 获取对应参数，param表示获取到的filter参数，也可以通过脚本获取跳转参数等。
+
+  return new Promise((resolve, reject) => {
+    param.condition.params = { 
+      // 此处为参数，正常格式！！！
+      // 键值对形式
+    };
+    // 参数介绍： 接口Id（apiId）, "BUNCHES"（默认即可）, 接口参数（param）, { lostAbility: "11" }（默认即可）
+    api.API_DATA_EXECUTE("678e6ac5-6479-4da9-9d91-942710a95932", "BUNCHES", param, { lostAbility: "11" })
+      .then(res => {
+        resolve(res);
+      }).catch(() => {
+        reject();
+      })
+  })
+
+
+}
+如果在其他组件需要调用该hook，如刷新数据等，使用以下方法：
+function main() {
+  Vue.nextTick(() => {
+    // 获取列表组件的id，使用以下方法可对列表进行刷新，每次筛选都会调用hook中脚本
+    let list = document.getElementById("card_container_dtqvlk_csshandler_generate")
+    if (list) {
+      let com = list.__vue__
+      com && com.onRefresh()
+    }
+  })
+}
+其他脚本中api使用可参考：《前端SDK说明》
+4 常见问题
+hook查询列表获取查询参数
+查询参数一般分两种：a.从跳转页面跳转自带。b.点击筛选条件
+跳转参数可以通过路由参数或者全局变量等方式进行存和取，例如：
+function main() {
+  const param = {}; // 跳转参数
+  this.$router.push({
+        name: "page-preview",// 页面
+        query: {
+            title: "案件列表",
+            pageId: '1774679672873394176-8dbc-5e35', // 对应页面id
+            showHeader: this.$route.query.showHeader,
+            isFromAction: 1,
+            _t: new Date().getTime() + "",
+        },
+        params: param
+    });
+}
+function main() {
+  const param = this.$route.params;
+}
+点击筛选条件对应的参数在hook中自带函数的param参数中的param.condition.tableConditionDescriptor
+function main(pageId, param) {
+  const paramArr = param.condition.tableConditionDescriptor; // 可输出该参数熟悉对应结构
+}
+如果需要将跳转参数赋值给对应的页面筛选条件，可通过如下方式赋值
+获取对应的组件标识并赋值
+function main(pageId, param) {
+  const regionId = 1; // 获取到的regionID
+   this.$$('query_field_wrapper_7hri1b').queryField.props.defaultValue.value = regionId;
+  }
+}
+这样跳转后回自动赋值
+选择过滤条件的hook查询要从hook中的param中获取对应参数并查询，下面展示一个完整实例：
+function main(pageId, param) {
+    // 获取对应参数
+    let start = "2024-01-01 00:00:00";
+    let end = "2024-04-01 00:00:00";
+    let regionId = '1';
+    let regionType = '2';
+    let stateType = null;
+    let eventSrcIDs = "";
+    let recTypeIDs = "";
+    let reviewType = "";
+    const timeDom = this.$$('csdn_form_custom_date_9zi6re');
+    if (timeDom && timeDom.currentTime) {
+        start = timeDom.currentTime.start.format('YYYY-MM-DD 00:00:00');
+        end = timeDom.currentTime.end.format('YYYY-MM-DD 23:59:59');
+    }
+    
+    /**
+ * 字段适配灵珑列表格式
+ */
+    
+
+    function getRegionInfo(data, id) {
+        if (!data || !data.length) return;
+        data.forEach(e => {
+            if (e.id == id) {
+                regionId = e.regionId;
+                regionType = e.regionType;
+            } else {
+                getRegionInfo(e.children, id);
+            }
+        })
+    }
+    if (param.condition.tableConditionDescriptor && param.condition.tableConditionDescriptor.members) {
+        const region = param.condition.tableConditionDescriptor.members.find(e => e.field == "80969cce-a4c0-4692-8cb5-7be16e0fdb58-8dbc-5e35");
+        if (region && region.values && region.values.length) {
+            const id = region.values[region.values.length - 1];
+            getRegionInfo(this.$$('query_field_wrapper_7hri1b').queryField.props.dataSource.options, id)
+        }
+        const stateData = param.condition.tableConditionDescriptor.members.find(e => e.field == "78e97aea-23e0-4a1f-bf5b-5100e1c46685-8dbc-5e35");
+        if (stateData && stateData.value) {
+            stateType = stateData.value;
+        }
+        const eventSrcData = param.condition.tableConditionDescriptor.members.find(e => e.field == "b75d4022-8761-46c7-ad72-e84e314fec4c-8dbc-5e35");
+        if (eventSrcData && eventSrcData.values) {
+            eventSrcIDs = eventSrcData.values.join(',');
+        }
+        const recTypeData = param.condition.tableConditionDescriptor.members.find(e => e.field == "a558f8d5-3612-49b3-bc94-a74ff472d63a-8dbc-5e35");
+        if (recTypeData && recTypeData.values) {
+            recTypeIDs = recTypeData.values.join(',');
+        }
+        const reviewData = param.condition.tableConditionDescriptor.members.find(e => e.field == "5368518b-3bc7-4dc1-a22b-0edd26dd806e-8dbc-5e35");
+        if (reviewData && reviewData.value) {
+            reviewType = reviewData.value;
+        }
+    }
+    
+    return new Promise((resolve, reject) => {
+        param.condition.params = { 
+            "eventSrcIDs": eventSrcIDs,
+            "humanId": "100433", 
+            "pageIndex": param.paging.pageIndex,
+            "regionId": regionId,
+            "regionType": regionType,
+            "stateType": stateType,
+            "pageSize": param.paging.pageSize,
+            "recTypeIDs": recTypeIDs,
+            "reviewType": reviewType,
+            "startTime": start,
+            "endTime": end,
+            "disposeNum": window.CSDNDATA.disposeNum,
+            "archiveNum": window.CSDNDATA.archiveNum,
+            "keyWord": param.condition.keyword || null,
+            "tab": window.CSDNDATA.tab || null
+        };
+        console.log(param.condition.params)
+
+        api.API_DATA_EXECUTE("678e6ac5-6479-4da9-9d91-942710a95932-8dbc-5e35", "BUNCHES", param, { lostAbility: "00" })
+            .then(res => {
+                console.log(res)
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+    })
+
+    
+}
+分页问题：
+需要通过param.paging中获取分页参数，同时注意注册的返回的接口中要返回总数，目前使用的接口如果是标准格式灵珑都能分页。

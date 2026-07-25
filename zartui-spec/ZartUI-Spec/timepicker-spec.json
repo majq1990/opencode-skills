@@ -1,0 +1,172 @@
+{
+  "name": "timepicker-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 时间选择框规范，含触发框五态、五种模式：时分秒 / 时分 / 时 / 十二小时制 / 范围选择",
+
+  "trigger": {
+    "description": "触发框，与输入框风格一致，右侧显示时钟图标",
+    "height": "32px",
+    "border_radius": "4px",
+    "padding": "0 32px 0 8px",
+    "font_size": "14px",
+    "color": "#223355",
+    "placeholder_color": "#A8B4C8",
+    "background": "#FFFFFF",
+    "cursor": "pointer",
+    "user_select": "none",
+
+    "clock_icon": {
+      "size": "16×16px",
+      "style": "线状时钟（圆形外框 + 时针分针）",
+      "position": "absolute right: 8px，垂直居中",
+      "color_default": "#A8B4C8",
+      "color_active": "#3388FF"
+    },
+
+    "states": {
+      "default":   { "border": "1px solid #DDE1EB", "background": "#FFFFFF" },
+      "hover":     { "border": "1px solid #3388FF" },
+      "active":    { "border": "1px solid #3388FF", "box_shadow": "0 0 0 2px #D6EDFF", "clock_icon_color": "#3388FF" },
+      "completed": { "border": "1px solid #DDE1EB", "color": "#223355" },
+      "disabled":  { "border": "1px solid #E9ECF2", "background": "#F5F7FA", "color": "#A8B4C8", "cursor": "not-allowed", "pointer_events": "none" },
+      "error":     { "border": "1px solid #FF4433" }
+    },
+
+    "error_message": {
+      "ref": "global-spec.json",
+      "margin_top": "4px",
+      "font_size": "12px",
+      "font_weight": "400",
+      "color": "#FF4433",
+      "layout_note": "触发框与错误提示须包裹在同一独立 wrapper 内"
+    }
+  },
+
+  "panel": {
+    "description": "下拉选项面板通用规则",
+    "offset_top": "4px",
+    "width": "fit-content（由内容自动撑开）",
+    "background": "#FFFFFF",
+    "border": "1px solid #E9ECF2",
+    "border_radius": "4px",
+    "box_shadow": "0 4px 12px rgba(34,51,85,0.10)",
+    "divider_horizontal": "1px solid #E9ECF2（列表区与底部操作区之间）",
+    "divider_vertical": "1px solid #E9ECF2（相邻列之间）",
+
+    "column": {
+      "width": "64px",
+      "max_height": "224px",
+      "overflow_y": "auto",
+      "scrollbar": "隐藏",
+      "padding": "4px 0",
+
+      "header": {
+        "height": "28px",
+        "font_size": "11px",
+        "color": "#A8B4C8",
+        "border_bottom": "1px solid #E9ECF2",
+        "text_align": "center"
+      }
+    },
+
+    "option": {
+      "height": "32px",
+      "font_size": "14px",
+      "text_align": "center",
+      "margin": "0 12px",
+      "border_radius": "4px",
+      "states": {
+        "default":  { "background": "transparent", "color": "#223355" },
+        "hover":    { "background": "#F5F7FA",     "color": "#223355" },
+        "selected": { "background": "#F0F9FF",     "color": "#3388FF", "font_weight": "500" },
+        "disabled": { "color": "#A8B4C8", "cursor": "not-allowed", "pointer_events": "none" }
+      }
+    },
+
+    "footer": {
+      "height": "40px",
+      "padding": "8px 12px",
+      "layout": "flex，space-between",
+
+      "now_btn": {
+        "label": "此刻",
+        "font_size": "13px",
+        "color": "#3388FF",
+        "hover_color": "#2167D9",
+        "position": "左侧"
+      },
+
+      "confirm_btn": {
+        "label": "确定",
+        "height": "26px",
+        "padding": "0 12px",
+        "background": "#3388FF",
+        "hover_background": "#2167D9",
+        "color": "#FFFFFF",
+        "border_radius": "4px",
+        "font_size": "13px",
+        "position": "右侧"
+      }
+    }
+  },
+
+  "modes": {
+    "hms": {
+      "description": "时分秒",
+      "columns": ["时", "分", "秒"],
+      "column_count": 3,
+      "footer": { "now_btn": true, "confirm_btn": true }
+    },
+
+    "hm": {
+      "description": "时分",
+      "columns": ["时", "分"],
+      "column_count": 2,
+      "trigger_width": "fit-content",
+      "footer": { "now_btn": true, "confirm_btn": true }
+    },
+
+    "h": {
+      "description": "时",
+      "columns": ["时"],
+      "column_count": 1,
+      "footer": {
+        "now_btn": true,
+        "now_btn_align": "center",
+        "confirm_btn": false
+      }
+    },
+
+    "hms_12": {
+      "description": "十二小时制",
+      "columns": ["时", "分", "秒", "AM/PM"],
+      "column_count": 4,
+      "ampm_column": {
+        "width": "56px",
+        "font_size": "13px",
+        "header_label": "制",
+        "options": ["AM", "PM"]
+      },
+      "footer": { "now_btn": true, "confirm_btn": true }
+    },
+
+    "range": {
+      "description": "范围选择（开始时间 ~ 结束时间）",
+      "trigger_width": "240px",
+      "trigger_separator": {
+        "label": "—",
+        "color": "#A8B4C8",
+        "font_size": "13px",
+        "margin": "0 6px"
+      },
+      "panel_layout": "左侧时分秒 + 1px #E9ECF2 竖向分隔线 + 右侧时分秒",
+      "left_columns": ["时", "分", "秒"],
+      "right_columns": ["时", "分", "秒"],
+      "footer": {
+        "now_btn": false,
+        "confirm_btn": true,
+        "confirm_btn_align": "右对齐"
+      }
+    }
+  }
+}

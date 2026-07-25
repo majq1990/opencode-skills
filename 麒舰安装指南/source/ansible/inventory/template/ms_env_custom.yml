@@ -1,0 +1,189 @@
+ms:
+  env:
+    custom:
+      linglong:
+        jvm_options:
+        jar_options: |
+          --flowable.database-schema-update=true \
+          --USERCENTER2_ENABLE=true \
+          --oauth2-server=http://egova-admin-service \
+          --oauth2.client.discovery=true \
+          --egova.service.admin.name=egova-admin-service \
+          --egova.service.admin.media-url=/usercenter-api \
+      wukong:
+        jvm_options:
+        jar_options: |
+          --egova.encryptor.type=AES \
+      dex:
+        jvm_options: |
+          -Dloader.path=lib \
+          -Djavax.net.ssl.sessionCacheSize=5120 \
+        jar_options: |
+          --server.tomcat.threads.max=1024 \
+      bigdata:
+        jvm_options: |
+          -Dloader.path=lib \
+          -Djavax.net.ssl.sessionCacheSize=5120 \
+        jar_options: |
+          --BIGDATA_ENABLED=true \
+          --KAFKA_ENABLED=true \
+          --APP_NAME=egova-bigdata-all \
+          --server.tomcat.threads.max=1024 \
+      evaluation:
+        jvm_options: |
+          -Dloader.path=stat_plugin \
+        jar_options: |
+          --ENABLE_SOLID=false \
+      dsscp:
+        jvm_options:
+        jar_options: |
+          --KEY_ENCRYPT_MODE=1 \
+          --ENCRYPTOR_COMPONENT=Wk2uBTeyp6 \
+      eureka:
+        jvm_options:
+        jar_options: |
+          --management.endpoints.enabled-by-default=false \
+          --management.endpoints.web.discovery.enabled=false \
+          --management.server.port=-1 \
+          --eureka.dashboard.enabled=false \
+      media:
+        jvm_options:
+        jar_options:
+      export:
+        jvm_options: |
+          -Dloader.path=export-plugin \
+        jar_options: |
+          --EXPORT_MAX_FILE=100 \
+          --EXPORT_EXECUTOR_CORE_POOL_SIZE=2 \
+          --EXPORT_EXECUTOR_MAX_POOL_SIZE=2 \
+          --EXPORT_EXECUTOR_BLOCKING_QUEUE_SIZE=10 \
+          --IMAGE_EXPORT_EXECUTOR_CORE_POOL_SIZE=2 \
+          --IMAGE_EXPORT_EXECUTOR_MAX_POOL_SIZE=2 \
+          --IMAGE_EXPORT_EXECUTOR_BLOCKING_QUEUE_SIZE=10 \
+          --FORCE_DELETE=true \
+          --HTTP_FILE_USE_DB=false \
+          --COMMITTER_NAME=HttpFile \
+          --HTTP_FILE_USERNAME=egovahttp \
+          --HTTP_FILE_PASSWORD=Http@123EgoVe \
+          --TEMP_FOLDER=/egova/apps/basic/export/tmp \
+      httpfileservice:
+        jvm_options:
+        jar_options: |
+          --EUREKA_ENABLE=false \
+          --LOG_PATH={{ app_root_dir }}/{{ web_app_dir }}/logs \
+          --CONTEXT_PATH=/HttpFileServer \
+          --USER_NAME='ENC(w2gc/gPK/v/4wpojCdlxG4OgJbnQgTOKu5anW2ku4wA=)' \
+          --USER_PASS='ENC(8ddYKBMfBoJMTtjsX+dR4ffvQF4nvcryN57ovy8NSp8=)' \
+          --MEDIA_ROOT=/egova/MediaRoot/ \
+          --NETTY_PORT=8087 \
+          --EXE_GROUP_SIZE=20 \
+          --UPLOAD_WHITE_LIST=jpg,jpeg,png,gif,tif,bmp,dwg,html,rtf,xml,zip,xls,xlsx,doc,docx,csv,zip,rar,txt,pdf,mp3,mp4,wav,avi,amr,rm,mpg,mov,sql,proxy,json,wma,3gp,asf,wmv,thumb \
+          --UPLOAD_BLACK_LIST= \
+          --DOWNLOAD_WHITE_LIST=jpg,jpeg,png,gif,tif,bmp,dwg,html,rtf,xml,zip,xls,xlsx,doc,docx,csv,zip,rar,txt,pdf,mp3,mp4,wav,avi,amr,rm,mpg,mov,sql,proxy,json,wma,3gp,asf,wmv,thumb \
+          --DOWNLOAD_BLACK_LIST= \
+          --JASYPT_ENABLED=true \
+          --JASYPT_KEY_FILE=ZUdvdmEyMDIyQFNNNEtFWQ== \
+      giscenter:
+        jvm_options:
+        jar_options:
+          --EUREKA_ENABLE=false \
+          --DATA_DIR={{ app_root_dir }}/data \
+          --LOG_PATH={{ app_root_dir }}/giscenter/logs \
+          {% for depend in microservice[app_type][app_name].depends %}
+          {% if depend.type == 'postgresql' %}
+          --PG_PUBLIC_URL={{ postgresql[depend.depend_key].ip }}:{{ postgresql[depend.depend_key].port }} \
+          {% endif %}
+          {% if depend.type == 'minio' %}
+          --MINIO_CATALOG_USER={{ minio[depend.depend_key].catalog_user }} \
+          --MINIO_CATALOG_PASSWORD={{ minio[depend.depend_key].catalog_password }} \
+          {% endif %}
+          {% endfor %}
+
+      gisserver:
+        jvm_options:
+        jar_options: |
+          --EUREKA_ENABLE=false \
+          --DATA_DIR={{ app_root_dir }}/data \
+          
+      facv22:
+        jvm_options:
+        jar_options: |
+       
+      facv20:
+        jvm_options:
+        jar_options:
+      datamgr:
+        jvm_options:
+        jar_options: |
+          --LIQUIBASE_ENABLE=true \
+          --DSSCP_INIT=false \
+      check:
+        jvm_options:
+        jar_options: |
+          --LIQUIBASE_ENABLE=true \
+      spm:
+        jvm_options:
+        jar_options: |
+          --LIQUIBASE_ENABLE=true \
+      tms:
+        jvm_options:
+        jar_options: |
+          --LIQUIBASE_ENABLE=true \
+      screen:
+        jvm_options:
+        jar_options:
+      indicator:
+        jvm_options:
+        jar_options: |
+          --LIQUIBASE_ENABLE=true \
+          --DSSCP_INIT=false \
+          --WIZDOMURL=http://{{ hostvars[inventory_hostname]['ansible_ssh_host'] }}:8080/eUrbanMIS \
+         
+      template:
+        jvm_options:
+        jar_options: |
+          --LIQUIBASE_ENABLE=true \
+          --DSSCP_INIT=false \
+          --DOCUMENT_INNERURL=http://{{ hostvars[inventory_hostname]['ansible_ssh_host'] }}:9090 \
+          --DOCUMENTJSURL=http://{{ hostvars[inventory_hostname]['ansible_ssh_host'] }}:9090 \
+          --TEMPLATE_URL=http://{{ hostvars[inventory_hostname]['ansible_ssh_host'] }}:{{ web_app_port }}/{{ microservice[app_type][app_name].url.backend }} \
+
+      ibility:
+        jvm_options:
+        jar_options: |
+          --LIQUIBASE_ENABLE=true \
+          --DSSCP_INIT=false \
+          {% for depend in microservice[app_type][app_name].depends %}
+          {% if depend.type == 'microservice' %}
+          {% if depend.sub_type == 'usercenter' %}
+          --CAS_ENDPOINT=http://{{ microservice.usercenter[depend.depend_key].ip }}:{{ microservice.usercenter[depend.depend_key].server_port }}/usercenter-api \
+          {% endif %}
+          {% endif %}
+          {% endfor %}
+          --CAS_CLIENT_ID=1737034036922023856 \
+          --CAS_CLIENT_SECRET=3c4efdb337 \
+
+
+      lampblack:
+        jvm_options:
+        jar_options:
+      itemlist:
+        jvm_options:
+        jar_options: |
+          --CAS_WIZDOM_ENDPOINT=\"http://127.0.0.1:8081/eUrbanMIS/api/\" \
+      usercenter:
+        jvm_options:
+        jar_options:
+      xuanzang:
+        jvm_options:
+        jar_options: |
+          --EUREKA_ENABLE=false \
+          --EUREKA_URL=http://eGovaEureka%402023:eGovaEureka%402023@127.0.0.1:10100/eureka/ \
+          --USERCENTER_CLIENT_ID=xuanzang \
+          --USERCENTER_CLIENT_SECRET=3ea8c68449 \
+      dataflow:
+        jvm_options:
+        jar_options: |
+          --USERCENTER_URL=/usercenter-api/sso/authorize \
+          --USERCENTER_CLIENT_ID=dataflow \
+          --USERCENTER_CLIENT_SECRET=9a25395cbf \

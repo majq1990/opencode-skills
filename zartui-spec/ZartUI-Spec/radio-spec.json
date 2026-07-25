@@ -1,0 +1,87 @@
+{
+  "name": "radio-spec",
+  "version": "1.1.0",
+  "description": "ZartUI 单选框规范，含五种状态（默认/Hover/选中/禁用未选/禁用选中）× 两种形态（基础单选/卡片单选）",
+
+  "size": {
+    "width": "16px",
+    "height": "16px",
+    "border_radius": "50%",
+    "label_gap": "6px"
+  },
+
+  "states": {
+    "default": {
+      "border": "1px solid #A8B4C8",
+      "background": "#FFFFFF"
+    },
+    "hover": {
+      "border": "1px solid #3388FF",
+      "background": "#FFFFFF",
+      "note": "禁用态不响应 Hover"
+    },
+    "checked": {
+      "border": "5px solid #3388FF",
+      "background": "#FFFFFF",
+      "note": "加粗描边表达选中态，无内圆点"
+    },
+    "disabled_default": {
+      "border": "1px solid #DDE1EB",
+      "background": "#F5F7FA",
+      "cursor": "not-allowed"
+    },
+    "disabled_checked": {
+      "border": "5px solid #ADD8FF",
+      "background": "#FFFFFF",
+      "cursor": "not-allowed"
+    }
+  },
+
+  "label_text": {
+    "font_size": "14px",
+    "color_default": "#223355",
+    "color_disabled": "#A8B4C8",
+    "gap": "6px"
+  },
+
+  "group": {
+    "direction_horizontal": { "gap": "20px", "align_items": "center" },
+    "direction_vertical":   { "gap": "12px" }
+  },
+
+  "card_radio": {
+    "description": "卡片单选，整张卡片为选择区域，右侧垂直居中显示单选框圆点，选中后卡片边框变蓝、圆点变为选中态加粗描边",
+    "sizes": {
+      "sm": { "width": "200px", "padding": "16px", "title_font_size": "14px" },
+      "lg": { "width": "320px", "padding": "20px", "title_font_size": "16px" }
+    },
+    "card": {
+      "border_radius": "8px",
+      "border_default": "1px solid #DDE1EB",
+      "border_hover":   "1px solid #3388FF",
+      "border_checked": "1px solid #3388FF",
+      "background": "#FFFFFF",
+      "cursor": "pointer"
+    },
+    "radio_dot": {
+      "position": "右侧垂直居中，top: 50%，right: 16px，transform: translateY(-50%)",
+      "size": "16×16px",
+      "border_radius": "50%",
+      "default": "1px solid #A8B4C8，背景 #FFFFFF",
+      "checked": "5px solid #3388FF，背景 #FFFFFF"
+    },
+    "title": { "font_weight": "500", "color": "#223355" },
+    "desc":  { "font_size": "12px", "color": "#6B7A99", "line_height": "18px", "margin_top": "4px" }
+  },
+
+  "known_pitfalls": [
+    {
+      "issue": "选中态用 border-color 改变颜色但粗细不变，视觉上与未选态区分不明显",
+      "fix": "选中态改用 border: 5px solid #3388FF，通过加粗描边明确表达选中，无需内圆点"
+    },
+    {
+      "issue": "禁用选中态与正常选中态颜色相同，无法区分",
+      "fix": "禁用选中态改用 #ADD8FF，与正常态 #3388FF 区分"
+    }
+  ]
+}

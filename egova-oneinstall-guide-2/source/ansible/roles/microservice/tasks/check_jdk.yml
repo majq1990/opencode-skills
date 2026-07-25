@@ -1,0 +1,12 @@
+---
+- name: Check if required JDK version is installed
+  stat:
+    path: "/usr/java/jdk{{ service_jdk_version }}"
+  register: jdk_path
+
+- name: Install required JDK version if not present
+  include_role:
+    name: jdk
+  vars:
+    required_jdk_version: "{{ service_jdk_version }}"
+  when: not jdk_path.stat.exists

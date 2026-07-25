@@ -1,0 +1,12 @@
+{%- set db_prefix = 'cetus' if 'cetus' in depend_key else 'mysql' %}
+{
+	"ip":"{{ vars[db_prefix][depend_key].ip }}",
+	"port":{{ vars[db_prefix][depend_key].port }},
+	"user":"{{ vars[db_prefix][depend_key].username }}",
+	"password":"{{ vars[db_prefix][depend_key].password }}",
+	"dbname":"facedb",
+	"tableface":"t_face_info",
+	"tabledictionary":"t_dictionary_item",
+	"errcodes":"2006,1302",
+	"keepalive":18000
+}

@@ -1,0 +1,267 @@
+{
+  "name": "table-form-spec",
+  "version": "1.0.0",
+  "description": "ZartUI 表格表单规范，涵盖常规表格表单、选择类表格表单、上传图片/附件表格三种形态",
+
+  "table": {
+    "border_collapse": "collapse",
+    "border": "1px solid #DDE1EB",
+    "cell": {
+      "border": "1px solid #DDE1EB",
+      "padding": "0 12px",
+      "height": "48px",
+      "font_size": "14px",
+      "color": "#223355",
+      "vertical_align": "middle"
+    },
+    "header": {
+      "background": "#F5F7FA",
+      "font_weight": "400",
+      "color": "#223355",
+      "font_size": "14px",
+      "text_align": "left"
+    },
+    "row_hover": {
+      "background": "#F5F7FA"
+    }
+  },
+
+  "required_label": {
+    "text": "（必填）",
+    "color": "#FF4433",
+    "margin_left": "4px",
+    "position": "标题文字右侧"
+  },
+  "optional_label": {
+    "text": "（非必填）",
+    "color": "#A8B4C8",
+    "margin_left": "4px",
+    "position": "标题文字右侧"
+  },
+
+  "add_row_button": {
+    "ref": "button-pill-spec.json",
+    "position": "表格左上角",
+    "border_radius": "100px",
+    "border": "1px solid #DDE1EB",
+    "background": "#FFFFFF",
+    "icon_color": "#3388FF",
+    "text_color": "#3388FF",
+    "states": {
+      "hover": { "background": "#F0F9FF", "border_color": "#3388FF" }
+    },
+    "behavior": "点击后新行插入到第一行，序号自动重排"
+  },
+
+  "col_index": {
+    "width": "56px",
+    "text_align": "center",
+    "color": "#6B7A99"
+  },
+
+  "col_action": {
+    "width": "72px",
+    "text_align": "left",
+    "delete_button": {
+      "type": "文字按钮",
+      "color": "#3388FF",
+      "hover_color": "#2167D9"
+    }
+  },
+
+  "controls": {
+    "description": "所有控件通过 position: absolute; inset: 0 填满单元格，无内嵌边框，父 td 设置 position: relative",
+
+    "input": {
+      "ref": "input-spec.json",
+      "fill_cell": true,
+      "font_size": "14px",
+      "color": "#223355",
+      "placeholder_color": "#A8B4C8",
+      "border": "none",
+      "background": "transparent"
+    },
+
+    "textarea": {
+      "fill_cell": true,
+      "font_size": "14px",
+      "color": "#223355",
+      "placeholder_color": "#A8B4C8",
+      "border": "none",
+      "background": "transparent",
+      "resize": "none",
+      "padding": "8px 12px"
+    },
+
+    "radio_group": {
+      "ref": "radio-spec.json",
+      "layout": "水平排列",
+      "gap": "16px",
+      "radio": {
+        "unchecked": { "border": "1px solid #DDE1EB", "background": "#FFFFFF" },
+        "checked": { "border": "2px solid #3388FF", "inner_dot": "#3388FF" }
+      }
+    },
+
+    "select": {
+      "ref": "select-spec.json",
+      "fill_cell": true,
+      "chevron_color": "#A8B4C8",
+      "value_color": "#223355",
+      "placeholder_color": "#A8B4C8"
+    },
+
+    "number_input": {
+      "ref": "number-input-spec.json",
+      "fill_cell": true,
+      "minus_button_width": "36px",
+      "plus_button_width": "36px",
+      "divider": "1px solid #E9ECF2",
+      "button_hover_background": "#F5F7FA"
+    },
+
+    "switch": {
+      "ref": "switch-spec.json",
+      "track_width": "36px",
+      "track_height": "20px",
+      "track_border_radius": "10px",
+      "states": {
+        "on": { "track_background": "#3388FF", "thumb": "白色居右" },
+        "off": { "track_background": "#DDE1EB", "thumb": "白色居左" }
+      }
+    },
+
+    "timepicker": {
+      "ref": "timepicker-spec.json",
+      "fill_cell": true,
+      "icon_color": "#A8B4C8",
+      "value_color": "#223355",
+      "placeholder_color": "#A8B4C8"
+    },
+
+    "multiselect": {
+      "ref": "multiselect-spec.json",
+      "fill_cell": true,
+      "tag": {
+        "height": "22px",
+        "padding": "0 6px",
+        "border_radius": "3px",
+        "background": "#F0F9FF",
+        "color": "#223355",
+        "border": "1px solid #DDE1EB"
+      },
+      "overflow_badge": {
+        "format": "+N",
+        "background": "#F0F9FF",
+        "color": "#3388FF",
+        "border_radius": "3px",
+        "height": "22px",
+        "padding": "0 6px"
+      },
+      "chevron_color": "#A8B4C8"
+    },
+
+    "modal_select": {
+      "description": "查找带回控件，点击右侧选择按钮后弹窗选择",
+      "fill_cell": true,
+      "value_color": "#223355",
+      "placeholder_color": "#A8B4C8",
+      "separator": "1px solid #E9ECF2",
+      "select_button": {
+        "color": "#3388FF",
+        "font_size": "13px",
+        "height": "28px",
+        "padding": "0 8px",
+        "border_radius": "4px",
+        "hover_color": "#2167D9"
+      },
+      "action_buttons": {
+        "description": "已选时显示清除、刷新图标按钮",
+        "size": "28×28px",
+        "border_radius": "4px",
+        "hover_background": "#F5F7FA"
+      }
+    }
+  },
+
+  "upload_table": {
+    "description": "上传图片 / 附件专用表格",
+    "row_height": "70px",
+    "cell_padding_left": "8px",
+
+    "upload_trigger": {
+      "width": "60px",
+      "height": "60px",
+      "border": "1px solid #DDE1EB",
+      "border_radius": "4px",
+      "background": "#F5F7FA",
+      "icon": {
+        "size": "16×16px",
+        "color": "#A8B4C8",
+        "shape": "+"
+      },
+      "position": "已上传内容最左侧第一个，距单元格左边框 8px",
+      "states": {
+        "hover": { "border_color": "#3388FF", "background": "#F0F9FF", "icon_color": "#3388FF" }
+      }
+    },
+
+    "image_item": {
+      "width": "60px",
+      "height": "60px",
+      "border_radius": "4px",
+      "object_fit": "cover",
+      "delete_button": {
+        "trigger": "悬停时显示",
+        "position": "右上角 top: 2px, right: 2px",
+        "size": "16×16px",
+        "border_radius": "50%",
+        "background": "rgba(34,51,85,0.45)",
+        "icon": "白色 × 图标 8×8px"
+      }
+    },
+
+    "attachment_item": {
+      "height": "60px",
+      "min_width": "140px",
+      "max_width": "180px",
+      "border": "1px solid #DDE1EB",
+      "border_radius": "4px",
+      "background": "#F5F7FA",
+      "layout": "横向排列，overflow-x: auto 可滚动",
+      "structure": "左侧图标 | 中间文件名 | 右侧删除图标",
+      "file_icon": {
+        "width": "40px",
+        "height": "40px",
+        "border_radius": "4px",
+        "font_size": "11px",
+        "font_weight": "600",
+        "color": "#FFFFFF",
+        "types": {
+          "DOC": "#2B579A",
+          "PDF": "#E84B3A",
+          "XLS": "#217346",
+          "PPT": "#D24726"
+        }
+      },
+      "file_name": {
+        "font_size": "12px",
+        "color": "#223355",
+        "overflow": "ellipsis"
+      },
+      "delete_button": {
+        "trigger": "悬停时显示",
+        "icon": "线性垃圾桶，16×16px",
+        "color": "#A8B4C8",
+        "hover_color": "#FF4433"
+      }
+    }
+  },
+
+  "error_message": {
+    "ref": "global-spec.json",
+    "margin_top": "4px",
+    "font_size": "12px",
+    "color": "#FF4433"
+  }
+}

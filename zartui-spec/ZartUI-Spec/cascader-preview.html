@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZartUI · 级联选择 规范预览</title>
+<style>
+:root {
+  --color-bg-page:      #F5F7FA;
+  --color-bg-panel:     #FFFFFF;
+  --color-text-primary: #081126;
+  --color-text-body:    #223355;
+  --color-text-muted:   #6B7A99;
+  --color-text-light:   #A8B4C8;
+  --color-primary:      #3388FF;
+  --color-primary-soft: #F0F9FF;
+  --color-bg-soft:      #F5F7FA;
+  --color-border:       #DDE1EB;
+  --color-border-soft:  #E9ECF2;
+  --font-family:        'PingFang SC','Microsoft YaHei',sans-serif;
+  --radius-m: 8px;
+  --radius-s: 4px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+button { font: inherit; border: none; background: none; cursor: pointer; padding: 0; }
+input { font: inherit; outline: none; }
+body {
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-body);
+  background: var(--color-bg-page);
+  padding: 40px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  margin-bottom: 32px;
+}
+
+.spec-section {
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-m);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.spec-section-title {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-soft);
+  margin-bottom: 24px;
+}
+
+.spec-block-title {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.demo-block { margin-bottom: 32px; }
+.demo-row { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.spec-table th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border-soft);
+  background: #F5F7FA;
+}
+.spec-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border-soft);
+  vertical-align: middle;
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td code {
+  font-family: 'SF Mono','Consolas',monospace;
+  font-size: 12px;
+  background: #F5F7FA;
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  color: var(--color-primary);
+}
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 14px; height: 14px; border-radius: var(--radius-s); border: 1px solid var(--color-border-soft); flex-shrink: 0; }
+
+/* ══════════════════════════════════════
+   级联选择器
+   ══════════════════════════════════════ */
+
+/* 触发输入框 */
+.cas-input {
+  display: inline-flex;
+  align-items: center;
+  width: 320px;
+  min-height: 32px;
+  padding: 4px 8px 4px 12px;
+  background: #FFFFFF;
+  border: 1px solid #DDE1EB;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  position: relative;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.cas-input:hover,
+.cas-input.is-focus { border-color: #3388FF; }
+
+.cas-input-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: #223355;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cas-input-placeholder {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: #A8B4C8;
+}
+
+.cas-input-arrow {
+  width: 14px;
+  height: 14px;
+  color: #A8B4C8;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.cas-input.is-open .cas-input-arrow { transform: rotate(180deg); }
+
+/* 多选标签 */
+.cas-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 6px;
+  background: #F5F7FA;
+  color: #223355;
+  font-size: 12px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.cas-tag-close {
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6B7A99;
+}
+.cas-tag-close svg {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.cas-tag-count {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 6px;
+  background: #F0F9FF;
+  color: #3388FF;
+  font-size: 12px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* 下拉面板 */
+.cas-panel {
+  display: flex;
+  width: 512px;
+  background: #FFFFFF;
+  box-shadow: 0 2px 50px 0 #0043ca33;
+  border-radius: 4px;
+  filter: blur(0);
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+/* 列 */
+.cas-col {
+  flex: 1;
+  max-height: 337px;
+  overflow-y: auto;
+  padding: 8px;
+  border-right: 1px solid #E9ECF2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cas-col:last-child { border-right: none; }
+
+/* 选项 */
+.cas-option {
+  height: 32px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #223355;
+  background: #FFFFFF;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cas-option:hover { background: #F5F7FA; }
+.cas-option.is-active {
+  background: #F0F9FF;
+  color: #3388FF;
+}
+.cas-option-text { flex: 1; }
+.cas-option-arrow {
+  width: 14px;
+  height: 14px;
+  color: #A8B4C8;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 复选框（统一规范） */
+.cas-check {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #A8B4C8;
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFFFFF;
+  transition: border-color 0.15s, background 0.15s;
+}
+.cas-option:hover .cas-check { border-color: #3388FF; }
+.cas-check.is-checked {
+  background: #3388FF;
+  border-color: #3388FF;
+}
+.cas-check.is-checked::after {
+  content: '';
+  width: 10px;
+  height: 8px;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='8' viewBox='0 0 10 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 4L4 6.5L8.5 1.5' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.cas-check.is-indeterminate {
+  background: #3388FF;
+  border-color: #3388FF;
+}
+.cas-check.is-indeterminate::after {
+  content: '';
+  width: 8px;
+  height: 2px;
+  background: #FFFFFF;
+  border-radius: 1px;
+}
+
+/* 全选区（位于列底部） */
+.cas-select-all {
+  height: 32px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #223355;
+  border-top: 1px solid #E9ECF2;
+  margin-top: auto;
+  flex-shrink: 0;
+  background: #FFFFFF;
+}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">ZartUI · 级联选择 规范预览</h1>
+
+<!-- 单选 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">1. 级联选择 · 单选</h2>
+
+  <div class="demo-row">
+    <!-- 触发框已选状态 -->
+    <div>
+      <div class="spec-block-title">触发框（已选三级）</div>
+      <div class="cas-input">
+        <span class="cas-input-text">华东 / 浙江 / 杭州</span>
+        <svg class="cas-input-arrow" viewBox="0 0 14 14"><path d="M3 5l4 4 4-4"/></svg>
+      </div>
+    </div>
+    <!-- 触发框占位 -->
+    <div>
+      <div class="spec-block-title">触发框（未选）</div>
+      <div class="cas-input">
+        <span class="cas-input-placeholder">请选择地区</span>
+        <svg class="cas-input-arrow" viewBox="0 0 14 14"><path d="M3 5l4 4 4-4"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-block" style="margin-top:24px;">
+    <div class="spec-block-title">展开面板（三级联动，间隔线分隔）</div>
+    <div class="cas-panel">
+      <!-- 一级 -->
+      <div class="cas-col">
+        <div class="cas-option is-active">
+          <span class="cas-option-text">华东</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="cas-option">
+          <span class="cas-option-text">华南</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="cas-option">
+          <span class="cas-option-text">华北</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="cas-option">
+          <span class="cas-option-text">西南</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+      </div>
+
+      <!-- 二级 -->
+      <div class="cas-col">
+        <div class="cas-option is-active">
+          <span class="cas-option-text">浙江</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="cas-option">
+          <span class="cas-option-text">江苏</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="cas-option">
+          <span class="cas-option-text">上海</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+      </div>
+
+      <!-- 三级（叶子节点无箭头） -->
+      <div class="cas-col">
+        <div class="cas-option is-active"><span class="cas-option-text">杭州</span></div>
+        <div class="cas-option"><span class="cas-option-text">宁波</span></div>
+        <div class="cas-option"><span class="cas-option-text">温州</span></div>
+        <div class="cas-option"><span class="cas-option-text">绍兴</span></div>
+        <div class="cas-option"><span class="cas-option-text">嘉兴</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <tbody>
+      <tr><td style="width:160px;">触发框</td><td>高 <code>32px</code>，圆角 <code>4px</code>，边框 <code>1px solid #DDE1EB</code>，Hover/Focus <code>#3388FF</code></td></tr>
+      <tr><td>占位文字</td><td><code>14px · #A8B4C8</code></td></tr>
+      <tr><td>已选展示</td><td>各级名称用 ` / ` 拼接，颜色 <code>#223355</code></td></tr>
+      <tr><td>下拉箭头</td><td><code>14×14px</code>，颜色 <code>#A8B4C8</code>，展开时 <code>rotate(180deg)</code></td></tr>
+      <tr><td>面板</td><td>白底，宽 <code>512px</code>，高度根据内容自适应，圆角 <code>4px</code>，阴影 <code>0 2px 50px 0 #0043ca33</code>，filter <code>blur(0)</code></td></tr>
+      <tr><td>列宽 / 列内边距</td><td>三列等宽，<code>padding: 8px</code>，列之间 <code>1px solid #E9ECF2</code> 间隔线</td></tr>
+      <tr><td>列高度</td><td>最大 <code>337px</code>，超出滚动</td></tr>
+      <tr><td>选项</td><td>高 <code>32px</code>，圆角 <code>4px</code>，间距 <code>4px</code>；默认文字 <code>#223355</code></td></tr>
+      <tr><td>Hover</td><td>背景 <code>#F5F7FA</code></td></tr>
+      <tr><td>选中</td><td>背景 <code>#F0F9FF</code>，文字 <code>#3388FF</code></td></tr>
+      <tr><td>下级箭头</td><td>非叶子节点右侧显示 <code>14×14px</code> 朝右箭头，颜色 <code>#A8B4C8</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 多选 -->
+<div class="spec-section">
+  <h2 class="spec-section-title">2. 级联选择 · 多选</h2>
+
+  <div class="demo-row">
+    <!-- 触发框：标签可显示 -->
+    <div>
+      <div class="spec-block-title">触发框（已选标签可全部显示）</div>
+      <div class="cas-input" style="width:340px;">
+        <span class="cas-tag">华东/浙江/杭州<span class="cas-tag-close"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg></span></span>
+        <span class="cas-tag">华东/江苏/南京<span class="cas-tag-close"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg></span></span>
+        <svg class="cas-input-arrow" viewBox="0 0 14 14"><path d="M3 5l4 4 4-4"/></svg>
+      </div>
+    </div>
+
+    <!-- 触发框：超出显示数量 -->
+    <div>
+      <div class="spec-block-title">触发框（标签过多，显示数量）</div>
+      <div class="cas-input" style="width:280px;">
+        <span class="cas-tag">华东/浙江/杭州<span class="cas-tag-close"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg></span></span>
+        <span class="cas-tag-count">+4</span>
+        <svg class="cas-input-arrow" viewBox="0 0 14 14"><path d="M3 5l4 4 4-4"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-block" style="margin-top:24px;">
+    <div class="spec-block-title">展开面板（带复选框 + 全选）</div>
+    <div class="cas-panel">
+      <!-- 一级 -->
+      <div class="cas-col">
+        <div class="cas-option is-active">
+          <span class="cas-check is-indeterminate"></span>
+          <span class="cas-option-text">华东</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="cas-option">
+          <span class="cas-check"></span>
+          <span class="cas-option-text">华南</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="cas-option">
+          <span class="cas-check"></span>
+          <span class="cas-option-text">华北</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="cas-select-all">
+          <span class="cas-check is-indeterminate"></span>
+          <span>全选</span>
+        </div>
+      </div>
+
+      <!-- 二级 -->
+      <div class="cas-col">
+        <div class="cas-option is-active">
+          <span class="cas-check is-checked"></span>
+          <span class="cas-option-text">浙江</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="cas-option">
+          <span class="cas-check is-indeterminate"></span>
+          <span class="cas-option-text">江苏</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="cas-option">
+          <span class="cas-check"></span>
+          <span class="cas-option-text">上海</span>
+          <svg class="cas-option-arrow" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4"/></svg>
+        </div>
+        <div class="cas-select-all">
+          <span class="cas-check is-indeterminate"></span>
+          <span>全选</span>
+        </div>
+      </div>
+
+      <!-- 三级 -->
+      <div class="cas-col">
+        <div class="cas-option">
+          <span class="cas-check is-checked"></span>
+          <span class="cas-option-text">杭州</span>
+        </div>
+        <div class="cas-option">
+          <span class="cas-check is-checked"></span>
+          <span class="cas-option-text">宁波</span>
+        </div>
+        <div class="cas-option">
+          <span class="cas-check is-checked"></span>
+          <span class="cas-option-text">温州</span>
+        </div>
+        <div class="cas-option">
+          <span class="cas-check is-checked"></span>
+          <span class="cas-option-text">绍兴</span>
+        </div>
+        <div class="cas-select-all">
+          <span class="cas-check is-checked"></span>
+          <span>全选</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-block-title">规格参数</div>
+  <table class="spec-table">
+    <tbody>
+      <tr><td style="width:160px;">触发框</td><td>规格同单选；多选时已选项以标签形式展示</td></tr>
+      <tr><td>已选标签</td><td>高 <code>22px</code>，圆角 <code>4px</code>，背景 <code>#F5F7FA</code>，文字 <code>#223355</code>；右侧关闭图标 <code>10×10px</code></td></tr>
+      <tr><td>溢出展示</td><td>显示不下时使用 "+N" 角标（背景 <code>#F0F9FF</code>，文字 <code>#3388FF</code>）</td></tr>
+      <tr><td>复选框</td><td><code>14×14px</code>，圆角 <code>4px</code>；选中 / 半选背景均为 <code>#3388FF</code></td></tr>
+      <tr><td>全选行</td><td>位于每列底部，复选框 + "全选" 文字，上方 <code>1px solid #E9ECF2</code> 分隔</td></tr>
+      <tr><td>选项布局</td><td>左侧复选框 + 文字 + 右侧下级箭头（非叶子节点）</td></tr>
+      <tr><td>父子联动</td><td>子节点全选 → 父节点选中；部分选 → 父节点半选</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

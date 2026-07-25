@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ZartUI — 视频预览</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F5F7FA; padding: 40px; }
+h1 { font-size: 20px; font-weight: 600; color: #081126; margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: #6B7A99; margin-bottom: 36px; }
+h2 { font-size: 15px; font-weight: 600; color: #223355; margin-bottom: 20px; margin-top: 32px; }
+.section { background: #FFFFFF; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; }
+.trigger-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 20px; border-radius: 4px;
+  border: 1px solid #DDE1EB; background: #FFFFFF;
+  font-size: 14px; color: #223355; cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.trigger-btn:hover { border-color: #3388FF; background: #F0F9FF; color: #3388FF; }
+
+/* ===================== 预览遮罩层 ===================== */
+.z-video-viewer {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+.z-video-viewer.is-open { display: flex; }
+
+.z-viewer-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* 左侧主区域 */
+.z-viewer-main {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 顶部信息 */
+.z-viewer-header {
+  position: relative;
+  z-index: 10;
+  padding: 24px 32px 0;
+}
+.z-viewer-uploader {
+  font-size: 14px;
+  font-weight: 500;
+  color: #FFFFFF;
+}
+
+/* 视频舞台 */
+.z-viewer-stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* 视频容器 */
+.z-video-wrap {
+  position: relative;
+  width: 1072px;
+  height: 724px;
+  max-width: calc(100% - 120px);
+  max-height: calc(100% - 40px);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0a0a0a;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* 风景照背景 */
+.z-video-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    url('https://picsum.photos/seed/landscape-mountain/1072/724') center/cover no-repeat;
+}
+/* 风景照上叠一层轻微暗化，让控件更清晰 */
+.z-video-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.15);
+}
+
+/* 底部渐变遮罩（让进度条和控件清晰可见） */
+.z-video-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* 大播放按钮（未播放时显示） */
+.z-video-play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  z-index: 6;
+  border: none;
+  flex-shrink: 0;
+}
+.z-video-play-btn:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: translate(-50%, -50%) scale(1.05);
+}
+.z-video-play-btn::after {
+  content: '';
+  display: block;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 16px 0 16px 28px;
+  border-color: transparent transparent transparent #000000;
+  margin-left: 6px;
+}
+.z-video-play-btn.is-hidden { display: none; }
+
+/* ---- 进度条 ---- */
+.z-video-progress-wrap {
+  position: absolute;
+  bottom: 48px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  /* 点击区域加高，方便交互 */
+  padding: 8px 0;
+  margin-bottom: -8px;
+  z-index: 6;
+  cursor: pointer;
+}
+/* 实际轨道 */
+.z-video-progress-track {
+  position: relative;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+}
+/* 已播放部分 */
+.z-video-progress-bar {
+  height: 100%;
+  width: 35%;
+  background: #3388FF;
+  position: relative;
+  pointer-events: none;
+}
+/* 进度圆点 */
+.z-video-progress-dot {
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #3388FF;
+  border: 2px solid #FFFFFF;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* 播放控制栏 */
+.z-video-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  z-index: 6;
+}
+.z-video-controls-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.z-video-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.z-ctrl-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.z-ctrl-btn:hover { background: rgba(255,255,255,0.15); color: #FFFFFF; }
+
+.z-video-time {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+}
+
+.z-video-speed {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  height: 32px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  border: none;
+  background: transparent;
+}
+.z-video-speed:hover { background: rgba(255,255,255,0.15); color: #FFFFFF; }
+
+/* 左右切换按钮 */
+.z-viewer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  transition: background 0.15s;
+  z-index: 10;
+}
+.z-viewer-nav:hover { background: rgba(0, 0, 0, 0.65); }
+.z-viewer-nav.is-prev { left: 24px; }
+.z-viewer-nav.is-next { right: 24px; }
+
+/* ===================== 右侧抽屉 ===================== */
+.z-viewer-drawer {
+  position: relative;
+  z-index: 10;
+  width: 392px;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.6);
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+.z-viewer-drawer::-webkit-scrollbar { width: 4px; }
+.z-viewer-drawer::-webkit-scrollbar-track { background: transparent; }
+.z-viewer-drawer::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+.z-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.z-drawer-title {
+  font-size: 13px;
+  color: #FFFFFF;
+}
+.z-drawer-icon-btn {
+  width: 28px; height: 28px;
+  border-radius: 4px; border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.z-drawer-icon-btn:hover { color: #FFFFFF; }
+
+/* 多组 Tab 头 */
+.z-drawer-tabs-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  margin: 0 -20px 16px;
+  padding: 0 20px;
+}
+.z-drawer-tabs { display: flex; align-items: center; flex: 1; }
+.z-drawer-tab {
+  position: relative;
+  height: 44px; padding: 0 12px;
+  display: flex; align-items: center;
+  font-size: 14px; color: rgba(255,255,255,0.4);
+  cursor: pointer; border: none; background: transparent;
+  transition: color .15s; white-space: nowrap;
+}
+.z-drawer-tab:hover { color: rgba(255,255,255,0.7); }
+.z-drawer-tab.is-active { color: #FFFFFF; font-weight: 500; }
+.z-drawer-tab::after {
+  content: '';
+  position: absolute;
+  left: 12px; right: 12px; bottom: -1px;
+  height: 2px; background: transparent; border-radius: 1px;
+  transition: background .15s;
+}
+.z-drawer-tab.is-active::after { background: #FFFFFF; }
+
+/* 视频列表 */
+.z-video-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 单条视频行 */
+.z-video-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 6px;
+  transition: background 0.15s;
+}
+.z-video-item:hover { background: rgba(255,255,255,0.06); }
+.z-video-item.is-active { background: rgba(255,255,255,0.1); }
+
+/* 缩略图 120×80 */
+.z-video-thumb {
+  width: 120px;
+  height: 80px;
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  border: 2px solid transparent;
+  transition: border-color 0.15s;
+}
+.z-video-item.is-active .z-video-thumb { border-color: #3388FF; }
+
+.z-video-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* 缩略图播放图标叠层 */
+.z-video-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.2);
+}
+.z-video-thumb-play {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.7);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.z-video-thumb-play::after {
+  content: '';
+  display: block;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 5px 0 5px 9px;
+  border-color: transparent transparent transparent #000;
+  margin-left: 2px;
+}
+
+/* 视频信息 */
+.z-video-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.z-video-name {
+  font-size: 14px;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.z-video-duration {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+}
+</style>
+</head>
+<body>
+
+<h1>ZartUI — 视频预览 VideoViewer</h1>
+<p class="page-desc">全屏蒙层视频预览，进度条 + 播放控制栏，右侧抽屉显示视频列表</p>
+
+<h2>触发预览</h2>
+<div class="section">
+  <div style="display:flex;gap:12px;">
+    <button class="trigger-btn" onclick="openViewer(false)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 2.5l10 5.5-10 5.5V2.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+      </svg>
+      单组视频预览
+    </button>
+    <button class="trigger-btn" onclick="openViewer(true)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 2.5l10 5.5-10 5.5V2.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+      </svg>
+      多组视频预览
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================
+     视频预览层
+============================================================ -->
+<div class="z-video-viewer" id="videoViewer">
+  <div class="z-viewer-mask" onclick="closeViewer()"></div>
+
+  <!-- 左侧主区域 -->
+  <div class="z-viewer-main">
+    <div class="z-viewer-header">
+      <span class="z-viewer-uploader">上传人：章小蕙&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;上传时间：2026-05-19 14:32:34</span>
+    </div>
+
+    <div class="z-viewer-stage">
+
+      <!-- 上一个 -->
+      <button class="z-viewer-nav is-prev" onclick="switchVideo(-1)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8l5 5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- 视频容器 -->
+      <div class="z-video-wrap" id="videoWrap" onclick="togglePlay()">
+
+        <!-- AI 风景照 -->
+        <div class="z-video-bg"></div>
+
+        <!-- 底部渐变遮罩 -->
+        <div class="z-video-gradient"></div>
+
+        <!-- 大播放按钮 -->
+        <button class="z-video-play-btn" id="bigPlayBtn" onclick="event.stopPropagation();togglePlay()"></button>
+
+        <!-- 进度条 -->
+        <div class="z-video-progress-wrap" id="progressWrap" onclick="seekVideo(event)">
+          <div class="z-video-progress-track">
+            <div class="z-video-progress-bar" id="progressBar">
+              <div class="z-video-progress-dot"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 控制栏 -->
+        <div class="z-video-controls" onclick="event.stopPropagation()">
+          <div class="z-video-controls-left">
+            <!-- 播放/暂停 -->
+            <button class="z-ctrl-btn" onclick="togglePlay()" title="播放/暂停">
+              <svg id="iconPlay" width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M4 2.5l11 6.5-11 6.5V2.5z" fill="currentColor"/>
+              </svg>
+              <svg id="iconPause" width="18" height="18" viewBox="0 0 18 18" fill="none" style="display:none;">
+                <rect x="4" y="3" width="3.5" height="12" rx="1" fill="currentColor"/>
+                <rect x="10.5" y="3" width="3.5" height="12" rx="1" fill="currentColor"/>
+              </svg>
+            </button>
+            <span class="z-video-time" id="videoTime">00:35 / 02:48</span>
+          </div>
+
+          <div class="z-video-controls-right">
+            <button class="z-video-speed" title="播放速度">2.0X</button>
+            <button class="z-ctrl-btn" title="声音设置">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path d="M3 6.5h2.5L9 3.5v11l-3.5-3H3v-4z"/>
+                <path d="M11.2 5.5a4.2 4.2 0 0 1 0 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                <path d="M12.8 3.5a6.5 6.5 0 0 1 0 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+              </svg>
+            </button>
+            <button class="z-ctrl-btn" title="全屏">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path d="M2 2h5v2H4v3H2V2zM11 2h5v5h-2V4h-3V2zM2 11h2v3h3v2H2v-5zM16 11v5h-5v-2h3v-3h2z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 下一个 -->
+      <button class="z-viewer-nav is-next" onclick="switchVideo(1)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M6 3l5 5-5 5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- 右侧抽屉 -->
+  <div class="z-viewer-drawer">
+
+    <!-- 单组头 -->
+    <div class="z-drawer-header" id="drawerHeaderSingle">
+      <div class="z-drawer-title" id="drawerTitleSingle">全部视频（4）</div>
+      <div style="display:flex;gap:4px;">
+        <button class="z-drawer-icon-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/>
+            <rect x="7.2" y="7" width="1.6" height="4.5" rx="0.8" fill="currentColor"/>
+            <circle cx="8" cy="5" r="0.9" fill="currentColor"/>
+          </svg>
+        </button>
+        <button class="z-drawer-icon-btn" onclick="closeViewer()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 多组头（Tab） -->
+    <div class="z-drawer-tabs-header" id="drawerHeaderMulti" style="display:none;">
+      <div class="z-drawer-tabs" id="drawerTabs">
+        <button class="z-drawer-tab is-active" onclick="switchTab(0)">第一组视频</button>
+        <button class="z-drawer-tab" onclick="switchTab(1)">第二组视频</button>
+      </div>
+      <div style="display:flex;gap:4px;margin-bottom:8px;flex-shrink:0;">
+        <button class="z-drawer-icon-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/>
+            <rect x="7.2" y="7" width="1.6" height="4.5" rx="0.8" fill="currentColor"/>
+            <circle cx="8" cy="5" r="0.9" fill="currentColor"/>
+          </svg>
+        </button>
+        <button class="z-drawer-icon-btn" onclick="closeViewer()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 视频列表 -->
+    <div class="z-video-list" id="videoList"></div>
+
+  </div>
+</div>
+
+<script>
+/* 每组视频用不同的 picsum seed 区分缩略图 */
+const groups = [
+  [
+    { name: '施工现场巡检视频_01.mp4', duration: '02:48', seed: 'mountain1' },
+    { name: '施工现场巡检视频_02.mp4', duration: '01:23', seed: 'forest2'   },
+    { name: '建筑外立面检查记录.mp4',  duration: '03:15', seed: 'river3'    },
+    { name: '隐患整改确认视频.mp4',    duration: '00:54', seed: 'sunset4'   },
+  ],
+  [
+    { name: '使用场景演示_01.mp4', duration: '04:02', seed: 'lake5'    },
+    { name: '使用场景演示_02.mp4', duration: '02:17', seed: 'canyon6'  },
+    { name: '培训记录片段.mp4',    duration: '05:30', seed: 'valley7'  },
+  ]
+];
+
+/* 主画面每条视频对应不同风景（换片时切换） */
+const bgSeeds = ['landscape-mountain', 'landscape-forest', 'landscape-river', 'landscape-sunset',
+                 'landscape-lake', 'landscape-canyon', 'landscape-valley'];
+
+let isMultiGroup = false;
+let currentTab   = 0;
+let currentIndex = 0;
+let isPlaying    = false;
+let progressTimer = null;
+let progressVal   = 0.35;
+
+function currentGroup() {
+  return isMultiGroup ? groups[currentTab] : groups[0];
+}
+
+function openViewer(multi) {
+  isMultiGroup = !!multi;
+  currentTab   = 0;
+  currentIndex = 0;
+  isPlaying    = false;
+  progressVal  = 0.35;
+
+  document.getElementById('drawerHeaderSingle').style.display = isMultiGroup ? 'none' : 'flex';
+  document.getElementById('drawerHeaderMulti').style.display  = isMultiGroup ? 'flex'  : 'none';
+
+  renderList();
+  updateViewer();
+  document.getElementById('videoViewer').classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeViewer() {
+  document.getElementById('videoViewer').classList.remove('is-open');
+  document.body.style.overflow = '';
+  stopProgress();
+  isPlaying = false;
+  syncPlayState();
+}
+
+function switchTab(i) {
+  currentTab   = i;
+  currentIndex = 0;
+  stopProgress(); isPlaying = false;
+  document.querySelectorAll('.z-drawer-tab').forEach((t, idx) => t.classList.toggle('is-active', idx === i));
+  renderList();
+  updateViewer();
+}
+
+function switchVideo(dir) {
+  const g = currentGroup();
+  currentIndex = (currentIndex + dir + g.length) % g.length;
+  stopProgress(); isPlaying = false; progressVal = 0;
+  renderList();
+  updateViewer();
+}
+
+function selectVideo(i) {
+  if (i === currentIndex) return;
+  currentIndex = i;
+  stopProgress(); isPlaying = false; progressVal = 0;
+  renderList();
+  updateViewer();
+}
+
+function renderList() {
+  const g = currentGroup();
+  document.getElementById('videoList').innerHTML = g.map((v, i) => `
+    <div class="z-video-item${i === currentIndex ? ' is-active' : ''}" onclick="selectVideo(${i})">
+      <div class="z-video-thumb">
+        <img class="z-video-thumb-img" src="https://picsum.photos/seed/${v.seed}/120/80" alt="">
+        <div class="z-video-thumb-overlay">
+          <div class="z-video-thumb-play"></div>
+        </div>
+      </div>
+      <div class="z-video-info">
+        <div class="z-video-name">${v.name}</div>
+        <div class="z-video-duration">${v.duration}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateViewer() {
+  syncPlayState();
+  updateProgressUI();
+  const g = currentGroup();
+  const v = g[currentIndex];
+  document.getElementById('videoTime').textContent = '00:00 / ' + v.duration;
+  if (!isMultiGroup) {
+    document.getElementById('drawerTitleSingle').textContent = '全部视频（' + g.length + '）';
+  }
+  /* 切换主画面背景 */
+  const seed = bgSeeds[(isMultiGroup ? currentTab * 4 : 0) + currentIndex] || 'landscape-mountain';
+  document.querySelector('.z-video-bg').style.backgroundImage =
+    "url('https://picsum.photos/seed/" + seed + "/1072/724')";
+}
+
+/* ---- 播放/暂停 ---- */
+function togglePlay() {
+  isPlaying = !isPlaying;
+  syncPlayState();
+  isPlaying ? startProgress() : stopProgress();
+}
+
+function syncPlayState() {
+  const bigBtn    = document.getElementById('bigPlayBtn');
+  const iconPlay  = document.getElementById('iconPlay');
+  const iconPause = document.getElementById('iconPause');
+  bigBtn.classList.toggle('is-hidden', isPlaying);
+  iconPlay.style.display  = isPlaying ? 'none' : '';
+  iconPause.style.display = isPlaying ? ''     : 'none';
+}
+
+/* ---- 进度条 ---- */
+function startProgress() {
+  stopProgress();
+  progressTimer = setInterval(function() {
+    progressVal = Math.min(1, progressVal + 0.002);
+    updateProgressUI();
+    if (progressVal >= 1) { isPlaying = false; stopProgress(); syncPlayState(); }
+  }, 100);
+}
+
+function stopProgress() {
+  if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+}
+
+function updateProgressUI() {
+  document.getElementById('progressBar').style.width = (progressVal * 100) + '%';
+}
+
+function seekVideo(e) {
+  e.stopPropagation();
+  const track = e.currentTarget.querySelector('.z-video-progress-track');
+  const rect  = track.getBoundingClientRect();
+  progressVal = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  updateProgressUI();
+}
+
+/* ---- 键盘 ---- */
+document.addEventListener('keydown', function(e) {
+  const viewer = document.getElementById('videoViewer');
+  if (!viewer.classList.contains('is-open')) return;
+  if (e.key === 'Escape')     closeViewer();
+  if (e.key === 'ArrowLeft')  switchVideo(-1);
+  if (e.key === 'ArrowRight') switchVideo(1);
+  if (e.key === ' ')          { e.preventDefault(); togglePlay(); }
+});
+</script>
+
+</body>
+</html>

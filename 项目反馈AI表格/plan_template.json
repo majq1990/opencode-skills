@@ -1,0 +1,8 @@
+{
+  "topic": "专项反馈",
+  "base_name": "专项反馈-项目反馈表",
+  "feedback_content": "请各项目确认处理情况并上传截图证明。",
+  "status_options": ["无需处理", "已经处理"],
+  "knowledge_node_id": "lyQod3RxJK3moqXKip330KX5Jkb4Mw9r",
+  "include_sales_manager_in_visibility": false
+}
