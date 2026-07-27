@@ -9,6 +9,25 @@ description: [memory] 从 NotebookLM 抓 note → AI 整理日报/周报 → 钉
 
 **Memory type**: unspecified
 
+## 2026-07-27 W2026-07-20 周报空读告警补推 + weekly 空结果兜底
+
+- **现象**：用户反馈「[周报告警] W2026-07-20 草稿生成失败：未从 NotebookLM 读取到任何笔记」。上周用户只上了两天班，所以担心是不是记录天数不足导致。
+- **确认**：系统确实是服务器主线 `/opt/notebooklm-daily-report/`：cron 每天 18:20 日报、每天 11:00 跑 `weekly-worker`，由 `_should_run_today()` 判断是否最后工作日次日。`data/weekly.log` 显示 2026-07-26 11:00 读取 `['260720','260721','260722','260723','260724']`，结果 `260721` 不存在，`260720/260722/260723/260724` 被判「过滤 meta 后为空」，因此 `raw_notes` 为空触发告警。
+- **关键事实**：手动抽 `debug_afterclick_*.html` 后发现 NotebookLM 当前实际有内容：
+  - `260722` 有 523 chars，包含大课堂账号同步、源码上传支持、监控接入、AI 培训计划、住建部日活等内容
+  - `260723` 有 190 chars，包含案件支持、住建部 nginx/fastjson 漏洞网络打通、白盒扫描测试
+  - `260720/260724` 基本只有自动回灌待办/当日计划，被 `_strip_meta_blocks` 过滤为空是合理的
+  - 所以不是“两天记录”不支持，周报历史上 1/5、2/5 天都能生成；这次是 NotebookLM 批量读取在 cron 当时拿到了空/旧视图
+- **补救**：2026-07-27 手动在服务器容器内按固定周 `2026-07-20 ~ 2026-07-24` 重建草稿，读取到 `260722/260723` 两天，调用 `ai_client.summarize_weekly_from_raw` 生成并 `state.save_draft + wechat_notify.push_weekly_draft` 推送。token：`LunH2qppL9_VHKArmSvE2w`；草稿落盘 `data/drafts/W2026-07-20.json`，`_meta.daily_count=2`。
+- **代码修复**：`src/weekly_main.py` 新增 `_fetch_weekly_notes(day_keys)`：
+  1. 先走 `notebooklm_fetch.fetch_multiple_notes(day_keys)`
+  2. 若空，等待 5 秒后批量重试一次
+  3. 若仍空，逐日调用 `fetch_today_note(day_key)` 兜底，找不到 note 或过滤后为空则跳过
+  4. `run()` 改为调用 `_fetch_weekly_notes`
+- **实施**：服务器备份 `src/weekly_main.py.bak-20260727-empty-notes-retry`；上传新 `src/weekly_main.py`；清 `src/__pycache__`；`python3 -m py_compile src/weekly_main.py` 通过。bind mount 生效，无需 rebuild。
+- **验证**：容器内调用 `_fetch_weekly_notes(['260720','260721','260722','260723','260724'])` 返回 `{'260722': 523, '260723': 190}`。下次若批量空读，会自动重试/逐日兜底，不会直接失败。
+- **How to apply**：以后看到 `未从 NotebookLM 读取到任何笔记`，先别判断为“记录少”。用 `docker compose run --rm worker python - <<PY ... fetch_multiple_notes([...])` 手动复读；再看 `data/debug_afterclick_<day>.html` 中 editor 文本。只要有 1 天真实正文就应生成周报；只有纯 `## 本周待办/## 当日工作计划` meta 时为空才正常。
+
 ## 2026-07-06 `_note_exists` 假阴性根治 + `_save_panel_to_note` 降级兜底
 
 - **现象**：/input 面板提交 260706 → 钉钉告警「[录入告警] 260706 写 NotebookLM 失败（本地草稿已保留）：note 260706 不存在（模式 overwrite 要求 note 已存在，请先用 upsert）」
