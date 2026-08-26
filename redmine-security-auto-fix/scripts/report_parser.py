@@ -102,6 +102,17 @@ def _normalize_level(value: str) -> str:
     for key, level in LEVELS.items():
         if key.lower() in text:
             return level
+    # Single-character Chinese severity (e.g. "高", "中", "低")
+    single = {
+        "严重": "critical",
+        "高": "high",
+        "中": "medium",
+        "低": "low",
+        "信息": "info",
+    }
+    for char, level in single.items():
+        if char in text:
+            return level
     return "medium"
 
 
@@ -184,6 +195,55 @@ def _parse_excel(path: Path) -> list[dict]:
     return rows
 
 
+def _merge_heading_with_tables(heading_rows: list[dict], table_rows: list[dict]) -> list[dict]:
+    if not heading_rows or not table_rows:
+        return heading_rows or table_rows
+
+    def bigrams(text: str) -> set[str]:
+        chars = re.sub(r"[\d.\-a-z_/\\]+", "", text or "", flags=re.I)
+        return {chars[i:i+2] for i in range(len(chars) - 1)}
+
+    def keywords(text: str) -> set[str]:
+        return set(re.findall(r"[\u4e00-\u9fff]{2,}", text or ""))
+
+    # Build a score matrix between every heading and every table, then assign
+    # greedily by descending score so a strong match is never stolen by an
+    # earlier heading that only weakly overlaps the same table.
+    scores: list[tuple[float, int, int]] = []
+    heading_bigrams = [(bigrams(h.get("漏洞名称") or ""), keywords(h.get("漏洞名称") or "")) for h in heading_rows]
+    table_bigrams = [(bigrams(t.get("漏洞名称") or ""), keywords(t.get("漏洞名称") or "")) for t in table_rows]
+    for hi, (hb, hk) in enumerate(heading_bigrams):
+        hname = heading_rows[hi].get("漏洞名称") or ""
+        for ti, (tb, tk) in enumerate(table_bigrams):
+            tname = table_rows[ti].get("漏洞名称") or ""
+            score = len(hb & tb) * 1.5 + len(hk & tk) * 2.0
+            if hname in tname or tname in hname:
+                score += 10
+            scores.append((score, hi, ti))
+
+    heading_to_table: dict[int, int] = {}
+    used_tables: set[int] = set()
+    for score, hi, ti in sorted(scores, key=lambda x: x[0], reverse=True):
+        if score < 2 or hi in heading_to_table or ti in used_tables:
+            continue
+        heading_to_table[hi] = ti
+        used_tables.add(ti)
+
+    result: list[dict] = []
+    for hi, heading in enumerate(heading_rows):
+        ti = heading_to_table.get(hi)
+        if ti is None:
+            result.append(heading)
+            continue
+        table_row = table_rows[ti]
+        merged = dict(heading)
+        for field in ("漏洞描述", "漏洞危害", "加固建议", "漏洞地址", "风险等级"):
+            if not merged.get(field) and table_row.get(field):
+                merged[field] = table_row[field]
+        result.append(merged)
+    return result
+
+
 def _parse_docx(path: Path) -> list[dict]:
     try:
         from docx import Document
@@ -200,6 +260,9 @@ def _parse_docx(path: Path) -> list[dict]:
             "风险名称": "漏洞名称",
             "漏洞名称": "漏洞名称",
             "问题名称": "漏洞名称",
+            "检测项": "漏洞名称",
+            "检测目": "漏洞名称",
+            "检测内容": "漏洞名称",
             "风险级别": "风险等级",
             "风险等级": "风险等级",
             "漏洞等级": "风险等级",
@@ -207,16 +270,25 @@ def _parse_docx(path: Path) -> list[dict]:
             "漏洞描述": "漏洞描述",
             "漏洞危害": "漏洞危害",
             "风险影响": "漏洞危害",
+            "风险分析": "漏洞危害",
+            "结果描述": "漏洞危害",
             "加固建议": "加固建议",
             "修复建议": "加固建议",
             "整改建议": "加固建议",
+            "解决方案": "加固建议",
             "漏洞链接": "漏洞地址",
             "涉及URL": "漏洞地址",
         }
         for table_row in table.rows:
             values = [_clean(cell.text) for cell in table_row.cells]
-            if len(values) >= 2 and values[0] in vertical_keys:
-                vertical[vertical_keys[values[0]]] = values[1]
+            if len(values) >= 2:
+                label = values[0]
+                matched = next(
+                    (v for k, v in vertical_keys.items() if k in label),
+                    None,
+                )
+                if matched:
+                    vertical[matched] = values[1]
         if vertical.get("漏洞名称"):
             rows.append(vertical)
             continue
@@ -292,6 +364,7 @@ def _parse_docx(path: Path) -> list[dict]:
                 "漏洞描述": "",
                 "漏洞危害": "",
                 "加固建议": "",
+                "source": "paragraph",
             }
             current_section = None
         elif current and current_section:
@@ -303,6 +376,11 @@ def _parse_docx(path: Path) -> list[dict]:
             current[key] = _clean(f"{current.get(key, '')} {line}")
     if current:
         rows.append(current)
+
+    if rows:
+        table_rows = [r for r in rows if r.get("漏洞名称") and (r.get("source") != "paragraph")]
+        para_rows = [r for r in rows if r.get("source") == "paragraph"]
+        rows = _merge_heading_with_tables(para_rows, table_rows)
     return rows
 
 
@@ -486,6 +564,81 @@ def _safe_extract_rar(path: Path, target: Path) -> list[Path]:
     return files
 
 
+def _parse_jianshi_html(text: str) -> list[dict]:
+    """Parse 坚石诚信 (Jet Sreality) HTML scan report text.
+
+    Pattern: vulnerability name followed by a numeric count, then
+    "漏洞描述" / "解决办法" sections.
+    """
+    known_vulns = {
+        "CORS", "SameSite", "Cookie", "HttpOnly", "Secure", "跨域",
+        "XSS", "SQL注入", "CSRF", "信息泄露", "ClickJacking", "点击劫持",
+        "弱口令", "明文传输", "不安全的HTTP方法", "目录遍历", "路径穿越",
+        "文件包含", "命令执行", "未授权", "越权", "敏感信息泄露",
+        "安全配置错误", "不安全设计", "注入", "过时的组件", "自带缺陷",
+        "SRI", "子资源完整性", "域名访问限制", "用户认证信息",
+        "密码表单自动完成", "电子邮箱", "应用错误信息", "HTML信息泄露",
+    }
+    lines = text.split("\n")
+    rows = []
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        # Skip empty lines, numbers, and section headers
+        if not line or re.match(r"^\d+$", line) or line in ("漏洞描述", "解决办法", "漏洞名称", "风险等级", "漏洞链接"):
+            i += 1
+            continue
+        # Check if this looks like a vulnerability name (contains known keywords or is a reasonable length)
+        has_kw = any(kw in line for kw in known_vulns)
+        if not has_kw and (len(line) < 4 or len(line) > 60):
+            i += 1
+            continue
+        # Skip common non-vuln lines
+        if line in ("漏洞（种", "实例（个", "插件ID", "风险等级图标", "比较危险"):
+            i += 1
+            continue
+        # This might be a vulnerability name. Look ahead for 漏洞描述/解决办法
+        desc = ""
+        fix = ""
+        level = ""
+        j = i + 1
+        while j < min(i + 100, len(lines)):
+            lj = lines[j].strip()
+            if lj == "漏洞描述":
+                k = j + 1
+                desc_parts = []
+                while k < min(j + 30, len(lines)):
+                    lk = lines[k].strip()
+                    if lk in ("解决办法", "漏洞描述", "漏洞名称", "风险等级", "漏洞链接") or (re.match(r"^\d+$", lk) and len(lk) < 5):
+                        break
+                    if lk:
+                        desc_parts.append(lk)
+                    k += 1
+                desc = " ".join(desc_parts)
+                j = k
+                continue
+            if lj == "解决办法":
+                k = j + 1
+                fix_parts = []
+                while k < min(j + 30, len(lines)):
+                    lk = lines[k].strip()
+                    if lk in ("解决办法", "漏洞描述", "漏洞名称", "风险等级", "漏洞链接") or (re.match(r"^\d+$", lk) and len(lk) < 5):
+                        break
+                    if lk:
+                        fix_parts.append(lk)
+                    k += 1
+                fix = " ".join(fix_parts)
+                j = k
+                continue
+            j += 1
+        if line:
+            rows.append({"漏洞名称": line, "漏洞描述": desc, "加固建议": fix, "风险等级": "medium"})
+            i = j
+        else:
+            i += 1
+    return rows
+
+
 def _parse_labeled_text(text: str) -> list[dict]:
     blocks = re.split(r"\n(?=(?:【?(?:严重|高危|中危|低危|信息)】?)?\s*\d*[.、]?\s*[^。\n]{2,60})", text)
     rows = []
@@ -539,7 +692,7 @@ def parse_report(path: str | Path) -> dict:
         except ImportError as exc:
             raise RuntimeError("HTML parsing requires beautifulsoup4") from exc
         text = BeautifulSoup(report.read_text(encoding="utf-8", errors="ignore"), "html.parser").get_text("\n")
-        rows = _parse_labeled_text(text)
+        rows = _parse_jianshi_html(text) or _parse_labeled_text(text)
     elif suffix in (".txt", ".md", ".log", ".out", ".properties"):
         rows = _parse_labeled_text(report.read_text(encoding="utf-8", errors="ignore"))
     elif suffix in (".zip", ".rar"):

@@ -47,11 +47,14 @@ def build_query(vuln: dict[str, Any]) -> str:
 
 
 def enrich_vulnerability(
-    vuln: dict[str, Any], bridge: SimilarAssistBridge
+    vuln: dict[str, Any],
+    bridge: SimilarAssistBridge,
+    internal: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     result = dict(vuln)
     code_related = is_code_vulnerability(vuln)
-    internal = bridge.search_internal(build_query(vuln))
+    if internal is None:
+        internal = bridge.search_internal(build_query(vuln))
 
     suggestions = []
     if vuln.get("fix_suggestion"):
@@ -118,4 +121,9 @@ def enrich_all(
     vulns: list[dict[str, Any]], repo_path: str = r"D:\git\redmine-similar-assist"
 ) -> list[dict[str, Any]]:
     bridge = SimilarAssistBridge(repo_path)
-    return [enrich_vulnerability(vuln, bridge) for vuln in vulns]
+    items = [{"id": index, "query": build_query(vuln)} for index, vuln in enumerate(vulns)]
+    batch = bridge.search_internal_batch(items)
+    return [
+        enrich_vulnerability(vuln, bridge, internal=batch.get(index))
+        for index, vuln in enumerate(vulns)
+    ]
