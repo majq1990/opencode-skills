@@ -1,5 +1,10 @@
 ---
 name: redmine-security-auto-fix
+version: 1.1.0
+author: majianquan
+license: MIT
+category: support-dept
+visibility: tech-manager
 description: Redmine 安全案件自动化处理与修复建议检索。凡涉及 Redmine 安全案件、漏洞报告解析、历史安全案件学习、相似漏洞修复方案、代码/非代码修复分流、钉钉知识库归档或安全漏洞自动修复，都应使用本 Skill。它兼容多种漏洞报告格式，优先检索 redmine-similar-assist 的历史案件库和钉钉知识库，非代码类始终并行检索互联网，代码类仅在内部无可执行方案时才用互联网兜底。
 ---
 
