@@ -31,6 +31,8 @@ visibility: support-dept
 
 > 注：原 company-grading-perf-sec 的「麒舰部署 quiz 259」通道本次未并入；需要时按「扩展新通道」章节补脚本即可。
 
+**⚑ 全局红线（所有通道）**：任何成绩回写都必须先 dry-run 预览、**人工明确确认后才执行**；未获确认禁止调用提交脚本。自动初评只作候选，最终分数以人工复核为准。
+
 ## 共享前置（所有 Moodle 通道）
 
 - **登录态**：Chrome 已登录 `onekey.egova.com.cn`（账号 majianquan / Egova@123）
@@ -130,7 +132,7 @@ visibility: support-dept
 
 ## 注意事项
 
-- **回写红线**：Moodle 提交前必须 dry-run 预览并获明确确认；重复/旧 attempt 要 skip
+- **回写红线（所有通道）**：任何成绩回写必须先 dry-run 预览、人工明确确认后才执行；重复/旧 attempt 要 skip
 - **截图答案**：社招截图答案需人工评分；麒舰/星桥按"截图优先"口径，不足的标记人工复核
 - **编码**：脚本输出 UTF-8；中文乱码时检查 `[Console]::OutputEncoding`
 - **临时文件**：阅卷完成后清理 `_extracted/`、`_visual/` 等中间产物（工作目录内保留评分结果）
