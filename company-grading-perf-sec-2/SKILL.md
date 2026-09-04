@@ -1,7 +1,7 @@
 ---
 name: company-grading-perf-sec
 version: 1.2.0
-description: 公司内部阅卷工具，支持两条通道。①性能安全通道：onekey.egova.com.cn Moodle quiz（性能安全认证实操，双题Q1/Q2各50分），登录→下载docx→解析→关键词初评→4并行视觉sub-agent→基准对照→标准答卷基线校准→HTML扣分评语→dry-run→批量POST录入。②麒舰部署通道（quiz 259，单题满分100，10大项41采分点部署实操）：下载→解析→视觉细查（按baseline的key_check/URL红线逐项判）→grading_qijian.py算分→评语→submit_qijian.py单slot录入。触发词：性能安全认证阅卷 / Moodle 阅卷 / onekey.egova quiz / 性能安全评分 / 麒舰部署阅卷 / 麒舰实操考核 / quiz 259。
+description: 【已废弃 2026-09-04】统一改用「内部阅卷」skill（D:\opencode\config\skills\内部阅卷），本 skill 仅保留脚本供引用。不要在本 skill 新建阅卷任务。原能力：公司内部阅卷工具，支持两条通道。①性能安全通道：onekey.egova.com.cn Moodle quiz（性能安全认证实操，双题Q1/Q2各50分），登录→下载docx→解析→关键词初评→4并行视觉sub-agent→基准对照→标准答卷基线校准→HTML扣分评语→dry-run→批量POST录入。②麒舰部署通道（quiz 259，单题满分100，10大项41采分点部署实操）：下载→解析→视觉细查（按baseline的key_check/URL红线逐项判）→grading_qijian.py算分→评语→submit_qijian.py单slot录入。触发词：性能安全认证阅卷 / Moodle 阅卷 / onekey.egova quiz / 性能安全评分 / 麒舰部署阅卷 / 麒舰实操考核 / quiz 259。
 author: majianquan
 category: support-dept
 visibility: support-dept
