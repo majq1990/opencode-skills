@@ -2,12 +2,13 @@
 name: 内部阅卷
 version: 2.0.0
 description: |
-  公司内部统一阅卷工具，一套 skill 支持 4 类阅卷工作（通道自动路由）：
+  公司内部统一阅卷工具，一套 skill 支持 5 类阅卷工作（通道自动路由）：
   ①性能安全认证阅卷（onekey.egova.com.cn Moodle quiz，双题 Q1/Q2 各 50 分）：登录→下载docx→解析→关键词初评→视觉细查→基线校准→HTML评语→dry-run→批量POST录入；
   ②麒舰实操阅卷（本地 docx 目录，10 大模块 100 分）：docx 解析→关键词+截图初评→基线校准→扣分明细+分数建议，仅出报告不回写；
   ③星桥高级认证阅卷（Moodle quiz 263，5 场景×20 分共 39 采分点）：拉卷→解析→关键词/代码/截图证据初评→人工复核应用→评语→提交 Moodle Q2~Q6；
-  ④社招笔试阅卷（assesscenter.italent.cn 链接，Shell/Python/SQL/日期题）：打开链接→分析题目→下载答题附件→(连库取正确答案)→自动评分→MD 报告。
-  触发词：内部阅卷 / 阅卷 / 评分 / 批改试卷 / 性能安全认证阅卷 / 性能安全评分 / 麒舰阅卷 / 麒舰实操打分 / 星桥高级阅卷 / 星桥评分 / 社招笔试 / Moodle 阅卷 / quiz 259 / quiz 263 / assesscenter / italent.cn。
+  ④社招笔试阅卷（assesscenter.italent.cn 链接，Shell/Python/SQL/日期题）：打开链接→分析题目→下载答题附件→(连库取正确答案)→自动评分→MD 报告；
+  ⑤AI认证阅卷（quiz265笔试 + quiz266实操 T1/30+T2/30+T3/40=100，增量）：录入笔试/实操地址→只拉未阅卷记录→独立阅卷→回写→更新表格（详见 references/RUN_aicert.md）。
+  触发词：内部阅卷 / 阅卷 / 评分 / 批改试卷 / 性能安全认证阅卷 / 性能安全评分 / 麒舰阅卷 / 麒舰实操打分 / 星桥高级阅卷 / 星桥评分 / 社招笔试 / Moodle 阅卷 / quiz 259 / quiz 263 / assesscenter / italent.cn / AI认证阅卷 / AI认证评分 / quiz 265 / quiz 266。
   旧 skill（社招阅卷 / 麒舰实操考核-阅卷 / 星桥高级认证-阅卷 / company-grading-perf-sec）均已废弃，统一走本 skill。
 author: majianquan
 category: support-dept
@@ -16,7 +17,7 @@ visibility: support-dept
 
 # 内部阅卷（统一阅卷 Skill）
 
-公司内部统一阅卷工具。把原先分散的 4 个阅卷 skill（性能安全 / 麒舰实操 / 星桥高级 / 社招）合并为一套，共享下载、解析、视觉细查、报告、Moodle 提交底座，按触发信号自动路由到对应通道。
+公司内部统一阅卷工具。把原先分散的 4 个阅卷 skill（性能安全 / 麒舰实操 / 星桥高级 / 社招）合并为一套，共享下载、解析、视觉细查、报告、Moodle 提交底座，按触发信号自动路由到对应通道；另有⑤AI认证增量通道。
 
 ## 通道路由表
 
@@ -28,6 +29,7 @@ visibility: support-dept
 | 本地目录含 `麒舰实操考核-*.docx` / "麒舰阅卷" / "麒舰实操打分" | **qijian 麒舰实操** | 本地 docx 目录（10 模块 100 分） | ❌ 仅报告 |
 | `quiz?id=263` / "星桥高级阅卷" / "星桥评分" | **starbridge 星桥高级** | Moodle quiz 263（5 场景×20 分） | ✅ 提交 Q2~Q6 |
 | `assesscenter.italent.cn` 链接 / "社招笔试" / "社招评分" | **social 社招** | AssessCenter 网页 | ❌ 仅报告 |
+| 笔试quiz地址 + 实操quiz地址 / "AI认证阅卷" / "AI认证评分" / quiz 265 / quiz 266 | **aicert AI认证** | quiz265笔试 + quiz266实操（T1/30+T2/30+T3/40）+ 花名册 | ✅ 增量回写 + 表格 |
 
 > 注：原 company-grading-perf-sec 的「麒舰部署 quiz 259」通道本次未并入；需要时按「扩展新通道」章节补脚本即可。
 
@@ -60,10 +62,14 @@ visibility: support-dept
 │   │   ├── grading_starbridge.py / gen_comments_starbridge.py / apply_manual_review_starbridge.py / submit_starbridge.py
 │   └── social/                  # 通道④社招
 │       └── db_query.py              # 连库取正确答案（pymysql）
+│   ├── aicert/                  # 通道⑤AI认证（增量）
+│       ├── grading_aicert.py        # T1/30+T2/30+T3/40 初评（argv[1]=workdir）
+│       └── submit_aicert.py         # 按题扣分明细评语回写（默认dry-run，--commit提交）
 ├── references/                  # 各通道评分规则 + 基线
 │   ├── grading_rules_perfsec.md / reference_baseline_perfsec.json / visual_check_prompt.md / RUN_perfsec.md
 │   ├── grading_rules_qijian.md
-│   └── grading_rules_starbridge.md / reference_baseline_starbridge.json
+│   ├── grading_rules_starbridge.md / reference_baseline_starbridge.json
+│   └── grading_rules_aicert.md / RUN_aicert.md
 ├── reference_answers/           # 性能安全标准答卷（基线重建用）
 └── templates/grading_report_template.md   # 社招评分报告模板
 ```
@@ -113,13 +119,27 @@ visibility: support-dept
 ---
 
 ## 通道④ 社招笔试阅卷（AssessCenter）
-
 1. **打开链接**：用 web-access 打开 `https://assesscenter.italent.cn/Report/SummaryReport?Elink=...`，提取考试名、学生姓名、题目列表（题号/分值/要求）、答题状态
 2. **下载附件**：点击每题"下载答案"保存到临时目录
 3. **读取答案**：文本直读；Word 提取文字+图片；识别格式（代码/截图/文本）
 4. **取正确答案**（如需要）：`python scripts/social/db_query.py <命令>`（pymysql 连 demo.egova.com.cn:18260/school；命令见脚本 help）
 5. **评分**：按题型标准评分（Shell：语法20/结果60/效率20；Python：逻辑40/结果40/质量20；SQL：语法20/结果60/效率20；日期：逻辑40/边界30/健壮30）
 6. **报告**：按 `templates/grading_report_template.md` 输出 MD 评分报告（含总分汇总）
+
+---
+
+## 通道⑤ AI认证阅卷（quiz265笔试 + quiz266实操，增量）
+
+用户录入笔试/实操 quiz 地址后：只拉未阅卷记录 → 独立阅卷 → 回写 → 更新表格。
+完整增量流程详见 `references/RUN_aicert.md`，评分规则见 `references/grading_rules_aicert.md`。
+
+1. **录入**：笔试quiz id（如265）+ 实操quiz id（如266）+ 花名册“全员状态”表
+2. **拉取**：`download_attachments.py <实操id> <workdir>`（翻页+断点续传）+ 笔试 overview 分页取分
+3. **找新增**：对比 `_attempts.json` 与 `_posted_<quiz>.json`，仅新增/补交进入阅卷
+4. **阅卷**：每~50份一组、每题一个独立agent（Q1/Q2/Q3），结果落 `_grading/`
+5. **对碰**：只看花名册“全员状态”（已交卷/参考中未交卷/实际未参考），重名取最高
+6. **回写**：`submit_aicert.py <workdir>` dry-run 预览 → 用户确认 → `--commit`（只POST未POST slot，按题扣分明细评语）
+7. **更新表格**：版本A/B双表全量覆盖 + 文档同步
 
 ---
 

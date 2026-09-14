@@ -62,10 +62,8 @@ def slug(s):
     return re.sub(r"[<>:\"/\\|?*]", "_", s).strip()
 
 
-def main():
-    print(f"[*] 抓取 quiz {QUIZ_ID} 的所有 attempt...")
-    # 用大 pagesize 一次抓全
-    url = f"{BASE}/mod/quiz/report.php?id={QUIZ_ID}&mode=responses&pagesize=100"
+def page_attempts(page):
+    url = f"{BASE}/mod/quiz/report.php?id={QUIZ_ID}&mode=responses&pagesize=100&page={page}"
     html = fetch(url)
 
     # 提取每行 attempt：review.php?attempt=XXX → 学员名 / email
@@ -76,7 +74,7 @@ def main():
         re.DOTALL,
     )
 
-    attempts = []
+    found = []
     for r in rows:
         m = re.search(r'review\.php\?attempt=(\d+)', r)
         if not m:
@@ -91,7 +89,33 @@ def main():
             name = re.sub(r'\s+', ' ', name).replace('回顾试答', '').strip()
         if len(cells) >= 4:
             email = re.sub(r'<[^>]+>', '', cells[3]).strip()
-        attempts.append({"attempt": attempt, "name": name, "email": email})
+        found.append({"attempt": attempt, "name": name, "email": email})
+    return found
+
+
+def main():
+    print(f"[*] 抓取 quiz {QUIZ_ID} 的所有 attempt（自动翻页）...")
+    attempts = []
+    page = 0
+    while True:
+        found = page_attempts(page)
+        new = [a for a in found if a["attempt"] not in {x["attempt"] for x in attempts}]
+        print(f"   page={page}: {len(found)} 行，新增 {len(new)}")
+        if not found:
+            break
+        attempts.extend(new)
+        # 本页无新 attempt 说明翻页已到底（或仅剩重复行），再多探一页确认后退出
+        if not new:
+            extra = page_attempts(page + 1)
+            extra_new = [a for a in extra if a["attempt"] not in {x["attempt"] for x in attempts}]
+            if not extra_new:
+                break
+            attempts.extend(extra_new)
+            page += 1
+        page += 1
+        if page > 50:  # 兜底：pagesize=100 时 50 页=5000 人，超出必为异常
+            print("   WARN: 翻页超过 50 页，强制停止", flush=True)
+            break
 
     # 去重 attempt
     seen = set()
@@ -137,6 +161,9 @@ def main():
                   f"{sorted({fl['slot'] for fl in files})}，判分需合并所有 Q*_ 目录")
         for f in files:
             out_path = os.path.join(out_dir, f"Q{f['slot']}_{f['fname']}")
+            if os.path.isfile(out_path) and os.path.getsize(out_path) > 0:
+                print(f"   SKIP Q{f['slot']} {f['fname']} (已存在 {os.path.getsize(out_path)} bytes)")
+                continue
             try:
                 size = download(f["url"], out_path, referer=f"{BASE}/mod/quiz/review.php?attempt={a['attempt']}")
                 print(f"   OK Q{f['slot']} {f['fname']} ({size} bytes)")
