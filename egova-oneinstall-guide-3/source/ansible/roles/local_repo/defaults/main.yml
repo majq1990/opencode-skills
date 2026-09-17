@@ -1,0 +1,3 @@
+# default variables
+#ansible_master_ip: 127.0.0.1
+#egova_apt_port: 20000

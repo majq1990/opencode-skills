@@ -1,0 +1,4 @@
+upstream onlyoffice {
+    # 映射onlyoffice docker下暴露的IP与PORT
+    server {{ hostvars[inventory_hostname]['ansible_ssh_host'] }}:9090;
+}

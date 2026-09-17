@@ -6,7 +6,7 @@ if hasattr(sys.stdout, "reconfigure"):
     try: sys.stdout.reconfigure(encoding="utf-8")
     except Exception: pass
 
-WORKDIR = sys.argv[1] if len(sys.argv) > 1 else r"D:\opencode\file\2026-09-14\阅卷_266"
+WORKDIR = r"D:\opencode\file\2026-09-14\阅卷_266"
 UNPACK = os.path.join(WORKDIR, "_unpacked")
 attempts_meta = {a["attempt"]: a for a in
                  json.load(open(os.path.join(WORKDIR, "_attempts.json"), encoding="utf-8"))}
@@ -140,7 +140,7 @@ for dn in dirs:
         t1_raw += aw
     t1_score = round(t1_raw / 34 * 30, 2)
     if s1 == 0 and t1_score > 0:
-        t1_score = round(min(t1_score, 30 * 0.3), 2); row["flags"].append("Q1无截图 capped30%")
+        t1_score = round(min(t1_score, 30), 2); row["flags"].append("Q1无截图 needs_visual")
     if s1 < 3: row["flags"].append(f"Q1截图{s1}张 needs_visual")
     row["items"]["T1"] = {"raw34": round(t1_raw, 2), "score30": t1_score, "shots": s1, "detail": t1_det}
     # Q2
@@ -158,7 +158,7 @@ for dn in dirs:
     if not f2 and not t2.strip():
         row["flags"].append("Q2缺交")
     elif s2 == 0 and t2_score > 0:
-        t2_score = round(min(t2_score, 30 * 0.3), 2); row["flags"].append("Q2无截图 capped30%")
+        t2_score = round(min(t2_score, 30), 2); row["flags"].append("Q2无截图 needs_visual")
     if f2 and s2 < 3: row["flags"].append(f"Q2截图{s2}张 needs_visual")
     row["items"]["T2"] = {"score30": t2_score, "shots": s2, "detail": t2_det}
     # Q3
@@ -179,7 +179,7 @@ for dn in dirs:
     if not f3 and not t3.strip():
         row["flags"].append("Q3缺交")
     elif s3 == 0 and t3_score > 0:
-        t3_score = round(min(t3_score, 40 * 0.3), 2); row["flags"].append("Q3无截图 capped30%")
+        t3_score = round(min(t3_score, 40), 2); row["flags"].append("Q3无截图 needs_visual")
     if f3 and s3 < 3: row["flags"].append(f"Q3截图{s3}张 needs_visual")
     row["items"]["T3"] = {"score40": t3_score, "shots": s3, "has_skill": has_skill, "detail": t3_det}
     row.update({"T1": t1_score, "T2": t2_score, "T3": t3_score,
@@ -208,7 +208,7 @@ lines = ["# Quiz266 初评 v2（严格口径，候选，非最终）", "", "| �
 for i, r in enumerate(results, 1):
     lines.append(f"| {i} | {r['attempt']} | {r['name']} | {r.get('direction','-')} | "
                  f"{r['T1']} | {r['T2']} | {r['T3']} | {r['total']} | {';'.join(r['flags'])} |")
-lines += ["", "> 口径：T1按34raw缩放到30；无截图题 capped30%。自动初评只作候选，最终以人工复核为准，不回写。",
+lines += ["", "> 口径：T1按34raw缩放到30；无截图题 needs_visual。自动初评只作候选，最终以人工复核为准，不回写。",
           "> 15个空交卷已计0分。"]
 open(os.path.join(WORKDIR, "_grading_266_v2.md"), "w", encoding="utf-8").write("\n".join(lines))
 print(f"[✓] 初评完成：{len(results)} 人，TOP3: " +

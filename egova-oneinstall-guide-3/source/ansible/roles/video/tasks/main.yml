@@ -1,0 +1,183 @@
+---
+# check service count
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- set_fact:
+    web_app_name: "{{ app_type }}"
+    web_app_dir: "{{ app_type }}"
+
+- set_fact:
+    app_root_dir: "/{{ microservice[app_type][app_name].base_path.split('/')[1] }}/{{ microservice[app_type][app_name].base_path.split('/')[2]  }}/{{ microservice[app_type][app_name].base_path.split('/')[3]  }}"
+    deploy_dir: "{{ microservice[app_type][app_name].base_path }}"
+    proxy_config: "{{ microservice[app_type][app_name].proxy | default([]) }}"
+    web_app_port: "{{ microservice[app_type][app_name].server_port }}"
+
+- name: 提取依赖的key值
+  set_fact:
+    video_backend_key: "{{ {'data': microservice[app_type][app_name].depends, 'type_value': 'microservice', 'sub_type_value': 'video'} | custom_json_query }}"
+
+- block:
+
+    - name: create dest dir
+      file: path={{ item }} state=directory mode='0755'
+      with_items:
+        - "{{ app_root_dir }}"
+        - "{{ deploy_dir }}"
+
+    - name: 检查 {{ app_type }}-backend.tar 是否存在
+      connection: local
+      stat:
+        path: "../src/bin/{{ app_type }}/{{ app_type }}-backend.tar"
+      register: app_type_tar
+
+    - name: Fail if {{ app_type }}-backend.tar is  empty
+      fail:
+        msg: |
+          待安装的{{ app_type }}服务，web包不存在,如需安装服务{{ ansible_master_ip }}服务器上执行 dl_v2.sh 下載待安裝的服务!!!
+          若ll /egova/onekey_install/oneinstall_v2/src/bin |grep {{ app_type }}|wc -l 大于0 则表示待安装的服务已存在
+      when: app_type_tar.stat.exists == False
+
+    - name: 解压{{ app_type }}-backend.tar
+      unarchive:
+        src: "{{ src_path }}/{{ app_type }}-backend.tar"
+        dest: "{{ deploy_dir }}"
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: '0755'
+      when: app_type_tar.stat.exists == True
+
+    - name: 提取依赖的key值
+      set_fact:
+        biz_db_key: "{{ {'data': microservice[app_type][app_name].depends, 'type_value': 'mysql', 'sub_type_value': 'biz'} | custom_json_query }}"
+
+    - set_fact:
+        db_ip: "{{ mysql[biz_db_key].ip }}"
+        db_port: "{{ mysql[biz_db_key].port }}"
+        db_username: "{{ mysql[biz_db_key].username }}"
+        db_password: "{{ mysql[biz_db_key].password }}"
+
+    - name: Get the primary IP address of the host
+      shell: hostname -I | awk '{print $1}'
+      register: primary_ip
+
+
+
+    - name: 读取用户中心主控机IP
+      connection: local
+      shell: >-
+        yq -r '.microservice.usercenter[]? | select(.status == "success" and .ip != null) | .ip' "{{ playbook_dir }}/inventory/metadata.yml"
+        | head -n 1
+      register: usercenter_master_ip_output
+      changed_when: false
+      failed_when: false
+
+    - name: 设置用户中心主控机IP
+      set_fact:
+        usercenter_master_ip: "{{ usercenter_master_ip_output.stdout | default('') | trim }}"
+
+    - name: 未获取到用户中心主控机IP则失败
+      fail:
+        msg: "未获取到 usercenter节点的 ip，请先安装/初始化用户中心。"
+      when: (usercenter_master_ip | trim) == ''
+
+    - name: Copy config file
+      template:
+        src: "{{ item.filename }}.j2"
+        dest: "{{ item.destpath }}/{{ item.filename }}"
+      with_items:
+        - { filename: "app.conf",destpath: "{{ deploy_dir }}/server/conf" }
+        - { filename: "config.ini",destpath: "{{ deploy_dir }}/mediaserver" }
+#        - { filename: "centre-restart.sh",destpath: "{{ deploy_dir }}/platform" }
+    - name: 生成视频中台nginx前端location配置
+      template:
+        src: "video-frontend.location.j2"
+        dest: "/etc/nginx/conf.d/video-frontend.location"
+      notify:
+        - reload nginx
+
+    - name: 生成视频中台nginx upstream配置
+      template:
+        src: "video.upstream.j2"
+        dest: "/etc/nginx/conf.d/video.upstream"
+      notify:
+        - reload nginx
+
+    - name: 生成视频中台nginx后端location配置
+      template:
+        src: "video-backend.location.j2"
+        dest: "/etc/nginx/conf.d/video-backend.location"
+      notify:
+        - reload nginx
+
+
+    - name: 检查数据库连接
+      connection: local
+      shell: mysql -h {{ db_ip }} -P {{ db_port }} -u {{ db_username }} -p{{ db_password }} -e "show databases;"
+      ignore_errors: yes
+      register: connect_db_output
+
+    - name: 输出数据库连接信息
+      fail:
+        msg: "数据库连接失败，连接命令：mysql -h {{ db_ip }} -P {{ db_port }} -u {{ db_username }} -p{{ db_password }}"
+      when: connect_db_output.rc > 0
+
+    - name: 检查数据库是否存在
+      connection: local
+      shell: "mysql -h {{ db_ip }} -P {{ db_port }} -u root -p{{ db_password }} -e 'use videov3 ;'"
+      register: check_db_result
+      ignore_errors: true
+
+    - name: 执行{{ app_type }}数据库初始化
+      connection: local
+      run_once: true
+      command: "bash {{ file_path }}/db_init.sh --host={{ db_ip }} --port={{ db_port }} --user=root --password={{ db_password }} --database='videov3' --dir={{ deploy_dir }}"
+      when: connect_db_output.rc == 0 and  check_db_result.rc != 0
+
+    - name: 检查视频中台后台服务脚本是否存在
+      stat:
+        path: "{{ deploy_dir }}/server/startZtserver.sh"
+      register: ztserver_script
+
+    - name: 启动视频中台后台服务
+      become: true
+      shell:
+        cmd: |
+          cd {{ deploy_dir }}/server
+          bash startZtserver.sh
+      when: ztserver_script.stat.exists == true
+
+    - name: 检查流媒体服务脚本是否存在
+      stat:
+        path: "{{ deploy_dir }}/mediaserver/start-ZT-mediaserver.sh"
+      register: mediaserver_script
+
+    - name: 启动流媒体服务
+      become: true
+      shell:
+        cmd: |
+          cd {{ deploy_dir }}/mediaserver
+          bash start-ZT-mediaserver.sh
+      when: mediaserver_script.stat.exists == true
+
+    - name: save metadata
+      connection: local
+      shell: |
+        yq -i '.microservice.'{{ app_type }}'.'{{ app_name }}'.status="'success'"' inventory/metadata.yml
+        yq -i '.microservice.'{{ app_type }}'.'{{ app_name }}'.ip="'{{ all.hosts[inventory_hostname].ansible_ssh_host }}'"' inventory/metadata.yml
+        yq -i '.microservice.'{{ app_type }}'.'{{ app_name }}'.host="'{{ inventory_hostname }}'"' inventory/metadata.yml
+        yq -i '.microservice.'{{ app_type }}'.'{{ app_name }}'.server_port="'{{ web_app_port }}'"' inventory/metadata.yml
+        yq -i '.microservice.'{{ app_type }}'.'{{ app_name }}'.media_server.port="8090"' inventory/metadata.yml
+        yq -i '.microservice.'{{ app_type }}'.'{{ app_name }}'.url.frontend="'{{ app_type }}'"' inventory/metadata.yml
+        yq -i '.microservice.'{{ app_type }}'.'{{ app_name }}'.url.backend="'{{ app_type }}'-api"' inventory/metadata.yml
+      when: app_type == "video"
+
+    #保存视频中台节点到inventory hosts.yml的video分组
+    - name: save video host group to inventory hosts.yml
+      connection: local
+      shell: |
+        yq -i '.all.children.video.hosts."{{ inventory_hostname }}" = ""' inventory/hosts.yml
+      when: app_type == "video"
+  when: video_backend_key == "" or app_type == "video"

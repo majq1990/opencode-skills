@@ -1,0 +1,15 @@
+---
+# check if ntp exists
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: check if sysbench exists
+  shell: "which sysbench"
+  register: check_sysbench_output
+  ignore_errors: yes
+
+- name: 安装sysbench
+  package: name=sysbench state=present
+  when: check_sysbench_output.rc > 0

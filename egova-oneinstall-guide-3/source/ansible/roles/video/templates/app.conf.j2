@@ -1,0 +1,46 @@
+appname = video_platform
+version = 3.0.0
+#http服务监听地址
+httpaddr = {{ primary_ip.stdout }}
+#http服务监听端口
+httpport = 8083
+#https服务监听端口
+HTTPSPort = 8085
+#https服务监听地址
+httpsaddr = 127.0.0.1
+#是否开启https服务，默认不开启
+EnableHTTPS = false
+#是否开启httpTLS服务，默认不开启。若开启https服务，则该配置需开启
+EnableHttpTLS = false
+HTTPSCertFile = "conf/server.crt"
+HTTPSKeyFile = "conf/server.key"
+runmode = prod
+copyrequestbody=true
+cache_expired=120
+
+logsLevel=7
+beego.BConfig.ServerName=egova
+beego.BConfig.EnableErrorsShow=true
+authorization=true
+autorender = true
+beego.PprofOn = false
+allowedOrigins = "*"
+
+
+#数据库配置
+[db]
+db_type=mysql
+db_user={{ db_username }}
+db_pass={{ db_password }}
+db_host={{ db_ip }}
+db_port={{ db_port}}
+db_name=videov3
+db_max_idle_conn=10
+db_max_open_conn=30
+
+[userCenterConfig]
+platformUrl=http://{{ usercenter_master_ip }}:8080/usercenter-api
+clientId={{ video_client_id | default('videocenter') }}
+clientSecret={{ video_client_secret | default('075d4fb603') }}
+applicationCode={{ video_application_code | default('videocenter') }}
+ssoUrl=http://{{ ansible_master_ip }}:8080/usercenter-api/sso/authorize?responseType=code&applicationId={{ video_application_code | default('videocenter') }}&redirectUrl=http://{{ ansible_master_ip }}:8080/video/#/overview

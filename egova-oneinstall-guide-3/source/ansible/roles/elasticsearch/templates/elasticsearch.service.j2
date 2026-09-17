@@ -1,0 +1,16 @@
+[Unit]
+Description=elasticsearch
+
+[Service]
+WorkingDirectory={{ deploy_path }}/elasticsearch
+ExecStart={{ deploy_path }}/elasticsearch/bin/elasticsearch
+Restart=always
+RestartSec=5
+IgnoreSIGPIPE=no
+StartLimitInterval=0
+OOMScoreAdjust=-1000
+User=egova
+Group=egova
+
+[Install]
+WantedBy=multi-user.target

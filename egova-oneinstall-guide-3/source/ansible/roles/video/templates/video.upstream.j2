@@ -1,0 +1,13 @@
+{%- set video_local_ip = (ansible_ssh_host | default(ansible_host | default(inventory_hostname))) | trim -%}
+
+upstream srvs_video_frontend {
+    server {{ video_local_ip }}:8080;
+}
+
+upstream srvs_video_backend {
+    server {{ video_local_ip }}:8083;
+}
+
+upstream srvs_video_media {
+    server {{ video_local_ip }}:8090;
+}

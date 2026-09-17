@@ -1,0 +1,127 @@
+---
+# check service count
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- block:
+    - set_fact: web_app_name={{ app_type }}
+    - set_fact: web_app_dir={{ app_type }}
+
+
+- name: 输出web_app_name名称
+  debug:
+    msg: "web_app_name: {{ web_app_name }}"
+
+- set_fact:
+    app_root_dir: "/{{ microservice[app_type][app_name].base_path.split('/')[1] }}/{{ microservice[app_type][app_name].base_path.split('/')[2]  }}/{{ microservice[app_type][app_name].base_path.split('/')[3]  }}"
+    deploy_dir: "{{ microservice[app_type][app_name].base_path }}"
+    proxy_config: "{{ microservice[app_type][app_name].proxy | default([]) }}"
+
+
+- name: 输出代理配置信息
+  debug:
+    msg: "proxy_config配置： {{ proxy_config }}"
+
+# create dest package dir
+- name: create dest dir
+  file: path={{ item }} state=directory mode='0755'
+  with_items:
+    - "{{ dest_path }}"
+    - "{{ app_root_dir }}"
+    - "{{ deploy_dir }}"
+
+- name: 检查 {{ app_type }}-backend.tar 是否存在
+  connection: local
+  stat:
+    path: "../src/web/{{ app_type }}/{{ app_type }}-backend.tar"
+  register: app_type_tar
+
+- name: Fail if {{ app_type }}-backend.tar is  empty
+  fail:
+    msg: |
+      待安装的{{ app_type }}服务，web包不存在,如需安装服务{{ ansible_master_ip }}服务器上执行 dl_v2.sh 下載待安裝的服务!!!
+      若ll /egova/onekey_install/oneinstall_v2/src/web |grep {{ app_type }}|wc -l 大于0 则表示待安装的服务已存在
+  when: app_type_tar.stat.exists == False
+
+- name: 解压{{ app_type }}-backend.tar
+  unarchive:
+    src: "{{ src_path }}/{{ app_type }}-backend.tar"
+    dest: "{{ deploy_dir }}"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    mode: '0755'
+  when: app_type_tar.stat.exists == True
+
+- block:
+    - name: 镜像导入
+      command: docker load -i {{ deploy_dir }}/{{ item }}
+      with_items:
+        - etcd.tar
+        - mongo.tar
+        - redis.tar
+      ignore_errors: true
+
+    - name: 解压Open-IM-Server.tar.gz
+      shell: |
+        tar xzvf {{ deploy_dir }}/Open-IM-Server.tar.gz -C {{ deploy_dir }}
+        chown -R {{ ops_user }}:{{ ops_user }} {{ deploy_dir }}
+        chmod -R '0755' {{ deploy_dir }}/Open-IM-Server
+
+    - name: 提取依赖的key值
+      set_fact:
+        biz_db_key: "{{ {'data': microservice[app_type][app_name].depends, 'type_value': 'mysql', 'sub_type_value': 'biz'} | custom_json_query }}"
+        kafka_key: "{{ {'data': microservice[app_type][app_name].depends, 'type_value': 'kafka', 'sub_type_value': None} | custom_json_query }}"
+        zookeeper_key: "{{ {'data': microservice[app_type][app_name].depends, 'type_value': 'zookeeper', 'sub_type_value': None} | custom_json_query }}"
+        usercenter_key: "{{ {'data': microservice[app_type][app_name].depends, 'type_value': 'microservice', 'sub_type_value': 'usercenter'} | custom_json_query }}"
+
+
+    - name: 输出
+      debug:
+        msg: |
+          biz_db_key: {{ biz_db_key }}
+          kafka_key: {{ kafka_key }}
+          zookeeper_key: {{ zookeeper_key }}
+          usercenter_key: {{ usercenter_key }}
+
+    - set_fact:
+        db_ip: "{{ mysql[biz_db_key].ip }}"
+        db_port: "{{ mysql[biz_db_key].port }}"
+        db_username: "{{ mysql[biz_db_key].username }}"
+        db_password: "{{ mysql[biz_db_key].password }}"
+        kafka_ip: "{{ kafka[kafka_key].ip }}"
+        kafka_port: "{{ kafka[kafka_key].port }}"
+        zookeeper_ip: "{{ zookeeper[zookeeper_key].ip }}"
+        usercenter_ip: "{{ microservice['usercenter'][usercenter_key].ip }}"
+        usercenter_port: "{{ microservice['usercenter'][usercenter_key].server_port }}"
+
+    - name: Get the primary IP address of the host
+      shell: hostname -I | awk '{print $1}'
+      register: primary_ip
+
+    - name: 更新config
+      template: src=config.yaml.j2 dest={{ deploy_dir }}/Open-IM-Server/config/config.yaml
+
+    - name: copy nginx location conf
+      template: src=service.location.j2 dest=/etc/nginx/conf.d/{{ app_type }}.location
+      notify:
+        - reload nginx
+
+    - name: 启动即时通讯
+      become: true
+      shell:
+        cmd: |
+          cd {{ deploy_dir }}/Open-IM-Server
+          docker-compose up -d
+          cd script/
+          ./start_all.sh -e no
+
+    - name: save metadata
+      connection: local
+      shell: |
+        yq -i '.microservice.'{{ app_type }}'.'{{ app_name }}'.status="'success'"' inventory/metadata.yml
+        yq -i '.microservice.'{{ app_type }}'.'{{ app_name }}'.ip="'{{ all.hosts[inventory_hostname].ansible_ssh_host }}'"' inventory/metadata.yml
+        yq -i '.microservice.'{{ app_type }}'.'{{ app_name }}'.host="'{{ inventory_hostname }}'"' inventory/metadata.yml
+
+  when: app_type == 'IM'

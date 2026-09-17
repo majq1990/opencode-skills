@@ -1,0 +1,19 @@
+[Unit]
+Description=nacos
+
+[Service]
+Type=forking
+WorkingDirectory={{ deploy_path }}/nacos
+Environment="JAVA_HOME=/usr/java/jdk{{ default_jdk_version }}"
+ExecStart={{ deploy_path }}/nacos/bin/startup.sh -m standalone
+ExecStop={{ deploy_path }}/nacos/bin/shutdown.sh
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=nacos
+Restart=on-failure
+RestartSec=5
+User=egova
+Group=egova
+
+[Install]
+WantedBy=multi-user.target

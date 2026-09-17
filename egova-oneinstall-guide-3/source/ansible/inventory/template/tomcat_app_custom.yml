@@ -1,0 +1,23 @@
+v14_srvs:
+  env:
+    custom:
+      eUrbanMIS:
+        config:
+      eUrbanUMA:
+        config:
+      eUrbanMF:
+        config:
+      eUrbanSG:
+        config:
+      eUrbanGIS:
+        config:
+          - src: applicationContext-mileageUpdateTimer.xml
+            dest: /WEB-INF/classes
+      eGovaMMS:
+        config:
+          - src: config.xml
+            dest: /WEB-INF/classes/mms
+      eGovaPublic:
+        config:
+      IMserver:
+        config:

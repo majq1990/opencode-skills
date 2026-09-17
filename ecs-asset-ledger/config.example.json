@@ -1,0 +1,7 @@
+{
+  "WEBHOOK_URL": "https://oapi.dingtalk.com/robot/send?access_token=<替换为群机器人 access_token>",
+  "WEBHOOK_KEYWORD": "egova",
+  "AT_USERIDS": ["<替换为资产管理员钉钉 userId>"],
+  "REGIONS": ["cn-beijing", "cn-wulanchabu", "cn-hangzhou"],
+  "WILDCARD_INSTANCE_DAYS": 3
+}

@@ -1,0 +1,12 @@
+{% for depend in service[app_type][app_name].depends %}
+{% if depend.type == 'zookeeper' %}
+serverLists={{ zookeeper[depend.depend_key].ip }}:{{ zookeeper[depend.depend_key].port }}
+namespace=egova-job
+baseSleepTimeMilliseconds=1000
+maxSleepTimeMilliseconds=3000
+connectionTimeoutMilliseconds=10000
+maxRetries=3
+initCheckInterval=60000
+digest=egova:5EKOpn+iKC+GcPC52dYhubSNjnE=
+{% endif %}
+{% endfor %}

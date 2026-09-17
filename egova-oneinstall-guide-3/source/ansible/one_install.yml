@@ -1,0 +1,20 @@
+---
+- name: configure and deploy the microservice
+  hosts: "{{ host }}"
+  gather_facts: "yes"
+  remote_user: root
+  # 优先级小于role/vars下定义的变量
+  vars_files:
+    - ./group_vars/all.yml
+    # 注入微服务配置
+    - ./inventory/hosts.yml
+  roles:
+    - local_repo
+    - common
+    - jdk
+    - nginx
+    - httpfileservice
+    - gisserver
+    - service
+    - logrotate
+    

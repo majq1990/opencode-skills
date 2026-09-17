@@ -1,0 +1,8 @@
+#!/bin/bash
+# 请勿直接修改statGatherApp.py 入口程序仍为app.py,为避免ps -ef歧义,每次运行时，复制app.py为statGatherApp.py
+
+before_path=$(pwd)
+cd {{ deploy_path }}
+\cp -f app.py statGatherApp.py
+nohup python3 -u statGatherApp.py > statGatherApp.out 2>&1 &
+cd ${before_path}

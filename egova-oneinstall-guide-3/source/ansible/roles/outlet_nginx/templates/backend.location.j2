@@ -1,0 +1,235 @@
+
+  {% if MS_CONFIG['url_backend'] == "eUrbanMIS/itemlistserver/" %}
+  location /{{ MS_CONFIG['url_backend'] }} {
+      proxy_pass http://srvs_{{ app_type }}_backend/;
+      proxy_redirect default;
+      proxy_connect_timeout 5;
+      send_timeout 10;
+      proxy_http_version 1.1;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+      proxy_set_header Host $http_host;
+      proxy_set_header Cookie $new_cookie;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_set_header X-Real-IP  $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header Range $http_range;
+      proxy_set_header If-Range $http_if_range;
+      proxy_hide_header X-Powered-By;
+      proxy_hide_header Server;
+      client_max_body_size  100m;
+      add_header Cache-Control max-age=0;
+      if ( $uri ~ "\.(js|css|txt)$" ){
+          add_header Cache-Control max-age=3600;
+      }
+}
+
+{%- elif MS_CONFIG['url_backend'] == "datamgr-api" %}
+location ~ ^/eUrbanMIS/(auth/login|mi/datamgr/v2|home/datamgr/v2|free/datamgr/v2)/(.*) {
+           set $path1 $1;
+           set $path2 $2;
+	    proxy_pass http://srvs_{{ app_type }}_backend/datamgr-api/$path1/$path2?$args;
+            proxy_cookie_path  / /eUrbanMIS/;
+            proxy_set_header           Host $host;
+            proxy_set_header  X-Real-IP  $remote_addr;
+            proxy_set_header           X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Range $http_range;
+            proxy_set_header If-Range $http_if_range;
+            client_max_body_size  100m;
+            index  index.html index.htm;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            add_header Cache-Control max-age=0;
+            if ( $uri ~ "\.(js|css|txt)$" ){
+                add_header Cache-Control max-age=3600;
+            }
+}
+
+location ~ ^/eUrbanMIS/(home/datamgr/v2/import)/(.*) {
+           set $path1 $1;
+           set $path2 $2;
+	    proxy_pass http://srvs_{{ app_type }}_backend/datamgr-api/$path1/$path2?$args;
+            proxy_cookie_path  / /eUrbanMIS/;
+            proxy_set_header           Host $host;
+            proxy_set_header  X-Real-IP  $remote_addr;
+            proxy_set_header           X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Range $http_range;
+            proxy_set_header If-Range $http_if_range;
+            client_max_body_size  100m;
+	    proxy_connect_timeout 10;
+            proxy_send_timeout 180;
+            proxy_read_timeout 180;
+            index  index.html index.htm;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            add_header Cache-Control max-age=0;
+            if ( $uri ~ "\.(js|css|txt)$" ){
+                add_header Cache-Control max-age=3600;
+            }
+}
+
+{%- elif MS_CONFIG['url_backend'] == "check-api" %}
+location ~ ^/eUrbanMIS/(home/check/v2|mi/check)/(.*) {
+        set $path1 $1;
+        set $path2 $2;
+        proxy_pass http://srvs_{{ app_type }}_backend/check-api/$path1/$path2?$args;
+        proxy_cookie_path  / /eUrbanMIS/;
+        proxy_set_header           Host $host;
+        proxy_set_header  X-Real-IP  $remote_addr;
+        proxy_set_header           X-Forwarded-For $proxy_add_x_forwarded_for;
+        client_max_body_size  100m;
+        index  index.html index.htm;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        add_header Cache-Control max-age=0;
+        if ( $uri ~ "\.(js|css|txt)$" ){
+            add_header Cache-Control max-age=3600;
+        }
+}
+
+{%- elif MS_CONFIG['url_backend'] == "spm-api" %}
+location ~ ^/eUrbanMIS/(home/spm|thirdapi/spm|mi/spm)/(.*) {
+        set $path1 $1;
+        set $path2 $2;
+        proxy_pass http://srvs_{{ app_type }}_backend/spm-api/$path1/$path2?$args;
+        proxy_cookie_path  / /eUrbanMIS/;
+        proxy_set_header           Host $host;
+        proxy_set_header  X-Real-IP  $remote_addr;
+        proxy_set_header           X-Forwarded-For $proxy_add_x_forwarded_for;
+        client_max_body_size  100m;
+        index  index.html index.htm;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        add_header Cache-Control max-age=0;
+        if ( $uri ~ "\.(js|css|txt)$" ){
+            add_header Cache-Control max-age=3600;
+        }
+ }
+
+{%- elif MS_CONFIG['url_backend'] == "tms-api" %}
+location ~ ^/eUrbanMIS/(home/tms|test/tms)/(.*) {
+        set $path1 $1;
+        set $path2 $2;
+        proxy_pass http://srvs_{{ app_type }}_backend/tms-api/$path1/$path2?$args;
+        proxy_cookie_path  / /eUrbanMIS/;
+        proxy_set_header           Host $host;
+        proxy_set_header  X-Real-IP  $remote_addr;
+        proxy_set_header           X-Forwarded-For $proxy_add_x_forwarded_for;
+        client_max_body_size  100m;
+        index  index.html index.htm;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        add_header Cache-Control max-age=0;
+        if ( $uri ~ "\.(js|css|txt)$" ){
+            add_header Cache-Control max-age=3600;
+        }
+}
+
+{%- elif MS_CONFIG['url_backend'] == "screen-api" %}
+location ~ ^/eUrbanMIS/(home/screen/datamgr|free/screen/datamgr)/(.*){
+        set $path1 $1;
+        set $path2 $2;
+        proxy_pass http://srvs_{{ app_type }}_backend/screen-api/$path1/$path2?$args;
+        proxy_cookie_path  / /eUrbanMIS/;
+        proxy_set_header           Host $host;
+        proxy_set_header  X-Real-IP  $remote_addr;
+        proxy_set_header           X-Forwarded-For $proxy_add_x_forwarded_for;
+        client_max_body_size  100m;
+        index  index.html index.htm;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        add_header Cache-Control max-age=0;
+        if ( $uri ~ "\.(js|css|txt)$" ){
+            add_header Cache-Control max-age=3600;
+        }
+}
+
+{%- elif MS_CONFIG['url_backend'] == "indicator-api" %}
+location ~ ^/eUrbanMIS/indicator/(.*) {
+            set $path1 $1;
+            proxy_pass http://srvs_{{ app_type }}_backend/indicator-api/$path1?$args;
+            proxy_cookie_path  / /eUrbanMIS/;
+            proxy_set_header           Host $host;
+            proxy_set_header  X-Real-IP  $remote_addr;
+            proxy_set_header           X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Range $http_range;
+            proxy_set_header If-Range $http_if_range;
+            client_max_body_size  100m;
+            index  index.html index.htm;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            add_header Cache-Control max-age=0;
+            if ( $uri ~ "\.(js|css|txt)$" ){
+                add_header Cache-Control max-age=3600;
+            }
+}
+
+{%- elif MS_CONFIG['url_backend'] == "template-api" %}
+location ~ ^/eUrbanMIS/(unity/category|unity/table|unity/column|free/establish|unity/page|free/display|free/template|unity/establish|free/printingTemplate|unity/printingTemplate)/(.*) {
+           set $path1 $1;
+           set $path2 $2;
+           proxy_pass http://srvs_{{ app_type }}_backend/template-api/$path1/$path2?$args;
+           proxy_cookie_path  / /eUrbanMIS/;
+           proxy_set_header  Host $host;
+           proxy_set_header  X-Real-IP  $remote_addr;
+           proxy_set_header  X-Forwarded-For $proxy_add_x_forwarded_for;
+           client_max_body_size  100m;
+           index  index.html index.htm;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection "upgrade";
+           add_header Cache-Control max-age=0;
+           if ( $uri ~ "\.(js|css|txt)$" ){
+               add_header Cache-Control max-age=3600;
+           }
+ }
+
+{% else %}
+ {% for config in proxy_config %}
+   location {{ config.source }} {
+ {% if 'http://' in config.destination or 'https://' in config.destination %}
+     proxy_pass {{ config.destination }};
+ {% else %}
+     proxy_pass http://srvs_{{ app_type }}_backend{{ config.destination }};
+ {% endif %}
+     proxy_redirect default;
+     proxy_connect_timeout 5;
+     send_timeout 10;
+     proxy_http_version 1.1;
+     proxy_set_header Upgrade $http_upgrade;
+     proxy_set_header Connection "upgrade";
+     proxy_set_header Host $http_host;
+     proxy_set_header Cookie $new_cookie;
+     proxy_set_header X-Forwarded-Proto $scheme;
+     proxy_set_header X-Real-IP  $remote_addr;
+     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+     proxy_set_header Range $http_range;
+     proxy_set_header If-Range $http_if_range;
+     proxy_hide_header X-Powered-By;
+     proxy_hide_header Server;
+     {% if 'xuanzang/files' in config.destination %}
+        proxy_hide_header Content-Type;
+        proxy_hide_header X-Content-Type-Options;
+     {% endif %}
+     gzip on;
+     gzip_min_length 1k;
+     gzip_comp_level 4;
+     gzip_types application/json;
+     gzip_vary off;
+     {% if config.source == '/media-api' %}
+       proxy_set_header Range $http_range;
+       proxy_set_header If-Range $http_if_range;
+       add_header Accept-Ranges bytes;
+       add_header Cache-Control max-age=0;
+     {% endif %}
+    }
+   {% endfor %}
+
+ {% endif %}

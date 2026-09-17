@@ -1,0 +1,8 @@
+mysql:
+  mysql_1:
+    port: "3306"
+    username: root
+    password: Wk2uBTeyp6
+    data_dir: /egova/db/mysql
+    temp_dir: /egova/db/.mysql_temp
+    ip: 127.0.0.1

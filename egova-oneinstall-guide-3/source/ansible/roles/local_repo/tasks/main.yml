@@ -1,0 +1,180 @@
+---
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    os_major_version: "{{ ansible_distribution_version.split('.')[0] }}"
+    os_distribution_name: "{{ ansible_distribution.split('_')[0] }}"
+    global_version: "{{ ansible_distribution }}_{{ ansible_architecture }}"
+
+-  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+   when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 输出global_version名称
+  debug:
+    msg: "global_version: {{ global_version }}"
+
+- name: 设置 max_xmx 的值 (MB)
+  set_fact:
+    max_xmx: "{{ max_xmx | default('0') | int }}"
+
+- name: 获取当前服务器的可用内存 (MB)
+  shell: free -m | awk '/^Mem:/{print $7}'
+  register: available_mem
+
+- name: 检查是否有足够的可用内存来部署服务
+  fail:
+    msg: "错误：系统没有足够的可用内存来部署服务。需要的内存：Xmx={{ max_xmx }}MB，当前可用内存：{{ available_mem.stdout }}MB"
+  ignore_errors: true
+  when: (max_xmx | int) > 0 and available_mem.stdout|int < (max_xmx | int)
+
+# check if already exists
+- name: 检查是否已配置本地源
+  stat: path={{ lock_file }}
+  register: file_exists
+
+- name: "解锁重要文件"
+  become: true
+  shell: |
+     chattr -i /etc/gshadow
+     chattr -i /etc/group
+     chattr -i /etc/shadow
+     chattr -i /etc/passwd
+  ignore_errors: yes
+
+- name: "检查是否已创建{{ ops_user }}组"
+  stat: path=/opt/.{{ ops_user }}_group_has_create
+  register: group_result
+
+- name: "{{ ops_user }}组创建"
+  become: true
+  group:
+    name: "{{ ops_user }}"
+    state: present
+  register: group_result
+  when: not group_result.stat.exists
+
+- name: "{{ ops_user }}组创建完成"
+  file: path=/opt/.{{ ops_user }}_group_has_create state=touch
+  when: group_result.skipped is not defined
+
+- name: "检查是否已创建{{ ops_user }}用户"
+  command: id "{{ ops_user }}"
+  ignore_errors: yes
+  register: user_exists
+
+- name: "{{ ops_user }}用户创建"
+  become: true
+  shell: |
+    useradd -m -g  {{ ops_user }}  {{ ops_user }}
+    echo "{{ ops_user }}:{{ ssh_password }}" | sudo chpasswd
+  ignore_errors: yes
+  when: user_exists.rc != 0
+
+
+- name: get python3 version
+  shell: python3 --version
+  register: python3_version_output
+  ignore_errors: yes
+
+- block:
+    - name: Install python3 package with unarchive module
+      unarchive:
+        src: "{{ src_path }}/python.tar.gz"
+        dest: "{{ deploy_path }}"
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: '0755'
+
+    - name: Create symbolic links for pip3 and python3
+      become: yes
+      file:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        state: link
+      loop:
+        - { src: '/usr/local/python3/bin/python3', dest: '/usr/bin/python3' }
+        - { src: '/usr/local/python3/bin/pip3', dest: '/usr/bin/pip3' }
+  when: python3_version_output.rc >0 and ansible_distribution == 'CentOS'
+
+- block:
+    - name: 准备目录
+      file: name={{ install_dir }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='0755'
+
+    # copy apt repo config
+    - name: copy apt repo config
+      template: src=egova-oneinstall-local.list.j2 dest={{ local_apt_conf }}
+      notify: update repo
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Copy repo config
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ local_yum_conf }}"
+#      notify: update repo
+      when: (ansible_distribution in ['openEuler','uos_x86','uos_arm','kylin_arm','kylin_x86','anolis_x86','anolis_arm'] and  item.os == 'openEuler')  or ( ansible_distribution == 'CentOS' and  item.os == 'CentOS')  or ( ansible_distribution == 'UOS' and  item.os == 'UOS')
+      with_items:
+        - { src: 'egova-oneinstall-local.repo.j2',os: 'openEuler' }
+        - { src: 'egova-oneinstall-local-centos.repo.j2', os: 'CentOS'}
+        - { src: 'egova-oneinstall-local-uos.repo.j2', os: 'UOS'}
+
+    - name: create lock file
+      file:
+        path: "{{ lock_file }}"
+        state: touch
+        mode: "0644"
+  when: not file_exists.stat.exists
+
+- name: Check if basic tools is installed
+  shell: "which cronolog"
+  register: basictools_check
+  ignore_errors: yes
+
+- name: "install basic tools"
+  package:
+    name: "{{ item }}"
+    state: "present"
+    update_cache: yes
+  with_items:
+    - net-tools
+    - zip
+    - unzip
+    - cronolog
+    - tcpdump
+    - vim
+    - atop
+    - bc
+    - dos2unix
+    - ftp
+    - htop
+    - iftop
+    - iotop
+    - lrzsz
+    - telnet
+    - ipset
+    - tar
+    - curl
+    - iptables
+    - iperf3
+    - logrotate
+  ignore_errors: yes
+  when: basictools_check.rc != 0
+
+- name: "install zh_cn"
+  package:
+    name: "{{ item }}"
+    state: "present"
+    update_cache: yes
+  with_items:
+    - language-pack-zh-hans
+    - language-pack-zh-hant
+    - curl
+  when: ansible_pkg_mgr ==  'apt'
+
+- name: "加锁重要文件"
+  become: true
+  shell: |
+    chattr +i /etc/gshadow
+    chattr +i /etc/group
+    chattr +i /etc/shadow
+    chattr +i /etc/passwd
+  ignore_errors: yes

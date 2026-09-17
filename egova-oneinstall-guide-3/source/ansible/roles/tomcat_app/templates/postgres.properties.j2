@@ -1,0 +1,15 @@
+# Properties file with JDBC-related settings.
+# eUrbanV14 standard database
+
+#PostgreSQL
+{% for depend in service[app_type][app_name].depends %}
+{% if depend.type == 'postgresql' %}
+geo.encrypt=false
+geo.jdbc.driverClassName ={{ pg_datasource_driver }}
+geo.jdbc.url = jdbc:postgresql://{{ postgresql[depend.depend_key].ip }}:{{ postgresql[depend.depend_key].port }}/{{ depend.database }}?characterEncoding=utf8
+geo.jdbc.username={{ postgresql[depend.depend_key].username }}
+geo.jdbc.cryptogram={{ postgresql[depend.depend_key].password }}
+geo.jdbc.validation.query = select 1
+geo.dialect = cn.com.egova.iotbase.dialect.FacPostgisDialect
+{% endif %}
+{% endfor %}

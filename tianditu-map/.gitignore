@@ -1,0 +1,8 @@
+# 排除敏感与生成物
+config/keys.local.json
+__pycache__/
+*.pyc
+evidence/
+*.geojson
+*.png
+*.html

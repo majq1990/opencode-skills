@@ -1,0 +1,27 @@
+{%- set nodes = MS_CONFIG['nodes']|unique %}
+{%- set backends = MS_CONFIG['backends'] %}
+{% if server_type == 'microservice' %}
+upstream srvs_{{ app_type }}_frontend {
+  {% for node in nodes %}
+    server {{ hostvars[node]['ansible_ssh_host'] }}:{{ NGINX_PORT |default("8080")}};
+  {% endfor %}
+}
+
+upstream srvs_{{ app_type }}_backend {
+ {% if app_type == 'xuanzang' %}
+   {% for bk in backends %}
+      server {{ hostvars[bk['host']]['ansible_ssh_host'] }}:{{ bk['port'] |default("8080")}};
+   {% endfor %}
+ {% else %}
+   {% for bk in backends %}
+      server {{ hostvars[bk['host']]['ansible_ssh_host'] }}:{{ bk['port'] }};
+   {% endfor %}
+ {% endif %}
+}
+{% else %}
+upstream {{ app_type }} {
+  {% for bk in backends %}
+    server {{ hostvars[bk['host']]['ansible_ssh_host'] }}:{{ bk['port'] }};
+  {% endfor %}
+}
+{% endif %}

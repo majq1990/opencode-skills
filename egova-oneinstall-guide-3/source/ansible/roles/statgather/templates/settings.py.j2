@@ -1,0 +1,125 @@
+# -*- coding: utf-8 -*-
+
+{%- set biz_db_prefix = 'cetus' if 'cetus' in biz_db_key else 'mysql' %}
+{%- set stat_db_prefix = 'cetus' if 'cetus' in stat_db_key else 'mysql' %}
+
+# 数据库配置
+# dbTypeName 数据库类型 oracle | mysql
+# stat_conn 统计库连接配置
+# stat_db_name 统计库名称
+# biz_conn 业务库连接配置
+# biz_db_name 业务库名称
+dbTypeName = "mysql"
+stat_conn = {
+    "host": "{{ vars[stat_db_prefix][stat_db_key].ip }}",
+    "port": {{ vars[stat_db_prefix][stat_db_key].port }},
+    "db": "cgdbstat",
+    "user": "{{ vars[stat_db_prefix][stat_db_key].username }}",
+    "password": "{{ vars[stat_db_prefix][stat_db_key].password }}",
+    "charset": "utf8"
+}
+stat_db_name = "cgdbstat"
+biz_conn = {
+    "host": "{{ vars[biz_db_prefix][biz_db_key].ip }}",
+    "port": {{ vars[biz_db_prefix][biz_db_key].port }},
+    "db": "cgdb",
+    "user": "{{ vars[biz_db_prefix][biz_db_key].username }}",
+    "password": "{{ vars[biz_db_prefix][biz_db_key].password }}",
+    "charset": "utf8"
+}
+biz_db_name = "cgdb"
+# ================================================================
+# 采集配置
+# 监督员上报问题来源标识
+patrol_report_src_tuple = (1,100,)
+# 受理阶段活动属性
+ACCEPTOR_PROP = (1, 2)
+# 值班长阶段活动属性
+GANGER_PROP = (3, 4)
+# 市派遣阶段活动属性
+DISPATCH_PROP = (6,)
+# 区派遣阶段活动属性
+SECOND_DISPATCH_PROP = (5,)
+# 处置阶段活动属性
+DISPOSE_PROP = (7, 8)
+# 督查阶段活动属性
+SUPERVISE_PROP = (9, 10)
+# 核查阶段活动属性
+CHECK_PROP = (11, 13)
+# 值班长结案阶段
+HUMAN_ARCHIVE_PROP = (12, 14)
+# 存档
+FINISH_PROP = (101,)
+# 作废
+CANCEL_PROP = (102,)
+
+# 监督员核查时限
+CHECK_LIMIT = 2
+VERIFY_LIMIT = 2
+
+# 发核查核实时限
+SEND_CHECK_LIMIT = 30
+SEND_VERIFY_LIMIT = 30
+
+street_check_limit = 60
+town_check_limit = 120
+
+# 采集间隔时间,单位秒
+gather_interval = 300 * 1
+
+# 门前三包采集间隔时间,单位秒
+mqsb_gather_interval = 300 * 1
+
+# 广告采集间隔时间,单位秒
+ad_gather_interval = 300 * 1
+
+# 默认计时方案
+default_time_sys_id = 1
+
+#是否将处置绑定至结案指标
+bundle_dispose_archive = 0
+
+# 需要固化的表名，固化时间，固化条件,对于固化时间可以选择月底endmonth或者是月中的某一天如01或21
+# 固化条件目前支持上报时间create_time, 处置截止时间dispose_deadline，结案时间archive_time
+# 每个需要固化的表对应一个固化对象 如果有多个表需要固化，固化的详细时间最好不要一样，若一样的话有可能会同一时刻不能同时固化多个表
+# 需要确认固化条件是否在表中是存在的
+#solidItem = [{"solidTableName": "to_stat_info", "solidTime": "21", "solidDetailTime": "23:50",
+#              "solidCond": "create_time"}]
+solidItem = []
+
+# 不采集的字段
+stat_info_filter_columns = ()
+
+# 是否采集重复案件
+gather_stat_repeat = 0
+
+#统计指标推送  服务器地址  端口号
+serviceIP = "localhost"
+port = 8080
+
+#判断是否采集河长项目的字段，默认不采集river_flag=0,采集设置river_flag=1
+river_flag = 0
+
+#大地坐标转wgs84经纬度坐标参数
+param_str ="82433.0558595657#-2517.97483825684#-0.00541148990399386#0.999993965780419#0#117"
+
+redis_process_num = 2
+redis_ip = "{{ redis[redis_key].ip }}"
+redis_port = {{ redis[redis_key].port }}
+redis_password = "{{ redis[redis_key].password }}"
+redis_database = 0
+redis_sysinfo_expire_time = 300
+
+#采集案件积分(0:兼容鹰潭的采集方式; 1:按照立案条件的基础分值; 2:按照mis提供的to_rec_rate表获取)
+rec_score_gather_flag = 0
+
+#是否启动固化任务
+gen_solid_table = 0
+#是否启动派遣推荐定时任务
+gen_trans_recommend = 0
+#是否启动大屏在办案件采集任务
+geather_disposing_rec = 1
+
+# 是否采集案件红包信息
+gather_bonus_record_flag = 0
+

@@ -1,0 +1,13 @@
+/egova/log/nginx/*.log {
+        su root root
+        dateext
+        dateformat .%Y-%m-%d
+        daily
+        missingok
+        rotate 15
+        nocompress
+        notifempty
+        create 640 nginx nginx
+        sharedscripts
+        copytruncate
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "query": "第三方调公钥接口一直 404，地址像是把 /v22-api/ 带进去了，帮我给个排查顺序。",
+    "should_trigger": true
+  },
+  {
+    "query": "token 接口报用户名或密码不正确，我怀疑 agent_username 配错了，先帮我排查。",
+    "should_trigger": true
+  },
+  {
+    "query": "案件已经流到节点了，但 api_message_send 没记录，这种通知采集问题先查什么？",
+    "should_trigger": true
+  },
+  {
+    "query": "我给你 action 和 JSON，帮我做第三方接口定向诊断。",
+    "should_trigger": true
+  },
+  {
+    "query": "帮我列一个麒舰第三方联调前准备清单，先不要讲报错。",
+    "should_trigger": false
+  },
+  {
+    "query": "甲方要我提前整理给第三方的材料和凭证，你先从接入准备角度给我梳理。",
+    "should_trigger": false
+  },
+  {
+    "query": "我想看 REPORT 接口的完整参数和请求示例，不用帮我排障。",
+    "should_trigger": false
+  },
+  {
+    "query": "我们还没开始联调，先帮我判断第三方直连上报和星桥拉取哪种更合适。",
+    "should_trigger": false
+  }
+]

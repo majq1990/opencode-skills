@@ -1,0 +1,56 @@
+---
+- name: 检查是否有自定义配置
+  connection: local
+  shell: test -e {{ custom_src_path }}/{{ app_type }}-custom.tar  && echo true || echo false
+  register: check_custom_output
+
+- block:
+  - name: 准备目录
+    file:
+      path: "{{ item }}"
+      state: directory
+      owner: "{{ ops_user }}"
+      group: "{{ ops_user }}"
+      mode: '0775'
+    with_items:
+      - "{{ custom_dest_path }}"
+
+  - name: 解压微服务自定义配置
+    unarchive:
+      src: "{{ custom_src_path }}/{{ app_type }}-custom.tar"
+      dest: "{{ custom_dest_path }}"
+      owner: "{{ ops_user }}"
+      group: "{{ ops_user }}"
+      mode: '0755'
+
+  - name: 检查是否有自定义前端配置
+    stat:
+      path: "{{ custom_dest_path }}/custom/{{ app_type }}-frontend-custom.location"
+    register: check_custom_frontend_output
+
+  - name: 检查nginx中是否已有自定义前端配置
+    stat:
+      path: "/etc/nginx/conf.d/{{ app_type }}-frontend-custom.location"
+    register: check_nginx_custom_frontend_output
+
+  - name: 替换并拷贝自定义nginx前端配置
+    block:
+      - name: 创建出口 nginx location 配置
+        copy:
+          src: "{{ custom_dest_path }}/custom/{{ app_type }}-frontend-custom.location"
+          dest: "{{ custom_dest_path }}/custom/{{ app_type }}-frontend-outlet-custom.location"
+
+      - name: 替换alias为proxy_pass
+        replace:
+          path: "{{ custom_dest_path }}/custom/{{ app_type }}-frontend-outlet-custom.location"
+          regexp: 'alias\s+([^;]+);'
+          replace: "proxy_pass http://srvs_{{ app_type }}_frontend;"
+
+      - name: 拷贝修改后的配置到nginx
+        copy:
+          src: "{{ custom_dest_path }}/custom/{{ app_type }}-frontend-outlet-custom.location"
+          dest: "/etc/nginx/conf.d/{{ app_type }}-frontend-outlet-custom.location"
+          remote_src: yes
+
+    when: check_custom_frontend_output.stat.exists and not check_nginx_custom_frontend_output.stat.exists
+  when: check_custom_output.stdout == 'true'

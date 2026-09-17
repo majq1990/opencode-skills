@@ -1,0 +1,14 @@
+[Unit]
+Description=stat-gather
+After=syslog.target network.target
+
+[Service]
+Type=forking
+ExecStart={{ deploy_path }}/startStatGather.sh
+ExecStop={{ deploy_path }}/stopStatGather.sh
+Restart=on-failure
+RestartSec=10
+User={{ ops_user }}
+
+[Install]
+WantedBy=multi-user.target

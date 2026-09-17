@@ -1,0 +1,14 @@
+{{ log_out_path }}/logs/**/*.log {{ log_out_path }}/WEB-INF/log/*.log {
+  su root root
+  dateext
+  dateformat .%Y-%m-%d
+  extension .log
+  daily
+  missingok
+  rotate 7
+  nocompress
+  notifempty
+  sharedscripts
+  olddir {{ log_out_path }}/logs
+  create 644 root root
+}

@@ -1,0 +1,4 @@
+---
+# variable for logrotate
+log_out_path: "{{ app_root_dir }}/{{ web_app_dir }}"
+log_logrotate_config_path: "/etc/logrotate.d/egova/logrotate.d"

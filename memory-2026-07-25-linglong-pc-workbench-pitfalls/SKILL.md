@@ -1,0 +1,1 @@
+C:/Users/majq1/.agent-memory/2026-07-25-linglong-pc-workbench-pitfalls.md

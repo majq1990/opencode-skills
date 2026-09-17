@@ -1,0 +1,47 @@
+---
+# check if python2 exists
+- name: get python2 version
+  shell: python2 --version
+  register: python2_version_output
+  ignore_errors: yes
+
+- block:
+    - name: 安装python2
+      package:
+        name:
+          - python2
+          - python-is-python2
+          - python-apt
+        state: 'present'
+        update_cache: yes
+
+    - name: 准备临时目录
+      file: name={{ temp_dir }} state=directory mode='0775'
+
+    - name: 解压安装包
+      unarchive:
+        src: "{{ src_path }}/{{ item.file }}.tar.gz"
+        dest: "{{ temp_dir }}"
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: "{{ item.mode }}"
+      with_items:
+        - { file: "{{ setuptools_dir }}",mode: "0775" }
+        - { file: "{{ pip_dir }}",mode: "0775" }
+        - { file: "{{ package_dir }}",mode: "0775" }
+
+    - name: 安装setuptools
+      command: python setup.py install
+      args:
+        chdir: "{{ temp_dir }}/{{ setuptools_dir }}"
+
+    - name: 安装pip
+      command: python setup.py install
+      args:
+        chdir: "{{ temp_dir }}/{{ pip_dir }}"
+
+    - name: 安装依赖包
+      command: pip install --no-index --find-links=offline-package -r requirement.txt
+      args:
+        chdir: "{{ temp_dir }}/{{ package_dir }}"
+  when: python2_version_output.rc >0

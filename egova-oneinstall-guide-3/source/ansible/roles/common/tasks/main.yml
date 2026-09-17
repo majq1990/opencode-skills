@@ -1,0 +1,112 @@
+---
+# This Playbook runs all the common plays in the deployment
+- name: 拷贝配置文件
+  copy: src=org.freedesktop.systemd1.policy dest=/etc/
+
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+# mount disk
+- block:
+    - name: install lvm2
+      package: name=lvm2 state=present
+
+    - name: mount egova
+      script: automount.sh
+      register: mount_result
+      args:
+        creates: /opt/.egova_has_mounted
+
+    - name: 输出挂载结果
+      debug: msg={{mount_result.stdout}}
+      when: mount_result.skipped is not defined
+
+    - name: 挂载完成
+      file: path=/opt/.egova_has_mounted state=touch
+      when: mount_result.skipped is not defined
+
+    - name: 关闭selinux
+      raw: "setenforce 0;sed -i 's/^SELINUX=.*$/SELINUX=disabled/g' /etc/selinux/config"
+      ignore_errors: yes
+      when: ansible_pkg_mgr in ['dnf', 'yum']
+
+    - name: 修复ubuntu配置项
+      script: i_ubuntu_mini_patch.sh
+      register: patch_result
+      args:
+        creates: /opt/.egova_has_patched
+
+    - name: 修复完成
+      file: path=/opt/.egova_has_patched state=touch
+      when: patch_result.skipped is not defined
+
+    - name: 检查是否已设置ufw防火墙规则
+      stat: path=/opt/.egova_has_ufw
+      register: egova_ufw_exists
+
+    - name: 检查是否安装防火墙ufw
+      shell: "which ufw"
+      register: check_ufw_exists
+      ignore_errors: yes
+      when: not egova_ufw_exists.stat.exists
+
+    - name: 检查防火墙ufw状态
+      shell: "ufw status | grep 'Status: active'"
+      register: check_ufw_state
+      ignore_errors: yes
+      when: not egova_ufw_exists.stat.exists
+
+    - name: 设置防火墙规则
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+        state: enabled
+      loop:
+        - 18081
+        - 80
+        - 3306
+        - 3307
+        - 6380
+        - 5222
+        - 5432
+        - 123
+        - 22
+        - 9000
+        - 9001
+        - 443
+        - 6030
+        - 6041
+        - 9848
+        - 9849
+      when:
+        - not egova_ufw_exists.stat.exists
+        - check_ufw_exists.rc == 0
+        - "'Status: active' in check_ufw_state.stdout"
+
+    - name: 设置防火墙连续端口
+      ufw:
+        rule: allow
+        from_port: "{{ item.from_port }}"
+        to_port: "{{ item.to_port }}"
+        proto : "{{ item.proto }}"
+        state: enabled
+      with_items:
+        - { from_port: "8080",to_port: "8099",proto: "tcp" }
+        - { from_port: "6030",to_port: "6034",proto: "udp" }
+      when:
+        - not egova_ufw_exists.stat.exists
+        - check_ufw_exists.rc == 0
+        - "'Status: active' in check_ufw_state.stdout"
+
+    - name: ufw防火墙设置完成
+      file: path=/opt/.egova_has_ufw state=touch
+      when: not egova_ufw_exists.stat.exists
+  when: mode == 'default'
+
+- name: 执行全量安全补丁脚本
+  script: i_security_os_patch.sh
+  when: mode == 'patch'
+

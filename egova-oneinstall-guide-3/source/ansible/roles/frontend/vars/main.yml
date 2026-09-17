@@ -1,0 +1,8 @@
+---
+app_type: "{{ app_type }}"
+app_name: "{{ app_name }}"
+
+# src_path可直接写死，根据在主控节点上解压安装包的路径确定
+src_path: "{{ src_web_package_path }}/{{ app_type }}"
+# 此路径为部署节点上存放web安装包的路径，安装包包含前端和后端两个
+dest_path: "{{ dest_package_root_path }}/microservice"

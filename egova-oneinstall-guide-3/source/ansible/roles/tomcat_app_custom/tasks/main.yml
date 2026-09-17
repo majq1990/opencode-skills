@@ -1,0 +1,48 @@
+---
+# V14智信云应用服务自定义配置统一放这里处理
+- name: 检查是否有自定义配置
+  connection: local
+  shell: test -e ../src/web/{{ app_type }}/{{ app_type }}-custom.tar  && echo true || echo false
+  register: check_custom_output
+
+- block:
+    - set_fact:
+        app_root_dir: "{{ service[app_type][app_name].base_path }}"
+        custom_config: "{{ v14_srvs.env.custom[app_type].config | default([]) }}"
+        main_nginx_host: "{{ ip_nginx_main.hosts.master }}"
+
+    - name: 准备目录
+      connection: local
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: '0755'
+      with_items:
+        - "{{ dest_path }}"
+        - "{{ app_root_dir }}"
+
+    # 自定义配置，命名规范{{ app_type }}-custom.tar，如wukong-custom.tar
+    - name: 解压微服务自定义配置
+      connection: local
+      unarchive:
+        src: "{{ src_path }}/{{ app_type }}-custom.tar"
+        dest: "{{ dest_path }}"
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: '0755'
+
+    - name: 修改配置
+      template:
+        src: "{{ dest_path }}/custom/{{ item.src }}.j2"
+        dest: "{{ deploy_path }}{{ item.dest }}/{{ item.src }}"
+        mode: '0644'
+      with_items: "{{ custom_config }}"
+      when: custom_config | length > 0
+
+    - name: 重启服务
+      systemd:
+        name: tomcat-{{ biz_type }}
+        state: restarted
+  when: check_custom_output.stdout == 'true'

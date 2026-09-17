@@ -1,0 +1,11 @@
+/egova/log/zookeeper/*.log /egova/log/zookeeper/*.out {
+        su root root
+        dateext
+        dateformat .%Y-%m-%d
+        daily
+        missingok
+        rotate 7
+        nocompress
+        notifempty
+        copytruncate
+}

@@ -1,0 +1,9 @@
+enhance_port: [端口加固](限制端口仅内部可访问,可多次运行)
+expose_port: [端口微调](端口加固之后,新增内部ip或者端口)
+add_security_agent: [密码加固]禁止服务内置超级用户登录
+scan_egova_service: [异常扫描]扫描nginx/tomcat/端口暴露是否存在异常
+scan_network: [网段扫描]fscan扫描当前网段
+scan_weak_password: [弱密码扫描]数据库人员弱密码检查工具
+scan_vulnerable_jar: [jar扫描]扫描是否存在高危漏洞的三方jar(部分jar可以自动替换)
+check_safe_config: [安全配置]各产品线安全配置项开启与检查
+enhance_middleware: [中间件加固]支持东方通和金蝶中间件

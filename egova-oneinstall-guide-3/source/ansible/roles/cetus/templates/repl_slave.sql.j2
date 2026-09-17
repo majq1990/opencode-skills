@@ -1,0 +1,5 @@
+change master TO master_host='{{ master_db_ip }}',
+master_user='repl',master_password='{{ password }}',
+master_port={{ master_db_port.stdout }},master_log_file='{{master_log_file}}',
+master_log_pos={{master_log_pos}};
+start slave;

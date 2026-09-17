@@ -1,0 +1,45 @@
+-- 此文件应该放在 linglong-db.tar 中，一键部署脚本中的文件为备份
+UPDATE `linglong`.`com_option` SET  `value` = 'http://{{ minio[minio_key].ip }}:{{ minio[minio_key].port }}' WHERE `groupType` = 'linglong' and `name` = 'MINIO_ENDPOINTS';
+UPDATE `linglong`.`com_option` SET  `value` = '{{ minio[minio_key].secret_key }}' WHERE `groupType` = 'linglong' and `name` = 'MINIO_SECRET';
+UPDATE `linglong`.`com_option` SET  `value` = '{{ minio[minio_key].access_key }}' WHERE `groupType` = 'linglong' and `name` = 'MINIO_ACCESS';
+UPDATE `linglong`.`com_option` SET  `value` = '{{ app_type }}' WHERE `groupType` = 'linglong' and `name` = 'MINIO_BUCKET';
+
+{% macro get_ip(host_info) %}
+{%- set master = host_info.hosts.master if host_info is defined and host_info.hosts is defined else None %}
+{%- set ip = hostvars[master]['ansible_ssh_host'] if master and master in hostvars and 'ansible_ssh_host' in hostvars[master] else '127.0.0.1'  %}
+{{ ip }}
+{%- endmacro -%}
+
+{%- set linglong_ip = get_ip(ip_web_linglong) %}
+{%- set onlyoffice_ip = get_ip(ip_web_onlyoffice) %}
+-- linglong后端地址
+update com_option set value ='http://{{ linglong_ip }}:10000/linglong-api' where groupType='linglong' and name='SERVICE_URL';
+-- onlyoffice 内网地址
+update com_option set value ='http://{{ onlyoffice_ip }}:9090' where groupType='linglong' and name='egova.editor.documentjsurl';
+
+-- onlyoffice 服务地址，直接使用相对路径
+update com_option set `value` ='/onlyoffice' where groupType='linglong' and name='commonSetting.onlyOfficeBase';
+-- 灵珑后端地址，直接使用相对路径
+update com_option set `value` ='/linglong-api' where groupType='linglong' and name='commonSetting.onlyOfficePluginUrl';
+
+{%- set nginx_main_node = ip_nginx_main.hosts.master  %}
+
+-- 修改认证
+{% if nginx_main_node is not none %}
+update lcbase_sso_client_info set endpoint = 'http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/usercenter-api' where name = 'qijian_api';
+update lcbase_sso_client_info set endpoint = 'http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/usercenter-api' where name = 'ibility';
+update  com_option set value= 'http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/usercenter-api/' where name ='egova.authing.cas.server.default.endpoint';
+update  com_option set value= 'http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/usercenter-api/sso/authorize?applicationId=1787786667060465664&responseType=code&redirectUrl=' where name ='egova.authing.cas.server.default.authorizeUrl';
+
+-- 修改多媒体
+update com_media_service set endpoint = 'http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/media-api' where type = 'V22FileService';
+
+{% else %}
+update lcbase_sso_client_info set endpoint = 'http://127.0.0.1:8080/usercenter-api' where name = 'qijian_api';
+update lcbase_sso_client_info set endpoint = 'http://127.0.0.1:8080/usercenter-api' where name = 'ibility';
+update  com_option set value= 'http://127.0.0.1:8080/usercenter-api/' where name ='egova.authing.cas.server.default.endpoint';
+update  com_option set value= 'http://127.0.0.1:8080/usercenter-api/sso/authorize?applicationId=1787786667060465664&responseType=code&redirectUrl=' where name ='egova.authing.cas.server.default.authorizeUrl';
+
+-- 修改多媒体
+update com_media_service set endpoint = 'http://127.0.0.1:8080/media-api' where type = 'V22FileService';
+{% endif %}

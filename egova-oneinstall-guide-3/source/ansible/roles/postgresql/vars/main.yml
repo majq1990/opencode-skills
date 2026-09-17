@@ -1,0 +1,33 @@
+---
+# variables for install
+src_path: "{{ src_env_package_path }}/postgresql"
+dest_path: "{{ dest_package_root_path }}/postgresql"
+deploy_path: "/egova/pgsql"
+ops_user: postgres
+usr_system_service_path: "/usr/lib/systemd/system"
+password: "{{ PG_password }}"
+postgresql_packages:
+  apt:
+    - postgresql-13
+  yum:
+    - postgresql13
+    - postgresql13-server
+  dnf:
+    - postgresql13
+    - postgresql13-server
+
+src_postgis_path: "{{ src_env_package_path }}/postgis"
+dest_postgisdb_path: "{{ deploy_path }}/postgresdb"
+postgis_packages:
+  apt:
+    - postgresql-13-postgis-3
+    - python3-psycopg2
+    - postgresql-{{ global_pg_version }}-pgrouting
+  yum:
+    - postgis
+    - python-psycopg2
+    - pgrouting_{{ global_pg_version }}
+  dnf:
+    - postgis
+    - python3-psycopg2
+    - pgrouting_{{ global_pg_version }}

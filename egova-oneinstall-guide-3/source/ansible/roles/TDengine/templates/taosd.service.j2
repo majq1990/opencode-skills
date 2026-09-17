@@ -1,0 +1,22 @@
+[Unit]
+Description=TDengine server service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/taosd
+ExecStartPre=/usr/local/taos/bin/startPre.sh
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+TimeoutStartSec=0
+StandardOutput=null
+Restart=always
+StartLimitBurst=3
+StartLimitInterval=60s
+User=egova
+Group=egova
+
+[Install]
+WantedBy=multi-user.target

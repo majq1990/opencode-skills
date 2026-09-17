@@ -1,0 +1,7 @@
+---
+# variables for nacos
+src_path: "{{ src_env_package_path }}/nacos"
+
+deploy_path: /egova
+
+encryption_key: XQf2fM86rR8eG7FsZ/OdpvylcZIjo2q9mXna9V1/SAo=

@@ -1,0 +1,4 @@
+---
+src_path: "{{ src_env_package_path }}/onlyoffice"
+deploy_path: /egova/deploy/onlyoffice
+onlyoffice_volumes_path: /egova/egova_docker/volumes

@@ -1,0 +1,1 @@
+C:/Users/majq1/.agent-memory/reference_oneinstall_v2_service_env_naming.md

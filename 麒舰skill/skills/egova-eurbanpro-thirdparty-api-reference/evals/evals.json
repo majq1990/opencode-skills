@@ -1,0 +1,71 @@
+{
+  "skill_name": "egova-eurbanpro-thirdparty-api-reference",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "action=REPORT，给我最小请求示例和必填字段，不要完整参数表。",
+      "expected_output": "命中 reporting-and-query，给最小字段+最小请求示例+关键约束，回答简短。",
+      "files": [],
+      "expectations": [
+        "明确命中 REPORT 或上报接口",
+        "包含最小请求示例",
+        "不展开完整参数表"
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "第三方问 token 怎么传，必须是 query 还是 header？再给一个最小 token 请求示例。",
+      "expected_output": "命中 auth-apis/common-protocol，明确 query 参数 egova_openapi_token，并给最小示例。",
+      "files": [],
+      "expectations": [
+        "明确 egova_openapi_token 使用 query 参数",
+        "给出最小请求示例",
+        "不扩展到接入方案"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "只给你 action=NOTICE_SIGNING，告诉我对应接口用途、最小字段和请求示例。",
+      "expected_output": "命中 notice-and-signing，按固定骨架回答。",
+      "files": [],
+      "expectations": [
+        "命中 NOTICE_SIGNING 或签收相关接口",
+        "给最小字段",
+        "给最小请求示例"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "我想知道第三方联调前该准备什么材料和账号，不是问具体 API。",
+      "expected_output": "先说明当前 skill 边界，并分流到 preparation-guide。",
+      "files": [],
+      "expectations": [
+        "明确属于接入准备问题",
+        "提示切换 preparation-guide",
+        "不展开 API 参数细节"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "公钥接口 404，该怎么排查？",
+      "expected_output": "先给可确认 API 事实，再分流到 troubleshooting，不在本 skill 做故障归因。",
+      "files": [],
+      "expectations": [
+        "明确这是排障问题",
+        "提示切换 troubleshooting",
+        "不输出排障链路细节"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "action=DISPOSE_FEEDBACK，给字段和最小请求。顺便告诉我为什么现场会失败。",
+      "expected_output": "先给 action 对应接口和最小请求；失败原因部分分流到 troubleshooting。",
+      "files": [],
+      "expectations": [
+        "命中流程动作接口",
+        "给最小字段和最小请求示例",
+        "失败原因分流而非展开"
+      ]
+    }
+  ]
+}

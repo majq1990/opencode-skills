@@ -1,0 +1,9 @@
+---
+# variables for minio
+src_path: "{{ src_env_package_path }}/minio"
+dest_path: "{{ dest_package_root_path }}/minio"
+# TODO: 可新增一个全局配置
+deploy_path: /egova/minio
+data_dir: /egova/minio/data
+
+encryption_key: ZWdvdmFfZ2lzX21pbmlvX2ttc19zZXJjcmV0X2tleQo=

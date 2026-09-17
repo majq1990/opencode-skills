@@ -1,0 +1,59 @@
+---
+app_type_suffix: "-{{ biz_type }}"
+app_port: "{{ port }}"
+# 此路径为解压安装包的路径
+src_path: "{{ src_env_package_path }}/tomcat"
+# 此路径为部署节点上存放tomcat的路径
+dest_path: "/egova/tomcat"
+
+# 版本
+tomcat_version: 9.0.105
+# 后缀
+tomcat_suffix: "{{ tomcat_version }}{{ app_type_suffix }}"
+# 软链接路径
+link_path: "{{ dest_path }}{{ app_type_suffix }}"
+
+tomcat_packages:
+  Ubuntu:
+    - libapr1
+    - libaprutil1
+    - libtcnative-1
+  CentOS:
+    - apr
+    - apr-util
+    - tomcat-native
+  openEuler:
+    - apr
+    - apr-util
+    - tomcat-native
+  kylin_arm:
+    - apr
+    - libtcnative-1-0
+  kylin_x86:
+    - apr
+    - apr-util
+    - libtcnative-1-0
+  UOS:
+    - apr
+    - apr-util
+    - tomcat-native
+  uos_x86:
+    - apr
+    - apr-util
+    - tomcat-native
+  uos_arm:
+    - apr
+    - apr-util
+    - tomcat-native
+  anolis_x86:
+    - apr
+    - apr-util
+    - tomcat-native
+  anolis_arm:
+    - apr
+    - apr-util
+    - tomcat-native
+  Anolis:
+    - apr
+    - apr-util
+    - tomcat-native

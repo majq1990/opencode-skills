@@ -1,0 +1,4 @@
+create user if not exists 'repl'@'%' identified by '{{password}}';
+REVOKE ALL PRIVILEGES ,GRANT OPTION FROM 'repl'@'%';
+GRANT RELOAD,LOCK TABLES, REPLICATION CLIENT ,REPLICATION SLAVE ON *.* TO 'repl'@'%';
+FLUSH PRIVILEGES;

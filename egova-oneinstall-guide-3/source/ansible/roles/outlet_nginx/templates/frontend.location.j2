@@ -1,0 +1,109 @@
+{%- if MS_CONFIG['url_frontend'] in ("usdm", "egovasgkpm", "egovasgspm", "egovasgtms", "sg-indicator") %}
+ location  /eUrbanMIS/{{ MS_CONFIG['url_frontend'] }}/ {
+    proxy_pass http://srvs_{{ app_type }}_frontend/{{ app_type }}/{{ MS_CONFIG['url_frontend'] }}/;
+    charset utf-8;
+    add_header Cache-Control max-age=0;
+    if ( $uri ~ "\.(gif|jpg|jpeg|bmp|png|ico|zip|pdf|svg|mp3|swf|cur|woff|woff2|eot|ttf|mp3|mp4|swf)$" ){
+        add_header Cache-Control max-age=2592000;
+    }
+    if ( $uri ~ "\.(js|css|txt)$" ){
+        add_header Cache-Control max-age=3600;
+    }
+	proxy_redirect default;
+    proxy_connect_timeout 5;
+    send_timeout 10;
+    proxy_http_version 1.1;
+  }
+{% elif microservice[app_type][app_name].frontend_name is defined and microservice[app_type][app_name].frontend_name is not none %}
+location ~ "{{ microservice[app_type][app_name].frontend_name }}/([^/]*)\.(js|html|json|ico|png)$" {
+    set $file_extension $2;
+    proxy_pass http://srvs_{{ app_type }}_frontend;
+    charset utf-8;
+    if ($file_extension != "html"){
+      add_header Cache-Control max-age=3600;
+    }
+}
+  location  "{{ microservice[app_type][app_name].frontend_name }}/static/" {
+    proxy_pass http://srvs_{{ app_type }}_frontend;
+    charset utf-8;
+	add_header Cache-Control max-age=3600;
+	if ( $uri ~ "\.(gif|jpg|jpeg|bmp|png|ico|zip|pdf|svg|mp3|swf|cur|woff|woff2|eot|ttf|mp3|mp4|swf)$" ){
+		add_header Cache-Control max-age=3600000;
+	}
+  }
+  location  "{{ microservice[app_type][app_name].frontend_name }}/" {
+    proxy_pass http://srvs_{{ app_type }}_frontend;
+    charset utf-8;
+	add_header Cache-Control max-age=3600;
+	if ( $uri ~ "\.(gif|jpg|jpeg|bmp|png|ico|zip|pdf|svg|mp3|swf|cur|woff|woff2|eot|ttf|mp3|mp4|swf)$" ){
+		add_header Cache-Control max-age=3600000;
+	}
+  }
+{# 前端使用vue3.*的情况#}
+{% elif microservice[app_type][app_name].vue_version is defined and microservice[app_type][app_name].vue_version==3 %}
+  location  "/{{ app_type }}/" {
+    proxy_pass http://srvs_{{ app_type }}_frontend;
+    charset utf-8;
+  	add_header Cache-Control max-age=3600;
+  	if ( $uri ~ "\.(gif|jpg|jpeg|bmp|png|ico|zip|pdf|svg|mp3|swf|cur|woff|woff2|eot|ttf|mp3|mp4|swf)$" ){
+  		add_header Cache-Control max-age=3600000;
+  	}
+  }
+{% else %}
+  location  "/{{ app_type }}" {
+    proxy_pass http://srvs_{{ app_type }}_frontend;
+    charset utf-8;
+	proxy_redirect default;
+    proxy_connect_timeout 5;
+    send_timeout 10;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $http_host;
+    proxy_set_header Cookie $new_cookie;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Real-IP  $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_hide_header X-Powered-By;
+    proxy_hide_header Server;
+  }
+ {%- endif %}
+
+ {% if app_type in  ("linglong", "xuanzang") %}
+  location /{{ app_type }}-api/files {
+      proxy_pass http://srvs_{{ app_type }}_frontend;
+      charset utf-8;
+      proxy_redirect default;
+      proxy_connect_timeout 5;
+      send_timeout 10;
+      proxy_http_version 1.1;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+      proxy_set_header Host $http_host;
+      proxy_set_header Cookie $new_cookie;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_set_header X-Real-IP  $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_hide_header X-Powered-By;
+      proxy_hide_header Server;
+   }
+{%- endif %}
+{% if app_type == 'usercenter' %}
+location /{{ app_type }}-api/usercenter {
+  proxy_pass http://srvs_{{ app_type }}_frontend;
+  charset utf-8;
+  proxy_redirect default;
+  proxy_connect_timeout 5;
+  send_timeout 10;
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection "upgrade";
+  proxy_set_header Host $http_host;
+  proxy_set_header Cookie $new_cookie;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header X-Real-IP  $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_hide_header X-Powered-By;
+  proxy_hide_header Server;
+}
+{%- endif %}

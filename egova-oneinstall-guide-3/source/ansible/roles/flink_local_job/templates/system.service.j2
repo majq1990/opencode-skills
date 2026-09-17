@@ -1,0 +1,14 @@
+[Unit]
+Description=flink-job-{{ app_type }}
+
+[Service]
+WorkingDirectory={{ app_root_dir }}/{{ web_app_dir }}/
+EnvironmentFile=-{{ app_root_dir }}/{{ web_app_dir }}/{{ app_type }}-flink-job.env
+ExecStart=/usr/bin/java $FLINK_JOB_OPTS
+Restart=on-failure
+RestartSec=5
+User={{ ops_user }}
+Group={{ ops_user }}
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,14 @@
+---
+# variables for install
+src_path: "{{ src_env_package_path }}/kafka"
+deploy_path: /egova
+
+# variables for kafka
+kafka_version: 2.12-3.6.0
+log_path: "{{ data_root_dir }}/kafka"
+port: 9093
+# 默认变量，暂不支持配置
+zk_data_path: "{{ data_root_dir }}/zookeeper"
+zk_client_port: 2181
+
+# kafka HEAP_OPTS，kafka默认-Xmx1G -Xms1G，zookeeper默认-Xmx512M -Xms512M

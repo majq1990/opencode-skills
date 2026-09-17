@@ -1,0 +1,10 @@
+name: openresty
+version: 1.29.2.3
+description: "OpenResty (Nginx + Lua) high-performance web platform"
+license: "BSD-2-Clause"
+maintainer: "build-pipeline@majq1990"
+url: "https://openresty.org/"
+upstream_tarball: "https://openresty.org/download/openresty-1.29.2.3.tar.gz"
+runtime_depends:
+  rpm: ["pcre", "openssl-libs"]
+  deb: ["libpcre3", "libssl3"]

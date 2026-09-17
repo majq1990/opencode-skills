@@ -1,0 +1,11 @@
+---
+# default vars file for microservice
+root_dir: /egova/web/
+# dest_path: /egova/deploy/apps
+logging_level_root: info
+datasource_driver: com.mysql.cj.jdbc.Driver
+
+java_memory_options: " -Xms=4096M -Xmx=6144M "
+
+# onlyoffice服务地址
+egova_documentjsurl: http://www.egova.top:30054

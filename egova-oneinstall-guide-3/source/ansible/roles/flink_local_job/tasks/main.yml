@@ -1,0 +1,27 @@
+---
+- name: 检查微服务是否依赖flink job
+  connection: local
+  shell: echo $(yq '.microservice.{{ app_type }}.{{ app_name }}.flink_job' inventory/metadata.yml)
+  register: check_flink_job_output
+
+
+- name: 检查是否已部署flink job
+  shell: test -e /etc/systemd/system/{{ app_type }}-flink-job.service && echo true || echo false
+  register: check_flink_job_exists_output
+  when: check_flink_job_output.stdout_lines[0] != 'null'
+
+# 对于某一种类型的微服务，flink job只启动一个
+- block:
+    - name: 拷贝flink job环境变量
+      template: src=service.env.j2 owner={{ ops_user }} group={{ ops_user }} dest={{ app_root_dir }}/{{ web_app_dir }}/{{ app_type }}-flink-job.env mode=0755
+    - name: 配置flink job系统服务
+      template: src=system.service.j2 dest=/etc/systemd/system/{{ app_type }}-flink-job.service
+    - name: 启动flink job
+      shell: |
+        systemctl daemon-reload
+        systemctl enable {{ app_type }}-flink-job
+        systemctl start {{ app_type }}-flink-job
+  when:
+    - check_flink_job_output.stdout_lines[0] != 'null'
+    - check_flink_job_exists_output.stdout == 'false'
+  ignore_errors: yes

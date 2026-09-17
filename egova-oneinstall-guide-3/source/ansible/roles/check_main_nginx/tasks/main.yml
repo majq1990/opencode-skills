@@ -1,0 +1,33 @@
+- name: 检查所有相关服务部署状态
+  stat:
+    path: "{{ nginx_path }}/{{ item }}.upstream"
+  register: service_files
+  loop:
+    - eUrbanMIS
+    - eUrbanUMA
+    - eUrbanMF
+    - eUrbanSG
+
+- name: 设置服务状态变量
+  set_fact:
+    mis_deployed: "{{ service_files.results[0].stat.exists }}"
+    uma_deployed: "{{ service_files.results[1].stat.exists }}"
+    mf_deployed: "{{ service_files.results[2].stat.exists }}"
+    sg_deployed: "{{ service_files.results[3].stat.exists }}"
+
+- name: 确定统一出口服务
+  set_fact:
+    target_service: "{{'eUrbanMIS' if mis_deployed else ('eUrbanUMA' if uma_deployed else ('eUrbanMF' if mf_deployed else ('eUrbanSG' if sg_deployed else 'none'))) }}"
+
+- name: 配置统一出口
+  template:
+    src: eUrbanMIS.location.j2
+    dest: "{{ nginx_path }}/eUrbanMIS.location"
+    mode: '755'
+  when: target_service != 'none'
+  notify: reload nginx
+
+- name: 所有服务都未部署时的提示
+  debug:
+    msg: "跳过eUrbanMIS统一出口配置：所有相关服务都未部署"
+  when: target_service == 'none'

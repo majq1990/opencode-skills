@@ -1,0 +1,48 @@
+- name: 清理yum缓存
+  shell: |
+    yum clean all
+    yum remove mariadb -y
+  when: ansible_pkg_mgr in ['dnf','yum']
+
+- name: 卸载mariadb
+  package:
+    name:  mariadb
+    state: 'absent'
+  ignore_errors: yes
+
+- name: 检查是否安装了MariaDB
+  shell: rpm -q mariadb
+  register: mariadb_installed
+  ignore_errors: true
+  when: ansible_pkg_mgr in ['dnf','yum']
+
+- name: MariaDB已安装
+  fail:
+    msg: "MariaDB自动卸载异常. 请手动卸载。yum remove -y mariadb*"
+  when: ansible_pkg_mgr in ['dnf','yum'] and mariadb_installed.rc == 0
+
+# check if mysql-client exists
+- name: Check if mysql_community_client is installed
+  package:
+    name: "{{ mysql_client_check_packages[ansible_distribution] }}"
+    state: present
+  register: mysql_client_status
+  when: ansible_pkg_mgr is defined and ansible_distribution != 'openEuler'
+
+
+- name: Fail if mysql_client is exist
+  fail:
+    msg: |
+      检查到已经安装过mysql-community-client,不可以再次安装。注意不要在已安装mysql服务器上卸载！！！！如需卸载可手工执行{{ ansible_pkg_mgr }} remove mysql-community-client*
+  ignore_errors: yes
+  when: mysql_client_status.changed == false
+
+
+- name: 安装mysql-client
+  package:
+    name: "{{ mysql_client_packages[ansible_distribution] }}"
+    state: 'present'
+    update_cache: yes
+  when:
+    - mysql_client_status.changed
+    - ansible_distribution in ['openEuler', 'kylin_arm','Ubuntu','CentOS','UOS','uos_x86','uos_arm','anolis_x86','anolis_arm']

@@ -1,0 +1,1 @@
+C:/Users/majq1/.agent-memory/2026-08-14_zabbix_stats_fix_deploy.md

@@ -1,0 +1,10 @@
+location  "/video/" {
+    alias {{ microservice[app_type][app_name].base_path }}/webApps/video/;
+    charset utf-8;
+    if ($uri !~ "\.html$"){
+      add_header Cache-Control max-age=3600;
+    }
+  	if ( $uri ~ "\.(gif|jpg|jpeg|bmp|png|ico|zip|pdf|svg|mp3|swf|cur|woff|woff2|eot|ttf|mp3|mp4|swf)$" ){
+  		add_header Cache-Control max-age=3600000;
+  	}
+  }

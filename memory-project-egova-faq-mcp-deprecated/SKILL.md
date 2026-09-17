@@ -1,0 +1,1 @@
+C:/Users/majq1/.agent-memory/project_egova_faq_mcp_deprecated.md

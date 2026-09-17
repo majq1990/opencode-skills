@@ -1,0 +1,130 @@
+---
+# 微服自定义配置统一放这里处理
+- name: 检查是否有自定义配置
+  connection: local
+  shell: test -e ../src/web/{{ app_type }}/{{ app_type }}-custom.tar  && echo true || echo false
+  register: check_custom_output
+
+- set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 安装 jmespath 库
+  package:
+    name: python3-jmespath
+    state: present
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- set_fact:
+    app_base_path: "{{ microservice[app_type][app_name].base_path }}"
+
+- name: xuanzang特殊location模板化
+  template:
+    src: "xuanzang-frontend-custom.location.j2"
+    dest: "/etc/nginx/conf.d/xuanzang-frontend-custom.location"
+  when: app_type == 'xuanzang'
+
+- block:
+  - set_fact:
+      app_root_dir: "/{{ app_base_path.split('/')[1] }}/{{ app_base_path.split('/')[2] }}/{{ app_base_path.split('/')[3] }}"
+
+  - name: 准备目录
+    file:
+      path: "{{ item }}"
+      state: directory
+      owner: "{{ ops_user }}"
+      group: "{{ ops_user }}"
+      mode: '0775'
+    with_items:
+      - "{{ dest_path }}"
+      - "{{ app_base_path }}"
+      - "{{ app_root_dir }}"
+
+  # 自定义配置，命名规范{{ app_type }}-custom.tar，如wukong-custom.tar
+  - name: 解压微服务自定义配置
+    unarchive:
+      src: "../src/web/{{ app_type }}/{{ app_type }}-custom.tar"
+      dest: "{{ dest_path }}"
+      owner: "{{ ops_user }}"
+      group: "{{ ops_user }}"
+      mode: '0755'
+
+  # 自定义前端配置，命名规范{{ app_type }}-frontend-custom.location，
+  # 包括两个，一个本地nginx配置，一个出口配置，wukong-frontend-custom.location/wukong-frontend-outlet-custom.location
+  - name: 检查是否有自定义前端配置
+    stat:
+      path: "{{ dest_path }}/custom/{{ app_type }}-frontend-custom.location"
+    register: check_custom_frontend_output
+
+  - name: 拷贝自定义nginx前端配置
+    shell: cp {{ dest_path }}/custom/{{ app_type }}-frontend-custom.location /etc/nginx/conf.d/
+    when: check_custom_frontend_output.stat.exists
+
+  - name: 检查是否有自定义后台配置
+    stat:
+      path: "{{ dest_path }}/custom/{{ app_type }}-backend-custom.location"
+    register: check_custom_backend_output
+
+  - name: 拷贝自定义nginx后台配置
+    shell: cp {{ dest_path }}/custom/{{ app_type }}-backend-custom.location /etc/nginx/conf.d/
+    when: check_custom_backend_output.stat.exists
+
+  - name: 检查{{ media_root_path }}是否存在
+    stat:
+      path: "{{ media_root_path }}"
+    register: media_root_dir_result
+
+  - name: 拷贝MediaRoot
+    shell: |
+      cp -r {{ media_root_path }} /egova/
+      chown -R egova:egova /egova/MediaRoot
+    when: media_root_dir_result.stat.exists
+
+  - name: 检查{{ custom_data_path }}是否存在
+    stat:
+      path: "{{ custom_data_path }}"
+    register: data_dir_result
+
+  - name: 处理data数据
+    block:
+      - name: 获取状态为success的giscenter服务key
+        set_fact:
+          giscenter_key: "{{ (microservice.giscenter | default({}) | dict2items | selectattr('value.status', 'defined') | selectattr('value.status', 'match', 'success') | map(attribute='key') | list | first | default('')) }}"
+    
+      - name: 检查是否存在状态为success的giscenter服务
+        fail:
+          msg: "未找到状态为success的giscenter服务实例，请先部署并确保服务状态正确"
+        when: giscenter_key == ''
+
+      - name: 提取依赖的key值
+        set_fact:
+          minio_key: "{{ {'data': microservice.giscenter[giscenter_key].depends,'type_value': 'minio', 'sub_type_value': None} | custom_json_query }}"
+          pg_key: "{{ {'data': microservice.giscenter[giscenter_key].depends,'type_value': 'postgresql', 'sub_type_value': None} | custom_json_query }}"
+
+      - name: 拷贝并修改配置文件
+        shell: |
+          cp -r {{ custom_data_path }} {{ app_root_dir }}
+          sed -i "s#IP_POSTGRES#{{ postgresql[pg_key].ip }}#g" {{ app_root_dir }}/data/server/workspaces/*/PG/datastore.xml
+          sed -i "s#PG_PASSWORD#{{ postgresql[pg_key].password }}#g" {{ app_root_dir }}/data/server/workspaces/*/PG/datastore.xml
+          sed -i "s#minio.s3.endpoint=.*#minio.s3.endpoint=http://{{ minio[minio_key].ip }}:{{ minio[minio_key].port }}/#g" {{ app_root_dir }}/data/server/s3.properties
+
+      - name: set minio fact
+        set_fact:
+          minio_ip: "{{ minio[minio_key].ip }}"
+          minio_port: "{{ minio[minio_key].port }}"
+
+      - name: gisserver特殊前端模板化
+        template:
+          src:  "gisserver-frontend-custom.location.j2"
+          dest: "/etc/nginx/conf.d/gisserver-frontend-custom.location"
+
+      - name: 更改目录的所有者和所属组
+        file:
+          path: "{{ app_root_dir }}/data"
+          owner: "{{ ops_user }}"
+          group: "{{ ops_user }}"
+          recurse: yes
+    when: data_dir_result.stat.exists and app_type == 'gisserver'
+  when: check_custom_output.stdout == 'true'

@@ -1,0 +1,1 @@
+C:/Users/majq1/.agent-memory/ssh-egova.md

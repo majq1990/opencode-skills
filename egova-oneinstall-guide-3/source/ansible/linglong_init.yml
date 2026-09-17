@@ -1,0 +1,13 @@
+---
+# This playbook config linglong init
+- name: config linglong init
+  hosts: "{{ host }}"
+  gather_facts: "{{ gather_facts }}"
+  remote_user: root
+  # 优先级小于role/vars下定义的变量
+  vars_files:
+    - ./group_vars/all.yml
+    - ./inventory/hosts.yml
+    - ./inventory/eurbanpro_multi_server.yml
+  roles:
+    - linglong_init

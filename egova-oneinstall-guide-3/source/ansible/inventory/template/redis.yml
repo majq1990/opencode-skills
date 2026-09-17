@@ -1,0 +1,7 @@
+# redis配置模板
+# 部署场景下，host和ip配置根据部署的节点，自动生成注入
+# host: node1
+port: "6380"
+password: Wk2uBTeyp6
+dir: /egova/data/redis
+ip: 127.0.0.1

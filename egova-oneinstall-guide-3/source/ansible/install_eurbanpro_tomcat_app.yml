@@ -1,0 +1,28 @@
+---
+# This playbook deploys the tomcat application
+- name: configure and deploy the service
+  hosts: "{{ host }}"
+  gather_facts: "yes"
+  remote_user: root
+  # 优先级小于role/vars下定义的变量
+  vars_files:
+    - ./group_vars/all.yml
+    - ./inventory/hosts.yml
+    - ./inventory/multi_server.yml
+    - ./inventory/eurbanpro_multi_server.yml
+    - ./inventory/template/tomcat_app_custom.yml
+  roles:
+    - local_repo
+    - common
+    - jdk
+    - nginx
+    - role: db_init
+      vars:
+        prefix: service
+    - role: tomcat
+      vars:
+        port: "{{ app_port }}"
+    - tomcat_app
+    - tomcat_app_custom
+    - logrotate
+    - ntp_client

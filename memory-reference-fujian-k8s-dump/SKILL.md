@@ -1,0 +1,1 @@
+C:/Users/majq1/.agent-memory/reference_fujian_k8s_dump.md

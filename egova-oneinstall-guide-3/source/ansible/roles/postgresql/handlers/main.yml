@@ -1,0 +1,7 @@
+---
+# handlers file for microservice
+- name: restart postgresql
+  become: true
+  systemd:
+    name: postgresql
+    state: restarted

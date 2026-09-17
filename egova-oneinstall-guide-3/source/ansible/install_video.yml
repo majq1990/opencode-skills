@@ -1,0 +1,23 @@
+---
+# This playbook deploys the video platform (视频中台)
+- name: deploy and configure the video platform
+  hosts: "{{ host }}"
+  gather_facts: "{{ gather_facts }}"
+  remote_user: root
+  # 优先级小于role/vars下定义的变量
+  vars_files:
+    - ./group_vars/all.yml
+    # 注入微服务配置
+    - ./inventory/template/ms_env_custom.yml
+    - ./inventory/hosts.yml
+
+
+  roles:
+    - local_repo
+    - common
+    - nginx
+    - db_init
+    - frontend
+    - ms_custom
+    - video
+    - logrotate

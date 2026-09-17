@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  onlyoffice:
+    image: onlyoffice/documentserver:7.5
+    container_name: onlyoffice
+    ports:
+      - "{{ port }}:80"
+    restart: always
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    volumes:
+      - /egova/data/onlyoffice/plugin-field:/var/www/onlyoffice/documentserver/sdkjs-plugins/field
+    environment:
+      - JWT_ENABLED=false
+      - USE_UNAUTHORIZED_STORAGE=true
+      - ONLYOFFICE_HTTPS_HSTS_ENABLED=false
+      - JWT_ENABLED=false
+

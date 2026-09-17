@@ -1,0 +1,40 @@
+{
+  "with_skill": {
+    "expectations": [
+      {
+        "text": "明确 egova_openapi_token 使用 query 参数",
+        "passed": true,
+        "evidence": "第1节明确写'egova_openapi_token 必须通过 query 参数传递，不使用 Authorization Header'，第4节再次强调'query 参数，不是 Header'"
+      },
+      {
+        "text": "给出最小请求示例",
+        "passed": true,
+        "evidence": "第3节提供了三步最小请求示例：获取公钥、获取token、携带token调业务接口（POST /api/report?egova_openapi_token=你拿到的token值）"
+      },
+      {
+        "text": "不扩展到接入方案",
+        "passed": true,
+        "evidence": "仅聚焦token传递规则和最小示例，未展开接入模式选择、环境配置、准备材料等接入方案内容"
+      }
+    ]
+  },
+  "old_skill": {
+    "expectations": [
+      {
+        "text": "明确 egova_openapi_token 使用 query 参数",
+        "passed": true,
+        "evidence": "明确写'业务接口统一使用 query 参数传递 token'，'token 必须是 query 参数，拼在 URL 上，不是放在 Header 里'"
+      },
+      {
+        "text": "给出最小请求示例",
+        "passed": true,
+        "evidence": "提供了获取token和用token调业务接口的两步示例"
+      },
+      {
+        "text": "不扩展到接入方案",
+        "passed": true,
+        "evidence": "仅聚焦token传递规则，未展开接入方案内容"
+      }
+    ]
+  }
+}

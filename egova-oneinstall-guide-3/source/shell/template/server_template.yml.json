@@ -1,0 +1,110 @@
+{
+  "eUrbanGIS": {
+    "name": "eUrbanGIS",
+    "server_port": 8081,
+    "base_path": "/egova/web/eUrbanGIS",
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      }
+    ]
+  },
+  "eUrbanUMA": {
+    "name": "eUrbanUMA",
+    "server_port": 8082,
+    "base_path": "/egova/web/eUrbanUMA",
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      },
+      {
+        "type": "mysql",
+        "name": "统计库",
+        "database": "cgdbstat",
+        "sub_type": "stat"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      }
+    ]
+  },
+  "eUrbanMF": {
+    "name": "eUrbanMF",
+    "server_port": 8083,
+    "base_path": "/egova/web/eUrbanMF",
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      },
+      {
+        "type": "mysql",
+        "name": "统计库",
+        "database": "cgdbstat",
+        "sub_type": "stat"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      }
+    ]
+  },
+  "eUrbanSG": {
+    "name": "eUrbanSG",
+    "server_port": 8084,
+    "base_path": "/egova/web/eUrbanSG",
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      },
+      {
+        "type": "mysql",
+        "name": "统计库",
+        "database": "cgdbstat",
+        "sub_type": "stat"
+      },
+      {
+        "type": "redis",
+        "name": "redis内存数据库",
+        "database": 0
+      }
+    ]
+  },
+  "IMserver": {
+    "name": "IMserver",
+    "server_port": 18080,
+    "base_path": "/egova/web/IMserver",
+    "depends": [
+      {
+        "type": "mysql",
+        "name": "业务库",
+        "database": "cgdb",
+        "sub_type": "biz"
+      }
+    ]
+  },
+  "HttpFileServer": {
+    "name": "HttpFileServer",
+    "server_port": 18080,
+    "base_path": "/egova/web/HttpFileServer"
+  }
+}

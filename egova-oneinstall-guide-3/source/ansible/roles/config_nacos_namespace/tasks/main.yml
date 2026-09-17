@@ -1,0 +1,146 @@
+# check nacos depend
+
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: Check nacos depend exist
+  connection: local
+  shell: yq '.'{{ app_type }}'.depends.[] | select(.type=="nacos") ' ../shell/template/microservice_template.yml
+  register: nacos_output
+
+- name: Print nacos output
+  debug:
+    msg: "nacos output:{{ nacos_output.stdout }}"
+
+- name: config nacos namespace
+  block:
+    - name: Get nacos metadata
+      connection: local
+      shell: yq ".nacos.{{ depend_key }}" inventory/metadata.yml
+      ignore_errors: yes
+      register: nacos_metadata
+
+    - name: Set yaml facts from output
+      set_fact:
+        nacos_output_yml: "{{ nacos_output.stdout | from_yaml }}"
+        nacos_metadata_yml: "{{ nacos_metadata.stdout | from_yaml }}"
+
+    - name: Set facts from yaml
+      set_fact:
+        app_space_name: "{{ nacos_output_yml.space_name | default(default_namespace)}}"
+        app_access_key: "{{ nacos_output_yml.access_key | default(default_username)}}"
+        app_secret_key: "{{ nacos_output_yml.secret_key | default(default_password)}}"
+        nacos_ip: "{{ nacos_metadata_yml.ip }}"
+        nacos_port: "{{ nacos_metadata_yml.port }}"
+        nacos_access: "{{ nacos_metadata_yml.access_key }}"
+        nacos_secret: "{{ nacos_metadata_yml.secret_key }}"
+
+    - name: Get nacos accessToken
+      uri:
+        url: "http://{{ nacos_ip }}:{{ nacos_port }}/nacos/v1/auth/login"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          username: "{{ nacos_access }}"
+          password: "{{ nacos_secret }}"
+        headers:
+          Content-Type: "application/x-www-form-urlencoded"
+        status_code: 200
+        return_content: yes
+      register: nacos_login_response
+      until: nacos_login_response.status == 200
+      retries: 3
+      delay: 3
+      ignore_errors: yes
+
+    - name: Check if Nacos API initialization succeeded
+      fail:
+        msg: "Nacos API initialization failed after 3 retries."
+      when: nacos_login_response.status != 200
+
+    - name: Extract accessToken from the response
+      set_fact:
+        nacos_accessToken: "{{ nacos_login_response.json.accessToken }}"
+      when: nacos_login_response is success
+
+    - name: Define Nacos resources
+      set_fact:
+        nacos_actions: []
+
+    - name: Check user exist
+      uri:
+        url: "http://{{ nacos_ip }}:{{ nacos_port }}/nacos/v1/auth/users?pageNo=1&pageSize=9&username={{ app_access_key }}&search=accurate&accessToken={{ nacos_accessToken }}"
+        method: GET
+        headers:
+          Accept: "application/json, text/plain, */*"
+        status_code: 200
+        return_content: yes
+      register: nacos_user_info_response
+
+    - name: add create user actions if user not exist
+      set_fact:
+        nacos_actions: "{{ nacos_actions + create_user_actions }}"
+      when: nacos_user_info_response.json.totalCount | int == 0
+      vars:
+        create_user_actions:
+          # 创建用户
+          - url: "/nacos/v1/auth/users"
+            body:
+              username: "{{ app_access_key }}"
+              password: "{{ app_secret_key }}"
+          # 创建角色
+          - url: "/nacos/v1/auth/roles"
+            body:
+              username: "{{ app_access_key }}"
+              role: "{{ app_access_key }}"
+
+    - name: Check namespace exist
+      uri:
+        url: "http://{{ nacos_ip }}:{{ nacos_port }}/nacos/v1/console/namespaces?show=all&namespaceId={{ app_space_name }}&accessToken={{ nacos_accessToken }}"
+        method: GET
+        headers:
+          Accept: "application/json, text/plain, */*"
+        return_content: yes
+      register: nacos_namespace_info_response
+      failed_when: false
+
+
+    - name: add create namespace actions if namespace not exist
+      set_fact:
+        nacos_actions: "{{ nacos_actions + create_namespace_actions }}"
+      when: nacos_namespace_info_response.status != 200
+      vars:
+        create_namespace_actions:
+          # 创建命名空间
+          - url: "/nacos/v1/console/namespaces"
+            body:
+              customNamespaceId: "{{ app_space_name }}"
+              namespaceName: "{{ app_space_name }}"
+              namespaceDesc: "{{ app_space_name }}"
+          # 绑定授权
+          - url: "/nacos/v1/auth/permissions"
+            body:
+              role: "{{ app_access_key }}"
+              resource: "{{ app_space_name }}:*:*"
+              action: "rw"
+
+    - name: Execute Nacos resources creation
+      uri:
+        url: "http://{{ nacos_ip }}:{{ nacos_port }}{{ item.url }}?accessToken={{ nacos_accessToken }}"
+        method: POST
+        body_format: form-urlencoded
+        body: "{{ item.body }}"
+        headers:
+          Content-Type: "application/x-www-form-urlencoded"
+        status_code: 200
+        return_content: yes
+      register: response_result
+      failed_when: response_result.status != 200
+      loop: "{{ nacos_actions }}"
+      loop_control:
+        loop_var: item
+      when: nacos_actions != []
+
+  when: nacos_output.stdout != ""

@@ -1,0 +1,8 @@
+# variables
+local_apt_conf: /etc/apt/sources.list
+install_dir: "{{ conf_root_dir }}/install"
+lock_file: "{{ install_dir }}/local-apt"
+local_yum_conf: /etc/yum.repos.d/egova-oneinstall-local.repo
+ssh_password: Z@Tpwd@2024
+src_path: "{{ src_env_package_path }}/python"
+deploy_path:  "/usr/local"

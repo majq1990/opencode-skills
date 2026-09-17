@@ -1,0 +1,16 @@
+[Unit]
+Description=micro-service-{{ app_type }}
+
+[Service]
+WorkingDirectory={{ app_root_dir }}/{{ web_app_name }}/
+EnvironmentFile=-{{ app_root_dir }}/{{ web_app_name }}/application.properties
+ExecStart=/usr/bin/java -jar {{ microservice[app_type][app_name].environment.jvm_opts }} -Dspring.config.location={{ app_root_dir }}/{{ web_app_name }}/ {{ app_root_dir }}/{{ web_app_name }}/iot-platform.jar
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitInterval=500
+User={{ ops_user }}
+Group={{ ops_user }}
+
+[Install]
+WantedBy=multi-user.target

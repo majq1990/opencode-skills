@@ -1,0 +1,1 @@
+C:/Users/majq1/.agent-memory/2026-08-26_redmine-security-auto-fix-remote-kb.md

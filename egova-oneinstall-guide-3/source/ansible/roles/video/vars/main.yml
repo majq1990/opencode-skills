@@ -1,0 +1,18 @@
+---
+app_type: "{{ app_type }}"
+app_name: "{{ app_name }}"
+
+
+
+file_path: "{{ playbook_dir }}/roles/video/files"
+
+
+# src_path可直接写死，根据在主控节点上解压安装包的路径确定
+src_path: "{{ src_env_package_path }}/{{ app_type }}"
+# 前端部署路径
+frontend_path: "{{ app_type.app_name.frontend_path }}"
+
+# 视频中台用户中心配置
+video_client_id: videocenter
+video_client_secret: 075d4fb603
+video_application_code: videocenter

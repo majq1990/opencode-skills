@@ -1,0 +1,15 @@
+[Unit]
+Description=zookeeper
+After=syslog.target network.target
+
+[Service]
+Type=forking
+Environment=ZOO_LOG_DIR=/egova/log/zookeeper
+ExecStart=/egova/zookeeper/bin/zkServer.sh start
+ExecStop=/egova/zookeeper/bin/zkServer.sh stop
+Restart=always
+User=egova
+Group=egova
+
+[Install]
+WantedBy=multi-user.target

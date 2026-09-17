@@ -1,0 +1,62 @@
+---
+# check if kafka exists
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 检查目标目录
+  stat: path={{ deploy_path }}/kafka_{{ kafka_version }}
+  register: kafka_dir
+
+- name: Fail if kafka is not empty
+  fail:
+    msg: |
+      检查到已经安装过kafka,如需卸载请在{{ hostvars[inventory_hostname]['ansible_ssh_host'] }}服务器上执行 mv {{ deploy_path }}/kafka_{{ kafka_version }} {{ deploy_path }}/kafka_{{ kafka_version }}_backup
+  ignore_errors: yes
+  when: kafka_dir.stat.exists == True
+
+- block:
+    - name: 准备kafka目录
+      file: name={{ item.dir }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='{{ item.mode }}'
+      with_items:
+        - { dir: "{{ deploy_path }}",mode: "0775" }
+        - { dir: "{{ log_path }}",mode: "0775" }
+        - { dir: "{{ zk_data_path }}",mode: "0775" }
+
+    - name: 解压kafka
+      unarchive:
+        src: "{{ src_path }}/kafka_{{ kafka_version }}.tgz"
+        dest: "{{ deploy_path }}"
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: '0755'
+
+    - name: 修改kafka启动配置
+      shell: |
+        sed -i 's/export KAFKA_HEAP_OPTS="-Xmx1G -Xms1G"/export KAFKA_HEAP_OPTS="-Xmx4G -Xms512M"/' {{ deploy_path }}/kafka_{{ kafka_version }}/bin/kafka-server-start.sh
+        sed -i 's/-XX:+UseG1GC/-XX:+UnlockExperimentalVMOptions -XX:+UseG1GC/' {{ deploy_path }}/kafka_{{ kafka_version }}/bin/kafka-run-class.sh
+
+    - name: 创建软链接
+      file: src={{ deploy_path }}/kafka_{{ kafka_version }} dest={{ deploy_path }}/kafka state=link force=true
+
+#重命名kafka内置的zookeeper，使其与智云的zookeeper不冲突
+    - name: 修改配置
+      template: src={{ item.filename }}.j2 dest={{ item.destpath }}/{{ item.filename }}
+      with_items:
+        - { filename: "server.properties",destpath: "{{ deploy_path }}/kafka/config/" }
+        - { filename: "zookeeper.properties",destpath: "{{ deploy_path }}/kafka/config/" }
+        - { filename: "log4j.properties",destpath: "{{ deploy_path }}/kafka/config/" }
+        - { filename: "kafka.service",destpath: "/etc/systemd/system/" }
+        - { filename: "kafka_zookeeper.service",destpath: "/etc/systemd/system/" }
+
+    - name: daemon-reload
+      systemd: daemon_reload=yes
+
+    - name: 启动kafka内置的zookeeper
+      service: name=kafka_zookeeper state=restarted enabled=yes
+    #
+    #(由于zk问题可能会自动重启)
+    - name: 启动kafka
+      service: name=kafka state=restarted enabled=yes
+  when: kafka_dir.stat.exists == false

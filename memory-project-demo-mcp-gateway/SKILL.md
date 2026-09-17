@@ -1,0 +1,1 @@
+C:/Users/majq1/.agent-memory/project_demo_mcp_gateway.md

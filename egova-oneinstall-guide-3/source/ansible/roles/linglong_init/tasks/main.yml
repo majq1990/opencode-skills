@@ -1,0 +1,103 @@
+---
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 检查组件包是否存在
+  stat:
+    path: "{{ src_path }}/{{ app_type }}-linglong.tar"
+  register: component_file_check
+  connection: local
+
+- block:
+    - name: 复制组件包到灵珑目录
+      connection: local
+      copy: src={{ src_path }}/{{ app_type }}-linglong.tar dest={{ tmp_path }}/
+
+    - name: 解压组件包
+      connection: local
+      unarchive:
+        src: "{{ tmp_path }}/{{ app_type }}-linglong.tar"
+        dest: "{{ tmp_path }}/"
+
+    - name: 获取应用数据库连接信息
+      connection: local
+      shell: yq ".mysql.{{ db_key }}" inventory/metadata.yml
+      register: mysql_metadata
+
+    - name: 转换变量
+      set_fact:
+        mysql_metadata_yml: "{{ mysql_metadata.stdout | from_yaml }}"
+
+    - name: 配置数据库变量
+      set_fact:
+        ds_url: "jdbc:mysql://{{ mysql_metadata_yml['ip'] }}:{{ mysql_metadata_yml['port'] }}/{{ app_database }}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&autoReconnect=true&allowMultiQueries=true&connectTimeout=60000&socketTimeout=3600000&nullCatalogMeansCurrent=true&useCursorFetch=true&allowPublicKeyRetrieval=true"
+        ds_user: "{{ mysql_metadata_yml['username'] }}"
+        ds_password: "{{ mysql_metadata_yml['password'] }}"
+
+    - name: 查找 .j2 模板文件
+      connection: local
+      find:
+        paths: "{{ tmp_path }}/"
+        patterns: '*.j2'
+      register: j2_templates
+
+    - name: 渲染 .j2 模板文件
+      connection: local
+      template:
+        src: "{{ j2_templates.files[0].path }}"
+        dest: "{{ j2_templates.files[0].path | regex_replace('\\.j2$', '') }}"
+      when: j2_templates.files|length > 0
+
+    - name: 获取 .j2 模板文件名
+      set_fact:
+        j2_filename: "{{ j2_templates.files[0].path | basename | regex_replace('(.+?)\\.json.j2$', '\\1') }}"
+
+    - name: 创建远程 init 目录
+      file:
+        path: "{{ dest_path }}/init"
+        state: directory
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: '0755'
+
+    - name: 复制到远程目录
+      copy:
+        src: "{{ tmp_path }}/{{ j2_filename }}.{{ item }}"
+        dest: "{{ dest_path }}/init/{{ j2_filename }}.{{ item }}"
+      loop:
+        - zip
+        - json
+        - sql
+
+    - name: 获取灵珑数据库连接信息
+      connection: local
+      shell: yq ".mysql.{{ linglong_db_key }}" inventory/metadata.yml
+      register: linglong_mysql_metadata
+
+    - name: 转换变量
+      set_fact:
+        linglong_mysql_metadata_yml: "{{ linglong_mysql_metadata.stdout | from_yaml }}"
+
+    - name: check if mysql client exists
+      connection: local
+      shell: which mysql
+      register: check_mysql_output
+      ignore_errors: true
+
+    - block:
+        - name: 安装mysql客户端
+          connection: local
+          package:
+            name: "{{ mysql_client_packages[ansible_distribution] }}"
+            state: 'present'
+      when:
+        - check_mysql_output.rc > 0
+        - ansible_distribution in ['openEuler', 'kylin_arm','kylin_x86','UOS','Ubuntu','CentOS','uos_x86','uos_arm','anolis_x86','anolis_arm']
+
+    - name: 插入语句
+      connection: local
+      shell: |
+        mysql -h {{ linglong_mysql_metadata_yml['ip'] }} --port={{ linglong_mysql_metadata_yml['port'] }} -u {{ linglong_mysql_metadata_yml['username'] }} -p{{ linglong_mysql_metadata_yml['password'] }} -e "use linglong;INSERT INTO lcbase_deployment_task (id, fileName, status, type, importExportType) VALUES ('{{ j2_filename }}', '{{ j2_filename }}',  1, 1, 10);"
+  when: component_file_check.stat.exists == true

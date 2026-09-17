@@ -1,0 +1,1 @@
+C:/Users/majq1/.agent-memory/memory-feedback-skill-delete-gitrm.md

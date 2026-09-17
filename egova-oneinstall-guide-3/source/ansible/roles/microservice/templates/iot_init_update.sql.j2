@@ -1,0 +1,13 @@
+{% for depend in microservice[app_type][app_name].depends %}
+{% if depend.type == 'minio' %}
+-- minio地址修改
+UPDATE iot_config SET  value = 'http://{{ minio[depend.depend_key].ip }}:{{ minio[depend.depend_key].port }}/' WHERE config_name = 'MINIO_END_POINT';
+UPDATE iot_config SET value = '{{ minio[depend.depend_key].access_key }}' WHERE config_name = 'MINIO_ACCESSKEY';
+UPDATE iot_config SET value = '{{ minio[depend.depend_key].secret_key }}' WHERE config_name = 'MINIO_SECRETKEY';
+{% endif %}
+{% if depend.type == 'TDengine' %}
+-- TDengine地址修改
+UPDATE iot_config SET value = 'http://{{ TDengine[depend.depend_key].ip }}:{{ TDengine[depend.depend_key].port }}/' WHERE config_name = 'DB_TYPE_TDengine';
+UPDATE iot_config SET value = '{{ init_password }}' WHERE config_name = 'DB_CRYPTOGRAM_TDEngine';
+{% endif %}
+{% endfor %}

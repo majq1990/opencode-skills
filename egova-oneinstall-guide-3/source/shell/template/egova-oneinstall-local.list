@@ -1,0 +1,2 @@
+# Local APT Repository
+deb [trusted=yes] http://127.0.0.1:EGOVA_LOCAL_PORT/repo/RELEASE_VER/ ./

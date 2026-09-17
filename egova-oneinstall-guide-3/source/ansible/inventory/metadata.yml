@@ -1,0 +1,58 @@
+mysql:
+
+redis:
+
+minio:
+
+nginx:
+
+zookeeper:
+
+kafka:
+
+elasticsearch:
+
+postgresql:
+
+cetus:
+
+TDengine:
+
+service:
+
+  eUrbanMIS:
+
+  eUrbanMF:
+
+  eUrbanUMA:
+
+  eUrbanGIS:
+
+  eUrbanSG:
+
+  eGovaPublic:
+
+  IMserver:
+
+  statgather:
+
+microservice:
+  linglong:
+
+  wukong:
+
+  dex:
+
+  httpfileservice:
+  
+  evaluation:
+  
+  export:
+
+  usercenter:
+
+  eurbanpro:
+
+  patrol_gather:
+
+

@@ -1,0 +1,111 @@
+---
+# check if statgather exists
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: 检查目标目录
+  stat: path={{ deploy_path }}
+  register: deploy_dir
+
+- name: Fail if statgather is not empty
+  fail:
+    msg: |
+      检查到已经安装过statgather,如需卸载请在{{ hostvars[inventory_hostname]['ansible_ssh_host'] }}服务器上执行 mv {{ deploy_path }} {{ deploy_path }}_backup
+  ignore_errors: yes
+  when: deploy_dir.stat.exists == True
+
+
+- block:
+    - name: 准备目录
+      file: name={{ item.dir }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='{{ item.mode }}'
+      with_items:
+        - { dir: "{{ log_path }}",mode: "0775" }
+        - { dir: "{{ web_root_dir }}",mode: "0775" }
+        - { dir: "{{ tools_root_dir }}",mode: "0775" }
+
+    - name: 检查 statgather.tar 是否存在
+      connection: local
+      stat:
+        path: "../src/web/{{ app_type }}/statgather.tar"
+      register: statgather_tar
+
+    - name: Fail if statgather_tar is  empty
+      fail:
+        msg: |
+          待安装的statgather服务，web包不存在,如需安装服务{{ ansible_master_ip }}服务器上执行 dl_v2.sh 下載待安裝的服务!!!
+          若ll /egova/onekey_install/oneinstall_v2/src/web |grep statgather|wc -l 大于0 则表示待安装的服务已存在
+      when: statgather_tar.stat.exists == False
+
+    - name: 解压statgather
+      unarchive:
+        src: "{{ src_path }}/statgather.tar"
+        dest: "{{ web_root_dir }}"
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: '0755'
+      when: statgather_tar.stat.exists == True
+
+    - name: 提取依赖的key值
+      set_fact:
+        biz_db_key: "{{ {'data': service[app_type][app_name].depends, 'type_value': 'mysql', 'sub_type_value': 'biz'} | custom_json_query }}"
+        stat_db_key: "{{ {'data': service[app_type][app_name].depends, 'type_value': 'mysql', 'sub_type_value': 'stat'} | custom_json_query }}"
+        redis_key: "{{ {'data': service[app_type][app_name].depends, 'type_value': 'redis', 'sub_type_value': None} | custom_json_query }}"
+
+    - name: 修改配置
+      template:
+        src: "{{ item.filename }}.j2"
+        dest: "{{ item.destpath }}/{{ item.filename }}"
+        mode: '0644'
+      with_items:
+        - { filename: "settings.py",destpath: "{{ deploy_path }}" }
+        - { filename: "startStatGather.sh",destpath: "{{ deploy_path }}" }
+        - { filename: "stopStatGather.sh",destpath: "{{ deploy_path }}" }
+        - { filename: "start.sh",destpath: "{{ deploy_path }}" }
+        - { filename: "stat-gather.service",destpath: "{{ system_service_path }}" }
+
+    - name: 修改脚本权限
+      shell: |
+        chmod a+x {{ deploy_path }}/startStatGather.sh
+        chmod a+x {{ deploy_path }}/stopStatGather.sh
+        chmod a+x {{ deploy_path }}/start.sh
+
+    - name: 安装 python3-pip
+      package:
+        name: "{{ pip_packages[ansible_distribution] }}"
+        state: present
+        update_cache: yes
+
+    - name: 检查pip目录是否存在
+      stat: path=/usr/bin/pip
+      register: pip_dir
+
+    - name: 解压依赖
+      unarchive:
+        src: "{{ src_pip_path }}/require-package.tar.gz"
+        dest: "{{ deploy_path }}"
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: '0755'
+
+    - name: 安装统计依赖
+      shell: "pip3 install --no-index --find-links={{ deploy_path }}/require-package/offline-package -r {{ deploy_path }}/require-package/requirement.txt"
+  
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+  
+    - name: 启动stat-gather
+      systemd:
+        name: stat-gather
+        state: restarted
+        enabled: yes
+
+    - name: 更新metadata状态
+      connection: local
+      shell: |
+        yq -i '.service.'{{ app_type }}'.'{{ app_name }}'.status="'success'"' inventory/metadata.yml
+        yq -i '.service.'{{ app_type }}'.'{{ app_name }}'.ip="'{{ all.hosts[inventory_hostname].ansible_ssh_host }}'"' inventory/metadata.yml
+        yq -i '.service.'{{ app_type }}'.'{{ app_name }}'.host="'{{ inventory_hostname }}'"' inventory/metadata.yml
+  when: deploy_dir.stat.exists == false

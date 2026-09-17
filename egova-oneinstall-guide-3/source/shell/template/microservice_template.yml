@@ -1,0 +1,1541 @@
+# 根据此模板生成对应的环境变量，注入到env文件中，service加载env文件，实现微服务启动参数注入
+# arg_type区分传参类型， java:java -D传参方式， main_class:入口类传参方式
+linglong:
+  name: 灵珑
+  category: basic
+  display: 1
+  # 10000是起始端口，自动计算
+  server_port: 10000
+  login_url: http://ip:8080/linglong/index.html
+  user: admin
+  password: eGova@2023Yhzx
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E7%81%B5%E7%8F%91%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2-%E5%BE%AE%E6%9C%8D%E5%8A%A1%E7%89%88
+  base_path: /egova/apps/basic/linglong
+  jar_name: magic-world.jar
+  frontend_path: /egova/apps/basic/linglong/webApps
+  proxy:
+    - source: /linglong-api
+      destination: /linglong-api
+  url:
+    backend: linglong-api
+    frontend: linglong
+  environment:
+    jvm_opts: -Xms128m -Xmx4096m
+  depends:
+    - type: mysql
+      # 子类型，对于mysql，可区分业务库和统计库
+      sub_type: biz
+      name: mysql业务库
+      database: linglong
+    - type: redis
+      sub_type:
+      name: redis
+      database: 4
+    - type: minio
+      name: minio
+      bucket_name: linglong
+    - type: nacos
+      name: nacos中心
+    - type: microservice
+      sub_type: usercenter
+      name: 用户中心2.0
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+
+
+wukong:
+  name: 悟空
+  category: basic
+  display: 1
+  login_url: http://ip:8080/wukong/index.html
+  user: admin
+  password: eGova@2023Wk
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E6%82%9F%E7%A9%BA%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 10010
+  base_path: /egova/apps/basic/wukong
+  jar_name: egova-wukong.jar
+  frontend_path: /egova/apps/basic/wukong/webApps
+  proxy:
+    - source: /wukong-api
+      destination: /wukong-api
+  url:
+    backend: wukong-api
+    frontend: wukong
+  environment:
+    jvm_opts: -Xms128m -Xmx2048m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: wukong
+      sub_type: biz
+    - type: redis
+      name: redis
+      database: 11
+    - type: nacos
+      name: nacos中心
+    - type: microservice
+      sub_type: usercenter
+      name: 用户中心2.0
+
+dex:
+  name: 星桥
+  category: basic
+  display: 1
+  login_url: http://ip:8080/dex/index.html
+  user: egovaadmin
+  password: eGova@2023Yhzx
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E6%98%9F%E6%A1%A5%E5%A4%A7%E6%95%B0%E6%8D%AE20%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 10020
+  base_path: /egova/apps/basic/dex
+  jar_name: data-exchange.jar
+  frontend_path: /egova/apps/basic/dex/webApps
+  proxy:
+    - source: /dex-api
+      destination: /dex-api
+  url:
+    backend: dex-api
+    frontend: dex
+  environment:
+    jvm_opts: -Xms128m -Xmx2048m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: data_exchange
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 7
+
+bigdata:
+  name: 大数据中心(包含星桥)
+  category: basic
+  display: 1
+  login_url: http://ip:8080/bigdata/index.html
+  user: egovaadmin
+  password: eGova@2023Yhzx
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E6%98%9F%E6%A1%A5%E5%A4%A7%E6%95%B0%E6%8D%AE20%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 10030
+  base_path: /egova/apps/basic/bigdata
+  jar_name: egova-bigdata-all.jar
+  frontend_path: /egova/apps/basic/bigdata/webApps
+  proxy:
+    - source: /bigdata-api
+      destination: /bigdata-api
+  url:
+    backend: bigdata-api
+    frontend: bigdata
+  environment:
+    jvm_opts: -Xms128m -Xmx2048m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: datacenter2
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 15
+    - type: kafka
+      name: 消息队列
+    - type: elasticsearch
+      name: es索引数据库
+  # 20221027 批注：此处有问题，需要改造，不能写死（不符合最初的设计）
+  flink_job:
+    name: flink任务
+    depends:
+      - kafka
+      - elasticsearch
+    parallelism: 8
+    max_parallelism: 8
+    kafka_group: catalog_index
+    jvm_options: -Xms128m -Xmx1024m
+    jar_name: catalog-index-flink.jar
+
+#evaluation:
+#  name: 毕升
+#  category: basic
+#  display: 1
+#  login_url: http://ip:8080/evaluation/index.html
+#  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E6%AF%95%E5%8D%87%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+#  server_port: 10040
+#  base_path: /egova/apps/basic/evaluation
+#  jar_name: egova-stat-service-1.0.0-SNAPSHOT.jar
+#  frontend_path: /egova/apps/basic/evaluation/webApps
+#  proxy:
+#    - source: /bi-api
+#      destination: /bi-api
+#  url:
+#    backend: bi-api
+#    frontend: evaluation
+#  environment:
+#    jvm_opts: -Xms128m -Xmx2048m
+#  depends:
+#    - type: mysql
+#      name: 业务库
+#      database: cgdb
+#      sub_type: biz
+#    - type: mysql
+#      name: 统计库
+#      database: cgdbstat
+#      sub_type: stat
+#    - type: redis
+#      name: redis内存数据库
+#      database: 0
+#    - type: microservice
+#      sub_type: eureka
+#      name: eureka注册中心
+
+eureka:
+  name: eureka服务注册中心
+  category: basic
+  display: 1
+  server_port: 10100
+  base_path: /egova/apps/springcloud/eureka
+  jar_name: egova-eureka-1.1.0-SNAPSHOT.jar #TODO，脚本需要兼容前后端为空的情况
+  frontend_path:  #TODO，脚本需要兼容前后端为空的情况
+  proxy: []
+  url:
+    backend:
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends: []
+
+media:
+  name: media多媒体服务
+  category: basic
+  display: 1
+  server_port: 10130
+  base_path: /egova/apps/basic/media
+  jar_name: egova-service-media-1.1.0-SNAPSHOT.jar #TODO，脚本需要兼容前后端为空的情况
+  frontend_path:  #TODO，脚本需要兼容前后端为空的情况
+  proxy: []
+  url:
+    backend:
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: microservice
+      sub_type: eureka
+      name: eureka注册中心
+
+export:
+  name: export2.0导出服务
+  category: basic
+  display: 1
+  server_port: 10110
+  base_path: /egova/apps/basic/export
+  jar_name: egova-service-export-2.0.0-SNAPSHOT.jar
+  frontend_path:
+  proxy: []
+  url:
+    backend:
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx2024m
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: 毕升库
+      database: becensus
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: nacos
+      name: nacos中心
+    - type: microservice
+      name: http共享目录服务
+      sub_type: httpfileservice
+
+dsscp:
+  name: dsscp加密服务
+  category: basic
+  display: 1
+  server_port: 10140
+  base_path: /egova/apps/basic/dsscp
+  jar_name: egova-service-dsscp-1.0.0-SNAPSHOT.jar
+  frontend_path:
+  proxy: []
+  url:
+    backend:
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: dsscp
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: microservice
+      sub_type: eureka
+      name: eureka注册中心
+
+httpfileservice:
+  name: http共享目录服务
+  category: basic
+  display: 1
+  server_port: 8086
+  base_path: /egova/apps/basic/httpfileservice
+  jar_name: egova-httpfileserver-netty-1.0.0.jar
+  frontend_path:
+  proxy: []
+  url:
+    backend:
+    frontend:
+  environment:
+    jvm_opts: -Xms256m -Xmx512m
+  depends: []
+
+
+giscenter:
+  name: 通图-giscenter
+  category: gis
+  display: 1
+  server_port: 8096
+  base_path: /egova/web/egovagisserver/giscenter
+  jar_name: egova-service-gis-cimcenter-1.1.0-SNAPSHOT.jar
+  frontend_path:
+  proxy:
+    - source: /egovagisserver/service-center
+      destination: /service-center
+    - source: /egovagisserver/services
+      destination: /services
+    - source: /egovagisserver/data
+      destination: /data
+    - source: /egovagisserver/map/
+      destination: /
+  url:
+    backend:
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+    jdk_version: 11
+  depends:
+    - type: mysql
+      name: mysql业务库
+      database: giscenter
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: minio
+      name: minio
+      bucket_name: egova
+    - type: postgresql
+      name: PG数据库
+      database: giscenter
+    - type: nacos
+      name: nacos中心
+
+gisserver:
+  name: 通图-gisserver
+  category: gis
+  display: 1
+  server_port: 8094
+  base_path: /egova/web/egovagisserver/gisserver
+  jar_name: egova-service-gis-cimserver-1.1.0-SNAPSHOT.jar
+  frontend_path: /egova/web/egovagisserver/gisserver/webApps
+  proxy:
+    - source: /egovagisserver/service/
+      destination: /
+    - source: /egovagisserver/tile/
+      destination: /
+  url:
+    backend:
+    frontend:
+  environment:
+    jvm_opts: -Xms256m -Xmx2048m
+    jdk_version: 11
+  depends:
+    - type: nacos
+      name: nacos中心
+    - type: microservice
+      name: 通图-giscenter
+      sub_type: giscenter
+
+fac:
+  name: 市政V22
+  category: fac
+  display: 1
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E5%B8%82%E6%94%BF%E5%BA%94%E7%94%A8_%E5%BE%AE%E6%9C%8D%E5%8A%A1%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2
+  server_port: 14010
+  base_path: /egova/apps/fac/fac
+  jar_name: facilities-facv22-service-1.0.0-SNAPSHOT.jar
+  frontend_path: /egova/apps/fac/fac/webApps
+  proxy:
+    - source: /fac-api
+      destination: /fac-api
+  url:
+    backend: fac-api
+    frontend: fac
+  environment:
+    jvm_opts: -Xms128m -Xmx1024m
+  depends:
+    - type: mysql
+      # 子类型，对于mysql，可区分业务库和统计库
+      sub_type: biz
+      name: 业务库
+      database: cgdb
+    - type: redis
+      name: redis
+      database: 5
+    - type: minio
+      name: minio
+      bucket_name: fac
+    - type: zookeeper
+      name: zookeeper
+
+eUrbanFac:
+  name: 市政V20
+  category: fac
+  display: 1
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E5%B8%82%E6%94%BF%E5%BA%94%E7%94%A8_%E5%BE%AE%E6%9C%8D%E5%8A%A1%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2
+  server_port: 14000
+  base_path: /egova/apps/fac/eUrbanFac
+  jar_name: facilities-facv20-service-1.0.0-SNAPSHOT.jar
+  frontend_path: /egova/apps/fac/eUrbanFac/webApps
+  proxy:
+    - source: /eUrbanFac-api
+      destination: /eUrbanFac-api
+  url:
+    backend: eUrbanFac-api
+    frontend: eUrbanFac
+  environment:
+    jvm_opts: -Xms128m -Xmx1024m
+  depends:
+    - type: mysql
+      # 子类型，对于mysql，可区分业务库和统计库
+      sub_type: biz
+      name: 业务库
+      database: cgdb
+    - type: redis
+      name: redis
+      database: 0
+    - type: minio
+      name: minio
+      bucket_name: fac
+
+datamgr:
+  name: 社会治理-在线采集
+  category: sg
+  display: 1
+  login_url: http://ip:port/eUrbanMIS/usdm/index.html#/login
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E7%A4%BE%E4%BC%9A%E6%B2%BB%E7%90%86%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 12000
+  base_path: /egova/apps/sg/datamgr
+  jar_name: egova-service-datamgr-1.0.0-SNAPSHOT.jar
+  frontend_path: /egova/apps/sg/datamgr/webApps
+  proxy:
+    - source: /datamgr-api
+      destination: /datamgr-api
+  url:
+    backend: datamgr-api
+    frontend: usdm
+  environment:
+    jvm_opts: -Xms128m -Xmx2048m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: microservice
+      sub_type: eureka
+      name: eureka注册中心
+    - type: zookeeper
+      name: zookeeper
+
+check:
+  name: 社会治理-通用检查平台
+  category: sg
+  display: 1
+  login_url: http://ip:port/eUrbanMIS/main.htm
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E7%A4%BE%E4%BC%9A%E6%B2%BB%E7%90%86%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 12020
+  base_path: /egova/apps/sg/check
+  jar_name: egova-check-platform-1.0.0-SNAPSHOT.jar
+  frontend_path: /egova/apps/sg/check/webApps
+  proxy:
+    - source: /check-api
+      destination: /check-api
+  url:
+    backend: check-api
+    frontend: egovasgkpm
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: microservice
+      sub_type: eureka
+      name: eureka注册中心
+    - type: zookeeper
+      name: zookeeper
+
+spm:
+  name: 社会治理-重点人管控
+  category: sg
+  display: 1
+  login_url: http://ip:port/eUrbanMIS/egovasgspm/index.html#/login
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E7%A4%BE%E4%BC%9A%E6%B2%BB%E7%90%86%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 12040
+  base_path: /egova/apps/sg/spm
+  jar_name: egova-service-spm.jar
+  frontend_path: /egova/apps/sg/spm/webApps
+  proxy:
+    - source: /spm-api
+      destination: /spm-api
+  url:
+    backend: spm-api
+    frontend: egovasgspm
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: microservice
+      sub_type: eureka
+      name: eureka注册中心
+    - type: zookeeper
+      name: zookeeper
+
+tms:
+  name: 社会治理-千分制106项
+  category: sg
+  display: 1
+  login_url: http://ip:port/eUrbanMIS/main.htm
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E7%A4%BE%E4%BC%9A%E6%B2%BB%E7%90%86%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 12060
+  base_path: /egova/apps/sg/tms
+  jar_name: egova-service-tms.jar
+  frontend_path: /egova/apps/sg/tms/webApps
+  proxy:
+    - source: /tms-api
+      destination: /tms-api
+  url:
+    backend: tms-api
+    frontend: egovasgtms
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: microservice
+      sub_type: eureka
+      name: eureka注册中心
+    - type: zookeeper
+      name: zookeeper
+
+screen:
+  name: 社会治理-综治大屏对接
+  category: sg
+  display: 1
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E7%A4%BE%E4%BC%9A%E6%B2%BB%E7%90%86%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 12070
+  base_path: /egova/apps/sg/screen
+  jar_name: egova-screen-interface.jar
+  frontend_path:
+  proxy:
+    - source: /screen-api
+      destination: /screen-api
+  url:
+    backend: screen-api
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: microservice
+      sub_type: eureka
+      name: eureka注册中心
+
+indicator:
+  name: 社会治理-平安指数
+  category: sg
+  display: 1
+  login_url: http://ip:port/eUrbanMIS/sg-indicator/index.html#/login
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E7%A4%BE%E4%BC%9A%E6%B2%BB%E7%90%86%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 12080
+  base_path: /egova/apps/sg/indicator
+  jar_name: egova-boot-indicator-service-1.0.0.jar
+  frontend_path: /egova/apps/sg/indicator/webApps
+  proxy:
+    - source: /indicator-api
+      destination: /indicator-api
+  url:
+    backend: indicator-api
+    frontend: sg-indicator
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: microservice
+      sub_type: eureka
+      name: eureka注册中心
+    - type: zookeeper
+      name: zookeeper
+    - type: minio
+      name: minio
+      bucket_name: indicator
+
+template:
+  name: 平安指数-模板服务
+  category: sg
+  display: 1
+  server_port: 12090
+  base_path: /egova/apps/sg/template
+  jar_name: egova-template.jar
+  frontend_path:
+  proxy:
+    - source: /template-api
+      destination: /template-api
+  url:
+    backend: template-api
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: microservice
+      sub_type: eureka
+      name: eureka注册中心
+    - type: zookeeper
+      name: zookeeper
+    - type: minio
+      name: minio
+      bucket_name: template
+
+ibility:
+  name: 全行业一体化
+  category: sg
+  display: 1
+  login_url: http://ip:port/ibility/index.html
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E5%85%A8%E8%A1%8C%E4%B8%9A%E4%B8%80%E4%BD%93%E5%8C%96%E9%83%A8%E7%BD%B2%E8%AF%B4%E6%98%8E
+  server_port: 12100
+  base_path: /egova/apps/sg/ibility
+  jar_name: egova-boot-ibility-service-1.0.0.jar
+  frontend_path: /egova/apps/sg/ibility/webApps/ibility
+  frontend_name: /ibility
+  proxy:
+    - source: /ibility-api
+      destination: /ibility-api
+  url:
+    backend: ibility-api
+    frontend: ibility
+  environment:
+    jvm_opts: -Xms128m -Xmx2048m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: ibility
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 9
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+    - type: nacos
+      name: nacos中心
+    - type: zookeeper
+      name: zookeeper
+    - type: minio
+      name: minio
+      bucket_name: ibility
+    - type: microservice
+      sub_type: usercenter
+      name: 用户中心2.0
+
+egova-law:
+  name: 执法-餐饮油烟/法律法规
+  category: elaw
+  display: 1
+  login_url: http://ip:port/egova-law/elaw-law/index.html
+  user: admin
+  password: 123456
+  server_port: 10060
+  base_path: /egova/apps/elaw/egova-law
+  jar_name: egova-law.jar
+  frontend_path: /egova/apps/elaw/egova-law/webApps
+  proxy:
+    - source: /egova-law-api
+      destination: /egova-law-api
+  url:
+    backend: egova-law-api
+    frontend: egova-law
+  environment:
+    jvm_opts: -Xms128m -Xmx1024m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: egova_law
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: minio
+      name: minio
+      bucket_name: egova-law
+
+itemlist:
+  name: 一网统管-事项清单
+  category: mis
+  display: 1
+  server_port: 8077
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E4%BA%8B%E9%A1%B9%E6%B8%85%E5%8D%95%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  base_path: /egova/apps/ywtg/itemlist
+  jar_name: egova-boot-item-list-service-1.0.0-SNAPSHOT.jar
+  frontend_path: /egova/apps/ywtg/itemlist/webApps/item-list
+  frontend_name: /eUrbanMIS/web/item-list
+  proxy:
+    - source: /eUrbanMIS/itemlistserver/
+      destination: http://srvs_itemlist_backend/
+  url:
+    backend: eUrbanMIS/itemlistserver/
+    frontend: eUrbanMIS/web/item-list/
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 1
+    - type: zookeeper
+      name: zookeeper
+
+hotline-perception:
+  name: 一网统管-热线感知
+  category: mis
+  display: 1
+  server_port: 9000
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E7%83%AD%E7%BA%BF%E6%84%9F%E7%9F%A5%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2
+  base_path: /egova/apps/ywtg/hotline-perception
+  jar_name: egova-boot-hotline-perception-v22-service-2.0.0.0.jar
+  frontend_path: /egova/apps/ywtg/hotline-perception/webApps/hotline-perceptual-analysis
+  frontend_name: /ywtg/web/hotline-perceptual-analysis
+  proxy:
+    - source: /ywtg/web/hotline-perceptual-analysis
+      destination: /ywtg/web/hotline-perceptual-analysis
+  url:
+    backend: ywtg/perceptionserver/
+    frontend: ywtg/web/hotline-perceptual-analysis
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: perception
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 12
+    - type: zookeeper
+      name: zookeeper
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+
+usercenter:
+  name: 用户中心2.0
+  category: basic
+  display: 1
+  login_url: http://ip:8080/usercenter/index.html
+  user: admin
+  password: eGova@2023Yhzx
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E7%BB%9F%E4%B8%80%E7%94%A8%E6%88%B7%E4%B8%AD%E5%BF%8320-%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 10050
+  base_path: /egova/apps/basic/usercenter
+  jar_name: egova-usercenter.jar
+  frontend_path: /egova/apps/basic/usercenter/webApps
+  vue_version: 3
+  proxy:
+    - source: /usercenter-api
+      destination: /usercenter-api
+  url:
+    backend: usercenter-api
+    frontend: usercenter
+  environment:
+    jvm_opts: -Xms128m -Xmx2048m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: usercenter
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+    - type: kafka
+      name: kafka消息队列
+
+
+xuanzang:
+  name: GIS-玄藏
+  category: gis
+  display: 1
+  login_url: http://ip:port/xuanzang/index.html
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E7%8E%84%E8%97%8F%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 10070
+  base_path: /egova/apps/gis/xuanzang
+  jar_name: egova-gis-xuanzang-service.jar
+  frontend_path: /egova/apps/gis/xuanzang/webApps
+  vue_version: 3
+  proxy:
+    - source: /xuanzang-api
+      destination: /xuanzang-api
+  url:
+    backend: xuanzang-api
+    frontend: xuanzang
+  environment:
+    jvm_opts: -Xms128m -Xmx2048m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: xuanzang
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 10
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: postgresql
+      name: PG数据库
+      database: giscenter
+    - type: minio
+      name: minio
+      bucket_name: xuanzang
+    - type: nacos
+      name: nacos中心
+
+iot:
+  name: 物联网平台
+  category: fac
+  display: 1
+  login_url: http://ip:port/iot/index.html
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E7%89%A9%E8%81%94%E7%BD%91%E5%B9%B3%E5%8F%B0_%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2V2
+  server_port: 14020
+  base_path: /egova/apps/iot/iot
+  jar_name: iot-platform.jar
+  frontend_path: /egova/apps/iot/iot/webApps
+  proxy:
+    - source: /iot
+      destination: /iot
+  url:
+    backend: iot
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx2048m
+  depends:
+    - type: mysql
+      # 子类型，对于mysql，可区分业务库和统计库
+      sub_type: biz
+      name: 业务库
+      database: egovaiot
+    - type: TDengine
+      name: 时序数据库
+      database: egovaiot
+    - type: redis
+      name: redis
+      database: 6
+    - type: minio
+      name: minio
+      bucket_name: egovaiot,egovaiotpic
+    - type: kafka
+      name: 消息队列
+
+urbansafe:
+  name: 生命线大平台(地下管线、城市安全)
+  category: fac
+  display: 1
+  server_port: 14040
+  base_path: /egova/apps/fac/urbansafe
+  jar_name: egova-urbansafe-core-service.jar
+  frontend_path: /egova/apps/fac/urbansafe/webApps/urbansafe
+  vue_version: 3
+  proxy:
+    - source: /urbansafe-api
+      destination: /urbansafe-api
+  url:
+    backend: urbansafe-api
+    frontend: urbansafe
+  environment:
+    jvm_opts: -Xms128m -Xmx1024m
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: 业务库
+      database: urbansafe
+    - type: redis
+      name: redis
+      database: 5
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: minio
+      name: minio
+      bucket_name: fac
+    - type: zookeeper
+      name: zookeeper
+    - type: nacos
+      name: nacos中心
+
+iotpro:
+  name: 物联网2.0
+  category: fac
+  display: 1
+  server_port: 14030
+  base_path: /egova/apps/fac/iotpro
+  jar_name: iot-platform.jar
+  frontend_path:
+  proxy:
+    - source: /iot-api
+      destination: /iot-api
+  url:
+    backend: iot-api
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx1024m
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: 业务库
+      database: iotpro
+    - type: redis
+      name: redis
+      database: 1
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: minio
+      name: minio
+      bucket_name: fac
+    - type: zookeeper
+      name: zookeeper
+    - type: nacos
+      name: nacos中心
+    - type: kafka
+      name: 消息队列
+    - type: TDengine3
+      name: 时序数据库
+      database: iotpro
+      sub_type: websocket
+
+evalreport:
+  name: 数据填报
+  category: sg
+  display: 1
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E6%95%B0%E6%8D%AE%E5%A1%AB%E6%8A%A5%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 17000
+  base_path: /egova/apps/csgl/evalreport
+  jar_name: egova-boot-evalreport-service.jar
+  frontend_path: /egova/apps/csgl/evalreport/webApps/operManageServicesV2
+  proxy:
+    - source: /evalreport-api
+      destination: /evalreport-api
+  url:
+    backend: evalreport-api
+    frontend: evalreport
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: cgdb
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 5
+
+advertisement:
+  name: 智慧广告平台
+  category: sg
+  display: 1
+  server_port: 9002
+  base_path: /egova/apps/csgl/advertisement
+  jar_name: egova-boot-advertisement-service.jar
+  frontend_path:
+  proxy:
+    - source: /microadvert
+      destination: /microadvert
+  url:
+    backend: microadvert
+    frontend: microadvert
+  environment:
+    jvm_opts: -Xms128m -Xmx1024m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: advert
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 5
+
+sanitation:
+  name: 智慧环卫
+  category: sg
+  display: 1
+  server_port: 17020
+  base_path: /egova/apps/csgl/sanitation
+  jar_name: egova-sanitation-service.jar
+  frontend_path:
+  proxy:
+    - source: /sanitation-api
+      destination: /sanitation-api
+  url:
+    backend: sanitation-api
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx1024m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: sanitation
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 10
+    - type: zookeeper
+      name: zookeeper
+    - type: TDengine
+      name: 时序数据库
+      database: trace
+    - type: microservice
+      sub_type: usercenter
+      name: 用户中心2.0
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+
+construction:
+  name: 建筑垃圾
+  category: sg
+  display: 1
+  server_port: 17040
+  base_path: /egova/apps/csgl/construction
+  jar_name: egova-boot-construction-service.jar
+  frontend_path:
+  proxy:
+    - source: /construction-api
+      destination: /construction-api
+  url:
+    backend: construction-api
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx1024m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: construction
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 11
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+    - type: zookeeper
+      name: zookeeper
+    - type: TDengine
+      name: 时序数据库
+      database: trace
+
+mjing:
+  name: 执法-明镜
+  category: elaw
+  display: 1
+  login_url: http://ip:port/mjing/index.html#/login
+  user: mjing
+  password: eGova@2023
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E6%98%8E%E9%95%9C_%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 15000
+  base_path: /egova/apps/elaw/mjing
+  jar_name: egova-mjing-service.jar
+  frontend_path: /egova/apps/elaw/mjing/webApps
+  vue_version: 3
+  proxy:
+    - source: /mjing-api
+      destination: /mjing-api
+  url:
+    backend: mjing-api
+    frontend: mjing
+  environment:
+    jvm_opts: -Xms512m -Xmx2048m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: mjing
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: zookeeper
+      name: zookeeper
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+
+eurbanpro:
+  name: 麒舰平台
+  category: eurbanpro
+  display: 1
+  login_url: http://ip:8080/eurbanpro/index.html#/
+  user: egova
+  password: eGova@2024
+  server_port: 16000
+  base_path: /egova/apps/basic/eurbanpro
+  jar_name: egova-urbanpro-mis-service.jar
+  frontend_path: /egova/apps/basic/eurbanpro/webapps
+  vue_version: 3
+  proxy:
+    - source: /eurbanpro-api
+      destination: /eurbanpro-api
+  url:
+    backend: eurbanpro-api
+    frontend: eurbanpro
+  environment:
+    jvm_opts: -Xms128m -Xmx4096m
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: mysql业务库
+      database: eurbanpro
+    - type: redis
+      sub_type:
+      name: redis
+      database: 2
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+    - type: zookeeper
+      name: zookeeper
+    - type: TDengine3
+      name: 时序数据库
+      database: trace
+
+workflow:
+  name: 麒舰流程中心
+  category: eurbanpro
+  display: 1
+  server_port: 16010
+  base_path: /egova/apps/basic/workflow
+  jar_name: egova-urbanpro-workflow-service.jar
+  frontend_path: /egova/apps/basic/workflow/webapps
+  vue_version: 3
+  proxy:
+    - source: /workflow-api
+      destination: /workflow-center-api
+  url:
+    backend: workflow-center-api
+    frontend: workflow
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: mysql业务库
+      database: eurbanpro
+    - type: redis
+      sub_type:
+      name: redis
+      database: 2
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+
+eurbanpro_media:
+  name: 麒舰多媒体服务
+  category: eurbanpro
+  display: 1
+  server_port: 16020
+  base_path: /egova/apps/basic/eurbanpro_media
+  jar_name: egova-urbanpro-media-service.jar
+  frontend_path:  #TODO，脚本需要兼容前后端为空的情况
+  proxy:
+    - source: /media-api
+      destination: /media-api
+  url:
+    backend: media-api
+    frontend: media
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: mysql业务库
+      database: eurbanpro
+    - type: redis
+      sub_type:
+      name: redis
+      database: 2
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+
+sms:
+  name: 麒舰短信服务
+  category: eurbanpro
+  display: 1
+  server_port: 11004
+  base_path: /egova/apps/basic/sms
+  jar_name: egova-urbanpro-sms-service.jar
+  frontend_path:  #TODO，脚本需要兼容前后端为空的情况
+  proxy:
+    - source: /sms-api
+      destination: /sms-api
+  url:
+    backend: sms-api
+    frontend: sms
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: mysql业务库
+      database: eurbanpro
+    - type: redis
+      sub_type:
+      name: redis
+      database: 2
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+
+patrol_gather:
+  name: 麒舰轨迹采集服务
+  category: eurbanpro
+  display: 1
+  server_port: 16040
+  base_path: /egova/apps/basic/patrol_gather
+  jar_name: egova-urbanpro-patrol-gather.jar
+  frontend_path:
+  proxy:
+    - source: /patrol-gather-api
+      destination: /patrol-gather-api
+  url:
+    backend: patrol-gather-api
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: mysql业务库
+      database: eurbanpro
+    - type: redis
+      sub_type:
+      name: redis
+      database: 2
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+    - type: TDengine3
+      name: 时序数据库
+      database: trace
+
+trajectory:
+  name: 麒舰轨迹上传服务
+  category: eurbanpro
+  display: 1
+  server_port: 16050
+  base_path: /egova/apps/basic/trajectory
+  jar_name: egova-urbanpro-trajectory-service.jar
+  frontend_path:
+  proxy:
+    - source: /eurbanpro-api/unity/mis/position/update-position
+      destination: /trajectory-api/unity/mis/position/update-position
+  url:
+    backend: trajectory-api
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: mysql业务库
+      database: eurbanpro
+    - type: redis
+      sub_type:
+      name: redis
+      database: 2
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+    - type: TDengine3
+      name: 时序数据库
+      database: trace
+
+#license:
+#  name: 麒舰License服务
+#  category: eurbanpro
+#  display: 0
+#  server_port: 11112
+#  base_path: /egova/license
+#  jar_name: egova-license-native
+#  frontend_path:  #TODO，脚本需要兼容前后端为空的情况
+#  proxy:
+#    - source: /license-server-api
+#      destination: /license-server-api
+#  url:
+#    backend: license-server-api
+#    frontend: license
+#  environment:
+#    jvm_opts:
+#  depends:
+#    - type: mysql
+#      sub_type: biz
+#      name: mysql业务库
+#      database: eurbanpro
+#    - type: redis
+#      sub_type:
+#      name: redis
+#      database: 2
+#    - type: nacos
+#      name: nacos中心
+
+IM:
+  name: 麒舰即时通讯
+  category: basic
+  display: 1
+  server_port: 16030
+  base_path: /egova/apps/basic/IM
+  proxy:
+    - source: /im-api
+      destination: 10011
+    - source: /im-msg-gateway
+      destination: 10001
+    - source: /im-jssdk-gateway
+      destination: 10003
+  url:
+    backend:
+    frontend:
+  environment:
+    jvm_opts: -Xms256m -Xmx512m
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: mysql业务库
+      database: open_im
+    - type: zookeeper
+      name: zookeeper
+    - type: kafka
+      name: kafka消息队列
+    - type: microservice
+      sub_type: usercenter
+      name: 用户中心2.0
+
+video:
+  name: 视频中台
+  category: ai
+  display: 1
+  login_url: http://ip:8080/videocenter/index.html
+  user: admin
+  password: eGova@Spzxai
+  server_port: 8083
+  base_path: /egova/apps/ai/video
+  jar_name:
+  frontend_path: /egova/apps/ai/video/webApps
+  proxy:
+    - source: /video-api
+      destination: /video-api
+  url:
+    backend: video-api
+    frontend: video
+  media_server:
+    port: 8090
+  environment:
+    jvm_opts:
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: mysql业务库
+      database: videov3
+
+evaluation:
+  name: 毕升（麒舰版）
+  category: basic
+  display: 1
+  version_flag: 1
+  login_url: http://ip:8080/evaluation/index.html
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E6%AF%95%E5%8D%87%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2%E9%BA%92%E8%88%B0%E7%89%88%E6%9C%AC
+  server_port: 10040
+  base_path: /egova/apps/basic/evaluation
+  jar_name: egova-stat-service-1.0.0-SNAPSHOT.jar
+  frontend_path: /egova/apps/basic/evaluation/webApps
+  proxy:
+    - source: /bi-api
+      destination: /bi-api
+  url:
+    backend: bi-api
+    frontend: evaluation
+  environment:
+    jvm_opts: -Xms128m -Xmx2048m
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: 毕升库
+      database: becensus
+    - type: redis
+      name: redis内存数据库
+      database: 0
+    - type: nacos
+      name: nacos中心
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+dataflow:
+  name: 毕升采集
+  category: basic
+  display: 1
+  login_url: http://ip:8080/dataflow/index.html
+  user: admin
+  password: eGova@2023Yhzx
+  wiki: http://faq.egova.com.cn:7777/projects/redmine/wiki/%E6%AF%95%E5%8D%87%E9%87%87%E9%9B%86%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2v2
+  server_port: 10080
+  base_path: /egova/apps/basic/dataflow
+  jar_name: egova-dataflow.jar
+  frontend_path: /egova/apps/basic/dataflow/webApps
+  vue_version: 3
+  proxy:
+    - source: /dataflow-api
+      destination: /dataflow-api
+  url:
+    backend: dataflow-api
+    frontend: dataflow
+  environment:
+    jvm_opts: -Xms128m -Xmx2048m
+  depends:
+    - type: mysql
+      name: 业务库
+      database: dataflow
+      sub_type: biz
+    - type: redis
+      name: redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+    - type: zookeeper
+      name: zookeeper
+      sub_type: dataflow_zookeeper
+wuneng:
+  name: 悟能服务
+  category: basic
+  display: 1
+  server_port: 16060
+  base_path: /egova/apps/basic/wuneng
+  jar_name: wuneng.jar
+  frontend_path:
+  proxy:
+    - source: /wuneng-api
+      destination: /wuneng-api
+  url:
+    backend: wuneng-api
+    frontend:
+  environment:
+    jvm_opts: -Xms128m -Xmx512m
+  depends:
+    - type: mysql
+      sub_type: biz
+      name: 业务库
+      database: wuneng
+    - type: redis
+      sub_type:
+      name: redis
+      database: 2
+    - type: usercenter_redis
+      name: usercenter_redis内存数据库
+      database: 3
+      sub_type: usercenter_redis
+    - type: nacos
+      name: nacos中心
+    - type: TDengine
+      name: 时序数据库
+      database: trace

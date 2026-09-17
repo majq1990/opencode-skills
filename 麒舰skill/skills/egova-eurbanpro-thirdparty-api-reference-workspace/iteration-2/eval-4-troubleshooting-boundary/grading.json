@@ -1,0 +1,40 @@
+{
+  "with_skill": {
+    "expectations": [
+      {
+        "text": "明确这是排障问题",
+        "passed": true,
+        "evidence": "开头即明确'这部分属于现象排障'"
+      },
+      {
+        "text": "提示切换 troubleshooting",
+        "passed": true,
+        "evidence": "明确写出'建议切换到 troubleshooting skill'"
+      },
+      {
+        "text": "不输出排障链路细节",
+        "passed": true,
+        "evidence": "全文仅一句话确认公钥路径和 token 传递方式，未输出任何排障步骤或链路细节"
+      }
+    ]
+  },
+  "old_skill": {
+    "expectations": [
+      {
+        "text": "明确这是排障问题",
+        "passed": true,
+        "evidence": "明确指出'这个问题属于故障排查场景，不在本 skill 的处理范围内'"
+      },
+      {
+        "text": "提示切换 troubleshooting",
+        "passed": true,
+        "evidence": "明确写出'请切换到 troubleshooting 技能'"
+      },
+      {
+        "text": "不输出排障链路细节",
+        "passed": false,
+        "evidence": "列出了初步确认步骤（接口路径是否拼写正确、是否多拼前缀、网络层是否能ping通）以及 troubleshooting skill 能提供的三项能力（前置核查清单、定向诊断步骤、配置表与SQL验证），属于输出排障链路细节"
+      }
+    ]
+  }
+}

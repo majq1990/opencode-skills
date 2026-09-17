@@ -9,7 +9,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, r"D:\git\opencode-skills\内部阅卷\scripts\common")
 from moodle_submit import fetch_form, post_grade  # noqa: E402
 
-WORKDIR = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("--") else r"D:\opencode\file\2026-09-14\阅卷_266"
+WORKDIR = r"D:\opencode\file\2026-09-14\阅卷_266"
 GDIR = os.path.join(WORKDIR, "_grading")
 SLOTS = [(1, "Q1", 30, "T1"), (2, "Q2", 30, "T2"), (3, "Q3", 40, "T3")]
 NAMES = {a["attempt"]: a["name"] for a in
@@ -18,16 +18,26 @@ NAMES = {a["attempt"]: a["name"] for a in
 
 def load_grades():
     grades = {}
+    import glob as _glob
+    files = []
     for gi in range(4):
         for q in ["Q1", "Q2", "Q3"]:
-            for r in json.load(open(os.path.join(GDIR, f"G{gi}_{q}.json"), encoding="utf-8")):
-                g = grades.setdefault(r["attempt"], {})
-                if q == "Q1":
-                    g["Q1"] = r
-                elif q == "Q2":
-                    g["Q2"] = r
-                else:
-                    g["Q3"] = r
+            files.append(os.path.join(GDIR, f"G{gi}_{q}.json"))
+    for gi in ["INCR0", "INCR1"]:
+        for q in ["Q1", "Q2", "Q3"]:
+            files.append(os.path.join(GDIR, f"{gi}_{q}.json"))
+    for fp in files:
+        if not os.path.isfile(fp):
+            continue
+        q = os.path.basename(fp).split("_")[-1].split(".")[0]
+        for r in json.load(open(fp, encoding="utf-8")):
+            g = grades.setdefault(r["attempt"], {})
+            if q == "Q1":
+                g["Q1"] = r
+            elif q == "Q2":
+                g["Q2"] = r
+            else:
+                g["Q3"] = r
     return grades
 
 
@@ -84,19 +94,36 @@ def slot_comment(slot, g, name, direction):
             lines.append(f"<p>{item}：{got}/{mx}，达标（{req}）。</p>")
         else:
             lines.append(f"<p>{item}：{got}/{mx}，扣{round(mx-got, 2)}分——{cause(flag)}；要求：{req}。</p>")
+    awarded = rec.get(tkey, 0)
+    raw_sum = round(sum(ds), 2)
+    raw_scaled = round(raw_sum / 34 * 30, 2) if slot == 1 else raw_sum
+    if awarded < raw_scaled - 0.01:
+        lines.append(
+            f"<p>注：以上分项合计原始分{raw_scaled}分；分项满分但有效截图不足，"
+            f"扣10%计{awarded}/{maxmark}分，待人工复核截图后可调。</p>")
     return "".join(lines)
 
 
 def main():
     commit = "--commit" in sys.argv
     only = None
+    frm = None
+    to = None
     if "--only" in sys.argv:
         only = int(sys.argv[sys.argv.index("--only") + 1])
+    if "--from" in sys.argv:
+        frm = int(sys.argv[sys.argv.index("--from") + 1])
+    if "--to" in sys.argv:
+        to = int(sys.argv[sys.argv.index("--to") + 1])
     if not os.environ.get("MOODLE_COOKIE"):
         raise SystemExit("缺少 MOODLE_COOKIE")
     grades = load_grades()
     if only is not None:
         grades = {only: grades[only]}
+    if frm is not None:
+        grades = {a: g for a, g in grades.items() if a >= frm}
+    if to is not None:
+        grades = {a: g for a, g in grades.items() if a <= to}
     results, n_post, n_skip = [], 0, 0
     for att in sorted(grades):
         if att == 7168:
@@ -130,13 +157,23 @@ def main():
                 continue
             c = slot_comment(slot, g, name, direction)
             if commit:
-                r = post_grade(att, slot, marks[slot], c, dry_run=False)
+                try:
+                    r = post_grade(att, slot, marks[slot], c, dry_run=False)
+                except Exception as e:
+                    results.append({"attempt": att, "slot": slot, "mark": marks[slot],
+                                    "err": f"POST异常 {e}"})
+                    print(f"FAIL POST attempt={att} slot={slot}: {e}", flush=True)
+                    continue
                 results.append({"attempt": att, "slot": slot, "mark": marks[slot],
                                 "result": r})
                 print(f"POST attempt={att} slot={slot} mark={marks[slot]} ok={r.get('ok')}",
                       flush=True)
                 n_post += 1
                 time.sleep(0.5)
+                if n_post % 25 == 0:
+                    json.dump(results, open(os.path.join(
+                        WORKDIR, "_submit_266_commit_part.json"), "w", encoding="utf-8"),
+                        ensure_ascii=False, indent=1)
             else:
                 results.append({"attempt": att, "slot": slot, "mark": marks[slot],
                                 "result": "dry-run ok"})

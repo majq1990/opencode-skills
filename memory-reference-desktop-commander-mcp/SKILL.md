@@ -1,0 +1,1 @@
+C:/Users/majq1/.agent-memory/reference_desktop_commander_mcp.md

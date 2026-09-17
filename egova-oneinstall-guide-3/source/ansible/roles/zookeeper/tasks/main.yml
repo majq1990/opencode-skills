@@ -1,0 +1,59 @@
+---
+# check if zookeeper exists
+- name: 检查目标目录
+  stat: path={{ deploy_path }}/zookeeper_{{ zookeeper_version }}
+  register: zookeeper_dir
+
+- name: Fail if zookeeper is not empty
+  fail:
+    msg: |
+      检查到已经安装过zookeeper,如需卸载请在{{ hostvars[inventory_hostname]['ansible_ssh_host'] }}服务器上执行 mv {{ deploy_path }}/zookeeper_{{ zookeeper_version }} {{ deploy_path }}/zookeeper_{{ zookeeper_version }}_backup
+  ignore_errors: yes
+  when: zookeeper_dir.stat.exists == True
+
+- block:
+    - name: 准备zookeeper目录
+      file: name={{ item.dir }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='{{ item.mode }}'
+      with_items:
+        - { dir: "{{ deploy_path }}",mode: "0775" }
+        - { dir: "{{ log_path }}",mode: "0775" }
+        - { dir: "{{ zk_data_path }}",mode: "0775" }
+
+    - name: 解压zookeeper
+      unarchive:
+        src: "{{ src_path }}/zookeeper_{{ zookeeper_version }}.tgz"
+        dest: "{{ deploy_path }}"
+        owner: "{{ ops_user }}"
+        group: "{{ ops_user }}"
+        mode: '0755'
+
+
+    - name: 创建软链接
+      file: src={{ deploy_path }}/zookeeper_{{ zookeeper_version }} dest={{ deploy_path }}/zookeeper state=link force=true
+
+    - name: 并修改配置
+      template: src={{ item.filename }}.j2 dest={{ item.destpath }}/{{ item.filename }}
+      with_items:
+        - { filename: "zoo.cfg",destpath: "{{ deploy_path }}/zookeeper/conf/" }
+        - { filename: "zookeeper.service",destpath: "/etc/systemd/system/" }
+        - { filename: "zookeeper-env.sh",destpath: "{{ deploy_path }}/zookeeper/conf/" }
+
+    - name: daemon-reload
+      systemd: daemon_reload=yes
+
+    - name: 启动zookeeper
+      service: name=zookeeper state=restarted enabled=yes
+
+    - name: 等待zookeeper启动
+      wait_for:
+        port: "{{ port }}"
+        timeout: 30
+    
+    - name: 创建认证用户和设置ACL
+      shell: |
+        /egova/zookeeper/bin/zkCli.sh -server localhost:{{ port }} << EOF
+        addauth digest {{ zk_user }}:{{ zk_password }}
+        setAcl /zookeeper auth:{{ zk_user }}:{{ zk_password }}:cdrwa
+        quit
+        EOF
+  when: zookeeper_dir.stat.exists == false

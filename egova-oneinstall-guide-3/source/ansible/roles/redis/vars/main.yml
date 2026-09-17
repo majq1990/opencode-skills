@@ -1,0 +1,5 @@
+---
+redis_data_dir: "{{ data_root_dir }}/redis"
+redis_port: 6380
+redis_password: Wk2uBTeyp6
+redis_log_dir: "{{ log_root_dir }}/redis"

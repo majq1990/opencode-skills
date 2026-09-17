@@ -1,0 +1,206 @@
+---
+# check if mysql exists
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+#- name: Show all facts
+#  debug:
+#    var: ansible_facts
+
+- name: 输出变量信息
+  debug:
+    msg: |
+      ansible_distribution： {{ ansible_distribution }}
+      mysql_packages： {{ mysql_packages[ansible_distribution] }}
+
+- name: check if mysqld exists
+  shell: "which mysqld"
+  register: check_mysqld_output
+  ignore_errors: true
+
+- name: 判断{{ data_dir }}数据目录是否为空
+  shell: ls "{{ data_dir }}" 2>/dev/null |wc -l
+  ignore_errors: true
+  register: file_count
+
+
+- name: 数据目录检查结果
+  debug:
+    msg: "{{ data_dir }}目录的文件数量为{{ file_count.stdout}}"
+
+- block:
+    - name: 清理yum缓存
+      shell: |
+       yum clean all
+       yum remove mariadb -y
+      when: ansible_pkg_mgr in ['dnf','yum']
+
+    - name: 卸载mariadb
+      package:
+        name: '{{ item }}'
+        state: 'absent'
+      with_items:
+        - mariadb
+        - mariadb-devel
+        - mariadb-libs
+        - mariadb-common
+      ignore_errors: true
+
+    - name: 检查是否安装了MariaDB
+      shell: rpm -q mariadb
+      register: mariadb_installed
+      ignore_errors: true
+      when: ansible_pkg_mgr in ['dnf','yum']
+
+    - name: MariaDB已安装
+      fail:
+        msg: "MariaDB自动卸载异常. 请手动卸载。yum remove -y mariadb*"
+      when:  ansible_pkg_mgr in ['dnf','yum'] and mariadb_installed.rc == 0
+
+    - name: 安装mysql
+      package:
+        name: "{{ mysql_packages[ansible_distribution] }}"
+        state: 'present'
+        update_cache: yes
+      when: ansible_distribution in ['openEuler', 'kylin_arm','Ubuntu','CentOS','kylin_x86','UOS','uos_x86','uos_arm','anolis_x86','anolis_arm', 'Anolis']
+
+    - name: "检查是否已创建mysql用户"
+      command: id mysql
+      ignore_errors: true
+      register: user_exists
+      when: ansible_distribution in ['UOS', 'Anolis']
+
+    - name: mysql用户创建"
+      become: true
+      shell: |
+        groupadd mysql
+        useradd -m -g  mysql  mysql
+      ignore_errors: true
+      when: ansible_distribution in ['UOS', 'Anolis'] and user_exists.rc != 0
+
+    - name: 准备mysql数据目录
+      file: path={{ item.dir }} state=directory owner=mysql group=mysql mode='{{ item.mode }}'
+      with_items:
+        - { dir: "{{ data_dir }}",mode: "0775" }
+        - { dir: "{{ temp_dir }}",mode: "0775" }
+        - { dir: "{{ log_dir }}",mode: "0775" }
+
+    - name: 计算mysql buffer pool
+      shell: mysql_mem=`expr $(grep MemTotal /proc/meminfo |awk '{print $2}') / 1365 ` && echo ${mysql_mem}
+      register: MYSQL_MEM
+
+    - set_fact: MYSQL_BUFFER_POLL={{MYSQL_MEM.stdout}}
+
+    - name: 根据 ip 和 hostname 生成 server-id
+      set_fact:
+        # 若 host 为 192.168.6.50，hostname 为 cg50
+        # 则 server_id 为 (((6 * 50) + (hash(cg50) 转 int 累和) % 100) % 65534) + 1
+        # 保证 server_id 范围在 1~65535 之间且不重复
+        server_id: >-
+          {% set ip_list = hostvars[inventory_hostname]['ansible_ssh_host'].split('.') %}
+          {% set hash_list = host|hash|list %}
+          {% set hash_sum = hash_list|map('int')|sum %}
+          {% set tmp_server_id = (ip_list[2]|int * ip_list[3]|int + hash_sum) % 65534 %}
+          {{ tmp_server_id + 1 }}
+
+    - name: 停止 MySQL 服务 (mysql 或 mysqld)
+      service:
+        name: "{{ item }}"
+        state: stopped
+      failed_when: false
+      loop:
+        - mysql
+        - mysqld
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Check if /lib/systemd/system/mysql.service exists
+      stat:
+        path: /lib/systemd/system/mysql.service
+      register: mysql_service_stat
+      ignore_errors: true
+
+    - name: Rename mysql.service to mysqld.service
+      shell: |
+        mv /lib/systemd/system/mysql.service /lib/systemd/system/mysqld.service
+        systemctl daemon-reload
+      when: mysql_service_stat.stat.exists
+
+    - name: 拷贝 my.cnf
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: 0644
+      loop:
+        - { src: "mysqld.cnf.j2", dest: "/etc/mysql/mysql.conf.d/mysqld.cnf" }
+        - { src: "my.cnf.j2", dest: "/etc/my.cnf" }
+      when: (ansible_pkg_mgr == 'apt' and item.src == "mysqld.cnf.j2") or (ansible_pkg_mgr in ['dnf','yum'] and item.src == "my.cnf.j2")
+
+
+    - name: 修正 ulimit 及自启动
+      shell: |
+        systemctl enable mysqld
+        {% if ansible_pkg_mgr == 'apt' %}
+        sed -i "/LimitNOFILE.*/d" /lib/systemd/system/mysqld.service
+        sed -i "/LimitNPROC.*/d" /lib/systemd/system/mysqld.service
+        {% elif ansible_pkg_mgr == 'dnf' or ansible_pkg_mgr == 'yum' %}
+        sed -i "/LimitNOFILE.*/d" /usr/lib/systemd/system/mysqld.service
+        sed -i "/LimitNPROC.*/d" /usr/lib/systemd/system/mysqld.service
+        {% endif %}
+        systemctl daemon-reload
+      when: ansible_pkg_mgr in ['apt', 'dnf','yum']
+
+    - name: mysql授权给{{ ops_user }}
+      user: name="{{ ops_user }}" groups=mysql append=true
+      notify: lock user and group files
+
+    - name: 更新usr.sbin.mysqld
+      template: src=usr.sbin.mysqld.j2 dest={{ apparmor_mysqld_file }} mode=0644
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: 初始化 MySQL
+      shell: |
+        {% if ansible_pkg_mgr == 'apt' %}
+        apparmor_parser -r {{ apparmor_mysqld_file }}
+        {% endif %}
+        mysqld --initialize-insecure --datadir={{ data_dir }} --user=mysql
+      when: ansible_pkg_mgr in ['apt', 'dnf', 'yum']
+
+    - name: 重置mysql密码
+      shell: |
+        systemctl stop mysqld
+        systemctl set-environment MYSQLD_OPTS='--skip-grant-tables'
+        systemctl start mysqld
+        mysql -u root --connect-expired-password -e "update mysql.user set authentication_string='' where user='root';"
+        systemctl unset-environment MYSQLD_OPTS
+        systemctl restart mysqld
+        mysql -u root --connect-expired-password -e "alter user 'root'@'localhost' identified with caching_sha2_password by '{{ password }}';flush privileges;"
+        mysql -u root -p{{ password }} -e "update mysql.user set host='%' where user='root';flush privileges;"
+        mysql -u root -p{{ password }} -e "GRANT BACKUP_ADMIN ON *.* TO 'root'@'%';"
+  when:
+    - file_count.stdout == '0'
+    - check_mysqld_output.rc > 0
+
+
+- name: lock user and group files
+  command: /bin/true
+  notify:
+    - lock user and group files
+  when:
+    - check_mysqld_output.rc == 0 or file_count.stdout > '0'
+
+- name: Fail if mysqld is installed
+  fail:
+    msg: |
+      检查到已经安装过mysqld,不可以再次安装。
+  ignore_errors: true
+  when:
+    - check_mysqld_output.rc == 0
+
+- name: Fail if data_dir is not empty
+  fail:
+    msg: |
+      检查到{{ data_dir }}目录不为空,不可以再次安装mysql
+  ignore_errors: true
+  when: file_count.stdout > '0'

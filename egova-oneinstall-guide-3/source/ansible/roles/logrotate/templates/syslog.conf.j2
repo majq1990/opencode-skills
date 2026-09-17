@@ -1,0 +1,11 @@
+/var/log/messages /var/log/*.log {
+        su root root
+        dateext
+        dateformat _%Y-%m-%d
+        daily
+        missingok
+        rotate 15
+        nocompress
+        notifempty
+        copytruncate
+}

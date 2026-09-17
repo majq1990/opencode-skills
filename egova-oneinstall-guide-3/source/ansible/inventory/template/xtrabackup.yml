@@ -1,0 +1,3 @@
+# xtrabackup配置模板
+ip: 127.0.0.1
+version: 2.7.18

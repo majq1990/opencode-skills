@@ -1,0 +1,6 @@
+{
+  "comment": "公开范本（随 skill 发布，不含明文密钥）。真实 API key 放在本机 config/keys.local.json（已 .gitignore）或环境变量 TIANDITU_MAP_KEYS / TIANDITU_API_KEY。脚本按 环境变量 → config/keys.local.json → 本文件 顺序加载。",
+  "env_refs": ["TIANDITU_MAP_KEYS", "TIANDITU_API_KEY"],
+  "keys": [],
+  "default_tps_per_key": 15
+}

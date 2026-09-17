@@ -1,0 +1,14 @@
+---
+- name: deploy to nginx
+  hosts: "{{ host }}"
+  gather_facts: no
+  remote_user: root
+  # 优先级小于role/vars下定义的变量
+  vars_files:
+    - ./group_vars/all.yml
+  roles:
+    - local_repo
+    - common
+    - nginx
+    - outlet_nginx
+    - logrotate

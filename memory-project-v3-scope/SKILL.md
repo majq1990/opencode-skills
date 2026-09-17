@@ -1,0 +1,1 @@
+C:/Users/majq1/.agent-memory/project_v3_scope.md

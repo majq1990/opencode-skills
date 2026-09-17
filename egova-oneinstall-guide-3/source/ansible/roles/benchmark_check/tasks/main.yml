@@ -1,0 +1,80 @@
+---
+
+- name: 检查ulimit
+  shell: ulimit -n 2>&1
+  register: check_rst
+  ignore_errors: yes
+
+- block:
+  - name: 准备目录
+    file: name={{ benchmark_check_log }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='0755'
+
+  - name: 修改ulimit
+    shell: |
+      sed -i '/ulimit -n/d' /etc/profile
+      echo ulimit -n 1048576 >>/etc/profile
+      source /etc/profile  
+      echo "ulimit已修改为1048576，满足需求">> {{ benchmark_check_log }}/check-result_`date +%Y%m%d`.txt
+    when: (check_rst.stdout | int) < 1048576
+
+  - name: ulimit满足需求，不修改
+    shell: |
+      echo "ulimit为1048576，满足需求">> {{ benchmark_check_log }}/check-result_`date +%Y%m%d`.txt
+    when: (check_rst.stdout | int) == 1048576
+
+  - name: TCP检查并修改
+    shell: |
+      sed -i '/_max_tw_buckets/d' /etc/sysctl.conf 
+      sed -i '/net.ipv4.tcp_fin_timeout/d' /etc/sysctl.conf
+      echo net.ipv4.tcp_max_tw_buckets=5000 >>/etc/sysctl.conf
+      echo net.ipv4.tcp_fin_timeout = 5 >>/etc/sysctl.conf
+      sysctl -p
+      cat /etc/sysctl.conf |grep net.ipv4.tcp >> {{ benchmark_check_log }}/check-result_`date +%Y%m%d`.txt
+      echo "TCP检查已修改，满足需求" >> {{ benchmark_check_log }}/check-result_`date +%Y%m%d_%H%M%S`.txt
+
+  - name: 磁盘IO
+    shell: |
+      dd bs=128k count=10K if=/dev/zero of=ddtest conv=fdatasync &>> {{ benchmark_check_log }}/check-result_`date +%Y%m%d`.txt
+      rm -rf ddtest
+
+  - name: 检查是否安装sysbench
+    shell: sysbench --version 2>&1
+    register: check_sysbench
+    ignore_errors: yes
+
+  - name: check if redis-benchmark exists
+    shell: "which redis-benchmark"
+    register: check_output
+    ignore_errors: yes
+
+  - name: print check_output
+    debug:
+      msg: "check_output: {{ check_output }}"
+
+  - name: 安装sysbench
+    package: name=sysbench state=present
+    when: check_sysbench.rc > 0
+
+  - name: 磁盘IOPS
+    shell: |
+      sysbench --test=fileio --num-threads=16 --file-total-size=3G --file-test-mode=rndrw prepare
+      sysbench --test=fileio --num-threads=16 --file-total-size=3G --file-test-mode=rndrw run >> {{ benchmark_check_log }}/check-result_`date +%Y%m%d`.txt
+      sysbench --test=fileio --num-threads=16 --file-total-size=3G --file-test-mode=rndrw cleanup
+
+  - name: redis基准检查
+    connection: local
+    shell: |
+      redis-benchmark -h {{ redis_ip }} -a {{ redis_password }} -p {{ redis_port }} -c 100 -n 100000 -q >> check-redis-result_`date +%Y%m%d`.txt
+    run_once: true
+    when:  check_output.rc == 0
+
+#  - name: 安全检测
+#    script: check-script-os.sh >> {{ benchmark_check_log }}/security-result_`date +%Y%m%d`.txt
+#    ignore_errors: yes
+
+  - name: 基准检查日志目录
+    debug:
+      msg: "请查看每台服务器基准检查日志，日志路径: {{ benchmark_check_log }}"
+
+
+

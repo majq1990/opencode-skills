@@ -1,0 +1,21 @@
+[Unit]
+Description=IPv4 firewall with iptables
+Before=network-pre.target
+Wants=network-pre.target
+Before=iptables.service
+After=syslog.target
+AssertPathExists=/etc/sysconfig/ipset
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/ipset restore -! -f /etc/sysconfig/ipset
+ExecReload=/usr/sbin/ipset restore -! -f /etc/sysconfig/ipset
+ExecStop=/usr/sbin/ipset save -f /etc/sysconfig/ipset
+Environment=BOOTUP=serial
+Environment=CONSOLETYPE=serial
+StandardOutput=syslog
+StandardError=syslog
+
+[Install]
+WantedBy=basic.target

@@ -1,0 +1,50 @@
+---
+# 边缘服务器，部署出口nginx，代理到内网服务
+- name: include metadata.yml
+  include_vars: "./inventory/metadata.yml"
+
+- name: 准备目录
+  file: name={{ script_path }} state=directory owner={{ ops_user }} group={{ ops_user }} mode='0755'
+
+- name: Check if yq is installed
+  shell: "command -v yq"
+  register: yq_installed
+  ignore_errors: yes
+
+- name: Copy yq binary to remote host if not installed
+  copy:
+    src: /usr/bin/yq
+    dest: /usr/bin/yq
+    mode: '0755'
+  when: yq_installed.rc != 0
+
+
+- name: Check if yq is installed
+  shell: "command -v yq"
+  register: yq_installed
+  ignore_errors: yes
+
+- name: Copy yq binary to remote host if not installed
+  copy:
+    src: /usr/bin/yq
+    dest: /usr/bin/yq
+    mode: '0755'
+  when: yq_installed.rc != 0
+
+
+- name: Copy multiple files using with_items
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ script_path }}"
+    mode: '755'
+  with_items:
+    - { src: "{{ file_path }}/modify_db_connection.sh"}
+    - { src: "{{ playbook_dir }}/../shell/template/microservice_template.yml"}
+    - { src: "{{ playbook_dir }}/../shell/template/tomcat_app_template.yml"}
+    - { src: "{{ playbook_dir }}/../shell/template/db_template.yml"}
+
+
+- name: 替换数据库配置信息
+  run_once: true
+  command: "bash {{ script_path }}/modify_db_connection.sh --SELECTED_PRODUCT_NAME={{ SELECTED_PRODUCT_NAME }} --DB_STAT_HOST={{ DB_STAT_HOST }} --DB_STAT_NAME={{ DB_STAT_NAME }} --DB_STAT_PORT={{ DB_STAT_PORT }} --DB_STAT_SCHEMA={{ DB_STAT_SCHEMA }} --DB_HOST={{ DB_HOST }} --DB_PORT={{ DB_PORT }} --DB_USER={{ DB_USER }} --DB_PASSWORD={{ DB_PASSWORD }} --DB_NAME={{ DB_NAME }} --DB_SCHEMA={{ DB_SCHEMA }} --DB_TYPE={{ DB_TYPE }} --DB_DRIVER={{ DB_DRIVER }}"
+

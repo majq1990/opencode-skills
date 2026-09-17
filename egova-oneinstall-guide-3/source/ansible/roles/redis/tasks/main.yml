@@ -1,0 +1,72 @@
+---
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+  # check if redis exists
+- name: check if redis exists
+  shell: test -e /usr/bin/redis-server && echo true || echo false
+  register: redis_exists
+
+- name: redis检查结果
+  debug:
+    msg: "检查到之前已存在redis，跳过安装"
+  when: redis_exists.stdout == 'true'
+
+# install redis
+
+- name: install redis in {{ ansible_distribution }}
+  package: name=redis-server state=present update_cache=yes
+  when: redis_exists.stdout == 'false' and ansible_distribution == 'Ubuntu'
+
+- name: install redis in {{ ansible_distribution }}
+  package: name=redis state=present update_cache=yes
+  when: redis_exists.stdout == 'false' and ansible_distribution in ['kylin_arm','openEuler','CentOS','kylin_x86','UOS','uos_x86','uos_arm','anolis_x86','anolis_arm', 'Anolis']
+
+- name: 准备redis目录
+  file: name={{ item.dir }} state=directory owner=redis group=redis mode='{{ item.mode }}'
+  with_items:
+    - { dir: "{{ redis_data_dir }}",mode: "0775" }
+    - { dir: "{{ redis_log_dir }}",mode: "0775" }
+
+- block:
+    - name: Check if directory exists
+      stat:
+        path: /etc/redis
+      register: dir_status
+
+    - name: Create directory if it doesn't exist
+      file:
+        path: /etc/redis
+        state: directory
+      when: not dir_status.stat.exists
+
+    - name: Create redis user
+      user:
+        name: redis
+        state: present
+
+    - name: copy redis.conf
+      template: src=redis.conf.j2 dest={{ item.dir }} owner=redis group=redis mode='{{ item.mode }}'
+      with_items:
+        - { dir: "/etc/redis/redis.conf",mode: "0775" }
+        - { dir: "/etc/redis.conf",mode: "0775" }
+
+    - name: redis授权给{{ ops_user }}
+      user: name="{{ ops_user }}" groups=redis append=true
+      notify: lock user and group files
+
+    - name: 修改redis.service文件
+      template:
+        src: redis-server.service.j2
+        dest: /usr/lib/systemd/system/redis.service
+        mode: '0755'
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: daemon-reload
+      systemd: daemon_reload=yes
+
+    - name: 自启动
+      service: name=redis state=restarted enabled=yes
+  when: redis_exists.stdout == 'false'

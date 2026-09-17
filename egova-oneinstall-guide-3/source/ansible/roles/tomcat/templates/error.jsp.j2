@@ -1,0 +1,12 @@
+<%@page contentType="text/html;charset=Big5" isErrorPage="true"%>
+<html>
+    <head>
+        <title>发生异常</title>
+    </head>
+    <body>
+        <H1>异常：</H1>
+        <%=exception%>
+        <H2>异常内容：</H2>
+        <%exception.printStackTrace(response.getWriter());%>
+    </body>
+</html>

@@ -1,0 +1,163 @@
+# \u5728\u53D1\u5E03\u8BF7\u628Aspring.profiles.active\u914D\u7F6E\u6CE8\u91CA\u6389\uFF0C\u5426\u5219\u5916\u90E8\u914D\u7F6E\u6587\u4EF6\u5C06\u4E0D\u8D77\u4F5C\u7528
+spring.profiles.active=kafka
+
+server.address=::
+server.port={{ microservice[app_type][app_name].server_port }}
+egova.global.regionId=420000
+server.servlet.context-path=/{{ app_type }}
+
+# session
+spring.session.store-type=redis
+
+#spring.devtools.restart.enabled=true
+{% for depend in microservice[app_type][app_name].depends %}
+{% if depend.type == 'redis' %}
+#redis
+spring.redis.host={{ redis[depend.depend_key].ip }}
+spring.redis.port={{ redis[depend.depend_key].port }}
+spring.redis.database={{ depend.database }}
+spring.redis.timeout=10s
+spring.redis.password={{ redis[depend.depend_key].password }}
+{% endif %}
+
+# Lettuce
+spring.redis.lettuce.pool.max-active=2000
+spring.redis.lettuce.pool.max-wait=10s
+spring.redis.lettuce.pool.max-idle=2000
+spring.redis.lettuce.pool.min-idle=1000
+spring.redis.lettuce.shutdown-timeout=1s
+
+# cache
+cache.multi.cache-names=minute10,minute30,hour1,hour12,hour24
+cache.multi.ehcache.max-entry=1000
+cache.multi.ehcache.expire-after-write=5000
+
+cache.multi.redis.default-expiration=0s
+cache.multi.redis.expires.minute10=10m
+cache.multi.redis.expires.minute30=30m
+cache.multi.redis.expires.hour1=1h
+cache.multi.redis.expires.hour12=12h
+cache.multi.redis.expires.hour24=24h
+cache.multi.cache-type=redis
+
+#logging.config=classpath:log4j2.xml
+
+flagwind.mybatis.before=true
+flagwind.mybatis.dialect=mysql
+flagwind.mybatis.mappers=com.flagwind.persistent.AbstractRepository
+mybatis.type-handlers-package=com.egova.*.*.typehandler,com.egova.*.*.*.typehandler
+#mybatis.config-locations=classpath:conf/mybatis-config.xml
+{% if depend.type == 'mysql' %}
+{%- set db_prefix = 'cetus' if 'cetus' in depend.depend_key else 'mysql' %}
+{% if depend.sub_type == 'biz' %}
+spring.datasource.url=jdbc:mysql://{{ vars[db_prefix][depend.depend_key].ip }}:{{ vars[db_prefix][depend.depend_key].port }}/{{ depend.database }}?useUnicode=true&characterEncoding=utf8&allowMultiQueries=true&allowPublicKeyRetrieval=true
+spring.datasource.username={{ vars[db_prefix][depend.depend_key].username }}
+spring.datasource.password={{ vars[db_prefix][depend.depend_key].password }}
+spring.datasource.driverClassName={{ datasource_driver }}
+spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
+{% endif %}
+{% endif %}
+{% endfor %}
+##dameng数据源
+#spring.datasource.url=jdbc:dm://127.0.0.1:5236?clobAsString=true
+#spring.datasource.username=SYSDBA
+#spring.datasource.password=SYSDBA
+#spring.datasource.driver-class-name=dm.jdbc.driver.DmDriver
+##金仓数据源
+#spring.datasource.driverClassName=com.kingbase8.Driver
+#spring.datasource.url=jdbc:kingbase8://localhost:54321/egovaiot
+#spring.datasource.username=system
+#spring.datasource.password=system
+#spring.liquibase.default-schema=public
+
+## druid datasource
+spring.datasource.druid.initialSize=20
+spring.datasource.druid.minIdle=30
+spring.datasource.druid.maxActive=50
+spring.datasource.druid.maxWait=60000
+spring.datasource.druid.timeBetweenEvictionRunsMillis=60000
+spring.datasource.druid.minEvictableIdleTimeMillis=300000
+spring.datasource.druid.validationQuery=SELECT 'x'
+spring.datasource.druid.testWhileIdle=true
+spring.datasource.druid.testOnBorrow=true
+spring.datasource.druid.testOnReturn=true
+spring.datasource.druid.poolPreparedStatements=true
+spring.datasource.druid.maxPoolPreparedStatementPerConnectionSize=20
+spring.datasource.druid.filters=stat
+spring.datasource.druid.connectionProperties=druid.stat.slowSqlMillis=5000
+
+
+logging.level.root=INFO
+logging.level.org.springframework.security=ERROR
+logging.level.org.springframework.web=ERROR
+logging.level.org.hibernate=ERROR
+logging.level.org.apache.commons.dbcp2=ERROR
+logging.file={{ app_root_dir }}/{{ web_app_name }}/logs/iotplatform.log
+
+egova.menu.app-path=classpath:conf/menu-desktop.json
+egova.menu.source=database
+
+egova.remote.shell.destination=/topic/command
+
+voice.url=http://192.168.101.39:8077/free/voice
+
+org.quartz.properties.path=conf/quartz.properties
+
+
+center.incremental.flag=false
+
+# liquibase
+spring.liquibase.enabled=true
+spring.liquibase.change-log=classpath:/liquibase/master.xml
+spring.liquibase.drop-first=false
+
+server.compression.enabled=true
+egova.security.front-end-encrypted=true
+
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+logback.logdir={{ app_root_dir }}/{{ web_app_name }}/logs
+logback.save.day=90
+
+#netty服务器默认不开启
+hjt212.netty.enable=false
+hjt212.netty.server.port=9999
+
+#三方平台路灯控制
+third.light.ccu.url=http://112.6.122.88:8081/monitor/module/light/app/control/controlCcuControl.action
+third.light.rtu.url=http://112.6.122.88:8081/monitor/module/light/app/control/controlRtuControl.action
+third.light.token.url=http://112.6.122.88:8081/monitor/module/pub/user/appLogin.action
+third.light.tokrn.username=qhxm
+third.light.tokrn.password=123456
+
+#设备报警案件上报的功能是否开启。默认不开启。某个地方项目需要这个功能就开启。开启后地方项目的配置文件要配置案件上报的相关配置。注意排序。如上报多个设备类型。用数组方式。相应的平台编号，表示，来源等也要按照设备类型相应的顺序。如下注释示例。
+anjian.rec.enable=false
+##示例案件上报的地址
+#anjian.rec.baseUrl=http://122.143.21.16:8080/eUrbanMIS
+##案件上报的设备类型id 5井盖6路灯
+#anjian.rec.equipTypeIds=2,2
+##案件上报的平台编号 井盖平台编号路灯平台编号
+#anjian.rec.senderCode=JGSBSB,LDSBSB
+##案件上报的事部件标识井盖路灯
+#anjian.rec.eventTypeCode=2,2
+##案件上报的问题级别标识井盖路灯
+#anjian.rec.eventLevelID=1,1
+##案件上报的来源井盖路灯
+#anjian.rec.eventSrcID=13012,13011
+##案件上报的类型标识井盖路灯
+#anjian.rec.recTypeId=1,1
+
+iot.platform.login-error-maxtimes=5
+iot.platform.login-error-ttl=5
+xss.enabled=false
+xss.excludes=/favicon.ico,/img/*,/js/*,/css/,/fronts,/free/oauth/login
+xss.urlPatterns=/
+
+server.tomcat.uri-encoding=utf-8
+server.tomcat.accesslog.enabled=true
+server.tomcat.accesslog.prefix=access_log
+server.tomcat.accesslog.suffix=.log
+server.tomcat.accesslog.file-date-format=.yyyy-MM-dd
+server.tomcat.accesslog.max-days=30
+server.tomcat.accesslog.pattern='%h %S %t "%r" %s %b %D'
+server.tomcat.basedir={{ app_root_dir }}/{{ web_app_name }}/logs/tomcat_logs

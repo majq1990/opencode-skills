@@ -1,0 +1,4 @@
+---
+src_path: "{{ src_env_package_path }}/docker"
+deploy_path: /usr/bin
+docker_data_path: /egova/data/docker

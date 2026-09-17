@@ -1,0 +1,6 @@
+---
+# 测试数据准备路径
+benchmark_check_log: /egova/log/check
+
+deploy_update_path: "/egova/update"
+deploy_web_path: "/egova/web"

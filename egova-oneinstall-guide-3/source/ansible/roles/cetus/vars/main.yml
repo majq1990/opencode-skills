@@ -1,0 +1,18 @@
+---
+db_type_ip: "ip_db_{{ db_type }}"
+port: "{{ port }}"
+password: "{{ common_password }}"
+root_user: root
+cetus_user: cetus
+temp_conf_path: "/root/temp/gen"
+system_service_file: "{{ system_service_path }}/cetus.service"
+local_cetus_conf: "/usr/local/cetus/conf"
+src_path: "{{ src_env_package_path }}/cetus"
+log_path: "/egova/log/cetus"
+deploy_path: "/usr/local"
+# variables for cetus
+cetus_version: 2.4.0
+file_path: "{{ playbook_dir }}/roles/cetus/files"
+lock_file: "/egova/conf/install/mysql-proxy"
+cetus_path: "{{ deploy_path }}/cetus"
+src_libtcmalloc_path: "/usr/lib64/libtcmalloc.so.4"

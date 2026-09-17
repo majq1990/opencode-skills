@@ -1,0 +1,3 @@
+  upstream  srvs_nacos{
+    server {{ hostvars[inventory_hostname]['ansible_ssh_host'] }}:{{ port }};
+  }

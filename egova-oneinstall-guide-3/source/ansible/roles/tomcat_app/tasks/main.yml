@@ -1,0 +1,113 @@
+---
+- set_fact:
+    web_app_name: "{{ app_type }}"
+    web_app_port: "{{ app_port }}"
+    web_app_dir: "{{ app_type }}"
+    app_root_dir: "{{ service[app_type][app_name].base_path }}"
+
+- name: 输出应用名称和路径
+  debug:
+    msg: "web_app_name: {{ web_app_name }}, app_root_dir: {{ app_root_dir }}"
+
+# create dest package dir
+- name: create dest dir
+  file: path={{ item }} state=directory mode='0755'
+  with_items:
+    - "{{ dest_path }}"
+    - "{{ app_root_dir }}"
+
+- name: 检查 {{ app_type }}.tar 是否存在
+  connection: local
+  stat:
+    path: "../src/web/{{ app_type }}/{{ app_type }}.tar"
+  register: app_type_tar
+
+- name: Fail if {{ app_type }}.tar is  empty
+  fail:
+    msg: |
+      待安装的{{ app_type }}服务，web包不存在,如需安装服务{{ ansible_master_ip }}服务器上执行 dl_v2.sh 下載待安裝的服务!!!
+      若ll /egova/onekey_install/oneinstall_v2/src/web |grep {{ app_type }}|wc -l 大于0 则表示待安装的服务已存在
+  when: app_type_tar.stat.exists == False
+
+- name: 解压{{ app_type }}
+  unarchive:
+    src: "{{ src_path }}/{{ app_type }}.tar"
+    dest: "{{ app_root_dir }}"
+    owner: "{{ ops_user }}"
+    group: "{{ ops_user }}"
+    mode: '0755'
+  when: app_type_tar.stat.exists == True
+
+- set_fact:
+    deploy_path: "{{ app_root_dir }}/{{ web_app_dir }}"
+    context_path: "/{{ web_app_name }}"
+
+- name: 修改配置文件
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ deploy_path }}/WEB-INF/classes/{{ item }}"
+    mode: '0644'
+  with_items:
+    - jdbc.properties
+    - redis.properties
+
+- name: 配置timeseries.properties和postgres.properties
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ deploy_path }}/WEB-INF/classes/{{ item }}"
+    mode: '0644'
+  with_items:
+    - timeseries.properties
+    - postgres.properties
+  when: web_app_name =="eUrbanMIS" or web_app_name =="eUrbanUMA" or web_app_name =="eUrbanMF" or web_app_name =="eUrbanSG"
+
+- name: 配置 kafka.properties
+  template:
+    src: kafka.properties.j2
+    dest: "{{ deploy_path }}/WEB-INF/classes/kafka.properties"
+    mode: '0644'
+  when: web_app_name in ["eUrbanMIS", "eUrbanUMA", "eUrbanMF"]
+
+- name: 检查jobmanager目录是否存在
+  stat: path={{ deploy_path }}/WEB-INF/classes/jobmanager
+  register: job_dir_info
+
+- name: 配置reg.properties
+  template:
+    src: reg.properties.j2
+    dest: "{{ deploy_path }}/WEB-INF/classes/jobmanager/reg.properties"
+    mode: '0644'
+  when: job_dir_info.stat.exists
+
+- name: 配置server.xml
+  lineinfile:
+    path: "{{ tomcat_path }}/conf/server.xml"
+    insertafter: ".*Context_FLAG.*"
+    line: "{{ template_xml }}"
+  vars:
+    template_xml: "<Context crossContext=\"true\" docBase=\"{{ deploy_path }}\" path=\"{{ context_path }}\" reloadable=\"false\" privileged=\"true\" />"
+
+# TODO: 多节点部署，需要拷贝配置，端口需根据实际的设置。
+# 多节点部署，需拷贝配置，拷贝使用新的app_name，用于下一步更新对应的配置。
+# 部署成功后，删除原配置，yq -i 'del(.microservice. linglong.linglong_1)' metadata.yml.
+#- set_fact: new_app_name={{ app_name }}_{{ inventory_hostname }}
+- set_fact: new_app_name={{ app_name }}
+
+- name: copy metadata config
+  connection: local
+  shell: |
+    yq eval '.service.{{ app_type }} += {"{{ new_app_name }}": (.service.{{ app_type }}.{{ app_name }})}' -i inventory/metadata.yml
+
+# update host/ip/status
+- name: save metadata
+  connection: local
+  shell: |
+    yq -i '.service.'{{ app_type }}'.'{{ new_app_name }}'.status="'success'"' inventory/metadata.yml
+    yq -i '.service.'{{ app_type }}'.'{{ new_app_name }}'.ip="'{{ all.hosts[inventory_hostname].ansible_ssh_host }}'"' inventory/metadata.yml
+    yq -i '.service.'{{ app_type }}'.'{{ new_app_name }}'.host="'{{ inventory_hostname }}'"' inventory/metadata.yml
+    yq -i '.service.'{{ app_type }}'.'{{ new_app_name }}'.server_port="'{{ web_app_port }}'"' inventory/metadata.yml
+
+- name: 启动{{ app_type }}服务
+  systemd:
+    name: tomcat-{{ biz_type }}
+    state: restarted

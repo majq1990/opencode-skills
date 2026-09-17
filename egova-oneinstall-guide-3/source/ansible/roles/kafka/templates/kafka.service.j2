@@ -1,0 +1,18 @@
+[Unit]
+Description=kafka
+Requires=kafka_zookeeper.service
+
+[Service]
+WorkingDirectory={{ deploy_path }}/kafka
+ExecStart={{ deploy_path }}/kafka/bin/kafka-server-start.sh {{ deploy_path }}/kafka/config/server.properties
+ExecStop={{ deploy_path }}/kafka/bin/kafka-server-stop.sh
+Restart=always
+RestartSec=5
+IgnoreSIGPIPE=no
+StartLimitInterval=0
+OOMScoreAdjust=-1000
+User=egova
+Group=egova
+
+[Install]
+WantedBy=multi-user.target

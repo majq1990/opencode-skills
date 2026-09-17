@@ -1,0 +1,7 @@
+---
+# handlers for minio
+- name: restart minio
+  service: name=minio state=restarted enabled=yes
+
+- name: reload nginx
+  shell: nginx -s reload

@@ -1,0 +1,7 @@
+{%- set nodes = MS_CONFIG['nodes']|unique %}
+{% for node in nodes %}
+server{
+    listen 5222;
+    proxy_pass {{ hostvars[node]['ansible_ssh_host'] }}:5222;
+}
+{% endfor %}

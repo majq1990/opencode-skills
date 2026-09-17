@@ -1,0 +1,94 @@
+---
+- name: Set the ansible_python_interpreter fact
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+  when: ansible_pkg_mgr in ['dnf','apt']
+
+- name: Set default JAVA_HOME
+  set_fact:
+    default_java_home: "{{ jdk_versions[default_jdk_version].java_home }}"
+
+- name: 检查默认JDK目录是否存在
+  stat:
+    path: "{{ default_java_home }}"
+  register: default_jdk_path
+
+# 安装默认版本JDK
+- block:
+    - name: Create java directory
+      file:
+        path: "{{ deploy_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Extract default JDK archive
+      unarchive:
+        src: "{{ jdk_versions[default_jdk_version].src_path }}"
+        dest: "{{ deploy_path }}"
+        creates: "{{ default_java_home }}"
+
+    - name: Create system-wide java symbolic link
+      file:
+        src: "{{ default_java_home }}/bin/java"
+        dest: "/usr/bin/java"
+        state: link
+        force: true
+  when: not default_jdk_path.stat.exists
+
+- name: 检查版本链接目录是否存在
+  stat:
+    path: "{{ deploy_path }}/jdk{{ default_jdk_version }}"
+  register: default_jdk_link_path
+
+# 创建简单版本链接，便于后续服务使用
+- block:
+    - name: Create default JDK symbolic link
+      file:
+        src: "{{ default_java_home }}"
+        dest: "{{ deploy_path }}/jdk{{ default_jdk_version }}"
+        state: link
+        force: true
+  when: not default_jdk_link_path.stat.exists
+
+# 如果请求安装非默认版本的JDK
+- block:
+    - name: Set required JAVA_HOME
+      set_fact:
+        required_java_home: "{{ jdk_versions[required_jdk_version].java_home }}"
+
+    - name: 检查请求的JDK版本目录是否存在
+      stat:
+        path: "{{ required_java_home }}"
+      register: required_jdk_path
+
+    - name: Install required JDK version
+      block:
+        - name: Extract required JDK archive
+          unarchive:
+            src: "{{ jdk_versions[required_jdk_version].src_path }}"
+            dest: "{{ deploy_path }}"
+            creates: "{{ required_java_home }}"
+        
+        - name: Create required JDK symbolic link
+          file:
+            src: "{{ required_java_home }}"
+            dest: "{{ deploy_path }}/jdk{{ required_jdk_version }}"
+            state: link
+            force: true
+      when: not required_jdk_path.stat.exists
+  when: required_jdk_version is defined and required_jdk_version != default_jdk_version
+
+- name: Add JAVA_HOME to ~/.bashrc
+  blockinfile:
+    path: /root/.bashrc
+    marker: "# {mark} ANSIBLE MANAGED BLOCK JAVA_HOME"
+    block: |
+      export JAVA_HOME={{ default_java_home }}
+      export PATH=$PATH:$JAVA_HOME/bin
+    state: present
+
+- name: Source ~/.bashrc
+  shell: bash -c "source /root/.bashrc"
+
+- name: Test default java version
+  shell: java -version

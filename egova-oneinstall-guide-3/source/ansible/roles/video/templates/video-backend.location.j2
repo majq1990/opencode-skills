@@ -1,0 +1,61 @@
+# backend
+# 后端：默认回源 http(8083)
+location ^~ /video-api {
+    proxy_pass http://srvs_video_backend;
+
+    proxy_redirect default;
+    proxy_connect_timeout 5;
+    send_timeout 10;
+
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+
+    proxy_set_header Host $http_host;
+    proxy_set_header Cookie $new_cookie;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    proxy_hide_header X-Powered-By;
+    proxy_hide_header Server;
+
+    gzip on;
+    gzip_min_length 1k;
+    gzip_comp_level 4;
+    gzip_types application/json;
+    gzip_vary off;
+
+    add_header Cache-Control max-age=0;
+}
+
+# thirdPart（按需）
+location /thirdPart/ {
+    proxy_pass http://srvs_video_backend;
+
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+# 流媒体：默认回源 http(8090)
+location ~* ^(/rtp|/record|/index/api) {
+    proxy_pass http://srvs_video_media;
+
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_connect_timeout 5s;
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+}
+

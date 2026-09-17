@@ -1,0 +1,1 @@
+C:/Users/majq1/.agent-memory/2026-09-02-auto-check-sec-detail-pm-refresh.md

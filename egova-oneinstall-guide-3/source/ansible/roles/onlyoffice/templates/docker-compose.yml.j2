@@ -1,0 +1,17 @@
+version: '3'
+services:
+  onlyoffice:
+    image: egova/onlyoffice:7.5.1
+    container_name: onlyoffice
+    ports:
+      - "{{ port }}:80"
+    restart: always
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    volumes:
+      - /egova/egova_docker/volumes/onlyoffice/DocumentServer/logs:/var/log/onlyoffice
+      - /egova/egova_docker/volumes/onlyoffice/DocumentServer/data:/var/www/onlyoffice/Data
+      - /egova/egova_docker/volumes/onlyoffice/DocumentServer/lib:/var/lib/onlyoffice
+      - /egova/egova_docker/volumes/onlyoffice/DocumentServer/db:/var/lib/postgresql

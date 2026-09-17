@@ -1,0 +1,224 @@
+---
+# 边缘服务器，部署出口nginx，代理到内网服务
+- name: include metadata.yml
+  include_vars:
+    file: "{{ playbook_dir }}/inventory/metadata.yml"
+
+- name: 检查waf配置是否存在
+  stat:
+    path: "{{ nginx_path }}/wafconf"
+  register: waf_file_exists
+
+- block:
+    - name: 准备目录
+      file: name={{ openresty_path }} state=directory owner=root group=root mode='0755'
+
+    - name: 解压缩lua-resty-egova.tar.gz
+      unarchive:
+        src: "{{ src_path }}/lua-resty-egova.tar.gz"
+        dest: "{{ openresty_path }}"
+        mode: '0755'
+
+    - name: 建立软链接
+      file: src={{ openresty_path }}/nginx/conf/{{ item }} dest={{ nginx_path }}/{{ item }} state=link force=true
+      with_items:
+        - wafconf
+        - include
+
+    - name: 删除已存在的http.include配置
+      lineinfile:
+        path: "{{ conf_file }}"
+        state: absent
+        regexp: "^\\s*include\\s+/etc/nginx/conf.d/include/http.include;"
+
+    - name: 修改nginx.conf配置
+      lineinfile:
+        path: "{{ conf_file }}"
+        state: present
+        line: "    include /etc/nginx/conf.d/include/http.include;"
+        insertafter: '^http\s*{'
+
+    - name: 删除已存在的server.include配置
+      lineinfile:
+        path: "{{ default_conf }}"
+        state: absent
+        regexp: "^\\s*include\\s+/etc/nginx/conf.d/include/server.include;"
+
+    - name: 修改default.conf配置
+      lineinfile:
+        path: "{{ default_conf }}"
+        state: present
+        line: "    include /etc/nginx/conf.d/include/server.include;"
+        insertafter: '^server\s*{'
+  when: not waf_file_exists.stat.exists
+
+- name: 获取服务列表
+  set_fact:
+     app_dict: "{{ vars[server_type][app_type] | default([]) }}"
+     proxy_config: "{{ ((microservice | default({})).get(app_type, {})).get(app_name, {}).get('proxy', []) }}"
+
+- name: print proxy_config参数
+  debug:
+    msg: "proxy_config: {{ proxy_config }}"
+
+- name: 设置即时通讯的IP
+  set_fact:
+    IM_IP: "{{ microservice[app_type]['IM_1'].ip }}"
+  when:  app_type == 'IM'
+
+- name: 计算配置信息
+  set_fact: MS_CONFIG={{ app_dict | get_server_node }}
+  when: app_dict | length > 0
+
+- name: 从 hosts.yml 推导视频中台IP
+  set_fact:
+    video_upstream_ip: "{{ hostvars[groups['video'][0]].ansible_host | default(hostvars[groups['video'][0]].ansible_ssh_host | default('')) }}"
+  when:
+    - app_type == 'video'
+    - video_upstream_ip is not defined or (video_upstream_ip | trim) == ''
+    - groups['video'] is defined
+    - (groups['video'] | length) > 0
+
+- name: 校验视频中台回源IP
+  fail:
+    msg: "未获取到 video 分组节点IP，请先把视频中台节点写入 inventory/hosts.yml 的 video 分组，或手工传入 video_upstream_ip。"
+  when:
+    - app_type == 'video'
+    - video_upstream_ip is not defined or (video_upstream_ip | trim) == ''
+
+- block:
+    - name: 生成{{ app_type }}反向代理配置
+      template:
+        src: video.upstream.j2
+        dest: /etc/nginx/conf.d/video.upstream
+        force: true
+
+    - name: 生成{{ app_type }}前端出口location配置
+      template:
+        src: video-frontend.location.j2
+        dest: "{{ nginx_path }}/video-frontend.location"
+        force: true
+
+    - name: 生成{{ app_type }}后端出口location配置
+      template:
+        src: video-backend.location.j2
+        dest: "{{ nginx_path }}/video-backend.location"
+        force: true
+  when: app_type == 'video'
+
+- name: 生成{{ app_type }}反向代理配置
+  template: src=service.upstream.j2 dest=/etc/nginx/conf.d/{{ app_type }}.upstream
+  when: app_dict | length > 0 and app_type not in ['IM', 'video']
+
+- name: 检查{{ app_type }}-frontend.location文件是否存在
+  stat:
+    path:  "{{ nginx_path }}/{{ app_type }}-frontend.location"
+  register: file_status
+
+
+- name: 检查文件{{ nginx_path }}/{{ app_type }}-frontend.location中是否不存在 "/eUrbanMIS/" 字符串
+  shell: grep -q "/eUrbanMIS/" "{{ nginx_path }}/{{ app_type }}-frontend.location"
+  register: check_result
+  ignore_errors: true
+  when:
+    - file_status.stat.exists
+    - app_type != 'video'
+
+
+
+# 社会治理微服务访问时前端需要走eUrbanMIS的出口nginx，单独处理
+- block:
+    - name: 生成{{ app_type }}前端出口location配置
+      template:
+        src: frontend.location.j2
+        dest: "{{ nginx_path }}/{{ app_type }}-frontend-out.location"
+        force: false
+  when:
+    - server_type == 'microservice'
+    - app_type in ['datamgr', 'check', 'spm', 'tms', 'indicator']
+    - file_status.stat.exists
+    - check_result.rc != 0
+
+
+- block:
+    # 后台始终覆盖
+    - name: 生成{{ app_type }}后端location配置
+      template: src=backend.location.j2 dest={{ nginx_path }}/{{ app_type }}-backend.location
+
+    # 前端存在则不覆盖
+    - name: 生成{{ app_type }}前端location配置
+      template:
+        src: frontend.location.j2
+        dest: "{{ nginx_path }}/{{ app_type }}-frontend.location"
+        force: false
+      when: file_status.stat.exists == false and app_type not in ['iot','eurbanpro_media']
+    
+    - name: 处理自定义配置
+      include_tasks: copy_custom_config.yml
+      when: app_type in ['eurbanpro']
+  when:
+    - server_type == 'microservice'
+    - proxy_config | length > 0
+    - app_type not in ['IM', 'video']
+
+- name: 生成{{ app_type }}后端出口location配置
+  template:
+    src: hotline-perception-backend.location.j2
+    dest: "{{ nginx_path }}/hotline-perception-backend.location"
+    force: true
+  when:
+    - server_type == 'microservice'
+    - app_type in ['hotline-perception']
+
+- name: 生成{{ app_type }}后端出口location配置
+  template:
+    src: IM.location.j2
+    dest: "{{ nginx_path }}/IM.location"
+    force: true
+  when:
+    - server_type == 'microservice'
+    - app_type in ['IM']
+
+
+- block:
+    # tomcat类应用
+    - name: 生成{{ app_type }}.location配置
+      template: src=service.location.j2 dest={{ nginx_path }}/{{ app_type }}.location
+
+    #gisserver出口单独处理
+    - name: 生成gisserver_main配置
+      template:
+        src: "{{ item.filename }}.j2"
+        dest: "{{ item.destpath }}/{{ item.filename }}"
+        mode: '0644'
+      with_items:
+        - { filename: "gisserver_main.location",destpath: "{{ nginx_path }}" }
+        - { filename: "gisserver_main.upstream",destpath: "{{ nginx_path }}" }
+      when: app_type == 'eUrbanGIS'
+  when:
+    - server_type == 'service'
+    - app_dict | length > 0
+
+- name: 检查是否已健康检查配置
+  stat: path={{ nginx_path }}/healthcheck.lua
+  register: file_exists
+
+- block:
+    - name: 生成健康检查配置
+      template:
+        src: "{{ item.filename }}.j2"
+        dest: "{{ item.destpath }}/{{ item.filename }}"
+        mode: '0644'
+      with_items:
+        - { filename: "healthcheck.lua",destpath: "{{ nginx_path }}" }
+        - { filename: "status.location",destpath: "{{ nginx_path }}" }
+
+    - name: 添加别名到~/.bashrc并刷新
+      shell: |
+        echo "alias nginxstatus=\"curl http://127.0.0.1:8080/_status\"" >> ~/.bashrc
+        bash -c "source ~/.bashrc"
+  when: not file_exists.stat.exists
+
+
+- name: reload nginx 
+  shell: nginx -s reload

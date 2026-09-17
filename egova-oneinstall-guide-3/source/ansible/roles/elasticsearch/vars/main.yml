@@ -1,0 +1,13 @@
+---
+# variables for install
+src_path: "{{ src_env_package_path }}/elasticsearch"
+deploy_path: /egova
+
+# variables for elasticsearch
+elasticsearch_version: 7.17.5
+port: 9201
+#jvm_xmx: 30g
+jvm_max_memory: 30
+data_path: "{{ data_root_dir }}/elasticsearch"
+username: egova
+password: eGova@2024

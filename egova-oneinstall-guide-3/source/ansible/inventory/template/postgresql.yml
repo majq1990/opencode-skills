@@ -1,0 +1,3 @@
+---
+default_variable_to_avoid_invalid_extra_vars: nothing
+port: 5432

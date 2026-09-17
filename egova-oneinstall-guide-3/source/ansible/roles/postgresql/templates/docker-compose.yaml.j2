@@ -1,0 +1,26 @@
+version: '3.3'
+services:
+  postgis35_13:
+    image: postgis-postgis35_13:latest
+    container_name: postgis35_13
+    environment:
+      - POSTGRES_PASSWORD=egova # 指定 postgresql 密码，必选
+      - LANG=en_US.UTF-8 # 设置字符集，可选，但推荐
+      - TZ=Asia/Shanghai # 设置时区，可选，但推荐
+    volumes:
+      - ./data:/var/lib/postgresql/data
+
+    # 映射端口
+    ports:
+      - "{{ port }}:5432" # 格式：宿主机端口:容器端口，必选，但宿主机端口可按需调整
+
+    # 日志配置，可选，但推荐
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g" # 日志文件最大容量
+        max-file: "10" # 日志文件最多数量
+
+    stdin_open: true
+    tty: true
+    restart: always

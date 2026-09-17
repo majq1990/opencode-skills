@@ -1,0 +1,10 @@
+-- 此文件应该放在 wukong-db.tar 中，一键部署脚本中的文件为备份
+{%- set nginx_main_node = ip_nginx_main.hosts.master  %}
+
+{% if nginx_main_node is not none %}
+UPDATE com_option SET  value = 'http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/usercenter-api/sso/authorize?applicationId=wukong&responseType=code&redirectUrl=' WHERE id = 'authing_cas_server_default_authorizeUrl';
+UPDATE com_option SET value = 'http://{{ hostvars[nginx_main_node]['ansible_ssh_host'] }}:8080/usercenter-api/' WHERE id = 'authing_cas_server_default_endpoint';
+{% else %}
+UPDATE com_option SET  value = 'http://127.0.0.1:8080/usercenter-api/sso/authorize?applicationId=wukong&responseType=code&redirectUrl=' WHERE id = 'authing_cas_server_default_authorizeUrl';
+UPDATE com_option SET value = 'http://127.0.0.1:8080/usercenter-api/' WHERE id = 'authing_cas_server_default_endpoint';
+{% endif %}

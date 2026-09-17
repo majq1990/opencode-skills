@@ -1,0 +1,5 @@
+grant system_user on *.* to 'root';
+create user if not exists "cetus"@"%" identified by "{{ password }}";
+GRANT SELECT, PROCESS, FILE, REFERENCES, INDEX, SHOW DATABASES, SUPER, LOCK TABLES, EXECUTE, REPLICATION SLAVE, REPLICATION CLIENT, SHOW VIEW ON *.* TO 'cetus'@'%';
+revoke INSERT, UPDATE, DELETE, CREATE, DROP on *.* from cetus@'%';
+FLUSH PRIVILEGES;

@@ -1,0 +1,40 @@
+{
+  "with_skill": {
+    "expectations": [
+      {
+        "text": "命中 NOTICE_SIGNING 或签收相关接口",
+        "passed": true,
+        "evidence": "标题为'NOTICE_SIGNING 接口速查'，明确列出 action: NOTICE_SIGNING，用途为通知签收"
+      },
+      {
+        "text": "给最小字段",
+        "passed": true,
+        "evidence": "仅列出顶层3个必传字段（action/senderCode/uid）和data中1个关键字段（noticeList[].noticeId）"
+      },
+      {
+        "text": "给最小请求示例",
+        "passed": true,
+        "evidence": "第3节提供了简洁的JSON最小请求示例，仅包含action/senderCode/uid/data.noticeList"
+      }
+    ]
+  },
+  "old_skill": {
+    "expectations": [
+      {
+        "text": "命中 NOTICE_SIGNING 或签收相关接口",
+        "passed": true,
+        "evidence": "标题为'NOTICE_SIGNING 接口速查'，明确列出 action: NOTICE_SIGNING"
+      },
+      {
+        "text": "给最小字段",
+        "passed": true,
+        "evidence": "列出顶层必传字段（data/senderCode/action/uid）和data中noticeList[].noticeId"
+      },
+      {
+        "text": "给最小请求示例",
+        "passed": true,
+        "evidence": "第3节提供了JSON请求示例，包含action/senderCode/uid/data.noticeList"
+      }
+    ]
+  }
+}

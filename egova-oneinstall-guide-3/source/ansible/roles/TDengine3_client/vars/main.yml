@@ -1,0 +1,8 @@
+---
+# TDengine3客户端安装变量
+src_path: "{{ src_env_package_path }}/TDengine"
+temp_dir: "/tmp/tdengine_client"
+
+# 版本配置
+td_version: "3.3.7.5"
+client_package: "tdengine-tsdb-oss-client-{{ td_version }}.tar.gz"

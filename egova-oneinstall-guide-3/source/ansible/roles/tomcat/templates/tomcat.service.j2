@@ -1,0 +1,13 @@
+[Unit]
+Description=Tomcat
+After=syslog.target network.target
+
+[Service]
+Type=forking
+ExecStart={{ link_path }}/bin/startup.sh
+ExecReload={{ link_path }}/bin/catalina.sh restart
+ExecStop={{ link_path }}/bin/shutdown.sh
+User=egova
+
+[Install]
+WantedBy=multi-user.target

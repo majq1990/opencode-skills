@@ -1,0 +1,12 @@
+/egova/log/cetus/*.log {
+    su root root
+    daily
+    rotate 15
+    dateext
+    dateformat .%Y-%m-%d
+    nocompress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

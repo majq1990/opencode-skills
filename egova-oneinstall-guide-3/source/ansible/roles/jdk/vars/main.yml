@@ -1,0 +1,10 @@
+---
+deploy_path: /usr/java
+
+jdk_versions:
+  "8":
+    src_path: "{{ src_env_package_path }}/jdk/jdk-8u421-linux.tar.gz"
+    java_home: "{{ deploy_path }}/jdk1.8.0_421"
+  "11":
+    src_path: "{{ src_env_package_path }}/jdk/jdk-11.0.24_linux.tar.gz"
+    java_home: "{{ deploy_path }}/jdk-11.0.24"

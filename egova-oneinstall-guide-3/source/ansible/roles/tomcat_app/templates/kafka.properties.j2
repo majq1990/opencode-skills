@@ -1,0 +1,32 @@
+{% for depend in service[app_type][app_name].depends %}
+{% if depend.type == 'kafka' %}
+bootstrap.servers={{ kafka[depend.depend_key].ip }}:{{ kafka[depend.depend_key].port }}
+{% endif %}
+{% endfor %}
+#producer
+acks=all
+retries=0
+batch.size=16384
+linger.ms=1
+buffer.memory=33554432
+key.serializer=org.apache.kafka.common.serialization.StringSerializer
+value.serializer=org.apache.kafka.common.serialization.StringSerializer
+
+#consumer
+enable.auto.commit=true
+auto.commit.interval.ms=1000
+session.timeout.ms=30000
+max.block.ms=10000
+key.deserializer=org.apache.kafka.common.serialization.StringDeserializer
+value.deserializer=org.apache.kafka.common.serialization.StringDeserializer
+
+request.timeout.ms=30000
+
+# -1:disabled,0:uc to wizdom,1:both,2:wizdom to uc
+common-auth.sync-mode=1
+common-auth.topic=authing-7205f502-04ae-4c80-a79b-0787715f94d6
+common-auth.data-sync-queue-size=1000
+common-auth.consumer-check-interval-sec=120
+
+max.poll.records=1
+max.poll.interval.ms=300000
