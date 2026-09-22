@@ -1,0 +1,11 @@
+{
+  "source_name": "CMDB 资产台账接口",
+  "base_url_env_ref": "CMDB_BASE_URL_REF",
+  "token_env_ref": "CMDB_TOKEN_REF",
+  "snapshot_date": "",
+  "sample_file": "tests/fixtures/security_case/sample_asset.json",
+  "network_scope": "内网 CMDB 只读调用",
+  "permission": "只读",
+  "owner_authority": "责任人一律以资产台账 owner 字段为准；扫描结果中的责任人字段不作为依据",
+  "note": "跨部门/他人资产不在本次授权范围内，超出范围即 stopping"
+}

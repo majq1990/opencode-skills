@@ -1,0 +1,8 @@
+{
+  "mode": "cross-reference",
+  "vuln_response_scripts_dir": "C:/Users/majq1/.zcode/skills/vuln-response/scripts",
+  "fetch_os_script": "fetch_vendor_advisory.py",
+  "fetch_software_script": "fetch_software_advisory.py",
+  "archive_env": "VULN_RESPONSE_ARCHIVE_DIR",
+  "note": "跨目录引用 vuln-response（不复制其脚本）；抓取产物经该环境变量重定向到 work/security_case/cache/cve_intel/。情报到 triage 输入的转换属人工/LLM 研判步骤，本 skill 不做自动转换"
+}

@@ -1,0 +1,141 @@
+{
+  "meta": {
+    "source": "漏洞扫描器结果接口（nessus 兼容格式，脱敏样例）",
+    "scan_task": "nightly-full-2026-09-13",
+    "scan_date": "2026-09-13",
+    "record_count_raw": 10,
+    "note": "本文件为离线 dry-run 样例；IP/主机名/证据均为仿真数据，不含任何真实环境的路径与口令"
+  },
+  "items": [
+    {
+      "finding_id": "SCAN-0001",
+      "asset_ip": "10.20.0.1",
+      "hostname": "vpn-edge-01",
+      "port": 443,
+      "protocol": "tcp",
+      "service": "https/PAN-OS",
+      "cve_id": "CVE-2024-3400",
+      "scanner_severity": "Critical",
+      "first_seen": "2026-09-13",
+      "last_seen": "2026-09-13",
+      "evidence_ref": "plugin-104001/management-plane"
+    },
+    {
+      "finding_id": "SCAN-0002",
+      "asset_ip": "10.20.2.21",
+      "hostname": "app-api-01",
+      "port": 8080,
+      "protocol": "tcp",
+      "service": "http/Tomcat",
+      "cve_id": "CVE-2021-44228",
+      "scanner_severity": "critical",
+      "first_seen": "2026-09-06",
+      "last_seen": "2026-09-13",
+      "evidence_ref": "plugin-156049/jndi-lookup"
+    },
+    {
+      "finding_id": "SCAN-0003",
+      "asset_ip": "10.20.4.41",
+      "hostname": "ci-run-01",
+      "port": 8080,
+      "protocol": "tcp",
+      "service": "http/Jenkins",
+      "cve_id": "CVE-2024-23897",
+      "scanner_severity": "高危",
+      "first_seen": "2026-09-02",
+      "last_seen": "2026-09-13",
+      "evidence_ref": "plugin-189321/cli-readfile"
+    },
+    {
+      "finding_id": "SCAN-0004",
+      "asset_ip": "10.20.1.11",
+      "hostname": "gw-web-01",
+      "port": 443,
+      "protocol": "tcp",
+      "service": "https/nginx",
+      "cve_id": "CVE-2023-44487",
+      "scanner_severity": "high",
+      "first_seen": "2026-09-01",
+      "last_seen": "2026-09-13",
+      "evidence_ref": "plugin-187642/http2-reset"
+    },
+    {
+      "finding_id": "SCAN-0005",
+      "asset_ip": "10.20.5.51",
+      "hostname": "oa-win-01",
+      "port": 3389,
+      "protocol": "tcp",
+      "service": "ms-wbt-server",
+      "cve_id": "CVE-2019-0708",
+      "scanner_severity": "High",
+      "first_seen": "2026-09-13",
+      "last_seen": "2026-09-13",
+      "evidence_ref": "plugin-091201/rdp-bluekeep"
+    },
+    {
+      "finding_id": "SCAN-0006",
+      "asset_ip": "10.20.3.31",
+      "hostname": "db-core-01",
+      "port": 3306,
+      "protocol": "tcp",
+      "service": "mysql",
+      "cve_id": "CNVD-2026-31842",
+      "scanner_severity": "Medium",
+      "first_seen": "2026-09-10",
+      "last_seen": "2026-09-13",
+      "evidence_ref": "plugin-120003/local-privesc"
+    },
+    {
+      "finding_id": "SCAN-0007",
+      "asset_ip": "10.20.6.61",
+      "hostname": "log-col-01",
+      "port": 5044,
+      "protocol": "tcp",
+      "service": "logstash-beats",
+      "cve_id": "CVE-2021-44832",
+      "scanner_severity": "medium",
+      "first_seen": "2026-09-05",
+      "last_seen": "2026-09-13",
+      "evidence_ref": "plugin-158901/jdbc-appender"
+    },
+    {
+      "finding_id": "SCAN-0008",
+      "asset_ip": "10.20.6.61",
+      "hostname": "log-col-01",
+      "port": 22,
+      "protocol": "tcp",
+      "service": "ssh",
+      "cve_id": "CVE-2024-6387",
+      "scanner_severity": "high",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-13",
+      "evidence_ref": "plugin-192301/ssh-signal-race"
+    },
+    {
+      "finding_id": "SCAN-0009",
+      "asset_ip": "10.20.2.21",
+      "hostname": "app-api-01",
+      "port": 8080,
+      "protocol": "tcp",
+      "service": "http/Tomcat",
+      "cve_id": "CVE-2021-44228",
+      "scanner_severity": "critical",
+      "first_seen": "2026-09-06",
+      "last_seen": "2026-09-13",
+      "evidence_ref": "plugin-156049/jndi-lookup"
+    },
+    {
+      "finding_id": "SCAN-0010",
+      "asset_ip": "10.20.9.99",
+      "hostname": "unknown-host",
+      "port": 8443,
+      "protocol": "tcp",
+      "service": "https/netscaler",
+      "cve_id": "CVE-2023-4966",
+      "scanner_severity": "critical",
+      "first_seen": "2026-09-13",
+      "last_seen": "2026-09-13",
+      "evidence_ref": "plugin-179001/netscaler-session"
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "source": "CMDB 资产台账快照（脱敏样例）",
+    "snapshot_date": "2026-09-13",
+    "owner_field_authority": "责任人以本文件 owner 字段为准",
+    "record_count_raw": 8,
+    "note": "IP/主机名/业务系统均为仿真数据"
+  },
+  "items": [
+    {
+      "asset_ip": "10.20.1.11",
+      "hostname": "gw-web-01",
+      "business": "统一门户网关",
+      "os": "CentOS 7.9",
+      "service": "nginx 1.20.1",
+      "criticality": "core",
+      "exposure": "public",
+      "owner": "刘锐",
+      "department": "安全运维组",
+      "updated_at": "2026-09-13"
+    },
+    {
+      "asset_ip": "10.20.2.21",
+      "hostname": "app-api-01",
+      "business": "案件受理 API",
+      "os": "Ubuntu 20.04",
+      "service": "Tomcat 9.0.71 / Log4j 2.14.1",
+      "criticality": "core",
+      "exposure": "public",
+      "owner": "王磊",
+      "department": "业务研发组",
+      "updated_at": "2026-09-13"
+    },
+    {
+      "asset_ip": "10.20.3.31",
+      "hostname": "db-core-01",
+      "business": "核心业务数据库",
+      "os": "CentOS 7.9",
+      "service": "MySQL 8.0.32",
+      "criticality": "core",
+      "exposure": "isolated",
+      "owner": "李峥",
+      "department": "数据组",
+      "updated_at": "2026-09-13"
+    },
+    {
+      "asset_ip": "10.20.4.41",
+      "hostname": "ci-run-01",
+      "business": "CI 构建机",
+      "os": "Ubuntu 22.04",
+      "service": "Jenkins 2.441",
+      "criticality": "high",
+      "exposure": "internal",
+      "owner": "刘锐",
+      "department": "安全运维组",
+      "updated_at": "2026-09-13"
+    },
+    {
+      "asset_ip": "10.20.5.51",
+      "hostname": "oa-win-01",
+      "business": "内部 OA / 合同档案文件服务",
+      "os": "Windows Server 2012 R2",
+      "service": "IIS 8.5 / RDP",
+      "criticality": "medium",
+      "exposure": "internal",
+      "owner": "赵敏",
+      "department": "综合保障组",
+      "updated_at": "2026-09-13"
+    },
+    {
+      "asset_ip": "10.20.6.61",
+      "hostname": "log-col-01",
+      "business": "日志采集",
+      "os": "CentOS 8.5",
+      "service": "Logstash 7.17 / OpenSSH 8.9p1",
+      "criticality": " medium",
+      "exposure": "INTERNAL",
+      "owner": null,
+      "department": "运维基础设施组",
+      "updated_at": "2026-09-13"
+    },
+    {
+      "asset_ip": "10.20.0.1",
+      "hostname": "vpn-edge-01",
+      "business": "边界 VPN / 防火墙",
+      "os": "PAN-OS 10.2.3",
+      "service": "GlobalProtect",
+      "criticality": "core",
+      "exposure": "public",
+      "owner": "刘锐",
+      "department": "安全运维组",
+      "updated_at": "2026-09-13"
+    },
+    {
+      "asset_ip": "10.20.2.21",
+      "hostname": "app-api-01-old",
+      "business": "案件受理 API（历史残留记录）",
+      "os": "Ubuntu 18.04",
+      "service": "Tomcat 8.5",
+      "criticality": "medium",
+      "exposure": "internal",
+      "owner": "王磊",
+      "department": "业务研发组",
+      "updated_at": "2025-11-02"
+    }
+  ]
+}

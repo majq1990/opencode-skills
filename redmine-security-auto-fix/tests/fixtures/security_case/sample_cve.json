@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "source": "NVD CVE API 2.0 (脱敏样例快照)",
+    "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0",
+    "snapshot_date": "2026-09-14",
+    "window_days": 30,
+    "record_count_raw": 11,
+    "note": "本文件为离线 dry-run 样例，用于复现分级算法；字段口径与 NVD 2.0 JSON 对齐，分值取自公开情报，主机名/IP 均为仿真数据"
+  },
+  "items": [
+    {
+      "cve_id": "CVE-2024-3400",
+      "title": "Palo Alto Networks PAN-OS 全局保护网关 OS 命令注入",
+      "cvss_score": 9.8,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "published": "2024-04-12",
+      "has_public_exploit": true,
+      "in_kev": true,
+      "affected_products": ["PAN-OS 10.2.3"],
+      "source": "NVD",
+      "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2024-3400"
+    },
+    {
+      "cve_id": "CVE-2021-44228",
+      "title": "Apache Log4j2 JNDI 注入远程代码执行（Log4Shell）",
+      "cvss_score": 10.0,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+      "published": "2021-12-10",
+      "has_public_exploit": true,
+      "in_kev": true,
+      "affected_products": ["Log4j 2.14.1", "Tomcat 9.0.71 内置依赖"],
+      "source": "NVD",
+      "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2021-44228"
+    },
+    {
+      "cve_id": "CVE-2024-23897",
+      "title": "Jenkins CLI 任意文件读取漏洞",
+      "cvss_score": 9.8,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "published": "2024-01-24",
+      "has_public_exploit": true,
+      "in_kev": false,
+      "affected_products": ["Jenkins 2.441"],
+      "source": "NVD",
+      "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2024-23897"
+    },
+    {
+      "cve_id": "CVE-2023-44487",
+      "title": "HTTP/2 Rapid Reset 拒绝服务",
+      "cvss_score": "7.5",
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "published": "2023-10-10",
+      "has_public_exploit": true,
+      "in_kev": false,
+      "affected_products": ["nginx 1.20.1"],
+      "source": "NVD",
+      "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2023-44487"
+    },
+    {
+      "cve_id": "CVE-2019-0708",
+      "title": "Windows 远程桌面服务远程代码执行（BlueKeep）",
+      "cvss_score": 9.8,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "published": "2019-05-14",
+      "has_public_exploit": true,
+      "in_kev": true,
+      "affected_products": ["Windows Server 2012 R2"],
+      "source": "NVD",
+      "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2019-0708"
+    },
+    {
+      "cve_id": "CNVD-2026-31842",
+      "title": "MySQL 8.0.32 本地提权（样例情报）",
+      "cvss_score": 6.8,
+      "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "published": "2026/09/02",
+      "has_public_exploit": false,
+      "in_kev": false,
+      "affected_products": ["MySQL 8.0.32"],
+      "source": "CNVD(样例)",
+      "source_url": "https://www.cnvd.org.cn/"
+    },
+    {
+      "cve_id": "CVE-2021-44832",
+      "title": "Apache Log4j2 JDBC Appender 远程代码执行",
+      "cvss_score": 6.6,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:H",
+      "published": "2021-12-28",
+      "has_public_exploit": false,
+      "in_kev": false,
+      "affected_products": ["Logstash 7.17 内置 log4j 2.17.0"],
+      "source": "NVD",
+      "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2021-44832"
+    },
+    {
+      "cve_id": "CVE-2024-6387",
+      "title": "OpenSSH server 信号处理竞争条件远程代码执行（regreSSHion）",
+      "cvss_score": 8.1,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "published": "2024-07-01",
+      "has_public_exploit": true,
+      "in_kev": false,
+      "affected_products": ["OpenSSH 8.9p1"],
+      "source": "NVD",
+      "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2024-6387"
+    },
+    {
+      "cve_id": "CVE-2023-4966",
+      "title": "Citrix NetScaler ADC/Gateway 敏感信息泄露（CitrixBleed）",
+      "cvss_score": 9.4,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "published": "2023-10-10",
+      "has_public_exploit": true,
+      "in_kev": true,
+      "affected_products": ["NetScaler ADC 13.1"],
+      "source": "NVD",
+      "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2023-4966"
+    },
+    {
+      "cve_id": "",
+      "title": "样例脏数据：缺少 CVE 编号",
+      "cvss_score": 7.2,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "published": "2026-08-30",
+      "has_public_exploit": false,
+      "in_kev": false,
+      "affected_products": ["unknown"],
+      "source": "NVD",
+      "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    },
+    {
+      "cve_id": "CVE-2025-31324",
+      "title": "样例脏数据：CVSS 分值为空",
+      "cvss_score": null,
+      "cvss_vector": "",
+      "published": "2025-04-15",
+      "has_public_exploit": false,
+      "in_kev": false,
+      "affected_products": ["SAP NetWeaver(样例)"],
+      "source": "NVD",
+      "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2025-31324"
+    }
+  ]
+}

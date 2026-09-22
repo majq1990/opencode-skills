@@ -1,11 +1,11 @@
 ---
 name: redmine-security-auto-fix
-version: 1.1.0
+version: 2.0.0
 author: majianquan
 license: MIT
 category: support-dept
 visibility: tech-manager
-description: Redmine 安全案件自动化处理与修复建议检索。凡涉及 Redmine 安全案件、漏洞报告解析、历史安全案件学习、相似漏洞修复方案、代码/非代码修复分流、钉钉知识库归档或安全漏洞自动修复，都应使用本 Skill。它兼容多种漏洞报告格式，优先检索 redmine-similar-assist 的历史案件库和钉钉知识库，非代码类始终并行检索互联网，代码类仅在内部无可执行方案时才用互联网兜底。
+description: Redmine 安全案件自动化处理与修复建议检索，v2.0 新增安全案件三源研判与滚动跟踪。凡涉及 Redmine 安全案件、漏洞报告解析、历史安全案件学习、相似漏洞修复方案、代码/非代码修复分流、钉钉知识库归档、安全漏洞自动修复、CVE/CNVD 情报采集、扫描结果与资产台账对照、处置报告与责任人待办、案件次日滚动跟踪，都应使用本 Skill。它兼容多种漏洞报告格式，优先检索 redmine-similar-assist 的历史案件库和钉钉知识库，非代码类始终并行检索互联网，代码类仅在内部无可执行方案时才用互联网兜底；v2.0 增量能力来自三源研判子系统（CVE 情报 × 扫描结果 × 资产台账 → 分级 → 报告/待办 → 次日跟踪），全部配置外置、默认关闭、人工确认后才推送。
 ---
 
 # Redmine 安全案件自动化处理
@@ -321,6 +321,53 @@ python scripts\finalize_publication.py <ISSUE_ID>_enriched.json `
 - 互联网建议及公开来源
 - 无建议项及原因
 - 修复验证方法
+
+## v2.0：安全案件三源研判与滚动跟踪
+
+> v2.0 在 v1.1.0 案件处理链路之外，新增一条**扫描驱动的三源研判链路**（能力来源：
+> security-case-handling，quiz266 T3 40 分提交，config 驱动）。两条链路共用本 skill
+> 的配置与钉钉出口；v1.1.0 全部规则不变，下述新能力默认关闭、按需启用。
+
+### 能力与脚本
+
+| 步骤 | 脚本 | 说明 |
+|---|---|---|
+| 资产台账采集 | `scripts/collect_asset_info.py` | CMDB → 归一化；同 IP 保留最新；owner 一律以台账为准；`--fetch` 需环境变量 CMDB token 且内网放行，否则停止 |
+| 扫描结果采集 | `scripts/collect_scanner_results.py` | nessus/openvas/xray 兼容 → 归一化；只读，不触发新扫描 |
+| CVE 主动情报（可选） | `scripts/collect_cve_intel.py` | 跨目录引用 `~/.zcode/skills/vuln-response` 的 fetch 脚本（os 分支厂商公告 / software 分支 NVD+GHSA+CNVD），产物经 `VULN_RESPONSE_ARCHIVE_DIR` 重定向到本 skill 的 work 目录；情报 → cve_items 的转换是人工/LLM 研判步骤，不自动转换 |
+| 三源融合研判 | `scripts/triage_cases.py` | CVE × 扫描 × 资产 → `risk_score = cvss × 资产关键度 × 暴露面 × EXP系数`，阈值/SLA/去重窗口全在 `config/security_case/triage_rules.json`，改 JSON 不碰代码；cvss 缺失/脏值转人工，融合后 0 案件即停止 |
+| 报告+待办+状态 | `scripts/gen_security_report.py` | 产出处置报告（默认【待复核】）、按责任人分组的待办清单、案件状态 JSON；模板在 `assets/security_case_{report,todo}_template.md` |
+| 次日滚动跟踪 | `scripts/track_case_state.py` | 读状态文件 + 人工回填 progress → 超期/进行中/待验证/已闭环四类清单与次日提醒 |
+| 案件关联（可选） | `scripts/asset_triage_link.py` | `process_issue.py --with-asset-triage --triage-cases <cases.json>` 时，把三源案件按 CVE 关联回 enriched 结果并追加到 fix_plan.md；默认关闭，关闭时 v1.1.0 行为不变 |
+
+### 标准运行序列（离线样例可直接跑通）
+
+```powershell
+python scripts/collect_asset_info.py --file tests/fixtures/security_case/sample_asset.json --date 2026-09-22
+python scripts/collect_scanner_results.py --file tests/fixtures/security_case/sample_scan.json --date 2026-09-22
+# CVE 情报：真实抓取用 collect_cve_intel.py（出站）；离线样例用 tests/fixtures/security_case/sample_cve.json
+python scripts/triage_cases.py --cve <cve_items.json> --scan <scan.json> --asset <asset.json> --date 2026-09-22
+python scripts/gen_security_report.py --cases work/security_case/output/cases_<date>.json --date <date>
+# 次日：
+python scripts/track_case_state.py --date <date+1> --state work/security_case/output/case_state_<date>.json --progress <progress.json>
+```
+
+### 配置与产物位置
+
+- 规则配置：`config/security_case/{asset,scanner,notify,triage_rules,cve_intel}.json`——只写
+  环境变量引用名，禁止写入真实 Key/Token；"换项目只改配置"即改这些 JSON。
+- 运行期产物：`work/security_case/{cache,output,progress}/`（已 gitignore，不入库）。
+- 测试：`tests/test_security_case_triage.py`、`tests/test_security_case_report_track.py`
+  （合成 fixture，不连真实 Redmine/钉钉）。
+
+### v2.0 新增停止条件
+
+1. CMDB/扫描器 `--fetch` 缺环境变量凭证或未获内网放行 → 输出 gap 停止，不猜测不兜底。
+2. 三源融合后 0 有效案件 → 停止；如属正常无风险场景，须在报告中显式写明【无有效案件】并经人工确认后归档。
+3. 台账外资产命中 → 不定责不推送，进"未定责清单"等人工确认归属。
+4. 报告默认【待复核】；推送必须经人工复核，且先推测试目标
+   （`config/security_case/notify.json` 的 allowed_targets），确认真实目标前禁止推真实群。
+5. CVE 情报未经研判转换成 cve_items 前，不得直接喂 triage 当作已研判结论。
 
 ## 安全约束
 

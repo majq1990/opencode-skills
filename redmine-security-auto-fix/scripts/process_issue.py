@@ -15,6 +15,8 @@ from fetch_vuln_docs import fetch_issue
 from generate_dingtalk_doc import generate_doc_markdown
 from recommendation_engine import enrich_all
 from report_parser import parse_report
+from asset_triage_link import attach as attach_asset_triage
+from asset_triage_link import render_section as render_asset_triage_section
 
 DEFAULT_PARENT_NODE_ID = "dQPGYqjpJYg0vw9osZbj1mpgWakx1Z5N"
 
@@ -87,6 +89,16 @@ def main() -> None:
         default=DEFAULT_PARENT_NODE_ID,
         help="钉钉修复文档目标目录节点",
     )
+    parser.add_argument(
+        "--with-asset-triage",
+        action="store_true",
+        help="启用三源研判对照（v2.0，默认关闭；需 --triage-cases 提供 cases JSON）",
+    )
+    parser.add_argument(
+        "--triage-cases",
+        default=None,
+        help="triage_cases.py 产出的 cases_<date>.json 路径",
+    )
     args = parser.parse_args()
 
     sys.path.insert(0, args.similar_assist)
@@ -131,6 +143,18 @@ def main() -> None:
     enriched = enrich_all(vulns, args.similar_assist)
     for row in enriched:
         row["responsibility"] = classify_vulnerability(row)
+
+    # v2.0 可选后处理：三源研判对照（默认关闭，关闭时与 v1.1.0 行为一致）
+    triage_summary = None
+    triage_section = ""
+    if args.with_asset_triage:
+        if not args.triage_cases:
+            parser.error("--with-asset-triage 需要 --triage-cases 指向 cases_<date>.json")
+        with open(args.triage_cases, encoding="utf-8") as handle:
+            cases_doc = json.load(handle)
+        triage_summary = attach_asset_triage(enriched, cases_doc)
+        triage_section = render_asset_triage_section(enriched, cases_doc.get("meta") or {})
+
     result = {
         "issue_id": args.issue_id,
         "source": "current_issue_attachments",
@@ -151,6 +175,8 @@ def main() -> None:
             if row.get("web_search", {}).get("required")
         ],
     }
+    if triage_summary is not None:
+        result["asset_triage"] = triage_summary
     result_path = output_dir / f"{args.issue_id}_enriched.json"
     result_path.write_text(
         json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -162,6 +188,9 @@ def main() -> None:
         ),
         encoding="utf-8",
     )
+    if triage_section:
+        with open(doc_path, "a", encoding="utf-8") as handle:
+            handle.write("\n" + triage_section)
 
     title = f"{issue.get('subject') or f'案件{args.issue_id}'} 安全漏洞修复方案"
     result["dingtalk_document"] = {

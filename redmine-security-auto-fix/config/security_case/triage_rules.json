@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "updated": "2026-09-22",
+  "approved_by": "待批准（阈值沿用 security-case-handling v1.1.0 初值，调整需责任人书面批准）",
+  "approval_note": "阈值调整必须经责任人书面批准，改本文件不碰代码",
+  "formula": "risk_score = round(cvss_score * asset_criticality * exposure * exploit_factor, 2)",
+  "weights": {
+    "asset_criticality": { "core": 1.0, "high": 0.8, "medium": 0.6, "low": 0.4 },
+    "exposure": { "public": 1.2, "internal": 1.0, "isolated": 0.6 },
+    "exploit_factor": { "public_exploit": 1.15, "none": 1.0 }
+  },
+  "level_thresholds": { "Critical": 12.0, "High": 8.0, "Medium": 4.0 },
+  "level_order": ["Critical", "High", "Medium", "Low"],
+  "sla_hours": { "Critical": 4, "High": 24, "Medium": 72, "Low": 336 },
+  "dedup": {
+    "key": ["asset_ip", "cve_id", "port"],
+    "window_days": 7,
+    "note": "同一资产同一 CVE 同端口在窗口期内只保留最新一条"
+  },
+  "owner_missing_policy": {
+    "mode": "fallback",
+    "default_owner": "安全运维值班（待指派）",
+    "note": "台账缺责任人 → 按兜底人指派，并在报告中标记 owner_source=fallback，转人工补台账"
+  },
+  "stop_conditions": {
+    "min_case_count": 1,
+    "note": "数据源缺失、越权、融合后 0 案件、无授权推送目标 → 返回 {ok:false, gap:...} 并停止"
+  }
+}

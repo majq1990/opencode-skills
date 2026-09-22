@@ -1,0 +1,11 @@
+{
+  "channel": "dingtalk",
+  "webhook_env_ref": "NOTIFY_WEBHOOK_REF",
+  "message_type": "markdown",
+  "send_mode": "manual_confirm",
+  "confirm_phrase": "确认推送",
+  "allowed_targets": ["安全案件处置测试群（上线前唯一授权目标）"],
+  "forbidden_targets": ["客户群", "管理层群", "对外公开渠道"],
+  "permission": "单向写（POST 一条消息，无读、无撤回、无 @全体 权限）",
+  "note": "未携带 --confirm 确认推送 时只打印预览 payload，绝不发送"
+}

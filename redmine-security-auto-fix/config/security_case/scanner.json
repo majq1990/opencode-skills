@@ -1,0 +1,12 @@
+{
+  "source_name": "漏洞扫描器结果接口",
+  "supported_scanners": ["nessus", "openvas", "xray"],
+  "scanner": "nessus",
+  "base_url_env_ref": "SCANNER_BASE_URL_REF",
+  "token_env_ref": "SCANNER_TOKEN_REF",
+  "last_scan_ref": "last / nightly scan",
+  "sample_file": "tests/fixtures/security_case/sample_scan.json",
+  "network_scope": "内网扫描器只读调用；不得触发新扫描任务、不得修改扫描策略",
+  "permission": "只读",
+  "note": "token 只通过环境变量引用名获取，缺失即停止并输出 gap，不做兜底猜测"
+}
