@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
+from sec_kb_bridge import SecKbBridge
 from similar_assist_bridge import SimilarAssistBridge
 
 CODE_PATTERNS = (
@@ -46,15 +48,69 @@ def build_query(vuln: dict[str, Any]) -> str:
     return "\n".join(str(part) for part in parts if part)
 
 
+# 建议优先级（与 SKILL.md「建议优先级」一节一致）：安全池两类都高于全库两类
+_SOURCE_ORDER = {
+    "sec_pool_history": 0,
+    "sec_pool_kb": 1,
+    "redmine_history": 2,
+    "knowledge_base": 3,
+}
+
+
+def _ordered_suggestions(internal: dict[str, Any]) -> list[dict[str, Any]]:
+    """按来源优先级排出可复用建议，过滤掉没有实际内容的候选。"""
+    if "ordered" in internal:
+        return list(internal["ordered"] or [])
+    return [
+        item for item in internal["history"] + internal["knowledge"]
+        if item.get("suggestion")
+    ]
+
+
+def merge_internal(
+    sec_result: dict[str, Any] | None,
+    full_result: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """合并安全池与全库两条链路的检索结果。
+
+    顺序即优先级：安全池案件 → 安全池文档 → 全库案件 → 全库文档。
+    外部 CVE 情报单独走 `external_intel`，不混入修复建议（情报只补充漏洞事实）。
+    """
+    sec_result = sec_result or {}
+    full_result = full_result or {}
+    history = list(sec_result.get("history") or []) + list(full_result.get("history") or [])
+    knowledge = list(sec_result.get("knowledge") or []) + list(full_result.get("knowledge") or [])
+    ordered = sorted(
+        history + knowledge,
+        key=lambda item: _SOURCE_ORDER.get(item.get("type"), 99),
+    )
+    return {
+        "history": history,
+        "knowledge": knowledge,
+        "ordered": ordered,
+        "external_intel": list(sec_result.get("external_intel") or []),
+        "sec_pool_error": sec_result.get("_error"),
+        "sec_pool_engine": sec_result.get("engine"),
+    }
+
+
 def enrich_vulnerability(
     vuln: dict[str, Any],
     bridge: SimilarAssistBridge,
     internal: dict[str, Any] | None = None,
+    sec_bridge: SecKbBridge | None = None,
 ) -> dict[str, Any]:
     result = dict(vuln)
     code_related = is_code_vulnerability(vuln)
     if internal is None:
-        internal = bridge.search_internal(build_query(vuln))
+        query = build_query(vuln)
+        if sec_bridge is not None:
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                sec_future = pool.submit(sec_bridge.search_security_pool, query)
+                full_future = pool.submit(bridge.search_internal, query)
+                internal = merge_internal(sec_future.result(), full_future.result())
+        else:
+            internal = bridge.search_internal(query)
 
     suggestions = []
     if vuln.get("fix_suggestion"):
@@ -64,25 +120,24 @@ def enrich_vulnerability(
                 "suggestion": vuln["fix_suggestion"],
             }
         )
-    for item in internal["history"] + internal["knowledge"]:
-        if item.get("suggestion"):
-            suggestions.append(
-                {
-                    "source": item["type"],
-                    "suggestion": item["suggestion"],
-                    "reference": item,
-                }
-            )
+    for item in _ordered_suggestions(internal):
+        suggestions.append(
+            {
+                "source": item["type"],
+                "suggestion": item["suggestion"],
+                "reference": item,
+            }
+        )
 
     result["fix_type"] = "code" if code_related else "non_code"
     result["internal_matches"] = internal
     result["recommendations"] = suggestions
+    result["external_intel"] = internal.get("external_intel") or []
 
     internal_has_solution = any(
-        item.get("suggestion")
-        for item in internal["history"] + internal["knowledge"]
+        item.get("suggestion") for item in _ordered_suggestions(internal)
     )
-    # 代码类：仅当内部（历史+知识库）无可执行方案时，才允许互联网作为兜底；
+    # 代码类：仅当内部（安全池+全库）无可执行方案时，才允许互联网作为兜底；
     #        内部有方案则禁止互联网补充（保留原安全红线）。
     # 非代码类：始终并行搜互联网（保持现状）。
     if code_related and internal_has_solution:
@@ -118,12 +173,28 @@ def _build_web_query(vuln: dict[str, Any]) -> str:
 
 
 def enrich_all(
-    vulns: list[dict[str, Any]], repo_path: str = r"D:\git\redmine-similar-assist"
+    vulns: list[dict[str, Any]],
+    repo_path: str = r"D:\git\redmine-similar-assist",
+    with_sec_pool: bool = True,
 ) -> list[dict[str, Any]]:
     bridge = SimilarAssistBridge(repo_path)
+    sec_bridge = SecKbBridge() if with_sec_pool else None
     items = [{"id": index, "query": build_query(vuln)} for index, vuln in enumerate(vulns)]
-    batch = bridge.search_internal_batch(items)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        full_future = pool.submit(bridge.search_internal_batch, items)
+        sec_future = (
+            pool.submit(sec_bridge.search_batch, items) if sec_bridge else None
+        )
+        full_batch = full_future.result()
+        sec_batch = sec_future.result() if sec_future else {}
+
     return [
-        enrich_vulnerability(vuln, bridge, internal=batch.get(index))
+        enrich_vulnerability(
+            vuln,
+            bridge,
+            internal=merge_internal(sec_batch.get(index), full_batch.get(index)),
+            sec_bridge=sec_bridge,
+        )
         for index, vuln in enumerate(vulns)
     ]

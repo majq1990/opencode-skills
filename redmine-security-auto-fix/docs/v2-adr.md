@@ -21,7 +21,7 @@
 | 案件附件多格式解析 | ✅ report_parser.py（doc/xls/pdf/html/zip…） | ❌ | ❌ |
 | 代码/非代码分流 | ✅ recommendation_engine.py | ❌ | ❌ |
 | 工程/研发责任分流 | ✅ classify_vulns.py | ❌ | ❌ |
-| 内部检索（历史案件+KB） | ✅ similar_assist_bridge.py（远端 sqlite-vec，18.9万案件） | ❌ | ❌ |
+| 内部检索（历史案件+KB） | ✅ 双链路：sec_kb_bridge.py（服务器安全池，tracker26+漏召回填+★安全文档+情报，秒级）+ similar_assist_bridge.py（全库 19.9万案件，sqlite-vec） | ❌ | ❌ |
 | 互联网兜底检索 | ✅（代码类兜底/非代码并行） | ❌ | ❌ |
 | CVE/CNVD 情报采集 | ❌ | ✅ fetch_vendor_advisory.py（6厂商）+ fetch_software_advisory.py（NVD/GHSA/CNVD） | ✅ collect_cve.py（NVD 2.0，支持离线 sample） |
 | 漏洞扫描结果采集 | ❌ | ❌ | ✅ collect_scanner_results.py（nessus/openvas/xray→归一化） |

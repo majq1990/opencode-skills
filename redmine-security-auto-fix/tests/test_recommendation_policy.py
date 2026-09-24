@@ -5,7 +5,11 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from recommendation_engine import enrich_vulnerability, is_code_vulnerability
+from recommendation_engine import (
+    enrich_vulnerability,
+    is_code_vulnerability,
+    merge_internal,
+)
 
 
 class FakeBridge:
@@ -86,6 +90,67 @@ class RecommendationPolicyTests(unittest.TestCase):
         self.assertEqual(
             [row["source"] for row in result["recommendations"]],
             ["report", "redmine_history"],
+        )
+
+
+    def test_merge_internal_puts_security_pool_first(self):
+        merged = merge_internal(
+            {
+                "history": [{"type": "sec_pool_history", "suggestion": "安全池案件"}],
+                "knowledge": [{"type": "sec_pool_kb", "suggestion": "安全池文档"}],
+                "external_intel": [{"cve_id": "CVE-2026-1"}],
+            },
+            {
+                "history": [{"type": "redmine_history", "suggestion": "全库案件"}],
+                "knowledge": [{"type": "knowledge_base", "suggestion": "全库文档"}],
+            },
+        )
+        self.assertEqual(
+            [row["type"] for row in merged["history"]],
+            ["sec_pool_history", "redmine_history"],
+        )
+        self.assertEqual(
+            [row["type"] for row in merged["knowledge"]],
+            ["sec_pool_kb", "knowledge_base"],
+        )
+        self.assertEqual(merged["external_intel"][0]["cve_id"], "CVE-2026-1")
+        # ordered 才是建议序列的真实顺序：安全池两类都排在全库两类之前
+        self.assertEqual(
+            [row["type"] for row in merged["ordered"]],
+            ["sec_pool_history", "sec_pool_kb", "redmine_history", "knowledge_base"],
+        )
+
+    def test_external_intel_is_not_treated_as_a_fix_suggestion(self):
+        # 情报只补充漏洞事实（CVSS/受影响版本/公告链接），不得进入修复建议序列
+        vuln = {"name": "CORS配置不当", "fix_suggestion": "限制允许来源"}
+        bridge = FakeBridge()
+        internal = merge_internal(
+            {
+                "history": [],
+                "knowledge": [],
+                "external_intel": [{"cve_id": "CVE-2026-1", "title": "某组件越权"}],
+            },
+            None,
+        )
+        result = enrich_vulnerability(vuln, bridge, internal=internal)
+        self.assertEqual([row["source"] for row in result["recommendations"]], ["report"])
+        self.assertEqual(result["external_intel"][0]["cve_id"], "CVE-2026-1")
+
+    def test_security_pool_failure_degrades_to_full_library_only(self):
+        # 安全池不可达时必须仍能靠全库给出结论，不能抛异常也不能留空建议
+        vuln = {"name": "SQL注入漏洞"}
+        bridge = FakeBridge(
+            history=[{"type": "redmine_history", "suggestion": "改用参数化查询"}]
+        )
+        internal = merge_internal(
+            {"history": [], "knowledge": [], "_error": "Connection timed out"},
+            {"history": [{"type": "redmine_history", "suggestion": "改用参数化查询"}]},
+        )
+        result = enrich_vulnerability(vuln, bridge, internal=internal)
+        self.assertEqual(result["fix_type"], "code")
+        self.assertFalse(result["web_search"]["required"])
+        self.assertEqual(
+            [row["source"] for row in result["recommendations"]], ["redmine_history"]
         )
 
 

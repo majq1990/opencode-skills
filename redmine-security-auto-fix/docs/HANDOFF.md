@@ -15,6 +15,39 @@ redmine-security-auto-fix v2.0 三源研判链路已在本地 feature 分支完�
 - 工作区状态：分支上除提交内容外，还有**与本任务无关的既有未提交修改**
   （dingtalk-aisearch 等 4 个文件的 M 状态，早于本任务存在）——不要动它们，也不要卷进本任务的后续提交。
 
+## 2026-09-24 追加：内部检索接入服务器安全池（sec_kb）
+
+v1.1/v2.0 的内部检索原先只有全库一条链路（`similar_assist_bridge.py`），不区分安全与非
+安全。现在服务器上有了安全专用池，本 skill 改为两条链路并行、按优先级合并。
+
+**服务器侧**（`demo.egova.com.cn`，代码 `/opt/redmine-assist/code/scripts/sec_kb`，
+随 `/app` bind mount 生效，无需重建容器）：
+
+- 安全池规模：9,000+ 安全案件（tracker 26 + 关键词 + LLM 精判回填的漏召案件）、
+  297 篇★安全文档、500+ 条 NVD/GHSA 情报
+- 安全专用小索引（faiss），快路径秒级；全库 faiss 冷启动约 12 分钟，故定时任务只做
+  采集与索引重建
+- cron：每日增量采集 + 每日情报；每周一 05:00 语义审计 → LLM 精判 → 回填 →
+  重建索引（`/etc/cron.d/sec_kb`）
+- `sec_query(..., structured=True)` 附带 `cases` / `docs` / `intel` 原始列表，
+  召回口径（阈值、★文档优先、按 node_id 去重）只在 sec_kb 侧实现一份
+
+**skill 侧新增/改动**：
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/sec_kb_bridge.py` | 新增。ssh + docker exec 只读调用安全池；返回结构与 `similar_assist_bridge` 同构，另多 `external_intel`；不可达时返回 `_error` 并降级为仅全库 |
+| `scripts/recommendation_engine.py` | 新增 `merge_internal()` 与 `_SOURCE_ORDER`；`enrich_all(with_sec_pool=True)` 并行跑两条链路；建议序列按「报告 → sec_pool_history → sec_pool_kb → redmine_history → knowledge_base → internet」排序 |
+| `SKILL.md` | 「内部检索」改为双链路；「建议优先级」加入 sec_pool 两类与 external_intel；「依赖」「单案件处理」「文档结构」同步 |
+| `tests/test_recommendation_policy.py` | 新增 3 个用例：合并顺序、情报不算修复建议、安全池失败降级。全套 31 passed |
+
+**实测**（2026-09-24，"Nacos 未授权访问漏洞"）：两条链路都通，合并出 9 条 sec_pool_history
++ 5 条 sec_pool_kb + 2 条 redmine_history，命中真实 Nacos 升级脚本与「未鉴权接口安全配置」
+wiki；`web_search.required=False`（代码类已有内部方案，按红线不搜互联网）。
+
+**外部情报的正确用法**：`external_intel` 只补充漏洞事实（CVSS、受影响版本、厂商公告
+链接），不得当作修复建议、不得凭情报编造修复命令。
+
 ## 节后第一步（按顺序）
 
 1. 补推送：`git -C D:/git/opencode-skills push -u origin feat/security-case-response-v2`
