@@ -193,7 +193,15 @@ python scripts\sec_kb_bridge.py "<查询词>" --top-cases 8 --top-docs 5
   `has_fix_record` / `match_reason` 打标，以及 `tracker_id`（可用于识别"支持类工单里
   夹带的安全案件"）
 - `knowledge`：★安全文档（`is_sec_doc=true`）优先
-- `external_intel`：CVE 情报，含 `cve_id` / `severity` / `cvss` / `source` / `url`
+- `external_intel`：CVE 情报，含 `cve_id` / `severity` / `cvss` / `source` / `url` /
+  `matched`。`matched` 是这条情报命中的公司关注面组件（由 sec_kb 从安全案件与
+  安全文档语料自动派生，不手工维护清单），**只有 `matched` 非空才说明这条 CVE
+  与公司实际环境相关**；`matched` 为空表示它只是提问里显式点名了 CVE 编号被带出来的。
+  服务端已按关注面过滤：关键词命中的情报不过闸门不会返回。2026-09-24 实测，旧的
+  无差别按日期抓取的 530 条情报里只有 43 条与公司组件相关，OpenStack Octavia、
+  Moore Threads、nocobase、Suricata 之类一律拦掉；改用关注面定向抓取后，843 条
+  情报里 331 条命中，命中组件 Top 为 spring / apache / jenkins / mysql / nginx /
+  tomcat / redis / mariadb / jquery / kafka / zookeeper / gitlab / oracle / openssl。
 
 ### 链路二：全库检索（`scripts\similar_assist_bridge.py`，补充）
 
@@ -220,7 +228,9 @@ python scripts\sec_kb_bridge.py "<查询词>" --top-cases 8 --top-docs 5
 4. 全库检索到的历史案件处理记录，来源标记 `redmine_history`
 5. 全库检索到的内部知识库修复操作，来源标记 `knowledge_base`
 6. 外部 CVE 情报（NVD / GHSA），来源标记 `external_intel`——只用于补充漏洞事实
-   （CVSS、受影响版本、厂商公告链接），**不算修复建议**，不得凭情报编造修复命令
+   （CVSS、受影响版本、厂商公告链接），**不算修复建议**，不得凭情报编造修复命令。
+   只有 `matched` 非空（命中公司关注面组件）的情报才值得引用；`matched` 为空的
+   说明与本环境无关，不要写进报告
 7. 互联网公开权威建议，来源标记 `internet`
 
 **KB 未命中特殊规则**：当内部（安全池 + 全库）均无可用修复操作时，互联网建议优先级

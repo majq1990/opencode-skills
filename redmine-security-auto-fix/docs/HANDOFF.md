@@ -21,14 +21,15 @@ v1.1/v2.0 的内部检索原先只有全库一条链路（`similar_assist_bridge
 安全。现在服务器上有了安全专用池，本 skill 改为两条链路并行、按优先级合并。
 
 **服务器侧**（`demo.egova.com.cn`，代码 `/opt/redmine-assist/code/scripts/sec_kb`，
-随 `/app` bind mount 生效，无需重建容器）：
+随 `/app` bind mount 生效，无需重建容器；**服务器那份是唯一权威副本**，本机开发副本在
+`D:\opencode\file\2026-09-23\sec_kb\`，改动后需 scp 回服务器再进容器验证）：
 
 - 安全池规模：9,000+ 安全案件（tracker 26 + 关键词 + LLM 精判回填的漏召案件）、
-  297 篇★安全文档、500+ 条 NVD/GHSA 情报
+  297 篇★安全文档、843 条 NVD/GHSA 情报（其中命中公司关注面 331 条）
 - 安全专用小索引（faiss），快路径秒级；全库 faiss 冷启动约 12 分钟，故定时任务只做
   采集与索引重建
-- cron：每日增量采集 + 每日情报；每周一 05:00 语义审计 → LLM 精判 → 回填 →
-  重建索引（`/etc/cron.d/sec_kb`）
+- cron：每日增量采集 + 每日关注面重建 + 每日情报；每周一 05:00 语义审计 → LLM 精判
+  → 回填 → 重建索引，06:00 NVD 关注面全量补齐（`/etc/cron.d/sec_kb`）
 - `sec_query(..., structured=True)` 附带 `cases` / `docs` / `intel` 原始列表，
   召回口径（阈值、★文档优先、按 node_id 去重）只在 sec_kb 侧实现一份
 
@@ -46,7 +47,48 @@ v1.1/v2.0 的内部检索原先只有全库一条链路（`similar_assist_bridge
 wiki；`web_search.required=False`（代码类已有内部方案，按红线不搜互联网）。
 
 **外部情报的正确用法**：`external_intel` 只补充漏洞事实（CVSS、受影响版本、厂商公告
-链接），不得当作修复建议、不得凭情报编造修复命令。
+链接），不得当作修复建议、不得凭情报编造修复命令。见下一节关注面闸门。
+
+## 2026-09-24 再追加：外部情报改为「关注面定向」，闸门挡掉无关 CVE
+
+**问题**：初版情报采集是"NVD 最近 N 天 + GHSA critical/high"全量拉取，攒下 504 条后
+实测公司环境关注的 tomcat / nginx / redis / mysql / nacos / kafka / log4j / spring /
+openssl **命中数全为 0**，Top1 是 mcp-atlassian（17 条）——这个池子对使用者 100% 是
+噪声。根因是抓取口径没有靶子。
+
+**做法**：新增 `sec_kb/watchlist.py`，从安全案件主题 + 安全文档标题（9,361 条）反推
+公司真实在跑的第三方组件，用它同时管两头——抓取时当 NVD `keywordSearch` 的关键词，
+查询时当情报闸门（`query` 的 `intel` 段只返回 `matched` 非空的情报）。
+
+- 关注面 121 项 = 语料派生 46（命中次数 ≥3）+ 种子 75 + 中文 12（达梦/人大金仓/统信…）
+- 三层停用词：常规英文、漏洞类型/语言/协议词（websocket/grpc/jwt…）、公司内部词
+  （mis/seninfo/egova/灵珑/麒舰…）。协议词单列：公司确实在用，但任意 CVE 里都会出现
+- 版本后缀折叠（`fortify23`→`fortify`）、连字符删除（`element-ui`→`elementui`，
+  否则切词后永远匹配不上）、别名组（`org.springframework`→`spring`，`XXL-JOB`→`xxljob`）
+- 别名组用显式表不用前缀放宽：放宽会让 `consul` 命中 `consult`、`boot` 命中 `bootstrap`；
+  组里不放 `element`——NVD 固定句式 "The affected element is an unknown function"
+  实测在 530 条里混进 14 条无关产品，已删
+- 相关性在查询时实时计算，关注面刷新后历史情报的判定随之改变，无需重新采集
+
+**实测**：
+
+| 口径 | 情报总量 | 闸门放行 | 命中组件 Top |
+|---|---|---|---|
+| 改造前（按日期/严重级别全拉） | 530 | 43（8.1%） | — |
+| 改造后（关注面定向抓取） | 843 | 331（39.3%） | spring 93 / apache 53 / jenkins 53 / mysql 41 / nginx 30 / tomcat 29 |
+
+被拦掉的典型：OpenStack Octavia 提权、Moore Threads 驱动、nocobase SQL 注入、
+Suricata、OpenPanel、mcp-atlassian。NVD 定向抓取实测 25 个关键词 → scanned 342 /
+written 337 / errors 0（受 5 req/30s 限速约束，60 词约 13 分钟）。
+
+**skill 侧改动**：`sec_kb_bridge.py` 的 `external_intel` 透传 `matched`；
+`SKILL.md` 建议优先级第 6 位明确"只有 `matched` 非空才值得引用"。
+服务器自测 `python /app/data/wl_selftest.py`（5 节全通过）。
+
+**已核验不可行**：把 `sec_intel` 推送到 `vuln-response` 的钉钉「安全漏洞台账」AI 表格。
+该表要求 `[修复]|[验证]|[公告]` 三段式，修复命令必须来自厂商公告，而 NVD/GHSA 情报
+不带逐操作系统补丁命令，凭情报编造即违反 skill 红线；且 504 条情报命中公司 OS 的为 0，
+强行写入只会把第三方库 CVE 灌进一张操作系统台账。README 相应段落已改写。
 
 ## 节后第一步（按顺序）
 

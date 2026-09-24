@@ -114,6 +114,9 @@ for item in request.get("queries", []):
                 "cvss": i.get("cvss"),
                 "published": i.get("published") or "",
                 "url": i.get("url") or "",
+                # 命中的公司关注面组件（sec_kb.watchlist 从案件语料派生）。
+                # 空列表表示这条是提问者显式点名 CVE 编号带出来的，不代表与公司环境相关。
+                "matched": list(i.get("matched") or []),
             })
         entry["history"].sort(key=lambda r: r["score"], reverse=True)
         entry["knowledge"].sort(key=lambda r: r["score"], reverse=True)
