@@ -3,8 +3,8 @@
 ## 当前状态（一句话）
 
 redmine-security-auto-fix v2.0 三源研判链路已在本地 feature 分支完成开发、测试、
-端到端冒烟并提交；**git push 因网络未完成**（GitHub SSH 22/443 均超时，按约定不
-走代理），节后第一件事就是补推送。
+端到端冒烟并提交；**分支已推送 GitHub**（2026-09-24 补推成功，SSH 直连可用，
+`feat/security-case-response-v2` → origin，可开 PR）。
 
 ## 分支与提交
 
@@ -50,8 +50,8 @@ wiki；`web_search.required=False`（代码类已有内部方案，按红线不�
 
 ## 节后第一步（按顺序）
 
-1. 补推送：`git -C D:/git/opencode-skills push -u origin feat/security-case-response-v2`
-   （直连；若仍超时记录后跳过，继续后面步骤，不要开代理）
+1. ~~补推送~~ **已完成（2026-09-24）**：`git -C D:/git/opencode-skills push -u origin
+   feat/security-case-response-v2` 直连成功，SSH 22/443 当时均可用。
 2. 真实试跑：Redmine tracker_id=26 最近的 1-2 个案件，v1.1 链路照旧跑
    `process_issue.py`；如需三源对照，先跑 `triage_cases.py` 产出 cases JSON，再
    `process_issue.py --with-asset-triage --triage-cases <cases.json>`。
@@ -64,9 +64,12 @@ wiki；`web_search.required=False`（代码类已有内部方案，按红线不�
 
 ## 已知问题 / 未解决
 
-- **git push 未完成**（本次唯一未竟事项）：本地提交完好，推不出去是网络路径问题
-  （ssh.github.com:443 与 github.com:22 双双超时；origin fetch 走 ghfast.top 镜像可用，
-  push URL 是 SSH）。
+- ~~**git push 未完成**~~ **已解决（2026-09-24）**：SSH 直连恢复，分支已推送。
+- **仓库工作区有约 680 个 tracked 文件缺失**（`memory-*` 等 skill 目录不在磁盘上），
+  其中约 285 个此前已被暂存为删除。这与本任务无关、早于本任务存在，本次提交已用
+  `git reset` 清空索引并只暂存本任务文件规避。**恢复前不要 `git add -A` 或
+  `git commit -a`**，否则会把整批缺失提交成删除。是否 `git checkout -- .` 恢复需用户
+  确认（可能覆盖有意的本地删除）。
 - CVE 情报真实抓取未验证：`collect_cve_intel.py` 需出站访问 NVD/厂商接口，节前只做了
   存在性与配置校验（未跑真实抓取）；情报 → cve_items 的转换目前是人工/LLM 研判步骤
   （设计如此，脚本 docstring 有 schema）。
