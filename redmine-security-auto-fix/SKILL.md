@@ -80,6 +80,15 @@ Redmine 下载接口会 `302` 跳转至 OSS。下载器优先使用 `curl.exe -L
 请求上携带 API Key，随后访问 OSS 地址。二进制文件严格校验大小；HTML/TXT 等文本
 允许 1KB 或 1% 的换行/编码差异。
 
+## 解析层回归与值守
+
+- **解析回归**：`python scriptsegression_check.py`——14 个样本组（各格式代表附件）
+  与 `tests/baseline/parse_regression.json` 比对，改动解析器/合并逻辑后必跑；
+  有意的行为变化用 `--update-baseline` 重录。检索/方案层回归走 12 案 journal 核对流程。
+- **新案件值守**：`python scripts\watch_new_cases.py --days 2 --limit 5`——发现
+  tracker26 新案件逐案出**草稿**（发布与通知仍被抑制，须人工 finalize），
+  已处理案件记入 state 自动跳过，限流按约定等 8 分钟。
+
 ## 验证历史语料解析
 
 下载完成后运行：

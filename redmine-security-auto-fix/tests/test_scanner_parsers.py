@@ -284,3 +284,53 @@ org.bouncycastle:bcprov 1.70                         java-archive  GHSA-xxxx-yyy
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MdPentestReportTests(unittest.TestCase):
+    MD = """# 渗透测试报告 — 测试平台（example.cn）
+
+## 1. 执行摘要
+
+本次测试发现一个认证缺陷。
+
+## 4.2 完整漏洞清单
+
+| 编号 | 漏洞名称 | 严重度 | CVSS | 验证 | 发现 Agent |
+|------|---------|--------|------|------|-----------|
+| AUTH-001 | SSO 任意用户会话伪造（根因） | 🔴 Critical | 9.8 | ✅ VERIFIED | auth |
+| BL-02 | OAuth 授权码经开放重定向外泄 | 🟠 High | 7.1 | ✅ VERIFIED | bl |
+| INFO-01 | 版本信息泄露 | 🟡 Low | 3.1 | ✅ | info |
+
+## 5. 漏洞详情
+
+### AUTH-001 · SSO 任意用户会话伪造（根因） 🔴
+
+**描述**：SSO 子系统把加密用户名视为身份凭证，攻击者可用公开公钥离线伪造任意用户会话。
+
+**修复建议**：authorize 必须校验调用方签名；公钥不可作为单独认证因子；改用服务端签发一次性票据。
+
+### BL-02 · OAuth 授权码经开放重定向外泄 🟠
+
+**描述**：授权码经开放重定向泄露给第三方站点。
+
+**修复建议**：redirect_uri 严格白名单校验。
+"""
+
+    def test_parses_summary_table_with_details(self):
+        rows = _parse_md_pentest_report(self.MD)
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(rows[0]["漏洞名称"], "SSO 任意用户会话伪造（根因）")
+        self.assertEqual(rows[0]["风险等级"], "严重")
+        self.assertTrue(rows[0]["漏洞描述"].startswith("CVSS 9.8"))
+        self.assertIn("一次性票据", rows[0]["加固建议"])
+        self.assertEqual(rows[1]["风险等级"], "高危")
+        self.assertEqual(rows[2]["风险等级"], "低危")
+
+    def test_rejects_design_doc_markdown(self):
+        self.assertEqual(
+            _parse_md_pentest_report("# 登录超时设计\n\n## 方案\n\n用户 30 分钟无操作自动登出。"),
+            [],
+        )
+
+
+from report_parser import _parse_md_pentest_report  # noqa: E402  (放底部避免打乱既有导入)

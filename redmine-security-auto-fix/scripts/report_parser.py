@@ -1090,6 +1090,76 @@ def _parse_trivy_table_txt(text: str) -> list[dict]:
     return result
 
 
+_MD_SEVERITY_CN = {
+    "critical": "严重", "high": "高危", "medium": "中危",
+    "low": "低危", "info": "信息",
+}
+
+
+def _parse_md_pentest_report(text: str) -> list[dict]:
+    """Markdown 渗透/安全测试报告（Agent 产出的结构化 md）。
+
+    两种数据源，优先用汇总表（编号/漏洞名称/严重度/CVSS），详情节
+    （`### ID · 名称` + `**描述**`/`**修复建议**`）按编号回填描述与建议；
+    没有汇总表时退回逐详情节解析。设计文档/普通 md 不含这些结构，不会误收。
+    """
+    if not re.search(r"渗透测试|漏洞清单|漏洞详情", text) or "**描述**" not in text:
+        return []
+    details: dict[str, dict] = {}
+    for match in re.finditer(r"^###\s+([A-Za-z][A-Za-z0-9_-]{1,15})\s*·\s*([^\n]{3,90})", text, re.M):
+        vid = match.group(1).strip()
+        name = _clean(match.group(2).rstrip(" 🔴🟠🟡🔵🟣⚪"))
+        end = text.find("\n### ", match.end())
+        if end < 0:
+            end = len(text)
+        block = text[match.end():end]
+        desc = re.search(r"\*\*描述\*\*[：:]\s*(.+?)(?=\n\*\*|\n```)", block, re.S)
+        fix = re.search(r"\*\*(?:修复建议|整改建议|加固建议)\*\*[：:]\s*(.+?)(?=\n\*\*|\n### |\n## |\Z)", block, re.S)
+        level = re.search(
+            r"(?:风险等级|严重度|危害)\*\*[：:]?\s*[^\n]*?(Critical|High|Medium|Low|严重|高危|中危|低危)",
+            block, re.I,
+        )
+        details[vid] = {
+            "漏洞名称": _clean(re.sub(r"^[（(【\[]?[A-Za-z0-9-]+[）)】\]]?\s*", "", name) or name),
+            "漏洞描述": _clean(desc.group(1))[:1500] if desc else "",
+            "加固建议": _clean(fix.group(1))[:3000] if fix else "",
+            "风险等级": _MD_SEVERITY_CN.get((level.group(1) if level else "").lower(), ""),
+        }
+
+    rows = []
+    table = re.search(
+        r"\|\s*编号\s*\|\s*漏洞名称\s*\|\s*严重度\s*\|\s*CVSS\s*\|[^\n]*\n(?:\|.*\n)+", text
+    )
+    if table:
+        for line in table.group(0).splitlines()[1:]:
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if len(cells) < 4 or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{1,15}", cells[0]):
+                continue
+            vid, name = cells[0], _clean(cells[1])
+            sev = re.search(r"(Critical|High|Medium|Low|Info)", cells[2], re.I)
+            detail = details.get(vid, {})
+            row = {
+                "漏洞名称": name or detail.get("漏洞名称") or vid,
+                "风险等级": _MD_SEVERITY_CN.get((sev.group(1) if sev else "").lower(), "")
+                or detail.get("风险等级", ""),
+                "漏洞描述": detail.get("漏洞描述", ""),
+                "加固建议": detail.get("加固建议", ""),
+            }
+            cvss = re.search(r"\d+(?:\.\d+)?", cells[3])
+            if cvss:
+                row["漏洞描述"] = (f"CVSS {cvss.group(0)}。" + row["漏洞描述"])[:1500]
+            if row["漏洞名称"] and (row["漏洞描述"] or row["加固建议"] or row["风险等级"]):
+                rows.append(row)
+        if rows:
+            return rows
+
+    # 无汇总表：退回逐详情节（至少 2 节带描述/建议才算漏洞条目）
+    for vid, detail in details.items():
+        if detail["漏洞描述"] or detail["加固建议"]:
+            rows.append(detail)
+    return rows if len(rows) >= 2 else []
+
+
 def _parse_osv_table_txt(text: str) -> list[dict]:
     """osv-scanner 表格文本报告（NAME/INSTALLED/FIXED IN/TYPE/VULNERABILITY/…）。
 
@@ -1465,7 +1535,8 @@ def parse_report(path: str | Path) -> dict:
     elif suffix in (".txt", ".md", ".log", ".out", ".properties"):
         content = report.read_text(encoding="utf-8", errors="ignore")
         rows = (
-            _parse_trivy_table_txt(content)
+            _parse_md_pentest_report(content)
+            or _parse_trivy_table_txt(content)
             or _parse_osv_table_txt(content)
             or _parse_labeled_text(content)
         )

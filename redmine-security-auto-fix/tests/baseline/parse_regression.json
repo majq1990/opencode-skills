@@ -1,0 +1,365 @@
+{
+ "444700-xlsx漏扫": {
+  "files": {
+   "69050_湛江市数字化城市管理系统平台-全量漏洞清单.xlsx": {
+    "rows": 64,
+    "cve_count": 63,
+    "levels": {
+     "medium": 64
+    },
+    "names_hash": "6c74fe4a9d0916ae"
+   },
+   "69122_GIS漏洞整改说明.xlsx": {
+    "rows": 41,
+    "cve_count": 41,
+    "levels": {
+     "medium": 41
+    },
+    "names_hash": "800d7b4872fbb77b"
+   }
+  },
+  "rows": 105,
+  "cve_count": 104,
+  "levels": {
+   "medium": 105
+  },
+  "names_hash": "c3f084eb1f0617ec"
+ },
+ "444168-xlsx大清单": {
+  "files": {
+   "69009_海南省住房和城乡建设厅六月基线.xlsx": {
+    "rows": 6,
+    "cve_count": 0,
+    "levels": {
+     "medium": 6
+    },
+    "names_hash": "da4c79dc2cfba7b8"
+   },
+   "69010_6月份-省住房城乡建设厅主机漏洞清单.xlsx": {
+    "rows": 245,
+    "cve_count": 230,
+    "levels": {
+     "medium": 176,
+     "high": 69
+    },
+    "names_hash": "332a229a5ab73713"
+   },
+   "69078_电信海南省住房和城乡建设厅.xlsx": {
+    "rows": 11,
+    "cve_count": 7,
+    "levels": {
+     "high": 8,
+     "medium": 1,
+     "critical": 2
+    },
+    "names_hash": "f9515ca80fb66951"
+   }
+  },
+  "rows": 262,
+  "cve_count": 237,
+  "levels": {
+   "medium": 183,
+   "high": 77,
+   "critical": 2
+  },
+  "names_hash": "37248099fbf5cb33"
+ },
+ "444808-docx渗透": {
+  "files": {
+   "69067_广州城管（智信）渗透测试报告2.docx": {
+    "rows": 2,
+    "cve_count": 0,
+    "levels": {
+     "medium": 2
+    },
+    "names_hash": "55464a2781c6ac5b"
+   },
+   "69068_广州城管（智信）渗透测试复测报告3.docx": {
+    "rows": 1,
+    "cve_count": 0,
+    "levels": {
+     "high": 1
+    },
+    "names_hash": "c210dcaa35f887ce"
+   },
+   "69069_广州城管渗透测试报告1.docx": {
+    "rows": 2,
+    "cve_count": 0,
+    "levels": {
+     "high": 2
+    },
+    "names_hash": "dee574b9069316a3"
+   },
+   "69070_广州城管渗透测试复测报告4.docx": {
+    "rows": 2,
+    "cve_count": 1,
+    "levels": {
+     "medium": 1,
+     "high": 1
+    },
+    "names_hash": "df23a75c527bbafc"
+   }
+  },
+  "rows": 7,
+  "cve_count": 1,
+  "levels": {
+   "medium": 3,
+   "high": 4
+  },
+  "names_hash": "517fa42e5e188be2"
+ },
+ "477801-源扫pdf": {
+  "files": {
+   "71179_2025-01-305-综合执法-城市运行管理-源代码扫描分析报告(首测).pdf": {
+    "rows": 26,
+    "cve_count": 0,
+    "levels": {
+     "high": 4,
+     "medium": 14,
+     "low": 8
+    },
+    "names_hash": "8b0d8e1967513271"
+   }
+  },
+  "rows": 26,
+  "cve_count": 0,
+  "levels": {
+   "high": 4,
+   "medium": 14,
+   "low": 8
+  },
+  "names_hash": "8b0d8e1967513271"
+ },
+ "477801-口令docx": {
+  "error": "找不到样本 D:\\opencode\\_archive\\security-corpus\\477801/口令问题.docx"
+ },
+ "样张-CWETop25": {
+  "files": {
+   "70433_egova-video-centre-web CWETop25.pdf": {
+    "rows": 6,
+    "cve_count": 0,
+    "levels": {
+     "critical": 1,
+     "low": 1,
+     "high": 3,
+     "medium": 1
+    },
+    "names_hash": "cfb07523ea0f6477"
+   },
+   "70434_egova-video-go CWETop25.pdf": {
+    "rows": 7,
+    "cve_count": 0,
+    "levels": {
+     "critical": 3,
+     "low": 2,
+     "high": 2
+    },
+    "names_hash": "2963a6ef64605220"
+   }
+  },
+  "rows": 13,
+  "cve_count": 0,
+  "levels": {
+   "critical": 4,
+   "low": 3,
+   "high": 5,
+   "medium": 1
+  },
+  "names_hash": "a3b883b073ef76cd"
+ },
+ "样张-CWETop25中文": {
+  "files": {
+   "69416_明镜移动端fortify扫描 CWETop25.pdf": {
+    "rows": 1,
+    "cve_count": 0,
+    "levels": {
+     "critical": 1
+    },
+    "names_hash": "e1e023971181deb0"
+   }
+  },
+  "rows": 1,
+  "cve_count": 0,
+  "levels": {
+   "critical": 1
+  },
+  "names_hash": "e1e023971181deb0"
+ },
+ "样张-SANS25": {
+  "files": {
+   "69280_egova-urbansafe-mobile-h5 CWESANSTop25.pdf": {
+    "rows": 2,
+    "cve_count": 0,
+    "levels": {
+     "critical": 1,
+     "high": 1
+    },
+    "names_hash": "b04263842664c836"
+   }
+  },
+  "rows": 2,
+  "cve_count": 0,
+  "levels": {
+   "critical": 1,
+   "high": 1
+  },
+  "names_hash": "b04263842664c836"
+ },
+ "样张-DevWorkbook": {
+  "files": {
+   "70771_v22 DeveloperWorkbook.pdf": {
+    "rows": 36,
+    "cve_count": 0,
+    "levels": {
+     "low": 26,
+     "critical": 3,
+     "medium": 2,
+     "high": 5
+    },
+    "names_hash": "f89391e5388f2cd3"
+   }
+  },
+  "rows": 36,
+  "cve_count": 0,
+  "levels": {
+   "low": 26,
+   "critical": 3,
+   "medium": 2,
+   "high": 5
+  },
+  "names_hash": "f89391e5388f2cd3"
+ },
+ "样张-AppScan": {
+  "files": {
+   "70436_egova-video-go appscan安全报告.pdf": {
+    "rows": 9,
+    "cve_count": 0,
+    "levels": {
+     "high": 1,
+     "low": 6,
+     "info": 2
+    },
+    "names_hash": "bee16ef9318912d7"
+   },
+   "71137_egova-video-go3 appscan1211 安全报告.pdf": {
+    "rows": 9,
+    "cve_count": 0,
+    "levels": {
+     "high": 2,
+     "low": 5,
+     "info": 2
+    },
+    "names_hash": "4cbb658dc36ecdad"
+   }
+  },
+  "rows": 18,
+  "cve_count": 0,
+  "levels": {
+   "high": 3,
+   "low": 11,
+   "info": 4
+  },
+  "names_hash": "34d1117987882aa9"
+ },
+ "样张-ZAP-PDF": {
+  "files": {
+   "69929_2025-08-29-ZAP-Report-.pdf": {
+    "rows": 8,
+    "cve_count": 0,
+    "levels": {
+     "medium": 8
+    },
+    "names_hash": "1d9142b4ae308ae6"
+   }
+  },
+  "rows": 8,
+  "cve_count": 0,
+  "levels": {
+   "medium": 8
+  },
+  "names_hash": "1d9142b4ae308ae6"
+ },
+ "样张-ZAP-HTML": {
+  "files": {
+   "74540_2026-09-08-ZAP-Report-关系图谱.html": {
+    "rows": 10,
+    "cve_count": 0,
+    "levels": {
+     "high": 1,
+     "medium": 2,
+     "low": 2,
+     "info": 5
+    },
+    "names_hash": "31e19fc24145d785"
+   },
+   "74543_2026-09-09-ZAP-Report-标签重采.html": {
+    "rows": 11,
+    "cve_count": 0,
+    "levels": {
+     "high": 2,
+     "medium": 2,
+     "low": 2,
+     "info": 5
+    },
+    "names_hash": "dd373867cc0bbeaa"
+   }
+  },
+  "rows": 21,
+  "cve_count": 0,
+  "levels": {
+   "high": 3,
+   "medium": 4,
+   "low": 4,
+   "info": 10
+  },
+  "names_hash": "4334f091f8168621"
+ },
+ "样张-Trivy": {
+  "files": {
+   "71714_sani12.txt": {
+    "rows": 26,
+    "cve_count": 26,
+    "levels": {
+     "medium": 15,
+     "high": 7,
+     "critical": 2,
+     "low": 2
+    },
+    "names_hash": "775b818fa036d44a"
+   }
+  },
+  "rows": 26,
+  "cve_count": 26,
+  "levels": {
+   "medium": 15,
+   "high": 7,
+   "critical": 2,
+   "low": 2
+  },
+  "names_hash": "775b818fa036d44a"
+ },
+ "样张-osv": {
+  "files": {
+   "71710_sani3.txt": {
+    "rows": 53,
+    "cve_count": 53,
+    "levels": {
+     "medium": 26,
+     "low": 6,
+     "high": 18,
+     "critical": 3
+    },
+    "names_hash": "34d92cfc05af501d"
+   }
+  },
+  "rows": 53,
+  "cve_count": 53,
+  "levels": {
+   "medium": 26,
+   "low": 6,
+   "high": 18,
+   "critical": 3
+  },
+  "names_hash": "34d92cfc05af501d"
+ }
+}
