@@ -48,6 +48,19 @@ def build_query(vuln: dict[str, Any]) -> str:
     return "\n".join(str(part) for part in parts if part)
 
 
+# 互联网查询词的名称上限。这个长度不是安全边界——真正拦案情描述的是下面的
+# _PROSE_MARK；上限只是兜底防呆，所以按"漏洞类型名写得再长也就到这个程度"
+# 来定：扫全语料 1214 个名称，截到 40 字只剩 140 个被切，压到 24 字会切掉
+# 571 个（"HTTPS会话中的敏感cookie没有设置安全属性"这类长类型名被腰斩），
+# 而两种上限下泄漏都是 0。
+_WEB_NAME_MAX = 40
+# 出现这些词就说明截出来的仍是案情/影响描述，里面必然带客户名和内网信息
+_PROSE_MARK = re.compile(
+    r"获取|突破|反弹|横向|内网|主机|权限|政务|省政府|市人民政府|办公室|"
+    r"互联网系统|攻击者|攻击成功|失陷|沦陷|植入|webshell|shell权限"
+)
+
+
 # 建议优先级（与 SKILL.md「建议优先级」一节一致）：安全池两类都高于全库两类
 _SOURCE_ORDER = {
     "sec_pool_history": 0,
@@ -134,6 +147,19 @@ def enrich_vulnerability(
     result["recommendations"] = suggestions
     result["external_intel"] = internal.get("external_intel") or []
 
+    # 报告没写等级时 level 是默认 medium；同一编号的情报带了 NVD 真实
+    # severity 就拿它回填，否则整张漏扫表会一片 medium，分级失去意义
+    if not vuln.get("level_explicit"):
+        cve = str(vuln.get("cve") or "").strip().upper()
+        for intel in result["external_intel"]:
+            if not cve or str(intel.get("cve_id") or "").upper() != cve:
+                continue
+            severity = str(intel.get("severity") or "").strip().lower()
+            if severity in ("critical", "high", "medium", "low", "info"):
+                result["level"] = severity
+                result["level_source"] = "external_intel"
+            break
+
     internal_has_solution = any(
         item.get("suggestion") for item in _ordered_suggestions(internal)
     )
@@ -145,6 +171,12 @@ def enrich_vulnerability(
             "required": False,
             "query": "",
             "reason": "代码类漏洞已命中内部修复方案，不做互联网补充。",
+        }
+    elif not _build_web_query(vuln):
+        result["web_search"] = {
+            "required": False,
+            "query": "",
+            "reason": "报告只给了案情描述、没有可用的漏洞类型名称，需人工确认后再检索。",
         }
     else:
         result["web_search"] = {
@@ -165,11 +197,33 @@ def enrich_vulnerability(
 
 
 def _build_web_query(vuln: dict[str, Any]) -> str:
-    name = vuln.get("name") or ""
-    cve = vuln.get("cve") or ""
+    """互联网查询词。
+
+    红线：查询词不得带客户名称、内网地址、案件正文。编号是最精确的查询词，
+    有 CVE 就只发编号；没有编号时名称只取第一句并截断，取出来仍像案情
+    描述的（"获取××主机管理员权限"这类）整条弃用，转人工确认。
+    """
+    name = re.sub(r"^\s*\d+(?:\s*\.\s*\d+)+\s*|\d{1,2}\s*[、.．,，]\s*", "", str(vuln.get("name") or ""))
+    name = re.sub(r"[【\[][^】\]]*[】\]]", "", name)
+    # 等级/状态括号对检索没有增量，去掉后查询词更干净
+    name = re.sub(
+        r"[（(]\s*(?:严重|高危|高|中危|中|低危|低|信息)"
+        r"(?:\s*[/\-—,，、]\s*(?:严重|高危|高|中危|中|低危|低|信息|待修复|已修复|已关闭|待整改|已整改))?"
+        r"\s*(?:风险|漏洞|等级|问题|级别|状态)?\s*[)）]",
+        "",
+        name,
+    )
+    name = name.strip(" ：:，,、")
+    # 标题行尾部的页码残留
+    name = re.sub(r"\s+\d{1,3}\s*$", "", name)
+    cve = str(vuln.get("cve") or "").strip().upper()
     if cve:
-        return f"{cve} {name} 安全 修复 加固 官方建议"
-    return f"{name} 安全 漏洞 修复 加固 官方建议"
+        return f"{cve} 安全 漏洞 修复 加固 官方建议"
+    head = re.split(r"[。；;！!？?\n]", name)[0]
+    head = re.split(r"[，,]", head)[0][:_WEB_NAME_MAX].strip()
+    if not head or _PROSE_MARK.search(head):
+        return ""
+    return f"{head} 安全 漏洞 修复 加固 官方建议"
 
 
 def enrich_all(
@@ -179,7 +233,24 @@ def enrich_all(
 ) -> list[dict[str, Any]]:
     bridge = SimilarAssistBridge(repo_path)
     sec_bridge = SecKbBridge() if with_sec_pool else None
-    items = [{"id": index, "query": build_query(vuln)} for index, vuln in enumerate(vulns)]
+    # 漏扫清单里同名漏洞占绝大多数（"SSH 服务支持弱加密算法"能重复几百次），
+    # 按「漏洞名+CVE」去重后只检索唯一条，结果共享给同键的所有漏洞——
+    # 1132 条的案件收敛到 ~260 条唯一键。检索命中由名称/CVE 决定，描述的
+    # 差异不影响命中，不值得为它翻倍检索量
+    items: list[dict[str, Any]] = []
+    key_first_index: dict[tuple, int] = {}
+    key_of_index: dict[int, tuple] = {}
+    for index, vuln in enumerate(vulns):
+        key = (
+            str(vuln.get("name") or "").strip(),
+            str(vuln.get("cve") or "").strip().upper(),
+        )
+        if key in key_first_index:
+            key_of_index[index] = key
+            continue
+        key_first_index[key] = index
+        key_of_index[index] = key
+        items.append({"id": index, "query": build_query(vuln)})
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         full_future = pool.submit(bridge.search_internal_batch, items)
@@ -189,11 +260,15 @@ def enrich_all(
         full_batch = full_future.result()
         sec_batch = sec_future.result() if sec_future else {}
 
+    def _internal_for(index: int) -> dict[str, Any]:
+        representative = key_first_index[key_of_index[index]]
+        return merge_internal(sec_batch.get(representative), full_batch.get(representative))
+
     return [
         enrich_vulnerability(
             vuln,
             bridge,
-            internal=merge_internal(sec_batch.get(index), full_batch.get(index)),
+            internal=_internal_for(index),
             sec_bridge=sec_bridge,
         )
         for index, vuln in enumerate(vulns)

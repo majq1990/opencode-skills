@@ -21,10 +21,13 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from typing import Iterable
+from concurrent.futures import ThreadPoolExecutor
 
 # 宿主机与容器的 bind mount 对应路径（/opt/redmine-assist/data ↔ /app/data）
 REMOTE_HOST_DATA_DIR = "/opt/redmine-assist/data"
@@ -38,24 +41,65 @@ REMOTE_DEFAULTS = {
 
 RESULT_MARKER = "===SEC_KB_RESULT==="
 
+# 超大清单分片参数（与 similar_assist_bridge 一致，环境变量可覆盖）
+_REMOTE_CHUNK = int(os.environ.get("RETRIEVAL_CHUNK", "40"))
+_REMOTE_PARALLEL = int(os.environ.get("RETRIEVAL_PARALLEL", "2"))
+
 # 容器内执行：调 sec_kb.query 的 structured 输出，本 runner 不做任何检索口径判断
 # （阈值、★安全文档优先、按 node_id 去重全部由 sec_kb 侧实现，避免两处漂移）。
 _REMOTE_RUNNER = r'''
 # -*- coding: utf-8 -*-
 import json
+import re
 import sys
+import time
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/scripts")
 
+import requests
+
 MARKER = "===SEC_KB_RESULT==="
 
+from sec_kb.intel import NVD_SLEEP, NVD_URL, TIMEOUT, UA, _parse_nvd
 from sec_kb.query import sec_query
+
+# 池里的情报按关键词采集，每个关键词最多翻 2 页（最新的 200 条），
+# 所以关注面组件的老 CVE 基本不在池中。案件里显式点名编号时，按编号
+# 实时向 NVD 精确补取；只读，不写 sec_intel。
+CVE_RE = re.compile(r"CVE-\d{4}-\d{4,7}", re.IGNORECASE)
+LIVE_CVE_LIMIT = 40       # 单批最多补取多少个编号（NVD 无 key 限速 5/30s）
+LIVE_CVE_BUDGET_S = 900   # 单批补取的总时间预算，超时即停，不影响已取到的结果
+
+_nvd_live_cache = {}
+
+
+def _live_cve(cve_id):
+    """NVD 按编号精确取一条，返回 _parse_nvd 的行或 None。"""
+    if cve_id in _nvd_live_cache:
+        return _nvd_live_cache[cve_id]
+    row = None
+    try:
+        r = requests.get(NVD_URL, params={"cveId": cve_id}, headers=UA, timeout=TIMEOUT)
+        if r.status_code == 200:
+            for it in r.json().get("vulnerabilities", []):
+                p = _parse_nvd(it)
+                if p:
+                    row = p
+                    break
+    except Exception:
+        row = None
+    _nvd_live_cache[cve_id] = row
+    time.sleep(NVD_SLEEP)
+    return row
+
 
 request = json.load(open(sys.argv[1], encoding="utf-8"))
 top_cases = int(request.get("top_cases", 8))
 top_docs = int(request.get("top_docs", 5))
 results = []
+live_deadline = time.time() + LIVE_CVE_BUDGET_S
+live_done = set()
 
 for item in request.get("queries", []):
     entry = {"id": item.get("id"), "history": [], "knowledge": [],
@@ -122,6 +166,34 @@ for item in request.get("queries", []):
         entry["knowledge"].sort(key=lambda r: r["score"], reverse=True)
     except Exception as exc:
         entry["error"] = f"{type(exc).__name__}: {str(exc)[:300]}"
+
+    # 情报兜底：不依赖 embedding，sec_query 失败时也要能补。
+    # 只补提问里显式点名的编号，不做关键词联想，避免把无关 CVE 塞进结果。
+    try:
+        named = {m.upper() for m in CVE_RE.findall(item.get("query") or "")}
+        have = {(i.get("cve_id") or "").upper() for i in entry["external_intel"]}
+        for cid in sorted(named - have):
+            if len(live_done) >= LIVE_CVE_LIMIT or time.time() >= live_deadline:
+                break
+            live_done.add(cid)
+            p = _live_cve(cid)
+            if not p:
+                continue
+            entry["external_intel"].append({
+                "type": "external_intel",
+                "cve_id": p["cve_id"],
+                "title": p["title"],
+                "source": "nvd-live",
+                "severity": p["severity"],
+                "cvss": p["cvss"],
+                "published": p["published"],
+                "url": f"https://nvd.nist.gov/vuln/detail/{p['cve_id']}",
+                # 实时补取不进关注面命中判定，matched 留空表示"点名带出"
+                "matched": [],
+                "live": True,
+            })
+    except Exception:
+        pass
     results.append(entry)
 
 sys.stdout.write("\n" + MARKER + "\n")
@@ -248,12 +320,60 @@ class SecKbBridge:
         pool: str = "sec",
         fast: bool = True,
     ) -> dict:
-        """批量检索。queries: [{"id": ..., "query": ...}]，按 id 返回。"""
+        """批量检索。queries: [{"id": ..., "query": ...}]，按 id 返回。
+
+        超大清单按片并行发起远端调用并打进度（单次往返几百条会在容器里
+        串行跑几十分钟且调用方看不到输出）；分片参数与全库链路一致。
+        """
         items = [{"id": q.get("id"), "query": q["query"]} for q in queries]
         if not self.enabled or not items:
             return {}
         try:
-            data = self._run_remote(items, top_cases, top_docs, pool, fast)
+            if len(items) <= _REMOTE_CHUNK:
+                data = self._run_remote(items, top_cases, top_docs, pool, fast)
+            else:
+                chunks = [
+                    items[start : start + _REMOTE_CHUNK]
+                    for start in range(0, len(items), _REMOTE_CHUNK)
+                ]
+                total = len(chunks)
+                t0 = dt.datetime.now()
+                print(
+                    f"[sec_kb] 安全池检索 {len(items)} 条，分 {total} 片（并行 {_REMOTE_PARALLEL}）",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                merged: dict = {}
+                lock = threading.Lock()
+
+                def run_chunk(chunk: list[dict]) -> None:
+                    result = self._run_remote(chunk, top_cases, top_docs, pool, fast)
+                    with lock:
+                        merged.setdefault("results", []).extend(
+                            result.get("results") or []
+                        )
+
+                with ThreadPoolExecutor(max_workers=_REMOTE_PARALLEL) as executor:
+                    futures = [executor.submit(run_chunk, c) for c in chunks]
+                    errors = []
+                    done = 0
+                    for future in futures:
+                        try:
+                            future.result()
+                        except Exception as exc:
+                            errors.append(str(exc))
+                        done += 1
+                        print(
+                            f"[sec_kb] 分片进度 {done}/{total}，"
+                            f"总耗时 {(dt.datetime.now() - t0).seconds}s",
+                            file=sys.stderr,
+                            flush=True,
+                        )
+                if errors:
+                    raise RuntimeError(
+                        f"安全池分片检索失败 {len(errors)}/{total} 片: {errors[0][:200]}"
+                    )
+                data = merged
         except Exception as exc:
             return {it["id"]: {"history": [], "knowledge": [],
                                "external_intel": [], "engine": None,

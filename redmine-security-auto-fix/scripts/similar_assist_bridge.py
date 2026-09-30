@@ -10,10 +10,17 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Iterable
+import threading
+import os
 
 # 远端批量检索：完整知识库在 demo.egova.com.cn 容器内（本地 vectors.db 只是过时副本）。
 # 查询打包经 ssh+docker exec 送入容器执行 embed+KNN+LLM gate，一次索引加载处理全部查询。
 RESULT_MARKER = "===RESULT_JSON==="
+
+# 超大清单（上千条）单次往返会让容器串行跑几十分钟且调用方看不到进度；
+# 按片拆开并行发起，片大小/并行度可用环境变量覆盖
+_REMOTE_CHUNK = int(os.environ.get("RETRIEVAL_CHUNK", "40"))
+_REMOTE_PARALLEL = int(os.environ.get("RETRIEVAL_PARALLEL", "2"))
 
 REMOTE_DEFAULTS = {
     "enabled": True,
@@ -375,6 +382,64 @@ class SimilarAssistBridge:
         return out
 
     def _search_remote_batch(
+        self,
+        items: list[dict],
+        top: int,
+        min_relevance: float,
+        remote_cfg: dict,
+    ) -> dict:
+        """分片并行远端检索。
+
+        单次 SSH 往返一次吃下全部查询时，几百条要在容器里串行跑很久且调用方
+        看不到任何输出（像假死）。按片拆开并行发起，每片完成即打进度；
+        片大小与并行度取保守值，避免把容器打爆。
+        """
+        if len(items) <= _REMOTE_CHUNK:
+            return self._search_remote_batch_single(items, top, min_relevance, remote_cfg)
+        chunks = [
+            items[start : start + _REMOTE_CHUNK]
+            for start in range(0, len(items), _REMOTE_CHUNK)
+        ]
+        total = len(chunks)
+        t0 = dt.datetime.now()
+        print(
+            f"[bridge] 远端检索 {len(items)} 条，分 {total} 片（每片≤{_REMOTE_CHUNK} 条，"
+            f"并行 {_REMOTE_PARALLEL}）",
+            file=sys.stderr,
+            flush=True,
+        )
+        out: dict = {}
+        done = 0
+        lock = threading.Lock()
+
+        def run_chunk(index: int, chunk: list[dict]) -> None:
+            nonlocal done
+            started = dt.datetime.now()
+            result = self._search_remote_batch_single(chunk, top, min_relevance, remote_cfg)
+            with lock:
+                out.update(result)
+                done += 1
+                print(
+                    f"[bridge] 分片 {index + 1}/{total} 完成（{len(chunk)} 条，"
+                    f"用时 {(dt.datetime.now() - started).seconds}s，"
+                    f"累计 {done}/{total}，总耗时 {(dt.datetime.now() - t0).seconds}s）",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        with ThreadPoolExecutor(max_workers=_REMOTE_PARALLEL) as pool:
+            futures = [pool.submit(run_chunk, i, c) for i, c in enumerate(chunks)]
+            errors = []
+            for future in futures:
+                try:
+                    future.result()
+                except Exception as exc:
+                    errors.append(str(exc))
+        if errors:
+            raise RuntimeError(f"分片检索失败 {len(errors)}/{total} 片: {errors[0][:200]}")
+        return out
+
+    def _search_remote_batch_single(
         self,
         items: list[dict],
         top: int,

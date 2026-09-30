@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -41,18 +42,64 @@ SUPPORTED = {
 }
 
 
+_LEVEL_RANK = {"info": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
+
+# 同一漏洞在报告里常同时出现在段落标题和汇总表格中，名称会带上章节号、
+# 等级/状态标记和页码残留，精确匹配合并不掉。只剥这些标记——括号里的
+# 模块名等信息要留，否则"越权访问（订单）"会被误合成"越权访问（用户）"。
+# 等级词必须是括号内的主体，"（中山路接口）"这类地名才不会被打成等级标记。
+_LEVEL_WORDS = r"严重|高危|高|中危|中|低危|低|信息|待修复|已修复|已关闭|待整改|已整改|提示"
+_LEVEL_MARK = re.compile(
+    rf"[（(\[【]\s*(?:{_LEVEL_WORDS})"
+    rf"(?:\s*[/\-—,，、]\s*(?:{_LEVEL_WORDS}))?"
+    rf"\s*(?:风险|漏洞|等级|问题|级别|状态)?\s*[)）\]】]"
+)
+# 标题行前缀："2.1.3" 或 "1、"；普通数字开头的名称（3DES）不能动，
+# 所以点号链至少要两级，或必须紧跟中文编号符号
+_LEAD_NUM = re.compile(r"^\s*(?:\d+(?:\s*\.\s*\d+)+\s*[、.．,，]?|\d{1,2}\s*[、.．,，])\s*")
+_TAIL_NUM = re.compile(r"\s+\d{1,3}\s*$")
+_PUNCT = re.compile(r"[\s，,。;；:：/／\-_]+")
+
+
+def _clean_name(name: str) -> str:
+    """标题行名称清洗：去掉章节号、等级/状态标记和页码残留，模块名保留。"""
+    text = _LEVEL_MARK.sub("", name or "")
+    text = _LEAD_NUM.sub("", text)
+    text = _TAIL_NUM.sub("", text)
+    return re.sub(r"\s{2,}", " ", text).strip(" ：:，,、")
+
+
+def _dedupe_key(name: str) -> str:
+    return _PUNCT.sub("", _clean_name(name).lower())
+
+
+def _to_int_like(value) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def merge_vulnerabilities(items: list[dict]) -> list[dict]:
     """Merge exact/near-exact names while preserving all report suggestions."""
     merged: dict[str, dict] = {}
     for item in items:
-        key = " ".join((item.get("name") or "").lower().split())
+        row = dict(item)
+        # 名称先清洗再合并：否则段落标题的章节号/状态标记会让同一条漏洞
+        # 在文档里以两种写法各出现一次
+        row["name"] = _clean_name(row.get("name") or "") or (row.get("name") or "")
+        key = _dedupe_key(row["name"])
         if not key:
             continue
         if key not in merged:
-            merged[key] = dict(item)
+            merged[key] = row
             merged[key]["source_files"] = [item.get("source_file")]
+            merged[key]["occurrences"] = 1
             continue
         current = merged[key]
+        # occurrences 只记录"原始报告里有几条"，不改变 instances 语义
+        # （instances 取较大例数，避免首测/复测重复计数）；总览用它如实展示
+        current["occurrences"] = current.get("occurrences", 1) + 1
         if item.get("source_file") not in current["source_files"]:
             current["source_files"].append(item.get("source_file"))
         if item.get("fix_suggestion"):
@@ -63,9 +110,20 @@ def merge_vulnerabilities(items: list[dict]) -> list[dict]:
             }
             suggestions.add(item["fix_suggestion"].strip())
             current["fix_suggestion"] = "\n---\n".join(sorted(suggestions))
-        for field in ("description", "harm", "cve", "cwe"):
+        for field in ("description", "harm", "cve", "cwe", "urls"):
             if not current.get(field) and item.get(field):
                 current[field] = item[field]
+        # 同一缺陷类型在多个附件里重复出现时取较大例数：相加会把
+        # 首测/复测同一批实例算两遍
+        if _to_int_like(item.get("instances")) > _to_int_like(current.get("instances")):
+            current["instances"] = item["instances"]
+        # 表格行常缺等级，段落行才带等级；出现分歧时取更高的一档，
+        # 低报风险比重复一条更糟
+        if _LEVEL_RANK.get(item.get("level"), 2) > _LEVEL_RANK.get(
+            current.get("level"), 2
+        ):
+            current["level"] = item["level"]
+            current["level_explicit"] = True
         current["urls"] = sorted(
             set(current.get("urls") or []) | set(item.get("urls") or [])
         )

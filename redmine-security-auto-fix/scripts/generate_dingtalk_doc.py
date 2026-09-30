@@ -34,7 +34,16 @@ def generate_doc_markdown(vuln_data, issue_url):
         vuln.get("level", "medium") for vuln in vulns
     )
     
-    instance_total = sum(_instance_count(vuln.get("name", "")) for vuln in vulns)
+    instance_total = sum(_instance_count(vuln) for vuln in vulns)
+    # 漏扫清单里同一型漏洞会在多台主机/多份报告各出一条，按类合并后 instances
+    # 会小于原始记录数；原始记录数单独展示，不虚增也不隐瞒
+    raw_total = sum(int(vuln.get("occurrences") or 1) for vuln in vulns)
+    raw_note = (
+        f"（{len(vulns)} 类由 {raw_total} 条原始记录合并，"
+        "同型漏洞在多主机/多批次重复出现时按类出条）"
+        if raw_total > len(vulns)
+        else ""
+    )
     source_files = sorted(
         {
             source
@@ -86,7 +95,7 @@ def generate_doc_markdown(vuln_data, issue_url):
             f"| {priority.get(vuln.get('level'), 'P3')} "
             f"| {level_names.get(vuln.get('level'), vuln.get('level', ''))} "
             f"| {vuln.get('name', '')} "
-            f"| {_instance_count(vuln.get('name', ''))} "
+            f"| {_instance_count(vuln)} "
             f"| {'、'.join(sources) or '无额外建议'} |\n"
         )
     responsibility_stats = Counter(
@@ -94,7 +103,7 @@ def generate_doc_markdown(vuln_data, issue_url):
         for vuln in vulns
     )
     md += f"""
-共识别 **{len(vulns)} 类、{instance_total} 个漏洞实例**。
+共识别 **{len(vulns)} 类、{instance_total} 个漏洞实例**{raw_note}。
 
 责任分工：
 
@@ -233,9 +242,23 @@ def _render_vulnerability_section(vulns, section_number):
     return md
 
 
-def _instance_count(name):
-    match = re.search(r"\*(\d+)", str(name or ""))
-    return int(match.group(1)) if match else 1
+def _instance_count(vuln):
+    """一"类"漏洞背后的实例数。
+
+    优先用解析阶段带上来的实例数列；其次从名称的 `*N` 写法（漏扫表常用）
+    和描述的"共 N 例"里取；都取不到按 1 个计。
+    """
+    if not isinstance(vuln, dict):
+        return _instance_count({"name": vuln})
+    count = vuln.get("instances")
+    if isinstance(count, int) and count > 0:
+        return count
+    for text in (vuln.get("name"), vuln.get("description")):
+        found = re.search(r"(\d+)\s*例", str(text or ""))
+        if found and int(found.group(1)) > 0:
+            return int(found.group(1))
+    found = re.search(r"\*(\d+)", str(vuln.get("name") or ""))
+    return int(found.group(1)) if found else 1
 
 
 def main():

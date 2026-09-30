@@ -129,6 +129,23 @@ PDF 阻塞整个批次。
 - 加固建议 / 修复建议 / remediation / solution
 - 漏洞地址 / URL / URI
 
+除通用表格解析外，以下报告格式有专项解析器（`report_parser.py`，按实际
+样本的结构实现，识别失败时自动落到通用解析，不会误收）：
+
+- **国产代码审计/渗透测试**：编号条目清单（`1、SQL 注入` + 漏洞描述/等级/整改建议）、
+  中正检测源代码扫描（缺陷类型 + N例）、深圳网安代码审计（缺陷类型汇总表）
+- **Fortify Audit Workbench**：CWE Top 25 导出（按 CWE 分节，名称取官方弱点短名，
+  例数取 Package 实例数，等级取实例最高档）；Developer Workbook（Results Outline
+  按 `分类 (N issues)` 分块，带 Explanation/Recommendation）
+- **Fortify Security Report**：`Category: X (N Issues)` 分节（已有问题数的报告；
+  "scan found 0 issues" 的空报告是真零，不是解析失败）
+- **HCL AppScan Standard 中文**：摘要表被压成一行文字，按「数字后跟级别字」
+  边界拆条，名称里带"中"字不受影响
+- **OWASP ZAP**：2.16 PDF（按 `CWE Id/WASC Id/Id` 收尾行切块）与 2.17 HTML
+  （`alert-type-counts` 汇总表 + 详情段的 Solution/CVE 标签）
+- **Trivy / osv-scanner 文本报告**：组件依赖漏洞表，逐 CVE 出条，
+  带已装版本、修复版本和组件名
+
 所有格式归一为：
 
 ```json
@@ -276,6 +293,10 @@ python scripts\sec_kb_bridge.py "<查询词>" --top-cases 8 --top-docs 5
 - **非代码类**：互联网搜索与内部知识库检索**同步并行发起**，不等待内部结果。
 - **代码类**：仅当内部（安全池 + 全库）**无可执行方案时**才触发互联网检索，作为兜底；
   内部有方案则不搜。`recommendation_engine.py` 据此决定 `web_search.required`。
+- **报告只给了案情描述**：有些附件（风险告知函、隐患报告）把"利用××漏洞获取××主机权限、
+  横向进入××内网"整段当作漏洞名。这类名称截不出可用的漏洞类型词，`_build_web_query`
+  直接返回空，`web_search.required` 置为 `false` 并在 `reason` 里说明需人工确认，
+  **不发起检索**。此时内部链路照常用完整案情做检索（内部不受此限），人工确认类型后再补搜。
 
 检索结果合并策略：
 
@@ -287,6 +308,10 @@ python scripts\sec_kb_bridge.py "<查询词>" --top-cases 8 --top-docs 5
 
 - 查询词只包含通用漏洞名称、CVE/CWE 和技术组件。
 - 不得发送客户名称、内网地址、案件正文、附件内容或其他内部信息。
+- 有 CVE 时查询词只发编号（`CVE-xxxx-xxxx 安全 漏洞 修复 加固 官方建议`），不带报告里的
+  漏洞名——名称常夹带案情。没有编号时才用名称：剥掉章节号、等级/状态括号和页码残留，
+  取第一句再按逗号切开，超过 40 字截断；切出来仍含"获取/突破/横向/内网/主机/权限/政务"
+  这类词的，判定仍是案情描述，整条弃用。
 - 优先厂商官方文档、CVE/CWE/NVD、OWASP、IETF、Mozilla、Microsoft、Oracle、
   Apache、Nginx、Spring 等一手来源。
 - 每条建议必须记录标题、URL、发布方和访问日期。
