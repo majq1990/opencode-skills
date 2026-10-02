@@ -1,0 +1,127 @@
+{
+  "version": "2.0.0",
+  "note": "16产品配置对照（机器可读），供 scripts/check_product_config.py 使用。路径相对 --root（默认 /egova）。present=true 表示该正则必须命中，present=false 表示必须不命中（迁移完成态口径：达梦驱动/URL 在、MySQL URL 消失）。",
+  "default_checks": [
+    { "regex": "jdbc:dm://", "present": true, "desc": "达梦 JDBC URL" },
+    { "regex": "jdbc:mysql://", "present": false, "desc": "MySQL URL 应已移除" },
+    { "regex": "dm\\.jdbc\\.driver\\.DmDriver", "present": true, "desc": "达梦驱动类" }
+  ],
+  "products": [
+    {
+      "product": "MIS/UMA/MF",
+      "dm_schema": "DLMIS",
+      "dm_user": "DLMIS",
+      "config_globs": ["web/eUrban*/WEB-INF/classes/jdbc.properties"],
+      "extra_checks": [
+        { "regex": "org\\.hibernate\\.dialect\\.DmDialect", "present": true, "desc": "Hibernate 方言" }
+      ]
+    },
+    {
+      "product": "MIS/UMA/MF-stat",
+      "dm_schema": "UMSTAT",
+      "dm_user": "UMSTAT",
+      "config_globs": ["web/eUrban*/WEB-INF/classes/jdbc.properties"],
+      "extra_checks": [],
+      "note": "stat 配置与主库同文件，按 key 前缀区分"
+    },
+    {
+      "product": "GIS",
+      "dm_schema": "GISCENTER",
+      "dm_user": "DLMIS",
+      "config_globs": ["web/eUrbanGIS/WEB-INF/classes/jdbc.properties"],
+      "extra_checks": [
+        { "regex": "org\\.hibernate\\.dialect\\.DmDialect", "present": true, "desc": "Hibernate 方言" }
+      ]
+    },
+    {
+      "product": "MMS",
+      "dm_schema": "MMS",
+      "dm_user": "DLMIS",
+      "config_globs": ["web/eGovaMMS/WEB-INF/classes/jdbc.properties"],
+      "extra_checks": [
+        { "regex": "compatibleMode=oracle|comOra=true", "present": false, "desc": "MySQL 体系无需 Oracle 兼容串" }
+      ]
+    },
+    {
+      "product": "通图",
+      "dm_schema": "GISCENTER",
+      "dm_user": "DLMIS",
+      "config_globs": ["web/egovagisserver/giscenter.env"],
+      "extra_checks": []
+    },
+    {
+      "product": "灵珑",
+      "dm_schema": "LINGLONG",
+      "dm_user": "LINGLONG",
+      "config_globs": ["apps/basic/linglong/linglong.env"],
+      "extra_checks": []
+    },
+    {
+      "product": "用户中心",
+      "dm_schema": "USERCENTER",
+      "dm_user": "USERCENTER",
+      "config_globs": ["apps/basic/usercenter/usercenter.env"],
+      "extra_checks": []
+    },
+    {
+      "product": "毕升",
+      "dm_schema": "DLMIS/UMSTAT",
+      "dm_user": "DLMIS",
+      "config_globs": ["apps/basic/evaluation/evaluation.env"],
+      "extra_checks": []
+    },
+    {
+      "product": "全行业",
+      "dm_schema": "IBILITY",
+      "dm_user": "IBILITY",
+      "config_globs": ["apps/sg/ibility/ibility.env"],
+      "extra_checks": []
+    },
+    {
+      "product": "悟空",
+      "dm_schema": "WUKONG",
+      "dm_user": "WUKONG",
+      "config_globs": ["apps/basic/wukong/wukong.env"],
+      "extra_checks": []
+    },
+    {
+      "product": "明镜",
+      "dm_schema": "MJING",
+      "dm_user": "MJING",
+      "config_globs": ["apps/elaw/mjing/mjing.env"],
+      "extra_checks": []
+    },
+    {
+      "product": "物联网",
+      "dm_schema": "EGOVAIOT",
+      "dm_user": "EGOVAIOT",
+      "config_globs": ["apps/iot/iot/application.properties", "apps/iot*/application.properties"],
+      "extra_checks": [],
+      "note": "目录不存在时用 cat /etc/systemd/system/iot.service 定位实际路径"
+    },
+    {
+      "product": "星桥",
+      "dm_schema": "DATACENTER2",
+      "dm_user": "DATACENTER2",
+      "config_globs": [],
+      "extra_checks": [],
+      "note": "dex 配置文件，现场定位后手工核对；迁移流程走 SKILL.md 星桥特殊步骤（空库启动→跳过 com_license/databasechangelog/databasechangeloglock 迁数据）"
+    },
+    {
+      "product": "玄奘",
+      "dm_schema": "XUANZANG_GIS",
+      "dm_user": "XUANZANG_GIS",
+      "config_globs": ["apps/gis/xuanzang/run.sh"],
+      "extra_checks": []
+    },
+    {
+      "product": "采集服务",
+      "dm_schema": "DLMIS+UMSTAT",
+      "dm_user": "复用",
+      "config_globs": ["web/statgather/settings.py"],
+      "extra_checks": [
+        { "regex": "dmPython|dmdbms", "present": true, "desc": "采集服务应走 dmPython 链路" }
+      ]
+    }
+  ]
+}
