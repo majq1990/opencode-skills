@@ -88,3 +88,6 @@ python scripts/05_kb_similar_search.py from-triage --triage work/io_triage/triag
 - 04 的业务统计数据走 JSON 文件输入，不直连客户业务系统（数字城管 API/CDP 等属客户环境定制，不在通用版内）
 - xlsx 读取支持常规表格（共享字符串/日期/合并单元格），复杂图表/透视表忽略；不支持老版二进制 .xls
 - docx 替换只处理正文（页眉页脚/批注/文本框内文字不替换）；复杂模板建议先另存为标准 docx
+- xlsx/docx 解析内置 DTD/实体声明拒绝闸：含 `<!DOCTYPE>`/`<!ENTITY>` 的恶意构造文件（实体扩展攻击）直接拒解析
+- 输入/输出路径参数（--file/--out 等）按本地单用户 CLI 威胁模型信任操作者（同 cat/grep 类命令行工具），不做路径白名单
+- 04/05 的出站目标来自操作者维护的 config 文件（巡检清单/MCP 端点），属工具本职，不接受不可信输入作为请求目标

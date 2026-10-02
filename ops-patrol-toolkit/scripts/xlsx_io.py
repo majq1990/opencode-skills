@@ -34,6 +34,20 @@ class XlsxError(Exception):
     """xlsx 结构性错误（文件损坏/不是 xlsx/找不到工作表）。"""
 
 
+# XML 部件安全闸：OOXML 正常部件不含 DTD；出现即视为潜在实体扩展攻击（billion laughs）
+_MAX_PART_BYTES = 64 * 1024 * 1024
+
+
+def _parse_xml(zf, part):
+    """读取并解析一个 XML 部件；带 DTD/实体声明或超大部件直接拒绝。"""
+    raw = zf.read(part)
+    if len(raw) > _MAX_PART_BYTES:
+        raise XlsxError("XML 部件超大（%d 字节），拒绝解析: %s" % (len(raw), part))
+    if b"<!DOCTYPE" in raw[:4096] or b"<!ENTITY" in raw:
+        raise XlsxError("XML 部件含 DTD/实体声明（潜在实体扩展攻击），拒绝解析: %s" % part)
+    return ET.fromstring(raw)
+
+
 def _col_to_idx(letters):
     n = 0
     for ch in letters:
@@ -64,7 +78,7 @@ def _parse_shared(zf, warnings):
     if "xl/sharedStrings.xml" not in zf.namelist():
         return []
     try:
-        root = ET.fromstring(zf.read("xl/sharedStrings.xml"))
+        root = _parse_xml(zf, "xl/sharedStrings.xml")
     except ET.ParseError as e:
         warnings.append("sharedStrings.xml 解析失败: %s" % e)
         return []
@@ -79,7 +93,7 @@ def _parse_date_styles(zf, warnings):
     if "xl/styles.xml" not in zf.namelist():
         return {}
     try:
-        root = ET.fromstring(zf.read("xl/styles.xml"))
+        root = _parse_xml(zf, "xl/styles.xml")
     except ET.ParseError as e:
         warnings.append("styles.xml 解析失败: %s" % e)
         return {}
@@ -105,7 +119,7 @@ def sheet_names(path):
     """返回工作表名列表（按工作簿顺序）。"""
     with zipfile.ZipFile(path) as zf:
         try:
-            wb = ET.fromstring(zf.read("xl/workbook.xml"))
+            wb = _parse_xml(zf, "xl/workbook.xml")
         except (KeyError, ET.ParseError) as e:
             raise XlsxError("不是有效的 xlsx（workbook.xml 缺失或损坏）: %s" % e)
     return [sh.get("name") or "Sheet%d" % (i + 1)
@@ -113,7 +127,7 @@ def sheet_names(path):
 
 
 def _sheet_part(zf, sheet):
-    wb = ET.fromstring(zf.read("xl/workbook.xml"))
+    wb = _parse_xml(zf, "xl/workbook.xml")
     sheets = list(wb.iter(NS_MAIN + "sheet"))
     if not sheets:
         raise XlsxError("workbook.xml 中没有工作表")
@@ -132,7 +146,7 @@ def _sheet_part(zf, sheet):
     part = "xl/worksheets/sheet%d.xml" % (idx + 1)  # 回退猜测
     if rid:
         try:
-            rels = ET.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
+            rels = _parse_xml(zf, "xl/_rels/workbook.xml.rels")
             for r in rels:
                 if r.get("Id") == rid:
                     target = r.get("Target") or ""
@@ -164,7 +178,7 @@ def read_rows(path, sheet=None, fill_merged=True, max_rows=None):
         date_styles = _parse_date_styles(zf, warnings)
         part = _sheet_part(zf, sheet)
         try:
-            root = ET.fromstring(zf.read(part))
+            root = _parse_xml(zf, part)
         except (KeyError, ET.ParseError) as e:
             raise XlsxError("工作表数据损坏 %s: %s" % (part, e))
 

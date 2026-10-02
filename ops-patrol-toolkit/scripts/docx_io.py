@@ -51,6 +51,11 @@ def _open_doc_xml(path):
         names = zf.namelist()
     finally:
         zf.close()
+    # XML 安全闸：OOXML 正常 document.xml 不含 DTD；出现即视为潜在实体扩展攻击
+    if len(raw) > 64 * 1024 * 1024:
+        raise DocxError("document.xml 超大（%d 字节），拒绝解析" % len(raw))
+    if b"<!DOCTYPE" in raw[:4096] or b"<!ENTITY" in raw:
+        raise DocxError("document.xml 含 DTD/实体声明（潜在实体扩展攻击），拒绝解析")
     return raw, names
 
 

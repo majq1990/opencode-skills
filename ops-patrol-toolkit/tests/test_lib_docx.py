@@ -93,5 +93,25 @@ class TestFillTemplate(unittest.TestCase):
         self.assertEqual(len(docx_io.read_tables(out)), 0)
 
 
+class TestDtdGuard(unittest.TestCase):
+    def test_entity_docx_refused(self):
+        # 恶意构造：document.xml 内嵌 DTD 实体扩展 → 必须拒绝解析
+        import zipfile as _zf
+        path = TMP / "evil.docx"
+        doc = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+               '<!DOCTYPE w:document [<!ENTITY x0 "lol"><!ENTITY x1 "&x0&x0&x0&x0">]>'
+               '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+               '<w:body><w:p><w:r><w:t>&x1;</w:t></w:r></w:p></w:body></w:document>')
+        with _zf.ZipFile(path, "w") as z:
+            z.writestr("[Content_Types].xml", docx_io._CT_DOCX)
+            z.writestr("_rels/.rels", docx_io._ROOT_RELS_DOCX)
+            z.writestr("word/_rels/document.xml.rels", docx_io._DOC_RELS)
+            z.writestr("word/styles.xml", docx_io._STYLES_DOCX)
+            z.writestr("word/document.xml", doc)
+        with self.assertRaises(docx_io.DocxError) as cm:
+            docx_io.read_paragraphs(path)
+        self.assertIn("DTD", str(cm.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

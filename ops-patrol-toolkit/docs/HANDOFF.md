@@ -52,6 +52,15 @@
 - 2026-10-02：本地提交 `5f46bf7`（48 文件）已固化；**GitHub push 暂阻塞**（443 connection reset，与 R52 GitLab 同因），网络恢复后 `git push origin feat/security-case-response-v2` 即可，远端引用仍在 c068204。
 - 2026-10-02：**skills-manager 拉取就绪已验证**——junction 路径可见（custom_tool_paths.opencode → D:\opencode\config\skills）、全树遍历 33 目录/173 文件零错误、无 .pytest_cache/__pycache__（已清理 2 处 __pycache__，规避毒 ACL 前科）、frontmatter 合规（name/version/description 齐全）。claude_code 在 disabled_tools 中，无需 .claude\skills 副本。待用户打开 skills-manager → 发现页 → 导入（DB 硬规则不改，导入只能在 UI）。
 
+## 安全审计（Mimosa）
+
+- 2026-10-02 deep 扫描（scan-2026-10-02T19-34-00.816Z-556b6bca5c13，seal sha256:d1fb8274…c3）：17 条发现，triage 结论——
+  - **XML 实体扩展 ×9（已修复）**：xlsx_io/docx_io 解析外部 Office 文件存在实体扩展风险 → 加 DTD/实体声明拒绝闸 + 64MB 部件上限，新增 2 个恶意构造拒绝用例（全仓 81 用例）
+  - **路径穿越 ×6（按设计接受）**：CLI 入参路径按本地单用户威胁模型信任操作者，非多租户服务
+  - **SSRF ×2（按设计接受）**：04 巡检目标 / 05 MCP 端点均来自操作者 config，属工具本职出站
+  - run status inconclusive（调用图部分动态派发）为分析覆盖度说明，非漏洞
+  - 修复后复扫确认 XML 类发现清零
+
 ## 提交纪律（重要）
 
 工作区存在大量与本任务无关的历史遗留脏状态（约 2029 D / 128 M / 26 ??）——**不要动它们，也不要卷进本任务的提交**。提交前：`git reset` 清暂存区 → 只 `git add ops-patrol-toolkit/` → `git show --name-status` 复核范围仅限本目录 → 再 commit。

@@ -147,6 +147,19 @@ class TestRawFeatures(unittest.TestCase):
         with self.assertRaises(xlsx_io.XlsxError):
             xlsx_io.read_rows(path)
 
+    def test_dtd_entity_refused(self):
+        # 恶意构造：sheet XML 内嵌 DTD 实体扩展（billion laughs）→ 必须拒绝
+        path = TMP / "evil.xlsx"
+        lol = "".join('<!ENTITY e%d "&e%d&e%d&e%d&e%d">' % ((i,) + (i - 1,) * 4) for i in range(1, 6))
+        sheet = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                 '<!DOCTYPE worksheet [<!ENTITY e0 "lol">' + lol + ']>'
+                 '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                 '<sheetData><row r="1"><c r="A1"><v>&e5;</v></c></row></sheetData></worksheet>')
+        _make_raw(path, sheet)
+        with self.assertRaises(xlsx_io.XlsxError) as cm:
+            xlsx_io.read_rows(path)
+        self.assertIn("DTD", str(cm.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
