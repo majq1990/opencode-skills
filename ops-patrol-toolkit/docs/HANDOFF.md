@@ -49,6 +49,7 @@
 ## 变更记录
 
 - 2026-10-02：v1.0 首发。五子工具 + 公共库 + 79 用例；05 真机试跑通过（zhengtong_query ~20s）；02→05 from-triage 闭环验证通过。
+- 2026-10-02：本地提交 `5f46bf7`（48 文件）已固化；**GitHub push 暂阻塞**（443 connection reset，与 R52 GitLab 同因），网络恢复后 `git push origin feat/security-case-response-v2` 即可，远端引用仍在 c068204。
 
 ## 提交纪律（重要）
 
