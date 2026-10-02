@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "updated": "2026-10-02",
+  "note": "03_manual_standardize 匹配与生成规则外置表。数值移植自内部评审入选样例的默认经验值（近保真）。调整任何数值前必须对照 references/standard-structure.json 的两级判定语义复核，并同步更新 version 与 updated。本文件只允许放阈值/口径/占位文案，禁止写入真实项目名、IP、人名或凭据。",
+  "match": {
+    "note": "章节两级判定阈值：主名精确 > 别名/高相似(alias_sim_min) > 关键词命中(keyword_score)；段落匹配要求更高(para_sim_min)且短名必须全等，末尾带页码的目录行不参与段落匹配",
+    "alias_sim_min": 0.55,
+    "keyword_score": 0.8,
+    "para_sim_min": 0.85,
+    "short_name_min_len": 4,
+    "toc_page_suffix": true
+  },
+  "check": {
+    "note": "内容证据兜底：疑似改名章节最多附 evidence_limit 条证据，超出截断",
+    "evidence_limit": 5
+  },
+  "generate": {
+    "note": "初稿占位与复核标记文案；generate 与 check 共用同一占位符保证口径一致",
+    "placeholder": "【待补充】",
+    "review_marker": "【待复核】"
+  }
+}

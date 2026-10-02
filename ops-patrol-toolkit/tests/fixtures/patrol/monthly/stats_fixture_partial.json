@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  "updated": "2026-10-02",
+  "note": "业务统计合成样例（部分命中）：故意带一个模板中不存在的占位符，用于验证未命中时信封带 unresolved_placeholders、输出按【待复核】口径提示。",
+  "month": "2026-09",
+  "project": "示例园区（合成样例）",
+  "replacements": {
+    "{{project_name}}": "示例园区",
+    "{{no_such_placeholder}}": "不应被替换的键"
+  },
+  "cells": []
+}

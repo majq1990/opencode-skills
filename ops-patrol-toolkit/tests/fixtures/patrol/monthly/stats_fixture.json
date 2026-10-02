@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "updated": "2026-10-02",
+  "note": "业务统计合成样例（配套 assets/monthly-report-template.docx，全部数值虚构）：replacements 覆盖模板全部段落占位符，系统可用率走 cells 单元格覆写演示。month/project 仅随信封回显。真实项目使用时由人工或其他工具产出本文件，本工具不直连业务系统。",
+  "month": "2026-09",
+  "project": "示例园区（合成样例）",
+  "replacements": {
+    "{{project_name}}": "示例园区",
+    "{{month}}": "2026-09",
+    "{{author}}": "运维组",
+    "{{report_date}}": "2026-10-02",
+    "{{summary}}": "本月系统整体运行平稳，未发生重大故障（合成样例数据）。",
+    "{{target_total}}": "3",
+    "{{target_ok}}": "1",
+    "{{target_failed}}": "2",
+    "{{tickets_total}}": "42",
+    "{{tickets_closed}}": "40",
+    "{{incidents_total}}": "2",
+    "{{issues}}": "本月优化巡检频次，异常节点已转人工跟进（合成样例）。"
+  },
+  "cells": [
+    { "table": 0, "row": 1, "col": 1, "text": "99.95%" }
+  ]
+}

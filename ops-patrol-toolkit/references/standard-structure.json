@@ -1,0 +1,386 @@
+{
+  "description": "标准《项目维护手册》必备章节与内容要素定义。可按项目实际情况增删：每个章节含 name（标准章节名）、aliases（可接受的别名）、keywords（模糊匹配关键词：标题含任一关键词即视为候选匹配）、expected_level（标题层级）、require_heading_style（是否必须使用标题样式）、description（章节用途）、elements（内容要素检查）、children（必备子章节）。检测时两级判定：①标题按 主名/别名/关键词 模糊匹配；②标题未命中的章节再扫描全文内容证据，命中则降级为 P1 疑似改名存在，仅内容也无证据时才报 P0 缺失。",
+  "required_sections": [
+    {
+      "id": "change-log",
+      "name": "文件变更记录",
+      "aliases": [
+        "变更记录",
+        "修订记录",
+        "版本变更记录",
+        "文档修订记录",
+        "文件修订记录"
+      ],
+      "keywords": [
+        "变更记录",
+        "修订",
+        "版本号",
+        "版本历史"
+      ],
+      "expected_level": 1,
+      "require_heading_style": false,
+      "description": "封面后的版本变更表，记录 A(增加)/M(修订)/D(删除) 类修订历史，是手册版本管理的依据",
+      "elements": [
+        {
+          "id": "change-log-table",
+          "desc": "含版本号、变更类型列的变更记录表",
+          "check": {
+            "type": "table_cols_all",
+            "values": [
+              "版本号",
+              "变更类型"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "project-scope",
+      "name": "项目承建内容",
+      "aliases": [
+        "承建内容",
+        "项目建设内容",
+        "项目概况",
+        "维保概况"
+      ],
+      "expected_level": 1,
+      "require_heading_style": true,
+      "description": "项目背景、承建与维保范围、子系统清单、基础地图数据等总体信息",
+      "elements": [
+        {
+          "id": "scope-weibao",
+          "desc": "明确维保/承建范围描述",
+          "check": {
+            "type": "text_any",
+            "values": [
+              "维保",
+              "承建",
+              "建设内容"
+            ]
+          }
+        },
+        {
+          "id": "scope-subsystem",
+          "desc": "子系统/模块清单",
+          "check": {
+            "type": "text_any",
+            "values": [
+              "子系统",
+              "模块",
+              "系统清单"
+            ]
+          }
+        }
+      ],
+      "keywords": [
+        "承建",
+        "建设内容",
+        "建设清单",
+        "项目概况",
+        "维保概况"
+      ]
+    },
+    {
+      "id": "server-config",
+      "name": "服务器配置信息",
+      "aliases": [
+        "服务器信息",
+        "服务器清单",
+        "服务器配置",
+        "服务器台账"
+      ],
+      "expected_level": 1,
+      "require_heading_style": true,
+      "description": "服务器台账：设备名称、IP地址、操作系统、硬件配置、账号密码、用途、部署服务",
+      "elements": [
+        {
+          "id": "server-config-table",
+          "desc": "含设备名称、IP地址列的服务器配置表",
+          "check": {
+            "type": "table_cols_all",
+            "values": [
+              "设备名称",
+              "IP地址"
+            ]
+          }
+        }
+      ],
+      "keywords": [
+        "服务器配置",
+        "服务器清单",
+        "服务器台账",
+        "云资源",
+        "云平台资源",
+        "资源情况"
+      ]
+    },
+    {
+      "id": "server-deploy",
+      "name": "服务器部署信息",
+      "aliases": [
+        "服务器部署",
+        "部署信息",
+        "服务启动命令"
+      ],
+      "expected_level": 1,
+      "require_heading_style": true,
+      "description": "通用账号、服务启动命令、应用访问地址等日常运维入口信息",
+      "elements": [
+        {
+          "id": "deploy-start-cmd",
+          "desc": "各服务的启动命令（service/systemctl/启动）",
+          "check": {
+            "type": "text_any",
+            "values": [
+              "service ",
+              "systemctl",
+              "启动"
+            ]
+          }
+        },
+        {
+          "id": "deploy-url",
+          "desc": "应用访问地址",
+          "check": {
+            "type": "text_any",
+            "values": [
+              "访问地址",
+              "http://",
+              "https://"
+            ]
+          }
+        }
+      ],
+      "keywords": [
+        "服务器部署",
+        "部署信息",
+        "启动命令",
+        "访问地址"
+      ]
+    },
+    {
+      "id": "app-system",
+      "name": "应用软件系统",
+      "aliases": [
+        "应用系统",
+        "软件系统",
+        "应用软件",
+        "应用部署信息"
+      ],
+      "expected_level": 1,
+      "require_heading_style": true,
+      "description": "按服务器逐台描述部署的软件、路径、访问地址、账号等信息",
+      "elements": [
+        {
+          "id": "app-db-name",
+          "desc": "数据库部署信息（数据库名/部署软件）",
+          "check": {
+            "type": "text_any",
+            "values": [
+              "数据库名",
+              "部署软件"
+            ]
+          }
+        }
+      ],
+      "children": [
+        {
+          "id": "app-db-service",
+          "name": "数据库服务",
+          "aliases": [
+            "数据库服务",
+            "数据库部署",
+            "数据库信息"
+          ],
+          "description": "各数据库服务器的部署详情",
+          "elements": []
+        },
+        {
+          "id": "app-web-server",
+          "name": "web应用服务器",
+          "aliases": [
+            "web服务器",
+            "应用服务器",
+            "web应用服务"
+          ],
+          "description": "各 web 应用服务器的发布程序、路径、访问地址",
+          "elements": []
+        }
+      ],
+      "keywords": [
+        "应用软件",
+        "软件平台",
+        "应用系统",
+        "应用部署"
+      ]
+    },
+    {
+      "id": "backup-plan",
+      "name": "备份计划",
+      "aliases": [
+        "备份策略",
+        "数据备份计划",
+        "备份方案"
+      ],
+      "expected_level": 1,
+      "require_heading_style": true,
+      "description": "本地与异地备份的库表、时间、路径、脚本位置",
+      "elements": [
+        {
+          "id": "backup-type",
+          "desc": "本地/异地备份安排",
+          "check": {
+            "type": "text_any",
+            "values": [
+              "本地备份",
+              "异地备份",
+              "本地",
+              "异地"
+            ]
+          }
+        },
+        {
+          "id": "backup-time",
+          "desc": "明确的备份时间点",
+          "check": {
+            "type": "regex",
+            "pattern": "\\d{1,2}[:：]\\d{2}"
+          }
+        }
+      ],
+      "keywords": [
+        "备份"
+      ]
+    },
+    {
+      "id": "internet-line",
+      "name": "互联网专线",
+      "aliases": [
+        "专线信息",
+        "互联网接入",
+        "网络专线"
+      ],
+      "expected_level": 1,
+      "require_heading_style": true,
+      "description": "互联网专线的用途、带宽、IP、网关等信息（无则明确写“无”）",
+      "elements": [],
+      "keywords": [
+        "专线",
+        "互联网接入",
+        "互联网出口",
+        "外网"
+      ]
+    },
+    {
+      "id": "port-mapping",
+      "name": "端口映射",
+      "aliases": [
+        "端口映射表",
+        "端口列表",
+        "网络端口映射"
+      ],
+      "expected_level": 1,
+      "require_heading_style": true,
+      "description": "公网地址/端口与内网地址/端口的映射关系表",
+      "elements": [
+        {
+          "id": "port-mapping-table",
+          "desc": "含公网、内网列的端口映射表",
+          "check": {
+            "type": "table_cols_all",
+            "values": [
+              "公网",
+              "内网"
+            ]
+          }
+        }
+      ],
+      "keywords": [
+        "端口映射",
+        "端口列表",
+        "端口"
+      ]
+    },
+    {
+      "id": "hardware",
+      "name": "硬件部分",
+      "aliases": [
+        "硬件信息",
+        "硬件资产",
+        "硬件设备"
+      ],
+      "expected_level": 1,
+      "require_heading_style": true,
+      "description": "硬件设备清单（无自购硬件时也需保留章节并注明“无”）",
+      "elements": [],
+      "keywords": [
+        "硬件"
+      ]
+    },
+    {
+      "id": "contacts",
+      "name": "联系人信息表",
+      "aliases": [
+        "联系人",
+        "联系方式",
+        "联系人列表",
+        "联系人信息"
+      ],
+      "expected_level": 1,
+      "require_heading_style": true,
+      "description": "甲方、乙方、第三方厂商的联系人、电话、职责",
+      "elements": [
+        {
+          "id": "contacts-table",
+          "desc": "含姓名、电话列的联系人表",
+          "check": {
+            "type": "table_cols_all",
+            "values": [
+              "姓名",
+              "电话"
+            ]
+          }
+        }
+      ],
+      "keywords": [
+        "联系人",
+        "联系方式",
+        "干系人"
+      ]
+    },
+    {
+      "id": "faq",
+      "name": "项目常见问题及解决方法",
+      "aliases": [
+        "常见问题及解决方法",
+        "常见问题",
+        "FAQ",
+        "问题及解决办法"
+      ],
+      "expected_level": 1,
+      "require_heading_style": true,
+      "description": "常见故障现象与解决办法，以及常用工具软件存放地址",
+      "elements": [
+        {
+          "id": "faq-solutions",
+          "desc": "问题与解决办法条目",
+          "check": {
+            "type": "text_any",
+            "values": [
+              "解决办法",
+              "解决方法",
+              "处理方法",
+              "处理办法"
+            ]
+          }
+        }
+      ],
+      "keywords": [
+        "常见问题",
+        "问题处理",
+        "故障处理",
+        "FAQ"
+      ]
+    }
+  ]
+}

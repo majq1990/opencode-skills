@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0", "updated": "2026-10-02",
+  "note": "历史相似案例检索配置。token 经环境变量引用名获取，绝不落盘；token 获取：https://demo.egova.com.cn/oauth/dingtalk/login 钉钉扫码",
+  "mcp_url": "https://demo.egova.com.cn/redmine-assist/mcp",
+  "token_env_ref": "DEMO_EGOVA_MCP_TOKEN",
+  "default_tool": "zhengtong_query",
+  "timeout_s": 120
+}

@@ -1,0 +1,27 @@
+{
+  "description": "术语基线：标准写法 + 常见不一致写法。扫描时自动忽略命令行与 URL 中的小写写法。可按团队规范增删条目。",
+  "terms": [
+    {"standard": "CentOS", "variants": ["CentOs", "Centos", "centos", "CENTOS", "CENT OS", "cent os"], "note": "操作系统"},
+    {"standard": "Windows Server", "variants": ["windows server", "Windows server", "WINDOWS SERVER"], "note": "操作系统"},
+    {"standard": "MySQL", "variants": ["Mysql", "mysql", "MYSQL"], "note": "数据库"},
+    {"standard": "PostgreSQL", "variants": ["PostGre", "Postgre", "PostGres", "Postgres", "POSTGRE"], "note": "数据库"},
+    {"standard": "Oracle", "variants": ["oracle", "ORACLE"], "note": "数据库"},
+    {"standard": "Redis", "variants": ["redis", "REDIS", "ReDis"], "note": "缓存"},
+    {"standard": "Tomcat", "variants": ["tomcat", "TOMCAT", "TomCat"], "note": "中间件"},
+    {"standard": "Nginx", "variants": ["nginx", "NGINX", "NGinx"], "note": "中间件"},
+    {"standard": "ZooKeeper", "variants": ["Zookeeper", "zookeeper", "ZOOKEEPER"], "note": "注册中心"},
+    {"standard": "VSFTPD", "variants": ["vsftpd", "Vsftpd"], "note": "FTP 服务"},
+    {"standard": "GeoServer", "variants": ["geoserver", "Geoserver", "GEOSERVER", "Geo Server"], "note": "地图服务"},
+    {"standard": "ArcGIS", "variants": ["arcgis", "ARCGIS", "Arcgis", "ARC GIS"], "note": "GIS 软件"},
+    {"standard": "eUrbanMIS", "variants": ["eurbanmis", "EUrbanmis", "eUrbanmis", "eUrbanMis"], "note": "数字政通 MIS 产品名"},
+    {"standard": "eUrbanGIS", "variants": ["eurbangis", "EUrbanGIS", "eUrbangis", "eUrbanGis"], "note": "数字政通 GIS 产品名"},
+    {"standard": "eGovaPublic", "variants": ["egovapublic", "EGovaPublic", "eGovapublic"], "note": "数字政通公共服务产品名"},
+    {"standard": "AppID", "variants": ["APPID", "Appid", "APP ID"], "note": "应用标识"},
+    {"standard": "AppSecret", "variants": ["APPSECRET", "Appsecret", "APP SECRET"], "note": "应用密钥"},
+    {"standard": "IP地址", "variants": ["IP 地址", "ip地址", "Ip地址", "IP址"], "note": "网络地址"},
+    {"standard": "VPN", "variants": ["vpn", "Vpn", "V.P.N"], "note": "虚拟专用网络"},
+    {"standard": "Linux", "variants": ["LINUX", "Linu x"], "note": "操作系统"},
+    {"standard": "FTP", "variants": ["ftp"], "note": "文件传输协议"},
+    {"standard": "Weblogic", "variants": ["weblogic", "WEBLOGIC", "WebLogic"], "note": "中间件"}
+  ]
+}

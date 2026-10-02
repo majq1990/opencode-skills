@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "updated": "2026-10-02",
+  "note": "巡检合成样例（冒烟/端到端用）：example.com 为 IANA 保留示例域、192.0.2.x 为 RFC 5737 文档测试段，均非真实资产。无外网环境时 unreachable 目标会以 ok:false 进 results，脚本信封仍 ok:true（failed==total 表达全失败），这正是契约要验证的降级行为。",
+  "timeout_s": 3,
+  "targets": [
+    { "name": "示例官网首页", "url": "https://www.example.com/", "expect_status": 200 },
+    { "name": "示例内网节点A", "url": "http://192.0.2.10/", "expect_status": 200 },
+    { "name": "示例内网节点B", "url": "http://192.0.2.20:8080/health", "expect_status": 200 }
+  ]
+}

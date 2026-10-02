@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  "updated": "2026-10-02",
+  "note": "批量网址/服务器巡检配置模板：全部为示例占位，换项目只改本文件（targets 换成实际 URL 与名称，脚本不动）。expect_status 为判定正常的状态码，缺省 200；timeout_s 为单目标超时秒数，可被命令行 --timeout 覆盖。example.com 为 IANA 保留示例域、192.0.2.x 为 RFC 5737 文档测试段，均非真实资产；真实客户 IP/域名/签名密钥禁止写入本仓库。自签名 HTTPS 证书场景不在 v1 范围（请走反向代理或加入系统信任库）。可离线运行的样例见 tests/fixtures/patrol/monthly/servers_fixture.json。",
+  "timeout_s": 5,
+  "targets": [
+    { "name": "示例官网首页", "url": "https://www.example.com/", "expect_status": 200 },
+    { "name": "示例门户-首页", "url": "http://192.0.2.10/", "expect_status": 200 },
+    { "name": "示例门户-健康检查", "url": "http://192.0.2.20/health", "expect_status": 200 },
+    { "name": "示例备用节点", "url": "http://192.0.2.30:8080/", "expect_status": 200 }
+  ]
+}

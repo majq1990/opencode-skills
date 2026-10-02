@@ -1,0 +1,6 @@
+﻿digest_text,schema_name,count_star,avg_timer_wait,sum_rows_examined,sum_rows_sent,sum_created_tmp_disk_tables,sum_no_index_used,sum_sort_rows
+"SELECT * FROM biz_event_log WHERE event_time > ? AND region_code = ? ORDER BY id DESC LIMIT ?","app_db",8642,2450000000000,4820000000,1210000,0,8642,1210000
+"SELECT id, event_time, operator_name, detail FROM biz_event_log WHERE detail LIKE ?","app_db",12680,1890000000000,3160000000,86400,0,12680,0
+"SELECT COUNT(*) AS cnt, region_code FROM biz_event_log WHERE event_time BETWEEN ? AND ? GROUP BY region_code ORDER BY cnt DESC","app_db",934,5620000000000,892000000,9340,934,934,892000000
+"SELECT t.*, u.account_name FROM biz_event_log t LEFT JOIN sys_account u ON t.account_id = u.id WHERE t.event_type = ?","app_db",5421,980000000000,468000000,542100,0,0,468000000
+"SELECT id FROM biz_event_log WHERE status = ? LIMIT ?","app_db",22450,12000000000,22450,22450,0,0,0
