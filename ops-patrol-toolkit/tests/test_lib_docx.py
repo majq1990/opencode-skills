@@ -113,5 +113,41 @@ class TestDtdGuard(unittest.TestCase):
         self.assertIn("DTD", str(cm.exception))
 
 
+class TestStyleName(unittest.TestCase):
+    """docx_io 读 styles.xml 解析 styleId→样式名（中文 Word 数字 styleId 支持）。"""
+
+    def _make(self, path, styles_xml, body_xml):
+        import zipfile as _zf
+        with _zf.ZipFile(path, "w") as z:
+            z.writestr("[Content_Types].xml", docx_io._CT_DOCX)
+            z.writestr("_rels/.rels", docx_io._ROOT_RELS_DOCX)
+            z.writestr("word/_rels/document.xml.rels", docx_io._DOC_RELS)
+            z.writestr("word/styles.xml", styles_xml)
+            z.writestr("word/document.xml", body_xml)
+
+    def test_numeric_styleid_resolves(self):
+        styles = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                  '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+                  '<w:style w:type="paragraph" w:styleId="1"><w:name w:val="heading 1"/></w:style>'
+                  '</w:styles>')
+        body = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+                '<w:body><w:p><w:pPr><w:pStyle w:val="1"/></w:pPr><w:r><w:t>服务器配置信息</w:t></w:r></w:p>'
+                '<w:p><w:r><w:t>正文段落</w:t></w:r></w:p></w:body></w:document>')
+        path = TMP / "numeric_styles.docx"
+        self._make(path, styles, body)
+        paras = docx_io.read_paragraphs(path)
+        self.assertEqual(paras[0]["style"], "1")
+        self.assertEqual(paras[0]["style_name"], "heading 1")
+        self.assertIsNone(paras[1]["style_name"])
+
+    def test_default_doc_has_no_stylename_for_unstyled(self):
+        path = TMP / "plain.docx"
+        docx_io.make_document(path, [{"type": "p", "text": "x"}])
+        paras = docx_io.read_paragraphs(path)
+        self.assertIsNone(paras[0]["style"])
+        self.assertIsNone(paras[0]["style_name"])
+
+
 if __name__ == "__main__":
     unittest.main()

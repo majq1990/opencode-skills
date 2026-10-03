@@ -268,5 +268,29 @@ class TestSubcommandEnvelope(unittest.TestCase):
         self.assertEqual(env["count"], 3)
 
 
+class TestDdlFirstField(unittest.TestCase):
+    """回归：外层左括号污染首段导致首列被整列丢弃（2026-10-02 修复）。"""
+
+    def test_first_column_lob_preserved(self):
+        ddl = ("CREATE TABLE `t1` (\n"
+               "  `note` TEXT,\n"
+               "  `id` BIGINT,\n"
+               "  `amount` DECIMAL(10,2),\n"
+               "  PRIMARY KEY (`id`),\n"
+               "  KEY `idx_amount` (`amount`)\n"
+               ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n")
+        t = triage02.parse_ddl(ddl)["t1"]
+        self.assertEqual(t["field_count"], 3)
+        self.assertEqual(t["lob_fields"], ["note"])  # 首列 LOB 不再丢失
+        self.assertTrue(t["has_pk"])
+        self.assertEqual(len(t["indexes"]), 2)
+
+    def test_first_column_normal_preserved(self):
+        ddl = "CREATE TABLE t2 (id BIGINT, name VARCHAR(64), PRIMARY KEY (id));"
+        t = triage02.parse_ddl(ddl)["t2"]
+        self.assertEqual(t["field_count"], 2)
+        self.assertTrue(t["has_pk"])
+
+
 if __name__ == "__main__":
     unittest.main()

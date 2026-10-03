@@ -1,6 +1,6 @@
 ---
 name: ops-patrol-toolkit
-version: 1.0.0
+version: 1.1.0
 author: 工程技术中心
 license: MIT
 category: ops

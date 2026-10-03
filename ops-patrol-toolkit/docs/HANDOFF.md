@@ -48,6 +48,7 @@
 
 ## 变更记录
 
+- 2026-10-02：**v1.1.0**——真实场景兼容性两项修复：① 03 标题识别支持中文 Word 纯数字 styleId（docx_io.read_paragraphs 新增 style_name 字段读 word/styles.xml，_heading_level 双 token 检测，旧数据无影响）；② 02 parse_ddl 首字段丢失修复（外层左括号污染首段，首列 LOB/字段计数恢复正确）。新增 6 用例，全仓 87 用例全绿。同日 1.0.0 首发与安全加固见下。
 - 2026-10-02：v1.0 首发。五子工具 + 公共库 + 79 用例；05 真机试跑通过（zhengtong_query ~20s）；02→05 from-triage 闭环验证通过。
 - 2026-10-02：本地提交 `5f46bf7`（48 文件）已固化；**GitHub push 暂阻塞**（443 connection reset，与 R52 GitLab 同因），网络恢复后 `git push origin feat/security-case-response-v2` 即可，远端引用仍在 c068204。
 - 2026-10-02：**skills-manager 拉取就绪已验证**——junction 路径可见（custom_tool_paths.opencode → D:\opencode\config\skills）、全树遍历 33 目录/173 文件零错误、无 .pytest_cache/__pycache__（已清理 2 处 __pycache__，规避毒 ACL 前科）、frontmatter 合规（name/version/description 齐全）。claude_code 在 disabled_tools 中，无需 .claude\skills 副本。待用户打开 skills-manager → 发现页 → 导入（DB 硬规则不改，导入只能在 UI）。

@@ -31,4 +31,5 @@ python -m pytest tests/ -p no:cacheprovider -q
 
 ## 版本历史
 
+- 1.1.0（2026-10）：真实场景兼容性修复——中文 Word 纯数字 styleId 标题识别（docx_io 读 styles.xml，03 双 token 检测）；02 DDL 首字段丢失修复（外层左括号污染）；DTD/实体声明拒绝闸（安全加固）；全仓 87 用例。
 - 1.0.0（2026-10）：四子工具首发；公共库 patrol_lib/xlsx_io/docx_io/redact；合成 fixtures 离线自测。

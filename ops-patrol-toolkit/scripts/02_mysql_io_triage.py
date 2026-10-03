@@ -445,6 +445,10 @@ def parse_ddl(text):
         for c in body:
             if c == "(":
                 depth += 1
+                if depth == 1:
+                    # 表名后的外层左括号不入 buf：否则首列名带 "(" 匹配失败被整列丢弃
+                    buf = ""
+                    continue
             elif c == ")":
                 depth -= 1
             if c == "," and depth == 1:

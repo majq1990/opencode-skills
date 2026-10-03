@@ -31,8 +31,8 @@
      代价是表格证据无法归属到具体章节——不会漏报 P0，只可能少报 P1 要素缺失。
   2. 源版三个脚本合一为 extract/generate/check 三个子命令；extract 输出改为
      段落/表格分列的 JSON（并在 note 中注明上述位置限制）。
-  3. 标题层级由段落样式 ID（Heading N / 标题 N）推断；docx_io 不读 styles.xml，
-     中文 Word 里 styleId 为纯数字（如"1"）的标题样式识别不到，按正文段落处理（已知边界）。
+  3. 标题层级由段落样式推断：styleId（Heading N / 标题 N）与样式名（word/styles.xml
+     的 w:name）双重检查，覆盖中文 Word 纯数字 styleId（styleId="1"→样式名"heading 1"）。
 
 安全约束:
   - 手册含账号密码等敏感信息：展示摘要不得复述明文密码，分发范围由责任人确认
@@ -115,16 +115,11 @@ class DocxReadError(Exception):
     """docx 读取失败（文件缺失/损坏/非 docx）。由调用方决定 stop 还是降级。"""
 
 
-def _heading_level(style):
-    """由段落样式 ID 推断标题层级，非标题返回 None。
-
-    docx_io 只暴露 styleId（不读 styles.xml 样式名），因此覆盖两类常见写法：
-    英文 Heading1 / heading 1 与中文 标题1 / 标题 1；styleId 为纯数字的中文 Word
-    文档（styleId="1" 对应"标题 1"）识别不到，按正文段落处理（已知边界，见模块头）。
-    """
-    if not style:
+def _level_from_token(s):
+    """由单个样式标识（styleId 或样式名）推断标题层级，非标题返回 None。"""
+    if not s:
         return None
-    s = str(style).strip()
+    s = str(s).strip()
     low = s.lower()
     if low.startswith("heading"):
         tail = low[7:].strip()
@@ -136,6 +131,20 @@ def _heading_level(style):
         if tail.isdigit() and 1 <= int(tail) <= 6:
             return int(tail)
         return 1
+    return None
+
+
+def _heading_level(style, style_name=None):
+    """由段落样式推断标题层级，非标题返回 None。
+
+    同时检查 styleId 与样式名（docx_io.read_paragraphs 的 style_name 字段，
+    来自 word/styles.xml 的 w:name）：中文 Word 的标题样式 styleId 常为纯数字
+    （如 "1" 对应样式名 "heading 1"），只看 styleId 会漏识别。
+    """
+    for cand in (style, style_name):
+        lvl = _level_from_token(cand)
+        if lvl:
+            return lvl
     return None
 
 
@@ -165,9 +174,11 @@ def read_doc(path):
         if not text:
             continue
         style = p.get("style")
-        level = _heading_level(style)
+        style_name = p.get("style_name")
+        level = _heading_level(style, style_name)
         blocks.append({"type": "heading" if level else "para", "level": level,
-                       "style": style, "text": text, "index": len(blocks)})
+                       "style": style, "style_name": style_name,
+                       "text": text, "index": len(blocks)})
     tables = [t for t in tables
               if t and any(any(str(c).strip() for c in row) for row in t)]
     return blocks, tables

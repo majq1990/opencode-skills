@@ -69,16 +69,49 @@ def _para_text(p):
 
 
 def read_paragraphs(path):
-    """正文顶层段落（不含表格内段落）：[{"style": val或None, "text": str}]"""
+    """正文顶层段落（不含表格内段落）。
+
+    返回 [dict]：{"style": styleId, "style_name": 样式名或None, "text": str}。
+    style_name 来自 word/styles.xml 的 w:name：中文 Word 的标题样式 styleId 常为
+    纯数字（如 "1" 对应样式名 "heading 1"），只看 styleId 会漏识别标题。
+    """
     raw, _ = _open_doc_xml(path)
     root = ET.fromstring(raw)
     body = root.find(W + "body")
     if body is None:
         raise DocxError("document.xml 缺少 body")
+    style_names = _load_style_names(path)
     out = []
     for child in body:
         if child.tag == W + "p":
-            out.append({"style": _para_style(child), "text": _para_text(child)})
+            sid = _para_style(child)
+            out.append({"style": sid,
+                        "style_name": style_names.get(sid) if sid else None,
+                        "text": _para_text(child)})
+    return out
+
+
+def _load_style_names(path):
+    """styleId -> 样式名（word/styles.xml 的 w:name val）；部件缺失/异常返回 {}。"""
+    try:
+        with zipfile.ZipFile(str(path)) as zf:
+            if "word/styles.xml" not in zf.namelist():
+                return {}
+            raw = zf.read("word/styles.xml")
+    except (zipfile.BadZipFile, FileNotFoundError, KeyError):
+        return {}
+    if b"<!DOCTYPE" in raw[:4096] or b"<!ENTITY" in raw:
+        return {}
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError:
+        return {}
+    out = {}
+    for st in root.findall(W + "style"):
+        sid = st.get(W + "styleId")
+        nm = st.find(W + "name")
+        if sid and nm is not None and nm.get(W + "val"):
+            out[sid] = nm.get(W + "val")
     return out
 
 

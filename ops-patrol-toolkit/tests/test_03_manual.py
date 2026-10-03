@@ -244,5 +244,44 @@ class TestCheck(Test03Base):
         self.assertIn("no_such_manual.docx", env["gap"])
 
 
+class TestNumericStyleIdHeading(unittest.TestCase):
+    """中文 Word 纯数字 styleId 标题识别（2026-10-02 修复：双 token 检测）。"""
+
+    def _make_numeric_docx(self, path):
+        import zipfile as _zf
+        styles = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                  '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+                  '<w:style w:type="paragraph" w:styleId="1"><w:name w:val="heading 1"/></w:style>'
+                  '</w:styles>')
+        body = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+                '<w:body>'
+                '<w:p><w:pPr><w:pStyle w:val="1"/></w:pPr><w:r><w:t>服务器配置信息</w:t></w:r></w:p>'
+                '<w:p><w:r><w:t>应用服务器 1 台，数据库服务器 1 台。</w:t></w:r></w:p>'
+                '<w:p><w:pPr><w:pStyle w:val="1"/></w:pPr><w:r><w:t>联系人信息表</w:t></w:r></w:p>'
+                '<w:p><w:r><w:t>联系人见下表。</w:t></w:r></w:p>'
+                '</w:body></w:document>')
+        with _zf.ZipFile(path, "w") as z:
+            z.writestr("[Content_Types].xml", docx_io._CT_DOCX)
+            z.writestr("_rels/.rels", docx_io._ROOT_RELS_DOCX)
+            z.writestr("word/_rels/document.xml.rels", docx_io._DOC_RELS)
+            z.writestr("word/styles.xml", styles)
+            z.writestr("word/document.xml", body)
+
+    def test_level_from_style_name(self):
+        self.assertEqual(mod._heading_level("1", "heading 1"), 1)
+        self.assertEqual(mod._heading_level("2", "heading 2"), 2)
+        self.assertIsNone(mod._heading_level("1", None))  # 无映射时数字 styleId 不误判
+        self.assertIsNone(mod._heading_level(None, "Normal"))
+
+    def test_read_doc_recognizes_numeric_headings(self):
+        path = TMP / "numeric_headings.docx"
+        self._make_numeric_docx(path)
+        blocks, _tables = mod.read_doc(str(path))
+        heads = [b for b in blocks if b["type"] == "heading"]
+        self.assertEqual([b["text"] for b in heads], ["服务器配置信息", "联系人信息表"])
+        self.assertTrue(all(b["level"] == 1 for b in heads))
+
+
 if __name__ == "__main__":
     unittest.main()
