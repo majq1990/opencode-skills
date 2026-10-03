@@ -44,7 +44,7 @@
 
 - 04 业务统计走 JSON 文件输入，数字城管 API/CDP 等客户直连不在通用版
 - xlsx_io 不支持 .xls 老格式/图表透视表（忽略）；docx_io 只处理正文（页眉页脚/文本框不替换）
-- 02 沿用源版行为：parse_ddl 首字段计数偏小 1（不影响判定）
+- ~~02 沿用源版行为：parse_ddl 首字段计数偏小 1~~（v1.1.0 已修复，见变更记录）
 
 ## 变更记录
 
@@ -52,6 +52,7 @@
 - 2026-10-02：v1.0 首发。五子工具 + 公共库 + 79 用例；05 真机试跑通过（zhengtong_query ~20s）；02→05 from-triage 闭环验证通过。
 - 2026-10-02：本地提交 `5f46bf7`（48 文件）已固化；**GitHub push 暂阻塞**（443 connection reset，与 R52 GitLab 同因），网络恢复后 `git push origin feat/security-case-response-v2` 即可，远端引用仍在 c068204。
 - 2026-10-02：**skills-manager 拉取就绪已验证**——junction 路径可见（custom_tool_paths.opencode → D:\opencode\config\skills）、全树遍历 33 目录/173 文件零错误、无 .pytest_cache/__pycache__（已清理 2 处 __pycache__，规避毒 ACL 前科）、frontmatter 合规（name/version/description 齐全）。claude_code 在 disabled_tools 中，无需 .claude\skills 副本。待用户打开 skills-manager → 发现页 → 导入（DB 硬规则不改，导入只能在 UI）。
+- **push 备忘**：GitHub 直连时好时坏（443 reset / HTTP2 framing / remote hung up），失败就退避重试；"Everything up-to-date" 可能是失败后的误导信息，**以 `git rev-parse origin/feat/security-case-response-v2` 对照本地分支头确认是否真已推送**。v1.1.0（4c9a373 起）截至本记录因网络未推上（远端在 4560ad3），网络恢复后重推即可。
 
 ## 安全审计（Mimosa）
 
