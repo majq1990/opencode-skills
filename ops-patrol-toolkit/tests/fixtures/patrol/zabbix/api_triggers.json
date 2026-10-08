@@ -1,0 +1,34 @@
+[
+  {
+    "triggerid": "10501",
+    "description": "High CPU utilization (over 90% for 5m)",
+    "priority": "5",
+    "hosts": [
+      {"host": "app-server-01", "name": "应用服务器 01"}
+    ]
+  },
+  {
+    "triggerid": "10502",
+    "description": "Free disk space is less than 5% on volume /data",
+    "priority": "4",
+    "hosts": [
+      {"host": "db-server-01", "name": "数据库服务器 01"}
+    ]
+  },
+  {
+    "triggerid": "10503",
+    "description": "自定义业务接口探活连续失败",
+    "priority": "3",
+    "hosts": [
+      {"host": "biz-gw-01", "name": "业务网关 01"}
+    ]
+  },
+  {
+    "triggerid": "10504",
+    "description": "MySQL: Threads_connected is over 90%",
+    "priority": "5",
+    "hosts": [
+      {"host": "mysql-01", "name": "MySQL 主库"}
+    ]
+  }
+]

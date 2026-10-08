@@ -1,0 +1,50 @@
+{
+  "status": "success",
+  "data": {
+    "alerts": [
+      {
+        "labels": {
+          "alertname": "InstanceDown",
+          "instance": "10.10.0.11:9100",
+          "job": "node",
+          "severity": "critical"
+        },
+        "annotations": {
+          "summary": "Instance down: node unreachable",
+          "description": "Instance 10.10.0.11:9100 has been down for more than 5 minutes."
+        },
+        "state": "active",
+        "activeAt": "2026-10-08T09:30:00Z",
+        "value": "1"
+      },
+      {
+        "labels": {
+          "alertname": "NodeDiskUsageHigh",
+          "instance": "10.10.0.12:9100",
+          "device": "/dev/vda",
+          "severity": "warning"
+        },
+        "annotations": {
+          "summary": "Disk space usage high on /data",
+          "description": "Disk usage on /data is above 85 percent."
+        },
+        "state": "active",
+        "activeAt": "2026-10-08T09:10:00Z",
+        "value": "86.4"
+      },
+      {
+        "labels": {
+          "alertname": "Watchdog",
+          "severity": "none"
+        },
+        "annotations": {
+          "description": "Watchdog fires to ensure the alerting pipeline works.",
+          "runbook_url": "http://prometheus.example.internal/runbooks/watchdog"
+        },
+        "state": "active",
+        "activeAt": "2026-10-08T00:00:00Z",
+        "value": "1"
+      }
+    ]
+  }
+}

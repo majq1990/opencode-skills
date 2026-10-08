@@ -1,0 +1,11 @@
+{
+  "note": "08 号子工具测试用监控配置模板：{PORT} 由测试在运行时替换为本地假服务端口；allow_local_targets/allow_private_targets 双 true 仅用于 127.0.0.1 假服务联调，绝不指向真实端点；url 尾部带斜杠用于验证归一（不出现双斜杠）",
+  "prometheus": {
+    "enabled": true,
+    "url": "http://127.0.0.1:{PORT}/",
+    "token_env_ref": "PROMETHEUS_API_TOKEN",
+    "timeout_s": 10,
+    "allow_private_targets": true,
+    "allow_local_targets": true
+  }
+}

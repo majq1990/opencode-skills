@@ -1,0 +1,46 @@
+[
+  {
+    "eventid": "3001",
+    "objectid": "10501",
+    "clock": "1790000000",
+    "ns": "123456789",
+    "name": "High CPU utilization (over 90% for 5m)",
+    "severity": "5",
+    "r_eventid": "0",
+    "tags": [
+      {"tag": "scope", "value": "performance"}
+    ]
+  },
+  {
+    "eventid": "3002",
+    "objectid": "10502",
+    "clock": "1790003000",
+    "ns": "222333444",
+    "name": "Free disk space is less than 5% on volume /data",
+    "severity": "4",
+    "r_eventid": "0",
+    "tags": []
+  },
+  {
+    "eventid": "3003",
+    "objectid": "10503",
+    "clock": "1790006000",
+    "ns": "555666777",
+    "name": "自定义业务接口探活连续失败",
+    "severity": "3",
+    "r_eventid": "0",
+    "tags": [
+      {"tag": "class", "value": "biz"}
+    ]
+  },
+  {
+    "eventid": "3004",
+    "objectid": "10504",
+    "clock": "1790009000",
+    "ns": "888999000",
+    "name": "MySQL: Threads_connected is over 90%",
+    "severity": "5",
+    "r_eventid": "0",
+    "tags": []
+  }
+]

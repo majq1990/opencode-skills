@@ -12,6 +12,7 @@ ops-patrol-toolkit 公共库。
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -28,6 +29,34 @@ ASSETS_DIR = ROOT / "assets"
 WORK_DIR = ROOT / "work"
 
 EXIT_GAP = 2
+
+
+def keyword_hit(keyword, text):
+    """处置剧本关键词命中判定（供 06-09 号子工具的 match_playbook 统一使用）。
+
+    ASCII 关键词在原文（保留大小写）上找命中位置，逐个判定词左边界：
+      - 位置 0，或前一字符非字母数字（空格/标点/下划线/中文）→ 命中
+      - 驼峰词首（前字符小写 + 当前字符大写，如 HighCpuLoad 里的 Cpu/Load）→ 命中
+      - 其余词中片段（replication 里的 io、export 里的 port、EXPORT 里的 PORT）→ 不命中
+    允许右向扩展（"connection" 命中 "connections"）；含非 ASCII（中文等）保持 contains。
+    """
+    kw = str(keyword or "").strip()
+    src = str(text or "")
+    if not kw:
+        return False
+    if kw.isascii():
+        for m in re.finditer(re.escape(kw), src, re.IGNORECASE):
+            pos = m.start()
+            if pos == 0:
+                return True
+            prev = src[pos - 1]
+            cur = src[pos]
+            if not prev.isalnum():
+                return True
+            if cur.isupper() and prev.islower():
+                return True
+        return False
+    return kw.lower() in src.lower()
 
 
 def skill_path(*parts):

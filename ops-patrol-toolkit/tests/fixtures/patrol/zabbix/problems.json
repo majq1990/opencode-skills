@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "fetched_at": "2026-10-08 10:00:00",
+  "source": "zabbix",
+  "endpoint": "zabbix.example.internal/zabbix/api_jsonrpc.php",
+  "findings": [
+    {
+      "source": "zabbix",
+      "id": "3001",
+      "title": "High CPU utilization (over 90% for 5m)",
+      "host": "应用服务器 01",
+      "severity": 4,
+      "severity_label": "严重",
+      "fired_at": "2026-10-08 09:30:00",
+      "age_s": 1800,
+      "tags": [
+        {"tag": "scope", "value": "performance"}
+      ]
+    },
+    {
+      "source": "zabbix",
+      "id": "3002",
+      "title": "Free disk space is less than 5% on volume /data",
+      "host": "数据库服务器 01",
+      "severity": 5,
+      "severity_label": "灾难",
+      "fired_at": "2026-10-08 09:10:00",
+      "age_s": 3000,
+      "tags": []
+    },
+    {
+      "source": "zabbix",
+      "id": "3003",
+      "title": "自定义业务接口探活连续失败",
+      "host": "业务网关 01",
+      "severity": 3,
+      "severity_label": "一般严重",
+      "fired_at": "2026-10-08 08:40:00",
+      "age_s": 4800,
+      "tags": [
+        {"tag": "class", "value": "biz"}
+      ]
+    }
+  ]
+}

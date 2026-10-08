@@ -1,28 +1,30 @@
 ---
 name: ops-patrol-toolkit
-version: 1.1.0
+version: 1.2.0
 author: 工程技术中心
 license: MIT
 category: ops
 visibility: tech-center
-description: 运维巡检与故障排查通用工具集（R48）。凡涉及：运维巡检、故障排查、巡查数据汇总、人巡/机巡/部件三源合并、巡查日报标准输入、巡查明细表生成、MySQL 只读副本高 I/O 分诊、iostat 解析、慢查询 digest 分析、全表扫描/回表放大/排序落盘/大字段溢出/复制回放根因判定、项目维护手册规范化生成、手册章节完整性与要素缺失检测、月度运维报告生成、服务器/网址批量巡检、月报 Word 模板回填、运维材料脱敏——都应使用本 Skill。
+description: 运维巡检与故障排查通用工具集（R48）。凡涉及：运维巡检、故障排查、巡查数据汇总、人巡/机巡/部件三源合并、巡查日报标准输入、巡查明细表生成、MySQL 只读副本高 I/O 分诊、iostat 解析、慢查询 digest 分析、全表扫描/回表放大/排序落盘/大字段溢出/复制回放根因判定、项目维护手册规范化生成、手册章节完整性与要素缺失检测、月度运维报告生成、服务器/网址批量巡检、月报 Word 模板回填、运维材料脱敏、auto-check 巡检报告告警分诊、巡检问题处置引导、Zabbix 告警处理、Prometheus 告警处理、SkyWalking APM 告警处理、监控告警分诊——都应使用本 Skill。
 ---
 
 # ops-patrol-toolkit · 运维巡检与故障排查工具集
 
 ## 目标
 
-把巡查/巡检/诊断/月报四类高频运维工作固化为一套零依赖、离线可跑、可独立调用的脚本工具集：
+把巡查/巡检/诊断/月报/监控告警分诊五类高频运维工作固化为一套零依赖、可独立调用的脚本工具集：
 
 1. **巡查数据三源汇总**：人巡/机巡/部件 Excel 源表 → 统一 9 列明细表（巡查日报标准输入）
 2. **MySQL 只读副本高 I/O 分诊**：iostat + 慢查询 digest + 表 DDL → 根因候选 + 置信度 + 证据链 → 中文诊断报告
 3. **维护手册规范化**：零散立项资料 → 标准章节手册初稿（待补项占位）+ 章节完整性/要素缺失检测
 4. **月度运维报告**：批量网址/服务器巡检 + 业务统计数据（JSON 输入）→ 回填 Word 月报模板
+5. **监控告警分诊与处置引导**：auto-check 巡检报告 / Zabbix / Prometheus / SkyWalking 告警 → 归一化 → 处置剧本匹配 → 处置引导报告（含 WIKI 链接与 05 历史案例检索衔接）
 
 ## 依赖
 
-- Python 3.8+，**只用标准库**，无第三方包，01-04 离线可跑
+- Python 3.8+，**只用标准库**，无第三方包，01-04/06 离线可跑
 - 05 需访问公司 redmine-assist MCP（网络出站），token 经环境变量 `DEMO_EGOVA_MCP_TOKEN` 注入（钉钉扫码获取，见 `config/patrol/kb_search.json`），缺失即 gap 停止
+- 07/08/09 需访问对应监控端点（`config/patrol/monitors.json` 显式声明 URL，token 经 `*_env_ref` 环境变量注入）；URL 安全闸强制 http/https、拒绝回环与云元数据地址，内网私有网段由配置 `allow_private_targets=true` 显式放行
 - 不需要数据库连接；输出统一写到 `work/` 或显式 `--out` 路径；模板与配置原件永不改写
 
 ## 子工具路由
@@ -34,7 +36,12 @@ description: 运维巡检与故障排查通用工具集（R48）。凡涉及：�
 | 03 | `scripts/03_manual_standardize.py` | 维护手册生成 + 规范检测（双模式，生成后自动回检） |
 | 04 | `scripts/04_monthly_report.py` | 服务器巡检 + 月报模板回填 |
 | 05 | `scripts/05_kb_similar_search.py` | 历史相似案例检索（redmine-assist MCP：17 万工单 + 4500 篇知识库文档） |
+| 06 | `scripts/06_autocheck_triage.py` | auto-check 巡检报告摄取 → 预警表达式安全求值 → 告警项 + WIKI 链接 + 处置引导 |
+| 07 | `scripts/07_zabbix_triage.py` | Zabbix 告警拉取（JSON-RPC problem.get/trigger.get）→ 分诊 → 处置引导 |
+| 08 | `scripts/08_prometheus_triage.py` | Prometheus 告警拉取（/api/v1/alerts）→ 分诊 → 处置引导 |
+| 09 | `scripts/09_skywalking_triage.py` | SkyWalking OAP 告警拉取（GraphQL queryAlarms）→ 分诊 → 处置引导 |
 | 公共 | `scripts/redact.py` | 材料脱敏（先脱敏再分析，保留数值口径） |
+| 公共 | `scripts/monitor_http.py` | 监控出站共享客户端与 URL 安全闸（06-09 专用） |
 
 ## 快速开始
 
@@ -57,6 +64,17 @@ python scripts/04_monthly_report.py fill --template assets/monthly-report-templa
 python scripts/05_kb_similar_search.py query --text "MySQL只读副本磁盘IO高，慢查询全表扫描" --out work/kb/result.md
 # 02→05 闭环：用分诊结果自动拼检索词
 python scripts/05_kb_similar_search.py from-triage --triage work/io_triage/triage.json
+
+# 06 auto-check 巡检报告分诊（离线；处置引导含 WIKI 链接与 05 检索命令）
+python scripts/06_autocheck_triage.py triage --report out/json/os_web01.json --dir out/json --out work/autocheck/guide.md
+
+# 07/08/09 监控告警拉取 + 分诊（端点配置 config/patrol/monitors.json，enabled 置 true）
+python scripts/07_zabbix_triage.py problems --config config/patrol/monitors.json --out work/zabbix/problems.json
+python scripts/07_zabbix_triage.py triage --problems work/zabbix/problems.json --out work/zabbix/guide.md
+python scripts/08_prometheus_triage.py alerts --config config/patrol/monitors.json --out work/prometheus/alerts.json
+python scripts/08_prometheus_triage.py triage --alerts work/prometheus/alerts.json --out work/prometheus/guide.md
+python scripts/09_skywalking_triage.py alarms --config config/patrol/monitors.json --out work/skywalking/alarms.json
+python scripts/09_skywalking_triage.py triage --alarms work/skywalking/alarms.json --out work/skywalking/guide.md
 ```
 
 ## 输出契约
@@ -90,4 +108,6 @@ python scripts/05_kb_similar_search.py from-triage --triage work/io_triage/triag
 - docx 替换只处理正文（页眉页脚/批注/文本框内文字不替换）；复杂模板建议先另存为标准 docx
 - xlsx/docx 解析内置 DTD/实体声明拒绝闸：含 `<!DOCTYPE>`/`<!ENTITY>` 的恶意构造文件（实体扩展攻击）直接拒解析
 - 输入/输出路径参数（--file/--out 等）按本地单用户 CLI 威胁模型信任操作者（同 cat/grep 类命令行工具），不做路径白名单
-- 04/05 的出站目标来自操作者维护的 config 文件（巡检清单/MCP 端点），属工具本职，不接受不可信输入作为请求目标
+- 04/05/07/08/09 的出站目标来自操作者维护的 config 文件，属工具本职，不接受不可信输入作为请求目标；URL 安全闸强制 http/https 并拒绝回环/云元数据地址
+- **auto-check 解决文档同步点**：auto-check 团队正在统一调整"问题解决文档"，06 号子工具的 auto-check 专属指标目录（autocheck_metrics.json）与处置剧本（autocheck_playbooks.json）延后到那边定稿后同步——CLI 已预留 `--metrics`/`--playbooks` 可选参数，届时只换 JSON 零代码改动；当前处置引导走 `references/playbooks/common_playbooks.json` 通用剧本
+- 剧本关键词为边界感知匹配（词左边界 + 驼峰词首，见 `patrol_lib.keyword_hit`）：replication 不会误命中 io 剧本，HighCpuLoad 能命中 cpu 剧本；新增剧本关键词时用全词或中文词

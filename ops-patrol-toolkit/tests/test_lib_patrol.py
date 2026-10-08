@@ -89,5 +89,42 @@ class TestJsonIo(unittest.TestCase):
         self.assertFalse(patrol_lib.as_bool(None))
 
 
+class TestKeywordHit(unittest.TestCase):
+    """处置剧本关键词边界感知命中（06-09 共用）。"""
+
+    def test_ascii_left_boundary_blocks_midword(self):
+        self.assertFalse(patrol_lib.keyword_hit("io", "mysql replication delay"))  # 词中 io 不命中
+        self.assertFalse(patrol_lib.keyword_hit("port", "export-worker timeout"))  # 词中 port 不命中
+        self.assertFalse(patrol_lib.keyword_hit("port", "EXPORT blocked"))  # 全大写词中同样拦截
+        self.assertTrue(patrol_lib.keyword_hit("io", "disk io high"))
+        self.assertTrue(patrol_lib.keyword_hit("port", "port 8080 exposed"))
+
+    def test_camelcase_hump_allowed(self):
+        self.assertTrue(patrol_lib.keyword_hit("cpu", "HighCpuLoad"))  # Cpu 驼峰词首命中
+        self.assertTrue(patrol_lib.keyword_hit("load", "HighCpuLoad"))  # Load 驼峰词首命中
+        self.assertTrue(patrol_lib.keyword_hit("memory", "HighMemoryUsage"))
+
+    def test_ascii_right_extension_allowed(self):
+        self.assertTrue(patrol_lib.keyword_hit("connection", "too many connections"))
+        self.assertTrue(patrol_lib.keyword_hit("mem", "memory usage 95%"))
+        self.assertTrue(patrol_lib.keyword_hit("cpu", "cpu usage high"))
+
+    def test_left_boundary_allows_start_and_punct(self):
+        self.assertTrue(patrol_lib.keyword_hit("io", "io等待过高"))
+        self.assertTrue(patrol_lib.keyword_hit("io", "mysql_io_test"))  # 下划线视为分隔
+        self.assertTrue(patrol_lib.keyword_hit("tomcat", "tomcat-thread-pool: 98%"))
+        self.assertTrue(patrol_lib.keyword_hit("down", "service is DOWN"))
+
+    def test_chinese_contains(self):
+        self.assertTrue(patrol_lib.keyword_hit("磁盘", "磁盘空间不足"))
+        self.assertTrue(patrol_lib.keyword_hit("慢查询", "存在慢查询堆积"))
+        self.assertFalse(patrol_lib.keyword_hit("磁盘", "memory high"))
+
+    def test_empty_and_case(self):
+        self.assertFalse(patrol_lib.keyword_hit("", "anything"))
+        self.assertFalse(patrol_lib.keyword_hit(None, "anything"))
+        self.assertTrue(patrol_lib.keyword_hit("CPU", "cpu load 99%"))
+
+
 if __name__ == "__main__":
     unittest.main()

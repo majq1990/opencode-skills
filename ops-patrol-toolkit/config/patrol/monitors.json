@@ -1,0 +1,35 @@
+{
+  "version": "1.2.0",
+  "updated": "2026-10-02",
+  "note": "监控端点配置模板（06-09 号子工具共用）。换项目只改本文件：url 必须显式声明（安全闸校验仅 http/https）；token 经 *_env_ref 环境变量引用名注入，绝不落盘；内网监控地址属部署常态，allow_private_targets=true 表示信任运维的端点声明（回环/云元数据地址仍被强制拦截；本机联调可临时 allow_local_targets=true）。enabled=false 的组不会被拉取。",
+  "zabbix": {
+    "enabled": false,
+    "url": "http://zabbix.example.internal/zabbix/api_jsonrpc.php",
+    "token_env_ref": "ZABBIX_API_TOKEN",
+    "timeout_s": 60,
+    "allow_private_targets": true,
+    "allow_local_targets": false,
+    "severities": [3, 4, 5],
+    "note": "severities 为拉取的告警级别（0未定义 1信息 2警告 3一般严重 4严重 5灾难），缺省全量"
+  },
+  "prometheus": {
+    "enabled": false,
+    "url": "http://prometheus.example.internal:9090",
+    "token_env_ref": "",
+    "timeout_s": 60,
+    "allow_private_targets": true,
+    "allow_local_targets": false,
+    "note": "url 填 Prometheus 根地址（自动拼 /api/v1/alerts）；有网关鉴权时填 token_env_ref"
+  },
+  "skywalking": {
+    "enabled": false,
+    "url": "http://skywalking-oap.example.internal:12800/graphql",
+    "token_env_ref": "",
+    "timeout_s": 60,
+    "allow_private_targets": true,
+    "allow_local_targets": false,
+    "duration": "minutes:60",
+    "alarm_query": "query ($duration: Duration!) { alarms: queryAlarms(duration: $duration) { key id message startTime } }",
+    "note": "alarm_query 可按 OAP 版本替换（返回必须含 alarms 列表字段）"
+  }
+}

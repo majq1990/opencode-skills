@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "fetched_at": "2026-10-08 10:00:00",
+  "source": "skywalking",
+  "endpoint": "skywalking-oap.example.internal:12800/graphql",
+  "duration": "minutes:60",
+  "findings": [
+    {
+      "source": "skywalking",
+      "id": "3001",
+      "title": "jvm old gen usage of order-service is over 90% in 2 minutes",
+      "scope": "order-service",
+      "started_at": "2026-10-08 09:30:00",
+      "message": "jvm old gen usage of order-service is over 90% in 2 minutes of the last 10 minutes",
+      "raw": {
+        "key": "3001",
+        "message": "jvm old gen usage of order-service is over 90% in 2 minutes of the last 10 minutes",
+        "startTime": 1789999800
+      }
+    },
+    {
+      "source": "skywalking",
+      "id": "3002",
+      "title": "service cpu utilization of gateway-core is over 80%",
+      "scope": "gateway-core",
+      "started_at": "2026-10-08 09:10:00",
+      "message": "service cpu utilization of gateway-core is over 80% in 2 minutes of the last 10 minutes",
+      "raw": {
+        "key": "3002",
+        "message": "service cpu utilization of gateway-core is over 80% in 2 minutes of the last 10 minutes",
+        "startTime": 1789998600
+      }
+    },
+    {
+      "source": "skywalking",
+      "id": "3003",
+      "title": "订单导出任务排队时长超过 300 秒",
+      "scope": "dispatcher-01",
+      "started_at": "2026-10-08 08:40:00",
+      "message": "订单导出任务排队时长超过 300 秒",
+      "raw": {
+        "key": "3003",
+        "message": "订单导出任务排队时长超过 300 秒",
+        "startTime": 1789996800
+      }
+    }
+  ]
+}
