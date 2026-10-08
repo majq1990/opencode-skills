@@ -71,6 +71,7 @@
 
 ## 提交纪律（重要）
 
-- 2026-10-08 重克隆后工作区干净，历史遗留脏状态（原 2029 D / 128 M）已随旧仓清理消失。仍保持纪律：提交前 `git status --porcelain -- ops-patrol-toolkit/` 复核范围 → 只 `git add ops-patrol-toolkit/` → `git show --name-status` 复核仅限本目录 → 再 commit。
-- 仓库工作分支可能被其他会话（R50/R51 等）切走——跨会话提交先 `git branch --show-current` 确认，必要时 `git merge-base --is-ancestor` 验证后 checkout 本任务的 `feat/security-case-response-v2`，提交推送后切回原分支。
+- 2026-10-08 重克隆后工作区干净，历史遗留脏状态（原 2029 D / 128 M）已随旧仓清理消失。仍保持纪律：提交前复核范围 → 只 `git add ops-patrol-toolkit/` → **`git diff --cached --name-only | grep -v ops-patrol-toolkit`（必须为 0 行）** → 再 commit。
+- **暂存区陷阱（2026-10-08 实踩）**：并行子代理可能在共享工作区执行过 `git add <无关路径>`（本次 delivery-acceptance-assistant 31 文件被预先暂存，随提交混入后已 force-push 修正为 fcfdfa1）。另注意 `git status --porcelain --cached` 是**无效语法**（不报错但不看暂存区），暂存区核查只能用 `git diff --cached --name-only`。
+- 仓库工作分支可能被其他会话（R50/R51 等）切走——跨会话提交先 `git branch --show-current` 确认，必要时 checkout 本任务的 `feat/security-case-response-v2`，提交推送后切回。
 - push 备忘：GitHub 直连时好时坏（443 reset / HTTP2 framing / remote hung up），失败就退避重试；"Everything up-to-date" 可能是失败后的误导信息，**以 `git rev-parse origin/feat/security-case-response-v2` 对照本地分支头确认是否真已推送**。
