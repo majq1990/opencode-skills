@@ -1,0 +1,73 @@
+{
+  "_comment": "实施交付物（建表/升级/回滚 SQL）生成与校验规则。来源=工程中心现行数据库设计约定，换项目只改本文件。",
+  "version": "1.0.0",
+  "dialect": "MySQL 8.0",
+  "table": {
+    "allowed_prefixes": ["t_biz_", "td_biz_", "dim_", "fact_", "log_", "sys_", "tmp_"],
+    "prefix_semantics": {
+      "t_biz_": "业务主表",
+      "td_biz_": "业务明细表",
+      "dim_": "维度表",
+      "fact_": "事实表",
+      "log_": "日志/审计表",
+      "sys_": "配置/字典表",
+      "tmp_": "临时/中间表"
+    },
+    "deprecated_prefixes": ["tb_", "tbl_", "table_", "t_", "proj_"],
+    "max_length": 48,
+    "case_style": "snake_case",
+    "default_charset": "utf8mb4",
+    "default_collate": "utf8mb4_general_ci",
+    "default_engine": "InnoDB",
+    "require_comment": true
+  },
+  "column": {
+    "max_length": 32,
+    "case_style": "snake_case",
+    "primary_key_convention": "id，bigint(20) unsigned NOT NULL AUTO_INCREMENT",
+    "audit_columns": [
+      { "name": "create_time", "type": "datetime", "null": false, "default": "CURRENT_TIMESTAMP", "comment": "创建时间" },
+      { "name": "update_time", "type": "datetime", "null": false, "default": "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP", "comment": "更新时间" },
+      { "name": "creator", "type": "varchar(64)", "null": true, "default": null, "comment": "创建人" },
+      { "name": "updater", "type": "varchar(64)", "null": true, "default": null, "comment": "更新人" }
+    ],
+    "soft_delete": { "name": "is_deleted", "type": "tinyint(1)", "null": false, "default": "0", "comment": "删除标记 0否 1是" }
+  },
+  "index": {
+    "primary": "PRIMARY KEY (`id`)",
+    "unique_prefix": "uk_",
+    "normal_prefix": "idx_",
+    "max_columns": 5
+  },
+  "naming_violation_levels": {
+    "deprecated_prefix": "P0",
+    "camel_or_upper": "P0",
+    "leading_or_trailing_underscore": "P0",
+    "digit_first": "P0",
+    "too_long": "P0",
+    "mysql_reserved_word": "P0",
+    "double_underscore": "P1",
+    "semantic_not_matched": "P1",
+    "unregistered_abbreviation": "P1",
+    "soft_keyword": "P2"
+  },
+  "mysql_reserved_words": "add all alter and any as asc before begin between bigint binary blob both by call cascade case change char character check collate column condition constraint continue convert create cross current_date current_time current_timestamp current_user cursor database databases day_hour day_microsecond day_minute day_second dec decimal declare default delayed delete desc describe deterministic distinct distinctrow div double drop dual each else elseif enclosed escaped exists exit explain false fetch float float4 float8 for force foreign from fulltext grant group having high_priority hour_microsecond hour_minute hour_second if ignore in index infile inner inout insensitive insert int int1 int2 int3 int4 int8 integer interval into is iterate join key keys kill leading leave left like limit linear lines load localtime localtimestamp lock long longblob longtext loop low_priority match maxvalue mediumblob mediumint mediumtext middleint minute_microsecond minute_second mod modifies natural not null numeric on optimize option optionally or order out outer outfile precision primary procedure purge range read reads real references regexp release rename repeat replace require restrict return revoke right rlike schema schemas second_microsecond select sensitive separator set show smallint spatial specific sql sqlexception sqlstate sqlwarning sql_big_result sql_calc_found_rows sql_small_result ssl starting straight_join table terminated then tinyblob tinyint tinytext to trailing trigger true undo union unique unlock unsigned update usage use using utc_date utc_time utc_timestamp values varbinary varchar varcharacter varying when where while with write xor year_month zerofill",
+  "soft_keywords": "status type value name level source comment data date datetime timestamp user size format count sum avg min max role path start end state action",
+  "abbreviation_whitelist": "id ip url uri uid guid uuid sn no qty amt pct ts ms http https json xml sql db os cpu mem disk",
+  "semantic_dictionary": {
+    "primary_key": { "prefix_or_suffix": ["id"], "note": "主键用 id 或 <表名去前缀>_id" },
+    "foreign_key": { "suffix": ["_id"], "note": "外键用 <被引用表去前缀>_id" },
+    "time": { "suffix": ["_time", "_at", "_date"] },
+    "boolean": { "prefix": ["is_", "has_", "can_"] },
+    "amount": { "suffix": ["_amount", "_amt", "_fee"] },
+    "status": { "suffix": ["_status", "_state"] },
+    "quantity": { "suffix": ["_count", "_num", "_qty"] },
+    "name": { "suffix": ["_name"] },
+    "code": { "suffix": ["_code"] },
+    "remark": { "suffix": ["_remark", "_desc"] }
+  },
+  "compatibility_notes": [
+    "Oracle 8i 及以下标识符上限 30 字符，同时交付 Oracle 版本时字段名需 ≤30。",
+    "跨库移植场景避免使用 soft_keywords 中的词作为字段名（不阻断，标 P2）。"
+  ]
+}

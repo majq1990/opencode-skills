@@ -1,0 +1,73 @@
+{
+  "project": "自测示例项目",
+  "db_name": "demo_db",
+  "changelog_version": "v0.1.0",
+  "tables": [
+    {
+      "name": "t_biz_demo",
+      "comment": "示例主表",
+      "columns": [
+        {
+          "name": "demo_code",
+          "type": "varchar(64)",
+          "null": false,
+          "default": null,
+          "comment": "示例编码",
+          "unique": true
+        },
+        {
+          "name": "demo_name",
+          "type": "varchar(128)",
+          "null": false,
+          "default": null,
+          "comment": "示例名称"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uk_demo_code",
+          "columns": [
+            "demo_code"
+          ],
+          "unique": true
+        }
+      ],
+      "seed": [
+        {
+          "demo_code": "D001",
+          "demo_name": "示例数据"
+        }
+      ]
+    }
+  ],
+  "upgrade": {
+    "from_version": "v0.0.9",
+    "statements": [
+      "ALTER TABLE t_biz_demo ADD COLUMN remark VARCHAR(255) NULL COMMENT '备注'"
+    ],
+    "rollback": [
+      "ALTER TABLE t_biz_demo DROP COLUMN remark"
+    ]
+  },
+  "deploy": {
+    "app_name": "demo-app",
+    "java_home": "/usr/lib/jvm/java-8-openjdk",
+    "package": "demo-app.jar",
+    "port": 8080,
+    "service_user": "appuser",
+    "deploy_dir": "/opt/demo-app",
+    "log_dir": "/opt/demo-app/logs"
+  },
+  "middleware": {
+    "app": {
+      "port": 8080,
+      "max_pool": 10
+    },
+    "nginx": {
+      "upstream": "demo_app",
+      "upstream_port": 8080,
+      "server_name": "demo.example.com",
+      "root": "/opt/demo-app/web"
+    }
+  }
+}

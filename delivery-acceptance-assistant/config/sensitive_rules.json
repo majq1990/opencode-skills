@@ -1,0 +1,18 @@
+{
+  "_comment": "敏感信息扫描规则：regex + 脱敏方式。allowlist_files 内的文件跳过扫描。",
+  "version": "1.0.0",
+  "scan": {
+    "text_extensions": [".txt", ".md", ".csv", ".json", ".xml", ".yml", ".yaml",
+                        ".html", ".htm", ".sql", ".ini", ".conf", ".log"]
+  },
+  "patterns": [
+    { "id": "id_card", "regex": "(?<![0-9Xx])[1-9]\\d{5}(?:19|20)\\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])\\d{3}[0-9Xx](?![0-9Xx])", "mask": "keep_first6_keep_last4" },
+    { "id": "phone_mobile", "regex": "(?<![0-9])1[3-9]\\d{9}(?![0-9])", "mask": "keep_first3_keep_last4" },
+    { "id": "bank_card", "regex": "(?<![0-9])62(?:\\d{14,17})(?![0-9])", "mask": "keep_first4_keep_last4" },
+    { "id": "password_kv", "regex": "(?i)(password|passwd|pwd|密码|口令)[\\s]*[:=：][\\s]*[^\\s,',;\"）)]{4,}", "mask": "full" },
+    { "id": "private_key", "regex": "-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----", "mask": "full" },
+    { "id": "intranet_ip", "regex": "(?<![0-9.])(?:10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|192\\.168\\.\\d{1,3}\\.\\d{1,3}|172\\.(?:1[6-9]|2\\d|3[01])\\.\\d{1,3}\\.\\d{1,3})(?![0-9.])", "mask": "keep_first2" },
+    { "id": "email", "regex": "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "mask": "keep_first2" }
+  ],
+  "allowlist_files": ["*.md", "references/**", "docs/**"]
+}

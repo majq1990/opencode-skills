@@ -1,0 +1,53 @@
+{
+  "_comment": "自测用迷你项目档案",
+  "project": {
+    "name": "自测示例项目",
+    "code": "TEST-SAMPLE",
+    "customer": "测试建设单位",
+    "our_side": "自测承建单位",
+    "pm": "自测项目经理"
+  },
+  "acceptance_criteria": {
+    "format_required": true,
+    "naming_required": true,
+    "sensitive_scan_required": true,
+    "signature_required_items": [
+      "报审表"
+    ]
+  },
+  "deliverable_list": [
+    {
+      "id": "B-1",
+      "name": "开工申请单",
+      "format": "docx",
+      "required": true,
+      "owner": "项目管理",
+      "deadline": "2026-08-10"
+    },
+    {
+      "id": "B-2",
+      "name": "开工报告",
+      "format": "docx",
+      "required": true,
+      "owner": "项目管理",
+      "deadline": "2026-08-15"
+    },
+    {
+      "id": "B-3",
+      "name": "项目实施方案",
+      "format": "docx",
+      "required": true,
+      "owner": "实施",
+      "deadline": "2026-08-20"
+    },
+    {
+      "id": "B-6",
+      "name": "人员资质报审表",
+      "format": "pdf",
+      "required": true,
+      "owner": "项目管理",
+      "deadline": "2026-08-25"
+    }
+  ],
+  "extra_constraints": {}
+}

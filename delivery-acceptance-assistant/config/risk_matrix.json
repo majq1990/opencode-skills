@@ -1,0 +1,29 @@
+{
+  "_comment": "风险分级矩阵。score = probability * impact，落到 level。用于风险登记册自动分级。",
+  "version": "1.0.0",
+  "probability": {
+    "1": "极低", "2": "较低", "3": "中等", "4": "较高", "5": "极高"
+  },
+  "impact": {
+    "1": "轻微：不影响里程碑", "2": "较小：单点返工<1人日",
+    "3": "中等：单模块返工 1-3 人日", "4": "较大：影响里程碑或需客户协调",
+    "5": "严重：项目延期/验收受阻/数据丢失"
+  },
+  "thresholds": [
+    { "min": 20, "level": "极高", "color": "red", "action": "立即上报项目经理，24h 内出应对方案，纳入周报红色项" },
+    { "min": 12, "level": "高",   "color": "orange", "action": "3 日内出应对方案，指定责任人跟踪" },
+    { "min": 6,  "level": "中",   "color": "yellow", "action": "列入项目风险台账，周例会复盘" },
+    { "min": 3,  "level": "低",   "color": "blue",  "action": "登记观察，里程碑前复查" },
+    { "min": 0,  "level": "极低", "color": "green", "action": "仅登记，无需专项动作" }
+  ],
+  "escalation": {
+    "_comment": "满足任一条件即升级，无论分数多少",
+    "conditions": [
+      { "id": "blocks_acceptance", "desc": "直接阻断验收或终验", "escalate_to": "项目经理+部门负责人" },
+      { "id": "affects_data", "desc": "涉及数据丢失或数据安全", "escalate_to": "项目经理+技术支持部负责人" },
+      { "id": "affects_schedule", "desc": "预计影响里程碑>3个工作日", "escalate_to": "项目经理" },
+      { "id": "customer_related", "desc": "需客户方决策或协调", "escalate_to": "项目经理+商务" }
+    ]
+  },
+  "default_owner_departments": ["项目管理", "研发", "测试", "实施", "运维", "技术支持"]
+}

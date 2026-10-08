@@ -1,0 +1,37 @@
+{
+  "_comment": "交付文件命名规范。check 为 Python 正则（对文件名，忽略大小写），命中即报 naming 问题。",
+  "version": "1.0.0",
+  "recommended_pattern": "<交付物编号>_<交付物名称>_v<主>.<次>_<YYYYMMDD>.<ext>",
+  "rules": {
+    "no_copy_suffix": {
+      "check": "(副本|复件|拷贝|copy|backup)",
+      "desc": "不得带副本后缀",
+      "advice": "确认最新版后删除副本，只保留唯一有效版本"
+    },
+    "no_final_marker": {
+      "check": "(最终版|最终|final|定稿)",
+      "desc": "不得用「最终版/最终」作为版本标识",
+      "advice": "用日期+版本号：xxx_v1.0_20260910.docx"
+    },
+    "no_whitespace": {
+      "check": "\\s",
+      "desc": "文件名不得含空格",
+      "advice": "用下划线替代空格"
+    },
+    "no_temp_prefix": {
+      "check": "^(~\\$|\\.|#|temp_|tmp_|新建|未命名)",
+      "desc": "不得以临时/未命名前缀开头",
+      "advice": "重命名为规范的交付文件名"
+    },
+    "no_double_ext": {
+      "check": "\\.(docx|doc|xlsx|xls|pptx|ppt|pdf|jpg|png)\\.[a-z0-9]{1,4}$",
+      "desc": "不得有双重扩展名",
+      "advice": "确认真实格式后保留单一扩展名"
+    },
+    "no_multiple_version_tag": {
+      "check": "(v\\d+[._]?v\\d+|_v\\d+.*_v\\d+)",
+      "desc": "不得同时携带多个版本号",
+      "advice": "只保留一个版本号，历史版本移出交付目录"
+    }
+  }
+}

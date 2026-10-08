@@ -1,0 +1,28 @@
+{
+  "_comment": "交付物审查规则：级别、开关与说明。换项目只调 level/enabled，不改脚本。",
+  "version": "1.0.0",
+  "rules": {
+    "completeness": { "enabled": true, "level": "Critical", "desc": "验收清单要求但目录缺失" },
+    "sensitive": { "enabled": true, "level": "Critical", "desc": "身份证/手机号/银行卡/密码/私钥/内网IP/邮箱" },
+    "empty_file": { "enabled": true, "level": "High", "desc": "零字节文件" },
+    "format_mismatch": { "enabled": true, "level": "High", "desc": "材料格式与验收标准不符" },
+    "forbidden_ext": { "enabled": true, "level": "High", "desc": ".tmp/.log/.bak 等禁入扩展名" },
+    "naming": { "enabled": true, "level": "Medium", "desc": "副本/最终版/空格/临时前缀/双扩展名/多版本号" },
+    "oversize": { "enabled": true, "level": "Medium", "desc": "单文件超大小上限" },
+    "sla_overdue": { "enabled": true, "level": "Medium", "desc": "超提交时限" },
+    "cross_reference": { "enabled": true, "level": "Low", "desc": "正文引用的交付物编号不在清单内" },
+    "duplicate_version": { "enabled": true, "level": "Low", "desc": "同一交付物多版本并存" }
+  },
+  "forbidden_extensions": [".tmp", ".log", ".bak", ".cache", ".swp", ".obj", ".class"],
+  "oversize_max_mb": 100,
+  "level_definitions": {
+    "Critical": "阻断验收：必须闭环后才能进入验收（缺失必备件、敏感信息）",
+    "High": "高危：验收方大概率退回（空文件、格式不符、禁入扩展名）",
+    "Medium": "中危：形式不合规，需要整改（命名、超限、超期）",
+    "Low": "提示：不影响验收，建议优化（交叉引用、重复版本）"
+  },
+  "report": {
+    "title": "交付物审查报告",
+    "disclaimer": "结论仅针对材料齐套性与形式合规性，不构成对文档内容实质质量的结论。"
+  }
+}

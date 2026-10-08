@@ -1,0 +1,33 @@
+{
+  "_comment": "项目档案模板：验收清单（deliverable_list）+ 验收标准（acceptance_criteria）+ 附加约束。换项目复制本文件改内容。",
+  "project": {
+    "name": "示例项目名称",
+    "code": "EXAMPLE-001",
+    "customer": "建设单位名称",
+    "our_side": "北京数字政通科技股份有限公司",
+    "pm": "项目经理姓名",
+    "period_start": "2026-01-01",
+    "period_end": "2026-12-31"
+  },
+  "acceptance_criteria": {
+    "_comment": "验收标准——三源之一。scope 内逐项对照交付物清单核查。",
+    "format_required": true,
+    "signature_required_items": ["报审表", "申请表", "报告"],
+    "naming_required": true,
+    "sensitive_scan_required": true,
+    "notes": "报审表须盖章；测试报告须含用例通过率与遗留问题清单。"
+  },
+  "deliverable_list": [
+    { "id": "B-1", "name": "开工申请单", "format": "docx", "required": true, "owner": "项目管理", "deadline": "2026-08-10", "note": "开工前提交" },
+    { "id": "B-2", "name": "开工报告", "format": "docx", "required": true, "owner": "项目管理", "deadline": "2026-08-15", "note": "" },
+    { "id": "B-3", "name": "项目实施方案", "format": "docx", "required": true, "owner": "实施", "deadline": "2026-08-20", "note": "报审表须建设单位签章" },
+    { "id": "B-4", "name": "需求分析报审表", "format": "docx", "required": true, "owner": "实施", "deadline": "2026-08-25", "note": "" },
+    { "id": "B-5", "name": "概要设计报审表", "format": "docx", "required": true, "owner": "实施", "deadline": "2026-09-01", "note": "" },
+    { "id": "B-6", "name": "人员资质报审表", "format": "docx", "required": true, "owner": "项目管理", "deadline": "2026-08-25", "note": "" },
+    { "id": "B-7", "name": "用户测试报告", "format": "docx", "required": true, "owner": "实施", "deadline": "2026-10-01", "note": "须含用例通过率" }
+  ],
+  "extra_constraints": {
+    "_comment": "附加约束：如归档格式、命名模板、是否允许根目录直放文件等。",
+    "naming_pattern": "<交付物编号>_<交付物名称>_v1.0_YYYYMMDD.<ext>"
+  }
+}
