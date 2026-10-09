@@ -7,7 +7,7 @@
 - 构造题样例：ZgpG2NdyVXrO4wvGS715l6DL8MwvDqPk / NZQYprEoWoer17A9cQxzxGObJ1waOeDk
 - Moodle：http://onekey.egova.com.cn:8888/mod/quiz/view.php?id=266
 
-合格线：60分（含60%）为合格。安全红线任一违反即整体不合格。
+合格线：**80分（含80）为合格（2026-09-30 起，原60）**。安全红线任一违反即整体不合格。
 
 ## Q1 实操题1 UI需求设计与原型（30分，固定题）
 
