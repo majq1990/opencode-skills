@@ -23,7 +23,8 @@ def load_grades():
     for gi in range(4):
         for q in ["Q1", "Q2", "Q3"]:
             files.append(os.path.join(GDIR, f"G{gi}_{q}.json"))
-    for gi in ["INCR0", "INCR1"]:
+    for gi in ["INCR0", "INCR1", "NEW", "NEW2A", "NEW2B", "NEW3A", "NEW3B", "NEW4", "NEW5",
+               "NEW6", "NEW7", "NEW8A", "NEW8B", "NEW8C", "NEW8D", "NEW9A", "NEW9B", "NEW9C"]:
         for q in ["Q1", "Q2", "Q3"]:
             files.append(os.path.join(GDIR, f"{gi}_{q}.json"))
     for fp in files:
@@ -138,9 +139,7 @@ def main():
         for slot, q, maxmark, _ in SLOTS:
             flag = g.get(q, {}).get("flag", "")
             if "缺交" in flag and marks[slot] == 0:
-                results.append({"attempt": att, "slot": slot, "skip": "缺交"})
-                n_skip += 1
-                continue
+                c = f"<p>{_html.escape(name)}{KEYS[slot][3]}：0/{maxmark} 分，该题未提交。</p>"
             try:
                 form = fetch_form(att, slot)
             except Exception as e:
@@ -155,6 +154,22 @@ def main():
                 print(f"FAIL 预检 attempt={att} slot={slot} quba={form['quba']} maxmark={mm}",
                       flush=True)
                 continue
+            # 跳过 Moodle 已有分数的 slot（防止覆盖人工改分/已评分记录）
+            # --force 时仅允许覆盖当前为 0 的 slot（如空卷误判后补传材料的重写）
+            cur = form["fields"].get(f"q{form['quba']}:{slot}_-mark")
+            if cur is not None and str(cur).strip() != "":
+                cur_v = None
+                try:
+                    cur_v = float(cur)
+                except Exception:
+                    pass
+                if "--force" in sys.argv and cur_v == 0:
+                    pass  # 允许覆盖 0 分
+                else:
+                    results.append({"attempt": att, "slot": slot, "skip": f"Moodle已有分 {cur}"})
+                    n_skip += 1
+                    print(f"SKIP attempt={att} slot={slot} Moodle已有分={cur}", flush=True)
+                    continue
             c = slot_comment(slot, g, name, direction)
             if commit:
                 try:
