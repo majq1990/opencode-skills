@@ -2,7 +2,7 @@
 name: skill-hub
 description: 公司 skill 服务器（skills-manager 企业源）总入口：按需求检索团队 skill 池、下载装载执行、引导安装。Use when 用户想找 skill、"有没有能做 X 的 skill"、不确定有没有现成 skill、想装/启用服务器上的某个 skill、想看公司 skill 库有什么。用户已明确点名本机已安装的 skill 时不经过本 skill；公网 skills.sh 生态找 skill 走 find-skills；向服务器发布/上传 skill 走 skill-publisher。触发词：找skill、找个skill、有没有skill、skill库、技能库、装个skill、企业源、公司skill。
 metadata:
-  version: 1.0.0
+  version: 1.0.2
   author: majianquan
   category: global
   visibility: global
@@ -81,7 +81,12 @@ python3 "<本skill目录>/scripts/skill_server.py" download <name> --tmp
 
 成功后脚本输出入口路径 → **Read 该 SKILL.md → 按其内容执行**，本次会话立即可用。
 
-**持久装载（用户明确要装到某个工具时）：**
+**正规分发路径（推荐，优先于脚本直装）：** 本机装有 skills-manager 时，引导用户在
+skills-manager「发现」页把目标 skill 导入中央库，再由应用部署到各客户端——workbuddy、
+dsh、zcode、codex、opencode、autoclaw、codebuddy 等（以各人启用的工具为准），后续更新
+也由应用负责。脚本直连下载只用于：本机没有 skills-manager、或只需当次临时装载。
+
+**脚本直连装载（兜底）：**
 
 ```bash
 python3 "<本skill目录>/scripts/skill_server.py" download <name> --tool zcode      # zcode / opencode / workbuddy / dsh
@@ -126,3 +131,13 @@ python3 "<本skill目录>/scripts/skill_server.py" download <name> --dest "<用�
 | "无法连接 skill 服务器" | 检查网络/VPN，稍后重试 |
 | "下载内容不是合法 zip 包" | 如实报告版本与 skill 名，建议用户到 skills-manager 里核对该 skill |
 | --tool 找不到目录 | 已自动临时装载；转述脚本给出的持久化建议 |
+
+---
+
+<!-- feedback-channel v1 -->
+## 反馈渠道
+
+本技能已纳入企业反馈监控。使用中如遇「连续多轮仍未解决同一类问题」、「工具执行报错」，或你想主动反馈：
+
+- 在装有 feedback-monitor 插件的 agent（opencode / Claude Code / 腾讯 WorkBuddy）中，会自动采集并（脱敏后）上报到企业反馈平台；
+- 也可随时在 **skills-manager 应用 →「反馈 / 建议」** 手动提交，会自动记录关联技能与提交人。
