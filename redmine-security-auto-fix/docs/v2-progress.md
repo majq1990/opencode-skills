@@ -17,7 +17,7 @@
 ## 与 ADR 的偏差记录
 
 1. 移植脚本从计划的 4 个扩为 5 个：gen_security_report.py 一并移植——track_case_state 依赖其产出的 case_state 文件，且"责任人待办"由它生成，缺它则链路断。
-2. 刘锐的 push_security_report.py 未移植：其预览/确认逻辑与既有 notify_dingtalk.py 及 notify.json 的 manual_confirm 门禁重叠；推送统一走既有链路（测试目标先行）。
+2. 刘锐的 push_security_report.py 未移植：其预览/确认逻辑与既有人工复核门禁重叠；推送统一走既有链路（测试目标先行）。（注：notify_dingtalk.py 与 notify.json 已于 2026-10-10 按用户要求移除，推送改纯人工。）
 3. 规则配置放 config/security_case/*.json（沿用"改 JSON 不碰代码"），未并入 config.yaml 的 security_case 节；config.yaml 仍只管 v1.1 既有密钥/连接。triage_rules 的 approved_by 已改为"待批准"（原值是提交者姓名，不能带入生产配置），阈值数值未动。
 4. CVE 情报主链路从 vuln-response 改为服务器 sec_kb 关注面定向抓取（ADR 第 7 节），`collect_cve_intel.py` 降级为服务器不可达时的离线兜底，未删除。
 5. 情报不再推送钉钉「安全漏洞台账」AI 表格：该表字段要求与情报内容不匹配，且无 OS 命中，见 ADR 第 7 节决策 B。

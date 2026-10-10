@@ -33,7 +33,7 @@
 | 责任人待办 | ❌ | ❌ | ✅ todo_*.md（按 owner 分组） |
 | 确认后推送 | ❌ | ⚠️ 人工确认门禁（publish 前审稿） | ✅ push_security_report.py（人工确认门禁+只读单向） |
 | 次日滚动跟踪 | ❌ | ❌ | ✅ track_case_state.py（超期/进行中/待验证→次日提醒） |
-| 换项目只改配置 | ⚠️ config.yaml 密钥集中 | ⚠️ 少量硬编码默认值 | ✅ config/ 全量外置（asset/cve/scanner/notify/triage_rules） |
+| 换项目只改配置 | ⚠️ config.yaml 密钥集中 | ⚠️ 少量硬编码默认值 | ✅ config/ 全量外置（asset/cve/scanner/triage_rules） |
 
 ## 4. 合并方案（增量，不破坏 v1.1.0 语义）
 

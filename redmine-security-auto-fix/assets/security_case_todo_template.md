@@ -23,4 +23,4 @@
 
 ---
 
-生成脚本：`scripts/gen_security_report.py` ｜ 待复核后经 `scripts/notify_dingtalk.py` / 钉钉机器人推送（测试目标先行）
+生成脚本：`scripts/gen_security_report.py` ｜ 待复核后经人工推送（测试目标先行）

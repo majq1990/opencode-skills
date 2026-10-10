@@ -458,7 +458,7 @@ python scripts/track_case_state.py --date <date+1> --state work/security_case/ou
 
 ### 配置与产物位置
 
-- 规则配置：`config/security_case/{asset,scanner,notify,triage_rules,cve_intel}.json`——只写
+- 规则配置：`config/security_case/{asset,scanner,triage_rules,cve_intel}.json`——只写
   环境变量引用名，禁止写入真实 Key/Token；"换项目只改配置"即改这些 JSON。
 - 运行期产物：`work/security_case/{cache,output,progress}/`（已 gitignore，不入库）。
 - 测试：`tests/test_security_case_triage.py`、`tests/test_security_case_report_track.py`
