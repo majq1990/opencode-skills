@@ -161,12 +161,26 @@ def _render_vulnerability_section(vulns, section_number):
         }.get(vuln['level'], vuln['level'])
         
         responsibility = vuln.get("responsibility") or {}
+        ledger_line = ""
+        if vuln.get("ledger"):
+            hit = vuln["ledger"]
+            parts = [f"状态「{hit.get('状态') or '未知'}」"]
+            if hit.get("CVSS"):
+                parts.append(f"CVSS {hit['CVSS']}")
+            if hit.get("危险程度"):
+                parts.append(str(hit["危险程度"]))
+            if hit.get("修复文档链接"):
+                parts.append(f"[修复文档]({hit['修复文档链接']})")
+            ledger_line = f"""**台账登记**
+安全漏洞台账已登记该 CVE（{' · '.join(parts)}），处理进展以台账为准。
+
+"""
         md += f"""### {section_number}.{i} {vuln['name']}（{level_display}）
 
 **责任判定**
 {responsibility.get('owner_name', '研发中心')}，{responsibility.get('reason', '应用实现确认')}。
 
-"""
+{ledger_line}"""
         
         if vuln.get('description'):
             md += f"""**漏洞描述**

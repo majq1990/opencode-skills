@@ -252,8 +252,16 @@ python scripts\sec_kb_bridge.py "<查询词>" --top-cases 8 --top-docs 5
 
 ## 建议优先级
 
+**检索顺序：台账第一**。处理任何漏洞前，先查《安全漏洞台账》多维表
+（`scriptsuln_ledger.py lookup`，表"CVE 跟踪"）——CVE 已登记且带
+处理方案/状态的，直接沿用台账（来源标记 `ledger`，置顶展示），并跳过
+互联网搜索；台账没有的，才走下面的内部检索与搜索兜底。日常 CVE 获取
+也以台账为准（`python scriptsuln_ledger.py recent --days 7`）。
+
 每条漏洞按以下顺序组织建议：
 
+0. **安全漏洞台账**登记（状态/修复文档/关联案件），来源标记 `ledger`——
+   命中即置顶，且免互联网搜索
 1. 当前漏洞报告自带建议，来源标记 `report`
 2. **安全池**历史案件的实际处理操作，来源标记 `sec_pool_history`
 3. **安全池**文档修复操作，来源标记 `sec_pool_kb`

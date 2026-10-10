@@ -202,6 +202,19 @@ def main() -> None:
     for row in enriched:
         row["responsibility"] = classify_vulnerability(row)
 
+    # 台账第一优先：安全漏洞台账已登记的 CVE 直接沿用其方案/状态，
+    # 并压掉互联网搜索；台账不可达时降级继续（不阻塞主流程）
+    ledger_summary = None
+    try:
+        from vuln_ledger import attach_to_vulns
+        ledger_summary = attach_to_vulns(enriched)
+        if ledger_summary:
+            print(f"台账命中 {ledger_summary['matched']} 个 CVE，"
+                  f"据此免搜 {ledger_summary['suppressed_web_search']} 条")
+    except Exception as exc:
+        print(f"[ledger] 台账查询不可用，跳过（{type(exc).__name__}: {exc}）",
+              file=sys.stderr)
+
     # v2.0 可选后处理：三源研判对照（默认关闭，关闭时与 v1.1.0 行为一致）
     triage_summary = None
     triage_section = ""
