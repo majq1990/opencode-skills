@@ -132,6 +132,73 @@ class InternalAddressMaskTests(unittest.TestCase):
         text = "参考 https://faq.egova.com.cn:7787/issues/520604 与 223.5.5.5"
         self.assertEqual(_mask_internal_addresses(text), text)
 
+    def test_mask_works_when_ip_follows_chinese_text(self):
+        """中文后紧跟的内网 IP 也必须遮——\b 在汉字与数字之间不成立。
+
+        505980 端到端实测漏过 3 处："配置的接口ip是10.10.101.4"、
+        "只允许127.0.0.1"、"referer为127.0.0.2时拒绝访问"。
+        """
+        cases = {
+            "配置的接口ip是10.10.101.4，与实际不符合": ["10.10.101.4"],
+            "启用csrf检测，并设置只允许127.0.0.1，当referer为127.0.0.2时拒绝访问": [
+                "127.0.0.1",
+                "127.0.0.2",
+            ],
+            "拦截规则的回源地址为192.168.31.7，需同步修改": ["192.168.31.7"],
+            "测试环境172.16.9.20:8080已下线": ["172.16.9.20:8080"],
+        }
+        for text, leaked_list in cases.items():
+            masked = _mask_internal_addresses(text)
+            for leaked in leaked_list:
+                self.assertNotIn(leaked, masked, text)
+            self.assertEqual(masked.count("[内网地址已省略]"), len(leaked_list), text)
+            # 除了地址本身，上下文一个字符都不能丢
+            stripped = masked.replace("[内网地址已省略]", "")
+            expected = text
+            for leaked in leaked_list:
+                expected = expected.replace(leaked, "")
+            self.assertEqual(stripped, expected, text)
+
+    def test_mask_does_not_eat_version_numbers_or_longer_ips(self):
+        """新边界不能把版本号误判成 IP，也不能把 110.x 的后半段切出来遮。"""
+        for text in ("测试版本 1.7.3.93", "spring-boot 2.7.17", "CVSS 7.5.1.0"):
+            self.assertEqual(_mask_internal_addresses(text), text)
+        self.assertEqual(
+            _mask_internal_addresses("段110.10.101.4不在私网段"),
+            "段110.10.101.4不在私网段",
+        )
+        self.assertEqual(
+            _mask_internal_addresses("目标10.10.101.45已修复"),
+            "目标[内网地址已省略]已修复",
+        )
+
+    def test_report_text_fields_are_masked_in_doc(self):
+        """漏洞描述/危害/测试过程同样不能带内网地址出去。"""
+        md = generate_doc_markdown(
+            {
+                "issue_id": "900002",
+                "vulns": [
+                    {
+                        "name": "SQL 注入",
+                        "level": "high",
+                        "description": "复现：访问内网控制台10.9.8.7的查询接口即可触发",
+                        "harm": "可读取172.20.1.5上的业务库",
+                        "test_process": "在192.168.0.66上抓包确认",
+                        "recommendations": [
+                            {
+                                "source": "sec_pool_history",
+                                "suggestion": "研发已处理，接口ip是10.10.101.4，刷新接口即可",
+                            }
+                        ],
+                    }
+                ],
+            },
+            "https://faq.egova.com.cn:7787/issues/900002",
+        )
+        for leaked in ("10.9.8.7", "172.20.1.5", "192.168.0.66", "10.10.101.4"):
+            self.assertNotIn(leaked, md)
+        self.assertGreaterEqual(md.count("[内网地址已省略]"), 4)
+
     def test_recommendation_text_is_masked_in_doc(self):
         md = generate_doc_markdown(
             {

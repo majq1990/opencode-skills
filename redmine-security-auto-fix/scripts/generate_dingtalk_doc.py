@@ -40,13 +40,21 @@ def _redact_sensitive_text(value):
 # 安全池历史案件的"测试验证/研发完成"原文常把内网地址写进正文
 # （"测试版本：1.7.3.93 http://10.255.18.31:8080/bigdata-api/..."），这些原文被当作
 # 先例引进方案时，地址不能跟着出去。公网地址和域名不动，只遮私网/环回/链路本地段。
+#
+# 边界不能用 \b：Python 的 \w 把汉字也算单词字符，"配置的接口ip是10.10.101.4" 里
+# "是"和"1"之间不存在 \b，中文后紧跟的内网 IP 会整段漏遮。505980 端到端实测漏了
+# 3 处（10.10.101.4、127.0.0.1、127.0.0.2）进对外方案。改成只看前后是不是数字
+# 或点，中文、英文、标点、URL 分隔符都能正确触发，同时不会把 110.x 的后半段
+# 或 1.7.3.93 这种版本号误判成 IP。
 _INTERNAL_IP_PATTERN = re.compile(
-    r"\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+    r"(?<![\d.])"
+    r"(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
     r"|127\.\d{1,3}\.\d{1,3}\.\d{1,3}"
     r"|169\.254\.\d{1,3}\.\d{1,3}"
     r"|192\.168\.\d{1,3}\.\d{1,3}"
     r"|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}"
     r"|0\.0\.0\.0)"
+    r"(?!\d)"
     r"(?::\d{1,5})?"
 )
 
@@ -61,14 +69,24 @@ def _clean_reference_text(value):
     return _redact_sensitive_text(_mask_internal_addresses(value))
 
 
+def _clean_report_text(value):
+    """报告原文（漏洞描述/危害/测试过程）进对外方案前：去凭据 + 遮内网地址。
+
+    扫描报告偶尔会把内网地址直接写进描述正文（控制台地址、复现步骤里的目标
+    主机），这些和先例原文一样不能出现在对外公文里。
+    """
+    return _mask_internal_addresses(_redact_sensitive_text(value))
+
+
 def _sanitize_description(value, limit=400):
-    """案件描述摘录：去 HTML、去链接、去凭据，只留排查线索。
+    """案件描述摘录：去 HTML、去链接、去凭据、遮内网地址，只留排查线索。
 
     描述里常带内网控制台地址和默认账号口令，而方案是对外公文的素材，
     这两类必须挡在发布之前。
     """
     text = re.sub(r"<[^>]+>", " ", str(value or ""))
     text = re.sub(r"https?://\S+", "[链接已省略]", text)
+    text = _mask_internal_addresses(text)
     text = _redact_sensitive_text(text)
     text = re.sub(r"\s+", " ", text).strip()
     return text[:limit]
@@ -251,19 +269,19 @@ def _render_vulnerability_section(vulns, section_number):
         
         if vuln.get('description'):
             md += f"""**漏洞描述**
-{_redact_sensitive_text(vuln['description'])}
+{_clean_report_text(vuln['description'])}
 
 """
         
         if vuln.get('harm'):
             md += f"""**漏洞危害**
-{_redact_sensitive_text(vuln['harm'])}
+{_clean_report_text(vuln['harm'])}
 
 """
         
         if vuln.get('test_process'):
             md += f"""**测试过程**
-{_redact_sensitive_text(vuln['test_process'])}
+{_clean_report_text(vuln['test_process'])}
 
 """
         
