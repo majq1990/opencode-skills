@@ -13,17 +13,60 @@ import sys
 from datetime import datetime
 
 
+# 中文报告写"密码：xxx"比"password:xxx"更常见，冒号/等号都要含全角；
+# 值的终止符也要含全角逗号分号，否则"密码：abc，存在严重问题"会把
+# 后面的正文一起吞掉
+_REDACT_LABELS = (
+    r"password|passwd|pwd|token|secret|licenseKey|cookie|session|jsessionid"
+    r"|account|username|user|login|密码|口令|账号|账户|用户名|密钥"
+)
+_REDACT_PATTERNS = (
+    (
+        re.compile(rf"(?i)({_REDACT_LABELS})(\s*[:=：＝]\s*)[^\s;,;&、，；\"]+"),
+        r"\1\2[REDACTED]",
+    ),
+    (re.compile(r"(?i)(Cookie:\s*)[^\"]+"), r"\1[REDACTED]"),
+    (re.compile(r"(?i)(SESSION|JSESSIONID)(=)[^;\s]+"), r"\1\2[REDACTED]"),
+)
+
+
 def _redact_sensitive_text(value):
     text = str(value or "")
-    patterns = (
-        (r"(?i)(password|passwd|pwd|密码)(\s*[:=]\s*)[^\s;,&]+", r"\1\2[REDACTED]"),
-        (r"(?i)(token|secret|licenseKey)(\s*[:=]\s*)[^\s;,&\"]+", r"\1\2[REDACTED]"),
-        (r"(?i)(Cookie:\s*)[^\"]+", r"\1[REDACTED]"),
-        (r"(?i)(SESSION|JSESSIONID)(=)[^;\s]+", r"\1\2[REDACTED]"),
-    )
-    for pattern, replacement in patterns:
-        text = re.sub(pattern, replacement, text)
+    for pattern, replacement in _REDACT_PATTERNS:
+        text = pattern.sub(replacement, text)
     return text
+
+
+def _sanitize_description(value, limit=400):
+    """案件描述摘录：去 HTML、去链接、去凭据，只留排查线索。
+
+    描述里常带内网控制台地址和默认账号口令，而方案是对外公文的素材，
+    这两类必须挡在发布之前。
+    """
+    text = re.sub(r"<[^>]+>", " ", str(value or ""))
+    text = re.sub(r"https?://\S+", "[链接已省略]", text)
+    text = _redact_sensitive_text(text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:limit]
+
+
+def _render_no_report(no_report):
+    """0 漏洞时的说明块：把"查过什么、为什么是 0"写进方案，别交一份空表。"""
+    if not no_report:
+        return ""
+    lines = [
+        f"> **未解析到漏洞清单**：{no_report.get('reason', '未知原因')}",
+        ">",
+    ]
+    description = _sanitize_description(no_report.get("description"))
+    if description:
+        lines.append(f"> 案件描述摘录（已去链接和凭据，仅作排查线索）：{description}")
+        lines.append(">")
+    lines.append(
+        "> 处理建议：先回 Redmine 案件页确认是否漏传报告附件，"
+        "或把描述中的漏洞明细整理成报告附件后重新执行本流程。"
+    )
+    return "\n".join(lines) + "\n\n"
 
 
 def generate_doc_markdown(vuln_data, issue_url):
@@ -66,7 +109,7 @@ def generate_doc_markdown(vuln_data, issue_url):
     md += f"""
 定制的修复建议：
 
-## 一、修复总览
+{_render_no_report(vuln_data.get("no_report"))}## 一、修复总览
 
 | 优先级 | 风险等级 | 漏洞类型 | 实例数 | 修复建议来源 |
 |---|---|---|---:|---|

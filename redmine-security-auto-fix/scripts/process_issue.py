@@ -80,6 +80,36 @@ def _to_int_like(value) -> int:
         return 0
 
 
+def _diagnose_no_report(
+    attachments: list[dict], parse_results: list[dict], issue: dict
+) -> dict:
+    """0 漏洞时说明"查过了什么、为什么是 0"。
+
+    一类案件根本没传报告附件，漏洞明细只写在案件描述里；另一类附件
+    不是报告（截图、扫描器导出）。这两种都不能交一份只有"共识别 0 类"
+    的空表——读者分不清是没查到还是本案没问题。
+    """
+    parseable = [
+        result
+        for result in parse_results
+        if not result.get("error") and result.get("total")
+    ]
+    if not attachments:
+        reason = "本案没有可下载的附件，漏洞明细只写在案件描述里"
+    elif not parse_results:
+        reason = f"本案 {len(attachments)} 个附件都不是支持解析的报告格式"
+    elif not parseable and all(result.get("error") for result in parse_results):
+        reason = f"{len(parse_results)} 个附件全部解析失败"
+    else:
+        reason = "附件已下载并解析，但未识别出漏洞条目"
+    return {
+        "reason": reason,
+        "attachment_count": len(attachments),
+        "parse_results": parse_results,
+        "description": issue.get("description") or "",
+    }
+
+
 def merge_vulnerabilities(items: list[dict]) -> list[dict]:
     """Merge exact/near-exact names while preserving all report suggestions."""
     merged: dict[str, dict] = {}
@@ -248,6 +278,8 @@ def main() -> None:
     }
     if triage_summary is not None:
         result["asset_triage"] = triage_summary
+    if not enriched:
+        result["no_report"] = _diagnose_no_report(attachments, parse_results, issue)
     result_path = output_dir / f"{args.issue_id}_enriched.json"
     result_path.write_text(
         json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
