@@ -9,6 +9,7 @@ from report_parser import (
     _parse_appscan_pdf,
     _parse_fortify_cwe_top25_pdf,
     _parse_fortify_dev_workbook_pdf,
+    _parse_jianshi_html,
     _parse_osv_table_txt,
     _parse_trivy_table_txt,
     _parse_zap_html,
@@ -284,6 +285,49 @@ org.bouncycastle:bcprov 1.70                         java-archive  GHSA-xxxx-yyy
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class JianshiHtmlTests(unittest.TestCase):
+    """坚石诚信 HTML 报告；重点是别把 JS 渲染页/索引页的标题收成漏洞。"""
+
+    REPORT = """越权
+漏洞描述
+未校验资源归属即可读取他人数据。
+解决办法
+接口层校验 owner。
+敏感信息泄露
+漏洞描述
+响应里带回内部 IP。
+解决办法
+脱敏后返回。
+"""
+
+    def test_parses_blocks_with_description_and_fix(self):
+        rows = _parse_jianshi_html(self.REPORT)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["漏洞名称"], "越权")
+        self.assertIn("资源归属", rows[0]["漏洞描述"])
+        self.assertIn("owner", rows[0]["加固建议"])
+
+    def test_rejects_js_rendered_report_shell(self):
+        """数据全在 script 里、正文只剩标题的扫描页，不能出一条漏洞。"""
+        shell = (
+            "Codex Security 批量扫描报告\n"
+            "生成时间：2026-09-03 16:08 ｜ 共 7 个仓库 ｜ 共 21 个安全问题\n"
+            "21 全部发现\n2 高严重度\n9 中严重度\n10 低严重度\n7 扫描仓库\n"
+        )
+        self.assertEqual(_parse_jianshi_html(shell), [])
+
+    def test_rejects_report_index_page(self):
+        """索引页只有标题和指向别处报告的链接。"""
+        index = (
+            "安全测试报告汇总\n"
+            "以下为五份完整中文报告。原始 Markdown 报告保持不变。\n"
+            "egova-urbanpro-core — 中文安全测试报告\n"
+            "egova-urbanpro-mobile-framework-h5 — 中文安全测试报告\n"
+            "说明：egova-urbanpro-sms-service 下的两个扫描目录为空。\n"
+        )
+        self.assertEqual(_parse_jianshi_html(index), [])
 
 
 class MdPentestReportTests(unittest.TestCase):

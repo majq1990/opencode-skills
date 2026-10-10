@@ -1577,6 +1577,11 @@ def _parse_jianshi_html(text: str) -> list[dict]:
     }
     lines = text.split("\n")
     rows = []
+
+    def _is_next_vuln_name(candidate: str) -> bool:
+        """已经收到过正文段后，再出现关键词行就认为是下一条漏洞名。"""
+        return len(candidate) <= 60 and any(kw in candidate for kw in known_vulns)
+
     i = 0
     while i < len(lines):
         line = lines[i].strip()
@@ -1597,37 +1602,44 @@ def _parse_jianshi_html(text: str) -> list[dict]:
         desc = ""
         fix = ""
         level = ""
+        found_section = False
         j = i + 1
         while j < min(i + 100, len(lines)):
             lj = lines[j].strip()
-            if lj == "漏洞描述":
+            if lj in ("漏洞描述", "解决办法"):
+                found_section = True
+                field = "漏洞描述" if lj == "漏洞描述" else "解决办法"
                 k = j + 1
-                desc_parts = []
+                parts = []
                 while k < min(j + 30, len(lines)):
                     lk = lines[k].strip()
-                    if lk in ("解决办法", "漏洞描述", "漏洞名称", "风险等级", "漏洞链接") or (re.match(r"^\d+$", lk) and len(lk) < 5):
+                    if lk in ("解决办法", "漏洞描述", "漏洞名称", "风险等级", "漏洞链接"):
+                        break
+                    if re.match(r"^\d+$", lk) and len(lk) < 5:
+                        break
+                    # 正文里出现下一条漏洞名就到此为止，否则两条漏洞会被并成一条
+                    if parts and _is_next_vuln_name(lk):
                         break
                     if lk:
-                        desc_parts.append(lk)
+                        parts.append(lk)
                     k += 1
-                desc = " ".join(desc_parts)
+                if field == "漏洞描述":
+                    desc = " ".join(parts)
+                else:
+                    fix = " ".join(parts)
                 j = k
                 continue
-            if lj == "解决办法":
-                k = j + 1
-                fix_parts = []
-                while k < min(j + 30, len(lines)):
-                    lk = lines[k].strip()
-                    if lk in ("解决办法", "漏洞描述", "漏洞名称", "风险等级", "漏洞链接") or (re.match(r"^\d+$", lk) and len(lk) < 5):
-                        break
-                    if lk:
-                        fix_parts.append(lk)
-                    k += 1
-                fix = " ".join(fix_parts)
-                j = k
+            if lj == "漏洞名称" or lj == "风险等级" or lj == "漏洞链接":
+                j += 1
                 continue
+            # 收过正文段之后又遇到关键词行：那是下一条漏洞，前瞻就此打住
+            if found_section and _is_next_vuln_name(lj):
+                break
             j += 1
-        if line:
+        # 只有后面真的跟着"漏洞描述/解决办法"段的才算漏洞条目。JS 渲染的
+        # 扫描报告（数据全在 script 里）和报告索引页只有标题和链接，
+        # 不收就会把"XX批量扫描报告"这种页面标题当成一条漏洞交出去
+        if line and found_section:
             rows.append({"漏洞名称": line, "漏洞描述": desc, "加固建议": fix, "风险等级": "medium"})
             i = j
         else:
