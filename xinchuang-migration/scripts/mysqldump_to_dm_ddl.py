@@ -21,12 +21,16 @@
   1. 反引号 → 双引号（保留含空格/中文的标识符）
   2. 类型映射（VARCHAR 按字符单位声明，规避 DM LENGTH_IN_CHAR=0 截断；
      n > 4000 的列降级为 CLOB）
-  3. AUTO_INCREMENT → IDENTITY(1,1)
+  3. AUTO_INCREMENT → IDENTITY(1,1)，且紧跟类型（DM 要求 IDENTITY 在列注释前）
   4. 去掉 ENGINE/CHARSET/COLLATE/ROW_FORMAT/USING BTREE 等 MySQL 专属子句
   5. 去掉 unsigned / zerofill / CHARACTER SET / COLLATE 列级子句
   6. 去掉 ON UPDATE CURRENT_TIMESTAMP（DM 不支持，改触发器）
   7. 零日期 DEFAULT '0000-00-00' → DEFAULT NULL
-  8. 主键/唯一约束/索引从建表语句中摘出，输出到第二段
+  8. 位字面量 DEFAULT b'1' → DEFAULT 1（DM 不认 MySQL 位字面量）
+  9. 表注释 COMMENT='...' → 独立 COMMENT ON TABLE 语句（DM 不接受行内表注释）
+  10. 主键/唯一约束/索引从建表语句中摘出，输出到第二段；索引名 = 表名 + 原名
+      （MySQL 索引名只在一张表内唯一，DM 按 schema 唯一）
+  11. 同表重复索引、与主键列集合完全相同的唯一约束/索引：识别后跳过并告警
 
 不做的事（需要人工判断，转换器只打标记）：
   - FULLTEXT / SPATIAL 索引
@@ -34,6 +38,11 @@
   - 生成列（GENERATED ALWAYS AS）
   - 带函数默认值（DEFAULT CURRENT_TIMESTAMP 之外的表达式）
   - CREATE TABLE ... LIKE ...（照抄另一张表结构，DM 无此语法）
+  - 存储例程 PROCEDURE/FUNCTION/EVENT/TRIGGER（体内的 DDL 要在达梦侧人工重建）
+
+已实证：2026-10-10 拿 cg155 的 cgdb 真实 dump（5243 张表）转换后在 DM8 V8
+实例上真执行，建表 5243/5243、约束/索引/表注释 8911/8911 零失败。
+详见 references/mysql-to-dm-runbook.md 第六节。
 
 依赖：Python3 标准库，无第三方包。
 编码：Windows 控制台自动 UTF-8。
@@ -169,13 +178,24 @@ _ON_UPDATE_RE = re.compile(r"\bon\s+update\s+current_timestamp\s*(?:\(\s*\d+\s*\
 # 默认值：结尾不加 \b，否则 "'0000-00-00'" 这种带引号的值匹配不上
 #（单引号与后续空格之间不存在单词边界）。
 _DEFAULT_RE = re.compile(
-    r"\bdefault\s+(null|'[^']*'|-?\d+(?:\.\d+)?|current_timestamp)", re.I
+    r"\bdefault\s+(null|'[^']*'|-?\d+(?:\.\d+)?|current_timestamp|[bB]'[01]+')",
+    re.I,
 )
+
+# MySQL 的位字面量 b'101'，达梦不认，按整数值落
+_BIT_LITERAL_RE = re.compile(r"^[bB]'([01]+)'$")
 
 
 def _normalize_default(d: str) -> str:
-    """默认值归一：零日期 → NULL，current_timestamp → CURRENT_TIMESTAMP。"""
+    """默认值归一：零日期 → NULL，current_timestamp → CURRENT_TIMESTAMP。
+
+    bit 字面量 b'1' 转成整数：cgdb 里 bit(1) 列映射成 INT，默认值却原样带着
+    b'1'，DM8 直接报 Syntax error（真执行实证）。
+    """
     d = d.strip()
+    m = _BIT_LITERAL_RE.match(d)
+    if m:
+        return str(int(m.group(1), 2))
     if d.replace("-", "").replace(":", "").replace(" ", "").strip("'") in (
         "00000000", "00000000000000", "0000"
     ):
@@ -235,10 +255,12 @@ def convert_column(coldef: str):
     tail = re.sub(r"`([^`]*)`", r'"\1"', tail)
     tail = re.sub(r"\s{2,}", " ", tail).strip()
     out = "%s %s" % (name, new_type)
-    if tail:
-        out += " " + tail
+    # DM 语法：IDENTITY 必须排在列注释之前。`COMMENT 'x' IDENTITY(1,1)`
+    # 在 DM8 上直接报 Syntax error（V8 实证），所以 IDENTITY 要紧跟类型。
     if is_auto:
         out += " IDENTITY(1,1)"
+    if tail:
+        out += " " + tail
 
     note = None
     if not known:
@@ -356,11 +378,15 @@ def _quote_cols(cols_text: str):
     return out, had_prefix
 
 
-def convert_constraint(idxdef: str, dm_table: str, prefix: str = ""):
+def convert_constraint(idxdef: str, dm_table: str, pk_cols=None):
     """把索引/约束定义转成独立语句。
 
-    返回 (sql, note)。sql 为 None 表示该条需人工处理。
-    索引/约束名同样加 prefix，否则同 schema 灰度验证会与已有对象撞名。
+    返回 (sql, note)。sql 为 None 表示该条需人工处理或已按 DM 语义跳过。
+    索引/约束名 = 表名 + 原名：MySQL 的索引名只在一张表内唯一，达梦按 schema
+    维度唯一，同名索引落在不同表上会直接撞 -2140（cgdb 真执行 150 条失败的主因）。
+    dm_table 本身已带前缀，名称里不要再拼一次前缀，否则会出现 DDLCHK_DDLCHK_。
+
+    pk_cols：本表主键列名列表，用于识别"列集合与主键完全相同"的冗余约束/索引。
     """
     s = re.sub(r"\s{2,}", " ", idxdef.strip())
     head = s.split(None, 1)[0].upper() if s else ""
@@ -374,6 +400,28 @@ def convert_constraint(idxdef: str, dm_table: str, prefix: str = ""):
         if stripped:
             return cols, "已剥掉前缀长度（DM 前缀索引支持有限，索引覆盖范围变小）：%s" % s[:100]
         return cols, None
+
+    def unique_name(cname, fallback):
+        """索引名 = 表名 + 原名，保证 schema 内唯一（表名在 schema 内唯一）。"""
+        name = base + "_" + (cname or fallback)
+        if len(name) > 200:
+            name = name[:200]
+        return name
+
+    def col_list(cols_text):
+        # 列名可能还带反引号（原始 MySQL 文本），统一剥掉再比对主键列
+        cleaned = re.sub(r"`([^`]*)`", r"\1", cols_text)
+        return [c.strip().strip('"') for c in cleaned.split(",") if c.strip()]
+
+    def redundant(cols):
+        """列集合与主键完全相同的唯一约束/索引：DM 不允许重复建。
+
+        只判"完全相同"：复合主键 (a,b) 上单列 UNIQUE(a) 是更弱的合法约束，
+        不能顺手删掉。
+        """
+        if not pk_cols:
+            return False
+        return bool(cols) and sorted(cols) == sorted(pk_cols)
 
     # PRIMARY KEY (`a`,`b`)
     if re.match(r"^PRIMARY\s+KEY", s, re.I):
@@ -395,9 +443,11 @@ def convert_constraint(idxdef: str, dm_table: str, prefix: str = ""):
         cols, note = cols_note(raw)
         cname = m.group(1)
         cname = cname[1:-1] if cname and cname.startswith("`") else (cname or "")
-        label = prefix + (cname or ("UK_%s" % base))
+        if redundant(col_list(raw)):
+            return None, ("已跳过：%s 唯一约束的列与主键完全相同，DM 不允许"
+                          "重复建（MySQL 允许）：%s" % (dm_table, s[:100]))
         return ('ALTER TABLE %s ADD CONSTRAINT "%s" UNIQUE (%s);'
-                % (dm_table, label, cols)), note
+                % (dm_table, unique_name(cname, "UK_%s" % base), cols)), note
 
     # KEY/INDEX `name` (`a`,`b`)
     m = re.match(r"^(?:KEY|INDEX)\s+(`[^`]*`|[\w$]+)\s*\(", s, re.I)
@@ -408,8 +458,11 @@ def convert_constraint(idxdef: str, dm_table: str, prefix: str = ""):
         cols, note = cols_note(raw)
         cname = m.group(1)
         cname = cname[1:-1] if cname.startswith("`") else cname
-        return ('CREATE INDEX "%s%s" ON %s (%s);'
-                % (prefix, cname, dm_table, cols)), note
+        if redundant(col_list(raw)):
+            return None, ("已跳过：%s 索引列与主键完全相同，DM 会报重复索引"
+                          "（MySQL 允许）：%s" % (dm_table, s[:100]))
+        return ('CREATE INDEX "%s" ON %s (%s);'
+                % (unique_name(cname, "IX_%s" % base), dm_table, cols)), note
 
     # FOREIGN KEY / CHECK：DM 语法兼容但依赖被引表存在，保留并打标
     if re.match(r"^(?:FOREIGN\s+KEY|CONSTRAINT|CHECK)", s, re.I):
@@ -445,11 +498,33 @@ def convert_create(stmt: str, prefix: str = ""):
     body, close_idx = _find_matching_paren(stmt, open_idx)
 
     cols, cons, notes = [], [], []
-    for item in _split_top_level(body):
-        if not item.strip():
-            continue
+    items = [it for it in _split_top_level(body) if it.strip()]
+
+    # 先取主键列：达梦会为主键自动建唯一索引，重复的唯一约束/索引会被拒
+    # （-2864 / -3236，真执行实证），所以要在转换期就识别出来。
+    pk_cols = None
+    for item in items:
+        if CONSTRAINT_PREFIX.match(item) and re.match(r"^\s*PRIMARY\s+KEY", item, re.I):
+            raw = _first_paren(item.strip())
+            if raw:
+                pk_cols = [c.strip().strip('"')
+                           for c in re.sub(r"`([^`]*)`", r"\1", raw).split(",")
+                           if c.strip()]
+            break
+
+    seen_index_cols = set()
+    for item in items:
         if CONSTRAINT_PREFIX.match(item):
-            sql, note = convert_constraint(item, dm_table, prefix)
+            # 同一张表里列清单完全相同的索引只保留第一条：MySQL 允许冗余索引，
+            # DM 报 -3236 such column list already indexed。
+            key = re.sub(r"\s+", "", item.strip().upper())
+            key = re.sub(r"^(UNIQUE)?(KEY|INDEX)`[^`]*`", "", key)
+            if key in seen_index_cols:
+                notes.append("%s 存在列清单完全相同的重复索引，已跳过：%s"
+                             % (dm_table, re.sub(r"\s{2,}", " ", item.strip())[:100]))
+                continue
+            seen_index_cols.add(key)
+            sql, note = convert_constraint(item, dm_table, pk_cols=pk_cols)
             if sql:
                 cons.append(sql)
             if note:
@@ -462,10 +537,12 @@ def convert_create(stmt: str, prefix: str = ""):
 
     # 表级后缀子句（ENGINE=... DEFAULT CHARSET=... COMMENT='...' 等）
     suffix = stmt[close_idx + 1:].strip().rstrip(";").strip()
-    comment = ""
-    cm = re.search(r"COMMENT\s*=\s*'((?:[^'\\]|\\.)*)'", suffix, re.I)
+    cm = re.search(r"COMMENT\s*=?\s*'((?:[^'\\]|\\.)*)'", suffix, re.I)
     if cm:
-        comment = " COMMENT '%s'" % cm.group(1).replace("'", "''")
+        # DM 不接受 CREATE TABLE 右括号后跟 COMMENT '...'（V8 实证报 Syntax error），
+        # 表注释必须拆成独立语句，且要等表建好之后才能执行。
+        cons.append("COMMENT ON TABLE %s IS '%s';"
+                    % (dm_table, cm.group(1).replace("'", "''")))
     if re.search(r"\bPARTITION\s+BY\b", suffix, re.I):
         # 只取第一行，避免把 /*!50100 ... */ 条件注释整段带进告警
         first = re.sub(r"/\*.*?\*/", "", suffix, flags=re.S).strip().splitlines()
@@ -475,7 +552,7 @@ def convert_create(stmt: str, prefix: str = ""):
     parts = ["CREATE TABLE %s (" % dm_table]
     for i, d in enumerate(cols):
         parts.append("    " + d + ("," if i < len(cols) - 1 else ""))
-    parts.append(")%s;" % comment)
+    parts.append(");")
     return "\n".join(parts), cons, notes
 
 
@@ -532,8 +609,23 @@ def main():
 
     creates, constraints = [], []
     n_ok, n_skip = 0, 0
+    # 本转换器只覆盖 CREATE TABLE。例程体（PROCEDURE/FUNCTION/EVENT/TRIGGER）
+    # 里常夹带 DDL，被分号切碎后不会进产物——必须点名，否则现场会以为结构齐了。
+    n_routine = 0
+    routine_names = []
     for st in stmts:
         if not re.match(r"\s*CREATE\s+TABLE\b", st, re.I):
+            rm = re.match(
+                r"\s*CREATE\s+(?:OR\s+REPLACE\s+)?"
+                # mysqldump 会写 CREATE DEFINER=`root`@`%` PROCEDURE ...
+                r"(?:DEFINER\s*=\s*[^\s(]+\s+)?"
+                r"(PROCEDURE|FUNCTION|EVENT|TRIGGER)\s+"
+                r"(?:IF\s+NOT\s+EXISTS\s+)?(`[^`]+`|[\w$]+)", st, re.I)
+            if rm:
+                n_routine += 1
+                if len(routine_names) < 10:
+                    nm = rm.group(2)
+                    routine_names.append(nm[1:-1] if nm.startswith("`") else nm)
             continue
         create, cons, notes = convert_create(st, args.prefix)
         if create is None:
@@ -565,6 +657,11 @@ def main():
     sys.stdout.write("\n".join(out))
     sys.stderr.write("[DONE] 转换 %d 张表，%d 条约束/索引，跳过 %d 条无法解析的语句\n"
                      % (n_ok, len(constraints), n_skip))
+    if n_routine:
+        sys.stderr.write(
+            "[WARN] 检出 %d 个存储例程（PROCEDURE/FUNCTION/EVENT/TRIGGER），"
+            "其体内的 DDL/DML 不在本转换器覆盖范围内，需在达梦侧人工重建：%s\n"
+            % (n_routine, "、".join(routine_names)))
     return 0
 
 

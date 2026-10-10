@@ -15,6 +15,11 @@
 | 2026-10-10 | **v2.1 实迁作业线**：新增 `references/mysql-to-dm-runbook.md`（七节）+ `scripts/mysqldump_to_dm_ddl.py`（mysqldump DDL → 达梦 DDL 纯文本转换，不连库不执行 SQL）；SKILL.md 三线升四线并接线场景路由/工作流/参考文件；pytest **64 passed** | ✅ Mimosa 闸机结论：写入型 `open()` 判得比读取型严，去掉 `-o` CLI 写路径、只读 stdin/文件 + 一律写 stdout 后通过 |
 | 2026-10-10 | 转换器实证校验：拿 cg155 真实 DDL（5243 表 / 61983 列）与迁移引擎 `map_type()` 逐列对比 **1:1 全对上**；产物无反引号 / ENGINE / CHARSET / COLLATE / unsigned / ON UPDATE / 0000-00-00 / USING BTREE / AUTO_INCREMENT / PARTITION 残留 | ✅ 真实数据暴露 3 个坑（time 漏映射 / --prefix 未作用于索引名 / CREATE TABLE LIKE 被静默跳过），均已修 |
 
+| 2026-10-10 | **转换产物拿到 DM8 V8 真执行**（凭据死结已解：演练机 CGDB/Cgdb@2026 可直连 dmPython，此前"业务用户密码未留档"的记忆是错的）：第一轮建表 4107/5243、约束 8782/8911，逐条定位出 **5 个转换器 bug**（行内表注释 / IDENTITY 顺序 / bit 默认值 b'1' / 索引名 schema 内唯一 / 冗余唯一约束）；修后第二轮 **建表 5243/5243、约束 索引 表注释 8911/8911，零失败**（49s + 49s） | ✅ 关键结论：类型逐列 1:1 只证明类型选对，证明不了 DM 认这些语法；5 个 bug 全不在类型映射里 |
+| 2026-10-10 | DM 侧反查元数据 + 功能验证：`CHAR_USED='C'` 列 24722 个；255 个汉字写入 `VARCHAR(255 CHAR)` 成功（CHAR_LENGTH=255 / LENGTHB=510）；`IDENTITY(1,1)` 连续插入得 1,2,3；表注释 1069 + 列注释 33395 条全部落库；对象对账 5227 主键 + 93 唯一 + 3 外键 + 2519 索引 + 1069 表注释 = 8911 与产物一致 | ✅ 语义真落地，不是"碰巧建上了" |
+| 2026-10-10 | 转换器补 16 个测试（全套 **70 passed**），新增例程检出告警：cgdb 的 `po_sys_config_bak` 过程体内夹带 `create table ... like`，被分号切碎后不进产物，现在点名到 stderr | ✅ 例程本身仍需在达梦侧人工重建（DMSQL 程序语法差异大，非文本替换可解） |
+
+
 ## 已知边界与遗留
 
 - **P3 演练未做**：DM8/AAS 安装包与 license 未在演练机实装（计划允许：先交 v2.0.0，演练顺延 v2.1）。

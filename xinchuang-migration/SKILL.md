@@ -90,7 +90,7 @@ when_not_to_use: |
 | `scripts/precheck_env.sh` | 迁移前环境预检（OS/磁盘/内存/端口/dmdba 用户/内核限制） | 目标 Linux 节点 | 全程只读，输出 PASS/FAIL/WARN 清单 |
 | `scripts/verify_migration.py` | 迁移基线采集与前后一致性校验（表/视图/存储过程/行数对比） | 本机或节点 | `collect` 采基线，`compare` 出差异报告；判不一致时**停止并报告，不自动修复** |
 | `scripts/check_product_config.py` | 16 产品配置对照检查（jdbc:dm 驱动/方言/模式名） | 本机或节点 | 依赖 `config/product-config-map.json`，核对实际配置文件 |
-| `scripts/mysqldump_to_dm_ddl.py` | mysqldump DDL → 达梦 DDL 纯文本转换（不连库、不执行 SQL） | 本机 | 读 stdin 或 dump 文件、写 stdout（由调用方 `>` 落盘）；类型口径与 runbook 第一节一致；主键/唯一约束/索引后置到第二段；`--prefix` 供同 schema 灰度验证 |
+| `scripts/mysqldump_to_dm_ddl.py` | mysqldump DDL → 达梦 DDL 纯文本转换（不连库、不执行 SQL） | 本机 | 读 stdin 或 dump 文件、写 stdout（由调用方 `>` 落盘）；类型口径与 runbook 第一节一致；主键/唯一约束/索引后置到第二段；`--prefix` 供同 schema 灰度验证；**已在 DM8 V8 上真执行 5243 表零失败** |
 | `scripts/kb_query.py` | 公网 MCP 直调（precheck/zhengtong_query） | 本机 | token 从 `D:\opencode\config\redmine-assist-mcp.json` 或环境变量 `REDMINE_ASSIST_TOKEN` 读取，**不落源码** |
 | `scripts/query_xc.py` | REST 降级查询（`--sweep` 批量） | 本机 | MCP 不可用时走 `/query` REST |
 | `scripts/backup_web.sh` | 备份 `/egova/web` → `/egova/backup/web` | 老服务器 | tar.gz 全备份、保留 15 份、文件锁防并发、磁盘预检、nohup 后台 |
@@ -565,7 +565,7 @@ sqlite3 /opt/redmine-assist/data/vectors.db "SELECT title,url FROM docs_meta WHE
 
 **实迁作业（v2.1 新增，2026-10-10 四库 5589 表全量实证）**
 - `references/mysql-to-dm-runbook.md` — **MySQL→达梦 DM8 实迁作业规程**：类型映射表、三个必知判定口径（`LENGTH_IN_CHAR=0` 须 `VARCHAR(n CHAR)` / 排序规则只影响 MIN-MAX 用整列多重集判 / 活库漂移≠丢失用自然键集合差）、引擎运行姿势 10 条、四轨过程验证方法论、拓扑与回滚四要素
-- `scripts/mysqldump_to_dm_ddl.py` — mysqldump DDL → 达梦 DDL 转换器（纯文本，不连库不执行；类型口径与 runbook 第一节一致；主键/唯一约束/索引后置到第二段）
+- `scripts/mysqldump_to_dm_ddl.py` — mysqldump DDL → 达梦 DDL 转换器（纯文本，不连库不执行；类型口径与 runbook 第一节一致；主键/唯一约束/索引后置到第二段；cgdb 真实 dump 5243 表转换后在 DM8 上真执行零失败，实证记录见 runbook 第六节）
 
 **现场作业（v2.0 自 quiz266 提交物沉淀，经脱敏）**
 - `references/migration_steps.md` — 迁移步骤全文（达梦部署/DTS/各产品参数/采集服务 dmPython 切换）
