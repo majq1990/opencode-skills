@@ -40,7 +40,7 @@
   - CREATE TABLE ... LIKE ...（照抄另一张表结构，DM 无此语法）
   - 存储例程 PROCEDURE/FUNCTION/EVENT/TRIGGER（体内的 DDL 要在达梦侧人工重建）
 
-已实证：2026-10-10 拿 cg155 的 cgdb 真实 dump（5243 张表）转换后在 DM8 V8
+已实证：2026-10-10 拿源库主机的 cgdb 真实 dump（5243 张表）转换后在 DM8 V8
 实例上真执行，建表 5243/5243、约束/索引/表注释 8911/8911 零失败。
 详见 references/mysql-to-dm-runbook.md 第六节。
 
