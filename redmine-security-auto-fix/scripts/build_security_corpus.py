@@ -197,7 +197,7 @@ def main() -> None:
     parser.add_argument("--tracker-id", type=int, default=26)
     parser.add_argument("--output-dir", default=r"D:\opencode\_archive\security-corpus")
     parser.add_argument(
-        "--similar-assist", default=r"D:\git\redmine-similar-assist"
+        "--similar-assist", default=r"D:\git\redmine-assist"
     )
     parser.add_argument(
         "--download-config",

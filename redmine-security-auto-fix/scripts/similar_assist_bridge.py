@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bridge to redmine-similar-assist without copying its credentials."""
+"""Bridge to redmine-assist without copying its credentials."""
 
 from __future__ import annotations
 
@@ -219,7 +219,7 @@ REMOTE_CTR_DATA_DIR = "/app/data"
 def _load_similar_assist(repo_path: str):
     root = Path(repo_path).resolve()
     if not (root / "src" / "db_client.py").exists():
-        raise FileNotFoundError(f"redmine-similar-assist not found: {root}")
+        raise FileNotFoundError(f"redmine-assist not found: {root}")
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
@@ -232,7 +232,7 @@ def _load_similar_assist(repo_path: str):
 
 
 class SimilarAssistBridge:
-    def __init__(self, repo_path: str = r"D:\git\redmine-similar-assist") -> None:
+    def __init__(self, repo_path: str = r"D:\git\redmine-assist") -> None:
         self.repo_path = str(Path(repo_path).resolve())
         (
             self.RedmineDB,
@@ -340,7 +340,7 @@ class SimilarAssistBridge:
             return attachments
 
     def _load_remote_config(self) -> dict:
-        """读取 redmine-similar-assist config.yaml 的可选 bridge_remote 段，缺省启用远端。"""
+        """读取 redmine-assist config.yaml 的可选 bridge_remote 段，缺省启用远端。"""
         merged = dict(REMOTE_DEFAULTS)
         try:
             import yaml

@@ -229,7 +229,7 @@ def _build_web_query(vuln: dict[str, Any]) -> str:
 
 def enrich_all(
     vulns: list[dict[str, Any]],
-    repo_path: str = r"D:\git\redmine-similar-assist",
+    repo_path: str = r"D:\git\redmine-assist",
     with_sec_pool: bool = True,
 ) -> list[dict[str, Any]]:
     bridge = SimilarAssistBridge(repo_path)

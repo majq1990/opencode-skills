@@ -12,7 +12,7 @@ from pathlib import Path
 
 from build_security_corpus import download_attachment
 from classify_vulns import classify_vulnerability
-from fetch_vuln_docs import fetch_issue
+from fetch_vuln_docs import RedmineAccessError, fetch_issue
 from generate_dingtalk_doc import generate_doc_markdown
 from recommendation_engine import enrich_all
 from report_parser import parse_report
@@ -170,7 +170,7 @@ def main() -> None:
     parser.add_argument("--api-key", default=None)
     parser.add_argument("--output-dir", default=None)
     parser.add_argument(
-        "--similar-assist", default=r"D:\git\redmine-similar-assist"
+        "--similar-assist", default=r"D:\git\redmine-assist"
     )
     parser.add_argument(
         "--dingtalk-parent-node",
@@ -189,6 +189,16 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    # 检索仓路径写死过旧目录名，PATH 上又有无关的 src/config.py，
+    # import 会静默串到别的项目然后报看不懂的 ImportError；先自己校验
+    assist_root = Path(args.similar_assist)
+    if not (assist_root / "src" / "config.py").is_file():
+        print(
+            f"[error] 检索仓不可用：{assist_root} 下缺少 src/config.py。"
+            "请用 --similar-assist 指向 redmine-assist 仓的根目录",
+            file=sys.stderr,
+        )
+        return 2
     sys.path.insert(0, args.similar_assist)
     from src.config import cfg
 
@@ -200,7 +210,12 @@ def main() -> None:
         args.output_dir or rf"D:\opencode\_archive\{args.issue_id}"
     )
     output_dir.mkdir(parents=True, exist_ok=True)
-    issue = fetch_issue(args.redmine_url, args.api_key, args.issue_id)
+    try:
+        issue = fetch_issue(args.redmine_url, args.api_key, args.issue_id)
+    except RedmineAccessError as exc:
+        # key 失效/案件不存在时必须中断：否则会交一份"没有附件"的假方案
+        print(f"[error] {exc}", file=sys.stderr)
+        return 2
     attachments = issue.get("attachments") or []
 
     parsed_items = []

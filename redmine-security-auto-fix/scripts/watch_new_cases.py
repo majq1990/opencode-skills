@@ -79,7 +79,7 @@ def main() -> int:
     parser.add_argument("--output-dir", default=r"D:\opencode\_archive\skill-watch")
     parser.add_argument("--state", default=r"D:\opencode\_archive\skill-watch\watch_state.json")
     parser.add_argument("--digest", default=r"D:\opencode\_archive\skill-watch\digest_latest.md")
-    parser.add_argument("--similar-assist", default=r"D:\git\redmine-similar-assist")
+    parser.add_argument("--similar-assist", default=r"D:\git\redmine-assist")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)

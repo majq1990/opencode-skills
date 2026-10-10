@@ -5,21 +5,61 @@ Redmine安全案件漏洞文档下载脚本
 """
 
 import argparse
+import ipaddress
 import json
 import os
 import re
+import socket
 import sys
-import urllib.request
 import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
+
+
+class RedmineAccessError(RuntimeError):
+    """Redmine 认证/权限/案件不存在：必须中断，不能当成"没有附件"继续出方案。"""
+
+
+def _validate_redmine_url(redmine_url):
+    """请求前校验目标地址，避免把环回/云元数据地址或内嵌凭据带进请求。
+
+    公司 Redmine 可能部署在内网，所以只拦绝不可能是 Redmine 的段
+    （环回、链路本地——含云元数据 169.254.169.254、保留、组播、未指定），
+    私网段放行；协议只允许 http/https，URL 里不允许夹带账号口令。
+    """
+    parsed = urllib.parse.urlsplit(redmine_url)
+    if parsed.scheme not in ("http", "https"):
+        raise RedmineAccessError(f"Redmine 地址协议不允许：{parsed.scheme!r}")
+    if parsed.username or parsed.password:
+        raise RedmineAccessError("Redmine 地址不允许携带账号口令，请用 --api-key")
+    host = parsed.hostname
+    if not host:
+        raise RedmineAccessError(f"Redmine 地址缺少主机名：{redmine_url!r}")
+    for info in socket.getaddrinfo(host, parsed.port or None):
+        address = ipaddress.ip_address(info[4][0])
+        if (
+            address.is_loopback
+            or address.is_link_local
+            or address.is_reserved
+            or address.is_multicast
+            or address.is_unspecified
+        ):
+            raise RedmineAccessError(
+                f"Redmine 主机 {host} 解析到 {address}，拒绝请求"
+            )
+    return redmine_url
 
 
 def fetch_issue(redmine_url, api_key, issue_id):
     """获取Redmine案件及附件信息。"""
-    url = f"{redmine_url}/issues/{issue_id}.json?include=attachments"
+    url = (
+        f"{_validate_redmine_url(redmine_url)}"
+        f"/issues/{issue_id}.json?include=attachments"
+    )
     req = urllib.request.Request(url)
     req.add_header("X-Redmine-API-Key", api_key)
-    
+
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.loads(resp.read().decode("utf-8"))
@@ -45,6 +85,20 @@ def fetch_issue(redmine_url, api_key, issue_id):
             
             issue["attachments"] = attachments
             return issue
+    except urllib.error.HTTPError as exc:
+        # 401/403 多半是 key 失效或无权看该案件，404 是案件号不存在；
+        # 这三种情况若返回空案件，下游会产出"没有可下载的附件"的假方案
+        if exc.code in (401, 403):
+            raise RedmineAccessError(
+                f"Redmine 拒绝访问（HTTP {exc.code}）：API Key 无效或无权查看案件 "
+                f"{issue_id}，请检查 --api-key"
+            ) from exc
+        if exc.code == 404:
+            raise RedmineAccessError(
+                f"Redmine 上找不到案件 {issue_id}（HTTP 404），请确认案件号"
+            ) from exc
+        print(f"Error fetching issue: HTTP {exc.code}", file=sys.stderr)
+        return {}
     except Exception as e:
         print(f"Error fetching issue: {e}", file=sys.stderr)
         return {}

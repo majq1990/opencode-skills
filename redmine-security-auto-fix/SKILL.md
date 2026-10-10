@@ -1,11 +1,11 @@
 ---
 name: redmine-security-auto-fix
-version: 2.4.0
+version: 2.5.0
 author: majianquan
 license: MIT
 category: support-dept
 visibility: tech-manager
-description: Redmine 安全案件自动化处理与修复建议检索，v2.0 新增安全案件三源研判与滚动跟踪。凡涉及 Redmine 安全案件、漏洞报告解析、历史安全案件学习、相似漏洞修复方案、代码/非代码修复分流、钉钉知识库归档、安全漏洞自动修复、CVE/CNVD 情报采集、扫描结果与资产台账对照、处置报告与责任人待办、案件次日滚动跟踪，都应使用本 Skill。它兼容多种漏洞报告格式，内部检索走两条链路并合并：服务器安全池（tracker 26 安全案件 + 语义审计回填的漏召案件 + 297 篇★安全文档 + NVD/GHSA 情报，秒级）与全库（19.9 万工单 + 7,700 篇文档），安全池结果优先；非代码类始终并行检索互联网，代码类仅在内部无可执行方案时才用互联网兜底；v2.0 增量能力来自三源研判子系统（CVE 情报 × 扫描结果 × 资产台账 → 分级 → 报告/待办 → 次日跟踪），全部配置外置、默认关闭、人工确认后才推送。v2.1：《安全漏洞台账》多维表为检索第一优先（台账→内部检索→互联网搜索兜底，台账命中即免搜），anysearch 为默认搜索源（key 可选），新增 12 类扫描器报告专项解析（Fortify/AppScan/ZAP/Trivy/osv/Markdown 渗透报告/安全岛 IAST/麒舰 strix HTML 渗透报告/麒舰多项目汇总报告/渗透测试结果报告等），超大案件分片并行检索，已移除群机器人通知（发布即交付）。v2.2：附件下载遇服务端静默截断自动重拉（最多 3 次），历史案件/知识库或安全池检索整体失败时降级为无增强继续出方案（不阻断主流程），已用最近一周未关闭安全案件全集做全链路实测。v2.3：新增麒舰 strix 多项目汇总渗透报告（一个项目段落一个 h2，按项目前缀出条）与渗透测试结果报告（测试项矩阵里非"通过"的行才是漏洞，目录和章节标题不再被误收成漏洞）两种格式解析。v2.4：0 漏洞时方案不再交空表，改为写明"未解析到漏洞清单"及原因（无附件/格式不符/解析失败/解析出 0 条）并附案件描述摘录；对外文案的凭据红字帽补齐全角冒号与账号/口令/密钥等标签（中文报告"密码：xxx"以前漏红即泄密）。
+description: Redmine 安全案件自动化处理与修复建议检索，v2.0 新增安全案件三源研判与滚动跟踪。凡涉及 Redmine 安全案件、漏洞报告解析、历史安全案件学习、相似漏洞修复方案、代码/非代码修复分流、钉钉知识库归档、安全漏洞自动修复、CVE/CNVD 情报采集、扫描结果与资产台账对照、处置报告与责任人待办、案件次日滚动跟踪，都应使用本 Skill。它兼容多种漏洞报告格式，内部检索走两条链路并合并：服务器安全池（tracker 26 安全案件 + 语义审计回填的漏召案件 + 297 篇★安全文档 + NVD/GHSA 情报，秒级）与全库（19.9 万工单 + 7,700 篇文档），安全池结果优先；非代码类始终并行检索互联网，代码类仅在内部无可执行方案时才用互联网兜底；v2.0 增量能力来自三源研判子系统（CVE 情报 × 扫描结果 × 资产台账 → 分级 → 报告/待办 → 次日跟踪），全部配置外置、默认关闭、人工确认后才推送。v2.1：《安全漏洞台账》多维表为检索第一优先（台账→内部检索→互联网搜索兜底，台账命中即免搜），anysearch 为默认搜索源（key 可选），新增 12 类扫描器报告专项解析（Fortify/AppScan/ZAP/Trivy/osv/Markdown 渗透报告/安全岛 IAST/麒舰 strix HTML 渗透报告/麒舰多项目汇总报告/渗透测试结果报告等），超大案件分片并行检索，已移除群机器人通知（发布即交付）。v2.2：附件下载遇服务端静默截断自动重拉（最多 3 次），历史案件/知识库或安全池检索整体失败时降级为无增强继续出方案（不阻断主流程），已用最近一周未关闭安全案件全集做全链路实测。v2.3：新增麒舰 strix 多项目汇总渗透报告（一个项目段落一个 h2，按项目前缀出条）与渗透测试结果报告（测试项矩阵里非"通过"的行才是漏洞，目录和章节标题不再被误收成漏洞）两种格式解析。v2.4：0 漏洞时方案不再交空表，改为写明"未解析到漏洞清单"及原因（无附件/格式不符/解析失败/解析出 0 条）并附案件描述摘录；对外文案的凭据红字帽补齐全角冒号与账号/口令/密钥等标签（中文报告"密码：xxx"以前漏红即泄密）。v2.5：检索仓默认路径由已更名的 `redmine-similar-assist` 改为 `redmine-assist`（旧默认值会让 import 静默串到 PATH 上无关的 src/config.py，报看不懂的 ImportError）；Redmine 返回 401/403/404 时中断并给出明确错误，不再退化成"没有可下载的附件"的假方案（key 失效是静默出空方案的高危坑）；请求前校验目标地址协议与解析 IP，拒绝环回/链路本地/云元数据地址和 URL 内嵌凭据。
 ---
 
 # Redmine 安全案件自动化处理
@@ -24,7 +24,7 @@ description: Redmine 安全案件自动化处理与修复建议检索，v2.0 新
 
 ## 依赖
 
-- `D:\git\redmine-similar-assist`
+- `D:\git\redmine-assist`（原 `redmine-similar-assist` 仓已更名；`--similar-assist` 可改）
 - **安全池检索**：`demo.egova.com.cn` 上的 `sec_kb` 工具（容器 `redmine-assist`，
   路径 `/app/scripts/sec_kb`），经 `scripts\sec_kb_bridge.py` 只读调用。该池由服务器
   cron 每日增量采集、每周审计回填，本地无需任何数据库或密钥；不可达时自动降级为
@@ -40,7 +40,7 @@ description: Redmine 安全案件自动化处理与修复建议检索，v2.0 新
 - RAR：`rarfile` + unrar/unar/7-Zip 后端
 
 不要在本 Skill 中复制 Redmine、数据库、Embedding 或 LLM 密钥。统一读取
-`redmine-similar-assist\config.yaml`。
+`redmine-assist\config.yaml`。
 
 - **互联网搜索兜底**：anysearch（默认，国内直连）。key 优先级：环境变量
   `ANYSEARCH_API_KEY` → skill 根目录 `.env` → 匿名访问（可用但有速率限制）。
@@ -66,7 +66,7 @@ python scripts\download_security_corpus.py `
   --output-dir D:\opencode\_archive\security-corpus
 ```
 
-脚本通过 `redmine-similar-assist` 的 MySQL 连接查询案件和附件，下载至：
+脚本通过 `redmine-assist` 的 MySQL 连接查询案件和附件，下载至：
 
 ```text
 D:\opencode\_archive\security-corpus\<issue_id>\
