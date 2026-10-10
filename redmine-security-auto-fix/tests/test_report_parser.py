@@ -9,6 +9,7 @@ sys.path.insert(0, str(SCRIPTS))
 from report_parser import (
     _parse_cn_audit_detail_pdf,
     _parse_cn_source_scan_pdf,
+    _parse_qijian_rollup_html,
     _parse_qijian_strix_html,
     _parse_seczone_iast_pdf,
     normalize_rows,
@@ -243,6 +244,71 @@ class ReportParserTests(unittest.TestCase):
         vulns = normalize_rows(_parse_qijian_strix_html(html), "report.html")
         self.assertEqual(vulns[0]["level"], "low")
         self.assertTrue(vulns[0]["level_explicit"])
+
+    def test_qijian_rollup_html_groups_by_project(self):
+        """麒舰多项目汇总报告按 h2 项目段落出条，取执行摘要里带等级的发现列表。"""
+        html = (
+            "<html><body><h1>汇总</h1>"
+            "<h2>核心服务 · 安全渗透测试报告</h2>"
+            "<h3>执行摘要</h3><ul><li>存储型RCE可能危及整体平台。</li></ul>"
+            "<p><strong>关键发现（已报告 4 项）</strong></p><ul>"
+            "<li><strong>通过表达式注入实现远程代码执行（高危，CVSS 9.9）</strong>"
+            "——SpEL 在无限制上下文中求值。</li>"
+            "<li><strong>计时维护功能级授权失效（中危，CVSS 6.5）</strong>"
+            "——端点不校验记录归属。</li>"
+            "<li><strong>通知导出中的路径遍历（中危，CVSS 4.3）</strong>以及"
+            "<strong>规则引擎转义缺陷（低危，CVSS 3.3）</strong>。</li>"
+            "<li>静态分析与动态验证相结合。</li></ul>"
+            "<h3>技术分析</h3><ul>"
+            "<li><strong>路径遍历——通知导出。</strong>自由文本标题被拼接到附件文件名。</li>"
+            "<li>响应头会阻止内联脚本，但<strong>不会</strong>阻止 SVG 内联渲染。</li>"
+            "</ul>"
+            "<h2>前端 · 安全渗透测试报告</h2><h3>主要发现</h3><ul>"
+            "<li><strong>高危（High）——菜单响应 URL 外传令牌。</strong>复现含阴性对照。</li>"
+            "<li>锁文件中共有 <strong>46 个经核实的依赖 CVE</strong>，涉及净化器与密码学库。</li>"
+            "</ul>"
+            "<h2>无等级模块 · 安全渗透测试报告</h2><h3>发现概览</h3>"
+            "<p>共 2 项。</p><ul><li>信息收集与攻击面映射完成。</li></ul>"
+            "<h3>关键发现</h3><ul>"
+            "<li><strong>会话固定。</strong>登录后未重置会话标识。</li>"
+            "<li><strong>明文传输凭证。</strong>基本认证走 HTTP。</li></ul>"
+            "</body></html>"
+        )
+        rows = _parse_qijian_rollup_html(html)
+        self.assertEqual(
+            [(row["漏洞名称"], row["风险等级"]) for row in rows],
+            [
+                ("【核心服务】通过表达式注入实现远程代码执行", "高危"),
+                ("【核心服务】计时维护功能级授权失效", "中危"),
+                ("【核心服务】通知导出中的路径遍历", "中危"),
+                ("【核心服务】规则引擎转义缺陷", "低危"),
+                ("【前端】菜单响应 URL 外传令牌", "高危"),
+                ("【前端】46 个经核实的依赖 CVE", ""),
+                ("【无等级模块】会话固定", ""),
+                ("【无等级模块】明文传输凭证", ""),
+            ],
+        )
+        self.assertEqual(rows[0]["漏洞描述"], "SpEL 在无限制上下文中求值。")
+        self.assertEqual(rows[1]["漏洞描述"], "端点不校验记录归属。")
+        # 技术分析里的同名详情、正文里的强调加粗、方法论条目都不该进来
+        self.assertNotIn("路径遍历——通知导出", [row["漏洞名称"] for row in rows])
+        self.assertNotIn("不会", [row["漏洞名称"] for row in rows])
+        self.assertNotIn("静态分析与动态验证相结合。", [row["漏洞名称"] for row in rows])
+        self.assertEqual(rows[0]["source"], "qijian_rollup_html")
+        # 普通通报页不能误入这条路
+        self.assertEqual(_parse_qijian_rollup_html("<html><p>普通通报</p></html>"), [])
+
+    def test_qijian_rollup_html_levels_normalize(self):
+        html = (
+            "<h2>媒体服务 · 安全渗透测试报告</h2><h3>关键发现</h3><ul>"
+            "<li><strong>高风险 — 通过路径遍历任意读写文件。</strong>路径未规范化。</li>"
+            "</ul><h2>督办中心 · 安全渗透测试报告</h2><h3>关键发现</h3><ul>"
+            "<li><strong>跨单位任务接管（高危，High）。</strong>端点不校验调用者关系。</li>"
+            "</ul>"
+        )
+        vulns = normalize_rows(_parse_qijian_rollup_html(html), "report.html")
+        self.assertEqual([vuln["level"] for vuln in vulns], ["high", "high"])
+        self.assertTrue(all(vuln["level_explicit"] for vuln in vulns))
 
     def test_cn_audit_detail_pdf_uses_numbered_heading_as_name(self):
         text = (

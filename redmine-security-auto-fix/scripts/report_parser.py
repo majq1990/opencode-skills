@@ -1615,6 +1615,156 @@ def _parse_qijian_strix_html(html: str) -> list[dict]:
     return rows
 
 
+_QJ_ROLLUP_FINDING_H3 = (
+    "关键发现",
+    "主要发现",
+    "发现汇总",
+    "发现概览",
+    "汇总发现",
+    "已确认的发现",
+)
+# 等级标记两种摆放：后缀"名称（高危，CVSS 8.8）"/"名称（高危，High）"，
+# 前缀"高危（High）——名称"/"高风险 — 名称"；英文档位与 CVSS/CWE 都放过
+_QJ_ROLLUP_SEV_SUFFIX = re.compile(
+    r"^(?P<name>.*?)（(?P<sev>严重|高危|高风险|中危|中风险|低危|低风险|信息级|提示级)"
+    r"(?:[，,][^）]*)?）\s*[。.]?\s*$"
+)
+_QJ_ROLLUP_SEV_PREFIX = re.compile(
+    r"^(?P<sev>严重|高危|高风险|中危|中风险|低危|低风险)\s*(?:（[^）]*）)?"
+    r"\s*[—\-–:：]+\s*(?P<name>.+?)\s*[。.]?\s*$"
+)
+# 等级不写在名称里而是跟在后面："名称</strong>（高危，High，7.6）——描述"
+_QJ_ROLLUP_BODY_LEVEL = re.compile(
+    r"^（(?P<sev>严重|高危|高风险|中危|中风险|低危|低风险|信息级|提示级)"
+    r"(?:[，,][^）]*)?）\s*(?:[—\-–:：]+\s*)?"
+)
+# 并列发现的连接词：前文以它们收尾时，后面的 strong 仍是条目名而非强调
+_QJ_ROLLUP_NAME_CONNECTORS = ("以及", "及", "和", "与", "、", "，", ",", "；", ";")
+
+
+def _qijian_li_item(li: str) -> list[tuple[str, str, str]]:
+    """把一个 `<li>` 解析成若干 (名称, 等级, 描述)，不是发现条目返回空表。
+
+    条目名以 `<strong>` 起头，但正文里的强调加粗（"但<strong>不会</strong>
+    阻止…"）不是条目：只有段首、连接词之后、自带等级、或以逗号句号收尾
+    且够长的 strong 才算条目名。一个 li 里偶发两个发现并列（"名称A（中危）
+    以及名称B（低危）"），逐个 strong 拆开各出一条，正文取最后一个条目名
+    之后的文本。方法论条目没有 strong，两种路径都收不进来。
+    """
+    names: list[tuple[str, int]] = []
+    for strong in re.finditer(r"<strong>(.*?)</strong>", li, re.S):
+        text = _clean(re.sub(r"<[^>]+>", " ", strong.group(1)))
+        if not text:
+            continue
+        before = _clean(re.sub(r"<[^>]+>", " ", li[: strong.start()]))
+        after = _clean(re.sub(r"<[^>]+>", " ", li[strong.end() :]))
+        leveled = bool(
+            _QJ_ROLLUP_SEV_SUFFIX.match(text) or _QJ_ROLLUP_SEV_PREFIX.match(text)
+        )
+        is_name = (
+            not before
+            or before.endswith(_QJ_ROLLUP_NAME_CONNECTORS)
+            or leveled
+            or (len(text) >= 4 and after[:1] in "，,。")
+        )
+        if is_name:
+            names.append((text, strong.end()))
+    if not names:
+        return []
+    body = re.sub(r"<[^>]+>", " ", li[names[-1][1] :])
+    body = _clean(re.sub(r"^[—\-–:：，,。.\s]+", "", re.sub(r"\s+", " ", body)))
+    items: list[tuple[str, str, str]] = []
+    for strong_text, _ in names:
+        matched = _QJ_ROLLUP_SEV_SUFFIX.match(strong_text) or _QJ_ROLLUP_SEV_PREFIX.match(
+            strong_text
+        )
+        if matched:
+            name = _clean(matched.group("name")).strip("—\\-–:：").rstrip("。")
+            severity = matched.group("sev")
+        else:
+            name = strong_text.strip("—\\-–:：").rstrip("。")
+            severity = ""
+        if not name:
+            continue
+        if not severity:
+            body_level = _QJ_ROLLUP_BODY_LEVEL.match(body)
+            if body_level:
+                severity = body_level.group("sev")
+                body = body[body_level.end() :]
+        items.append((name, severity, body))
+    return items
+
+
+def _qijian_rollup_items(section: str) -> list[tuple[str, str, str]]:
+    """从一个项目段落里挑发现条目，返回 (名称, 等级, 描述) 列表。
+
+    执行摘要里的发现列表带等级标记，优先取"第一个含等级条目的列表"且只收
+    带等级的条目（同列表后半段常接着方法论条目，不能一起收）；技术分析里
+    还有一份不带等级或换个写法的详情列表，一概不看，避免同一发现出两条。
+    整段都没有等级标记时，退回第一个"关键发现/主要发现"等小节。
+    """
+    for block in re.findall(r"<[uo]l>(.*?)</[uo]l>", section, re.S):
+        items = []
+        for li in re.findall(r"<li>(.*?)</li>", block, re.S):
+            items.extend(_qijian_li_item(li))
+        # 判定"这是发现列表"看有没有带等级的条目；收的时候整表全收——
+        # 同列表里没写等级的也是真发现（如"46 个经核实的依赖 CVE"），
+        # 而方法论条目没有 strong，本来就被 _qijian_li_item 滤掉
+        if any(item[1] for item in items):
+            return items
+
+    h3s = [
+        (m.start(), m.end(), _clean(re.sub(r"<[^>]+>", " ", m.group(1))))
+        for m in re.finditer(r"<h3[^>]*>(.*?)</h3>", section, re.S)
+    ]
+    for index, (_, content_start, title) in enumerate(h3s):
+        if not any(keyword in title for keyword in _QJ_ROLLUP_FINDING_H3):
+            continue
+        end = h3s[index + 1][0] if index + 1 < len(h3s) else len(section)
+        items = []
+        for li in re.findall(r"<li>(.*?)</li>", section[content_start:end], re.S):
+            items.extend(_qijian_li_item(li))
+        if items:
+            return items
+    return []
+
+
+def _parse_qijian_rollup_html(html: str) -> list[dict]:
+    """麒舰 strix 多项目汇总渗透报告：一个 `<h2>XX · 安全渗透测试报告</h2>`
+    一个项目，没有 VULN 编号标题，发现藏在各项目段落的列表里。"""
+    h2s = [
+        (m.start(), _clean(re.sub(r"<[^>]+>", " ", m.group(1))))
+        for m in re.finditer(r"<h2[^>]*>(.*?)</h2>", html, re.S)
+    ]
+    projects = [item for item in h2s if "安全渗透测试报告" in item[1]]
+    if len(projects) < 2:
+        return []
+    rows = []
+    seen: set[tuple[str, str]] = set()
+    for index, (start, heading) in enumerate(projects):
+        end = projects[index + 1][0] if index + 1 < len(projects) else len(html)
+        section = html[start:end]
+        project = re.sub(r"\s*·\s*安全渗透测试报告.*$", "", heading).strip()
+        prefix = f"【{project}】" if project else ""
+        for name, severity, description in _qijian_rollup_items(section):
+            # 每个项目只取一个列表，同项目重复的概率很低；去重键带上项目前缀，
+            # 两个项目真有同名发现时不能把后一个项目的条目吞掉
+            key = (prefix + name, severity)
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(
+                {
+                    "漏洞名称": prefix + name,
+                    "风险等级": severity,
+                    "漏洞描述": description[:1500],
+                    "实例数": 1,
+                    "source": "qijian_rollup_html",
+                }
+            )
+    return rows
+
+
 def _parse_labeled_text(text: str) -> list[dict]:
     blocks = re.split(r"\n(?=(?:【?(?:严重|高危|中危|低危|信息)】?)?\s*\d*[.、]?\s*[^。\n]{2,60})", text)
     # 条目小标签：出现任一即认为这个块是漏洞详情而不是汇总表/说明文字
@@ -1682,10 +1832,13 @@ def parse_report(path: str | Path) -> dict:
         raw = report.read_text(encoding="utf-8", errors="ignore")
         zap_rows = _parse_zap_html(raw)
         qijian_rows = _parse_qijian_strix_html(raw)
+        rollup_rows = _parse_qijian_rollup_html(raw)
         if zap_rows:
             rows = zap_rows
         elif qijian_rows:
             rows = qijian_rows
+        elif rollup_rows:
+            rows = rollup_rows
         else:
             text = BeautifulSoup(raw, "html.parser").get_text("\n")
             rows = _parse_jianshi_html(text) or _parse_labeled_text(text)
