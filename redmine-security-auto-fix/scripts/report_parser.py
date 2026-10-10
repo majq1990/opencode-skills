@@ -184,6 +184,40 @@ def _parse_delimited(path: Path) -> list[dict]:
     raise ValueError(f"Unable to decode delimited report: {path}")
 
 
+_NVD_NOISE_PREFIX = re.compile(
+    r"^\s*(?:\*\*\s*(?:DISPUTED|REJECT|WITHDRAWN)\s*\*\*|Note:)\s*", re.IGNORECASE
+)
+# NVD 的 Vulnerability 列是整段描述，多数没有 ".This issue" 或句号可截：
+# 505980 实测名称中位数 127 字、最长 476 字，总览表格和章节标题直接不能看
+_NVD_TITLE_LIMIT = 60
+_DEPENDENCY_NAME_LIMIT = 110
+
+
+def _shorten_nvd_title(text: str, limit: int = _NVD_TITLE_LIMIT) -> str:
+    """NVD 描述当漏洞名用：去噪声前缀、截到句界、再压到 limit 字以内。"""
+    title = _NVD_NOISE_PREFIX.sub("", str(text or "")).strip()
+    title = re.split(r"\.This issue\b|\.\s", title)[0].strip(" .") or title
+    if len(title) <= limit:
+        return title
+    clipped = title[:limit].rsplit(" ", 1)[0].rstrip(" ,;:，。；：")
+    return f"{(clipped or title[:limit]).rstrip()}…"
+
+
+def _dependency_check_name(title: str, cve: str, component: str) -> str:
+    """dependency-check 条目名称：短标题 + CVE + 组件，整体有上限。
+
+    CVE 必须进名称：这批条目不带 CVE 号就没法对账、也没法查安全漏洞台账；
+    标题截断后也靠它保证不同 CVE 不会被合并成一类。
+    """
+    suffix = "、".join(part for part in (cve, component) if part)
+    if not suffix:
+        return title
+    room = _DEPENDENCY_NAME_LIMIT - len(suffix) - 2
+    if len(title) > max(room, 20):
+        title = _shorten_nvd_title(title, max(room, 20))
+    return f"{title}（{suffix}）"
+
+
 def _normalize_dependency_check_rows(rows: list[dict]) -> list[dict]:
     """OWASP dependency-check CSV：一行一个「组件 × CVE」。
 
@@ -201,7 +235,7 @@ def _normalize_dependency_check_rows(rows: list[dict]) -> list[dict]:
             continue
         # NVD 描述形如「<标题> vulnerability in <产品>.This issue affects ...」，
         # 标题截到 ".This issue" 或首个句号，全量描述放漏洞描述列
-        title = re.split(r"\.This issue\b|\.\s", vuln)[0].strip(" .") or vuln[:80]
+        title = _shorten_nvd_title(vuln)
         dependency = _clean(row.get("DependencyName"))
         component = dependency.split(":")[-1].strip() if dependency else ""
         severity = _clean(row.get("CVSSv3_BaseSeverity")) or _clean(
@@ -210,7 +244,7 @@ def _normalize_dependency_check_rows(rows: list[dict]) -> list[dict]:
         cwe = re.search(r"CWE-\d+", _clean(row.get("CWE")))
         normalized.append(
             {
-                "漏洞名称": f"{title}（{component}）" if component else title,
+                "漏洞名称": _dependency_check_name(title, cve, component),
                 "漏洞等级": severity,
                 "漏洞描述": vuln,
                 "加固建议": _clean(row.get("ShortDescription")),

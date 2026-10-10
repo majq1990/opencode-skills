@@ -477,6 +477,65 @@ class DependencyCheckCsvTests(unittest.TestCase):
         self.assertEqual(result["vulns"][0]["name"], "越权")
         self.assertEqual(result["vulns"][1]["level"], "medium")
 
+    LONG_ROW = (
+        '"demo","Wed, 2 Sep 2026 21:37:06 +0800",app.jar: shardingsphere-proxy-5.3.2.jar,'
+        '"proxy",https://www.apache.org/licenses/LICENSE-2.0.txt,'
+        '"CVE-2025-12345","CWE-89 Improper Neutralization of Special Elements",'
+        '"Apache ShardingSphere-Proxy prior to 5.3.0 when using MySQL as database backend '
+        "did not cleanup the database session completely after client authentication "
+        'failed, which allowed an attacker to execute normal commands with the '
+        'authenticated user, and then access the database.This issue affects Apache '
+        'ShardingSphere-Proxy: from 5.0.0 through 5.3.2. This vulnerability is fixed in '
+        '5.4.0.",'
+        '"NVD","","HIGH","",""\n'
+    )
+    DISPUTED_ROW = (
+        '"demo","Wed, 2 Sep 2026 21:37:06 +0800",app.jar: commons-jxpath-1.3.jar,'
+        '"xpath",https://www.apache.org/licenses/LICENSE-2.0.txt,'
+        '"CVE-2022-40352","CWE-611",'
+        '"** DISPUTED ** This record was originally reported by the oss-fuzz project who '
+        'failed to consider the security context in which JXPath is intended to be used '
+        'and failed to contact the JXPath maintainers prior to requesting the CVE '
+        'allocation.","NVD","","MEDIUM","",""\n'
+    )
+
+    def _row(self, data_row: str) -> str:
+        return self.CSV.splitlines()[0] + "\n" + data_row
+
+    def test_long_nvd_description_becomes_a_short_name(self):
+        """整段 NVD 描述不能直接当名称：表格和章节标题会被撑坏。"""
+        result = self._parse(self._row(self.LONG_ROW))
+        vuln = result["vulns"][0]
+        self.assertLessEqual(len(vuln["name"]), 110)
+        self.assertNotIn("This issue affects", vuln["name"])
+        self.assertNotIn("authenticated user", vuln["name"])
+        # 全量描述一个字不丢
+        self.assertIn("This issue affects Apache ShardingSphere-Proxy", vuln["description"])
+        self.assertIn("fixed in 5.4.0", vuln["description"])
+
+    def test_name_carries_cve_and_component(self):
+        """不带 CVE 号就没法对账、查不了台账；标题截断后也靠它区分类别。"""
+        result = self._parse(self._row(self.LONG_ROW))
+        name = result["vulns"][0]["name"]
+        self.assertIn("CVE-2025-12345", name)
+        self.assertIn("shardingsphere-proxy-5.3.2.jar", name)
+
+    def test_nvd_noise_prefix_is_dropped(self):
+        result = self._parse(self._row(self.DISPUTED_ROW))
+        name = result["vulns"][0]["name"]
+        self.assertFalse(name.startswith("**"))
+        self.assertNotIn("DISPUTED", name)
+        self.assertIn("commons-jxpath-1.3.jar", name)
+
+    def test_rows_sharing_a_prefix_stay_separate_classes(self):
+        """同前缀不同 CVE 不能被截断合并成一类。"""
+        result = self._parse(self._row(self.LONG_ROW.replace("CVE-2025-12345", "CVE-2025-12346")))
+        self.assertEqual(result["total"], 1)
+        single = self._parse(self._row(self.LONG_ROW))["vulns"][0]["name"]
+        other = result["vulns"][0]["name"]
+        self.assertNotEqual(single, other)
+        self.assertIn("CVE-2025-12346", other)
+
 
 class MdPentestReportTests(unittest.TestCase):
     MD = """# 渗透测试报告 — 测试平台（example.cn）
