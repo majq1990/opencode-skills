@@ -37,6 +37,30 @@ def _redact_sensitive_text(value):
     return text
 
 
+# 安全池历史案件的"测试验证/研发完成"原文常把内网地址写进正文
+# （"测试版本：1.7.3.93 http://10.255.18.31:8080/bigdata-api/..."），这些原文被当作
+# 先例引进方案时，地址不能跟着出去。公网地址和域名不动，只遮私网/环回/链路本地段。
+_INTERNAL_IP_PATTERN = re.compile(
+    r"\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+    r"|127\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+    r"|169\.254\.\d{1,3}\.\d{1,3}"
+    r"|192\.168\.\d{1,3}\.\d{1,3}"
+    r"|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}"
+    r"|0\.0\.0\.0)"
+    r"(?::\d{1,5})?"
+)
+
+
+def _mask_internal_addresses(value):
+    """遮掉文本里的私网/环回/链路本地 IP（含端口），其余内容原样保留。"""
+    return _INTERNAL_IP_PATTERN.sub("[内网地址已省略]", str(value or ""))
+
+
+def _clean_reference_text(value):
+    """内部先例原文进对外方案前的清洗：遮内网地址 + 去凭据。"""
+    return _redact_sensitive_text(_mask_internal_addresses(value))
+
+
 def _sanitize_description(value, limit=400):
     """案件描述摘录：去 HTML、去链接、去凭据，只留排查线索。
 
@@ -137,7 +161,7 @@ def generate_doc_markdown(vuln_data, issue_url):
         md += (
             f"| {priority.get(vuln.get('level'), 'P3')} "
             f"| {level_names.get(vuln.get('level'), vuln.get('level', ''))} "
-            f"| {vuln.get('name', '')} "
+            f"| {_mask_internal_addresses(vuln.get('name', ''))} "
             f"| {_instance_count(vuln)} "
             f"| {'、'.join(sources) or '无额外建议'} |\n"
         )
@@ -218,7 +242,7 @@ def _render_vulnerability_section(vulns, section_number):
 安全漏洞台账已登记该 CVE（{' · '.join(parts)}），处理进展以台账为准。
 
 """
-        md += f"""### {section_number}.{i} {vuln['name']}（{level_display}）
+        md += f"""### {section_number}.{i} {_mask_internal_addresses(vuln['name'])}（{level_display}）
 
 **责任判定**
 {responsibility.get('owner_name', '研发中心')}，{responsibility.get('reason', '应用实现确认')}。
@@ -247,7 +271,7 @@ def _render_vulnerability_section(vulns, section_number):
             md += """**涉及URL**
 """
             for url in vuln['urls']:
-                md += f"- {url}\n"
+                md += f"- {_mask_internal_addresses(url)}\n"
             md += "\n"
         
         recommendations = vuln.get("recommendations") or []
@@ -263,7 +287,7 @@ def _render_vulnerability_section(vulns, section_number):
                 source = source_names.get(
                     recommendation.get("source"), recommendation.get("source", "未知来源")
                 )
-                md += f"- **{source}**：{recommendation.get('suggestion', '')}\n"
+                md += f"- **{source}**：{_clean_reference_text(recommendation.get('suggestion', ''))}\n"
                 reference = recommendation.get("reference") or {}
                 if reference.get("issue_id"):
                     md += (
@@ -271,11 +295,11 @@ def _render_vulnerability_section(vulns, section_number):
                         f"https://faq.egova.com.cn:7787/issues/{reference['issue_id']}\n"
                     )
                 if reference.get("url"):
-                    md += f"  - 参考文档：{reference['url']}\n"
+                    md += f"  - 参考文档：{_mask_internal_addresses(reference['url'])}\n"
             md += "\n"
         elif vuln.get('fix_suggestion'):
             md += f"""**加固建议（当前漏洞报告）**
-{vuln['fix_suggestion']}
+{_clean_reference_text(vuln['fix_suggestion'])}
 
 """
 

@@ -6,6 +6,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from generate_dingtalk_doc import (  # noqa: E402
+    _mask_internal_addresses,
     _redact_sensitive_text,
     _sanitize_description,
     generate_doc_markdown,
@@ -114,6 +115,67 @@ class NoReportNoticeTests(unittest.TestCase):
             _redact_sensitive_text("password 字段需哈希存储"),
             "password 字段需哈希存储",
         )
+
+
+class InternalAddressMaskTests(unittest.TestCase):
+    """安全池先例原文里的内网地址不能跟着进对外方案（529626 实测泄露 135 处）。"""
+
+    def test_mask_private_and_loopback_with_port(self):
+        self.assertEqual(
+            _mask_internal_addresses("测试版本 1.7.3.93 http://10.255.18.31:8080/bigdata-api/tree"),
+            "测试版本 1.7.3.93 http://[内网地址已省略]/bigdata-api/tree",
+        )
+        for raw in ("192.168.1.1", "172.16.0.9:8080", "127.0.0.1:9000", "169.254.1.1"):
+            self.assertNotIn(raw, _mask_internal_addresses(f"见 {raw} 已屏蔽"))
+
+    def test_mask_keeps_public_addresses_and_domains(self):
+        text = "参考 https://faq.egova.com.cn:7787/issues/520604 与 223.5.5.5"
+        self.assertEqual(_mask_internal_addresses(text), text)
+
+    def test_recommendation_text_is_masked_in_doc(self):
+        md = generate_doc_markdown(
+            {
+                "issue_id": "529626",
+                "vulns": [
+                    {
+                        "name": "越权（待确认）GET /drone-api//unity/gis/wayline/theme/getlist",
+                        "level": "medium",
+                        "description": "越权",
+                        "recommendations": [
+                            {
+                                "source": "sec_pool_history",
+                                "suggestion": (
+                                    "[测试验证] 结果说明: 测试版本：1.7.3.93 "
+                                    "http://10.255.18.31:8080/bigdata-api/free/transformer/tree 已屏蔽此接口"
+                                ),
+                            }
+                        ],
+                    }
+                ],
+            },
+            "https://faq.egova.com.cn:7787/issues/529626",
+        )
+        self.assertNotIn("10.255.18.31", md)
+        self.assertIn("[内网地址已省略]", md)
+        self.assertIn("已屏蔽此接口", md)
+
+    def test_urls_and_name_are_masked_in_doc(self):
+        md = generate_doc_markdown(
+            {
+                "issue_id": "900001",
+                "vulns": [
+                    {
+                        "name": "未授权访问 http://10.250.4.84:38080/agent-uc/free/ms/oauth/get-token",
+                        "level": "high",
+                        "description": "未授权访问",
+                        "urls": ["http://10.11.1.1:32001/console"],
+                    }
+                ],
+            },
+            "https://faq.egova.com.cn:7787/issues/900001",
+        )
+        self.assertNotIn("10.250.4.84", md)
+        self.assertNotIn("10.11.1.1", md)
 
 
 if __name__ == "__main__":
