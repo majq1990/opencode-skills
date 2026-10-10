@@ -19,10 +19,20 @@
 | 2026-10-10 | DM 侧反查元数据 + 功能验证：`CHAR_USED='C'` 列 24722 个；255 个汉字写入 `VARCHAR(255 CHAR)` 成功（CHAR_LENGTH=255 / LENGTHB=510）；`IDENTITY(1,1)` 连续插入得 1,2,3；表注释 1069 + 列注释 33395 条全部落库；对象对账 5227 主键 + 93 唯一 + 3 外键 + 2519 索引 + 1069 表注释 = 8911 与产物一致 | ✅ 语义真落地，不是"碰巧建上了" |
 | 2026-10-10 | 转换器补 16 个测试（全套 **70 passed**），新增例程检出告警：cgdb 的 `po_sys_config_bak` 过程体内夹带 `create table ... like`，被分号切碎后不进产物，现在点名到 stderr | ✅ 例程本身仍需在达梦侧人工重建（DMSQL 程序语法差异大，非文本替换可解） |
 
+| 2026-10-10/11 | **v2.2 PG 系实迁作业线**：同一份源库（四库 5589 表 / 约 41.8 万行）迁 **瀚高 HighGo V9（PG 14.20，5866）首跑零失败**，迁 **人大金仓 KingbaseES V009R001C010（Oracle 兼容模式，54321）修 7 类 bug 后零失败**；双目标库四轨独立验证均 **0 数据丢失**（1412 表逐字段多重集 + 1981 个中文字段 + 大表指纹 + 5589 表行数对账）；对象对账 5570 主键 / 104 唯一 / 22 外键 / 2867 索引双侧一致 | ✅ 见 `references/mysql-to-pg-runbook.md`；**关键结论：瀚高过了不代表金仓能过**，7 类 bug 全是 Oracle 兼容层触发的 |
+| 2026-10-11 | 验证脚本四类"假数据丢失"定位并修掉：金仓 `float4::text` 只出 8 位有效数字（`extra_float_digits` 0-3 全试过均无效，`::numeric(30,10)` 更糟，**只有 `::float8` 二进制扩宽是精确的**）、MySQL `float(M,D)` 直读按 D 位舍入（须 `CAST AS DOUBLE`）、`bit(n)` MySQL 按整字节存（两侧按 `NUMERIC_PRECISION` 裁）、`time` timedelta vs 字符串（负时段要保留负号） | ✅ 四类全是回读表示差异，数据一条没丢 |
+| 2026-10-11 | MySQL 视图→PG 系转换器：朴素替换反引号只能成 27/49；落地 8 条改写规则（反引号 / INTERVAL 字符串化 / 三段式列引用 / 裸 JOIN→CROSS JOIN / concat 超 2 参嵌套 / ifnull→coalesce / LIMIT m,n / if()→CASE）后 **cgdb 40/49、cgdbstat 13/14**；剩余 10 个改不动的逐条归因（GROUP BY 功能依赖 3 / 未定位 concat 语法错 2 / 视图依赖视图需多轮重试 1 / PostGIS 缺失 1 / information_schema 列注释不存在 1 / sys.concat 1 类 / 另一视图 1） | ⚠️ 规则④（裸 JOIN）第一版写错，把 `join t a on(...)` 误判成要改，反把 27/49 砸下去；ON 在表引用后面，必须跳过表引用+别名再判断，且别名不能是关键字。修好后演练机已释放，43+/49 未复跑实测 |
+| 2026-10-11 | 索引对账口径纠偏：MySQL 索引名只在一张表内唯一、PG 系按 schema 唯一，**按名字比 100% 全对不上**；改语义四元组 `(表, 是否唯一, 有序列清单)` + 列名统一小写 + 目标侧按 `unnest(x.indkey) WITH ORDINALITY` 取键序（`k.ord <= x.indnkeyatts` 排除 INCLUDE 列） | ✅ 工具侧残留：同一条 SQL 在金仓上 `string_agg(... ORDER BY k.ord)` 列序不稳定（cgdb 15 组 / cgdbstat 3 组"仅源仅目标"全是列集合相同仅顺序不同），瀚高正常——是金仓聚合排序的工具问题，不是迁移缺陷 |
+
 
 ## 已知边界与遗留
 
 - **P3 演练未做**：DM8/AAS 安装包与 license 未在演练机实装（计划允许：先交 v2.0.0，演练顺延 v2.1）。
+- **PG 系视图转换未复跑收口**：修掉规则④ bug 并新增规则⑧（`if()`→CASE）后，按报错归类推算 cgdb 可达 43+/49，但演练机（8.130.120.33）已于 2026-10-11 释放，**43+/49 与"at or near concat"两条的根因均未实测**。下次演练优先做这两件事：① 最小复例二分定位 `concat` 语法错（先 `SELECT concat('a','b')`，再逐步加 `coalesce(x,'')`、嵌套、`union`）；② 复跑视图转换拿最终数字
+- **瀚高侧视图未测**：瀚高迁移与四轨验证全绿，但视图转换只在金仓上跑过（金仓 Oracle 兼容层才需要 concat 2 参嵌套等规则，瀚高大概率直接过）
+- **PG 系存储例程/触发器未覆盖**：cgdb 有例程体内夹带 DDL，PG 系过程语法与 MySQL 差异大，非文本替换可解
+- **PostGIS 未装**：两个目标库都没装，`geometry` 列先落 `bytea` 保数据，空间查询能力需另装扩展
+- **残留语义损失（已定性，需业务确认）**：`cgdb.tcdicadmindivision` 2 个单元格的 `\x00` 在 PG 系 text 类型存不了（双库表现一致）；`cgdb.to_patrol_labour_state` 1 个 `0000-00-00 00:00:00` 改写为 NULL
 - **雷同事项未裁决**（用户侧）：李涵/武扬孪生包评分复查由用户决定，与本 skill 技术线无关。
 - `verify_migration.py` 行数抽查为人工交互 SQL（模板在 migration_steps.md 4.0/4.4），自动 COUNT 因"标识符无法参数绑定"被安全闸拦截，v2.1 可评估 DM 系统视图统计口径替代。
 - skills-manager 发现页导入需用户在应用内操作（双层结构，见记忆 skills-manager-discovery-import）。
