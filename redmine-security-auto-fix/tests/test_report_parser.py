@@ -245,6 +245,77 @@ class ReportParserTests(unittest.TestCase):
         self.assertEqual(vulns[0]["level"], "low")
         self.assertTrue(vulns[0]["level_explicit"])
 
+    def test_docx_pentest_result_matrix_picks_failing_items(self):
+        """渗透测试结果报告：测试项矩阵里非"通过"的行才是漏洞。
+
+        目录（行尾带页码）和"二、漏洞类型测试结果"这类章节标题含"漏洞"二字，
+        通用段落解析会误收；叙述段按条目名找回危害/过程/建议，图注和 HTTP
+        原始包不灌进描述，"安全风险总结"之后的通用建议不收。
+        """
+        from docx import Document
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "report.docx"
+            document = Document()
+            document.add_paragraph("二、 漏洞类型测试结果\t3")
+            document.add_paragraph("3.2.1 垂直越权\t7")
+            document.add_paragraph("五、 附录\t13")
+            matrix = document.add_table(rows=3, cols=3)
+            for row, values in enumerate(
+                (
+                    ("测试分类", "测试项", "测试结果"),
+                    ("Web安全", "SQL注入", "通过"),
+                    ("业务逻辑安全", "垂直越权访问", "存在"),
+                )
+            ):
+                for col, value in enumerate(values):
+                    matrix.cell(row, col).text = value
+            stats = document.add_table(rows=2, cols=5)
+            for row, values in enumerate(
+                (
+                    ("系统名称", "严重漏洞", "高危漏洞", "中危漏洞", "低危漏洞"),
+                    ("某平台", "0", "1", "0", "0"),
+                )
+            ):
+                for col, value in enumerate(values):
+                    stats.cell(row, col).text = value
+            document.add_paragraph("漏洞类型测试结果")
+            document.add_paragraph("垂直越权")
+            document.add_paragraph("脆弱性评价")
+            document.add_paragraph("漏洞危害")
+            document.add_paragraph("越权漏洞是指未校验身份权限。")
+            document.add_paragraph("详细信息")
+            document.add_paragraph("漏洞URL：")
+            document.add_paragraph("https://example.test/api/getuser等")
+            document.add_paragraph("测试过程如下：")
+            document.add_paragraph("使用低权限账号登录，无任何功能访问权限")
+            document.add_paragraph("图3-1 暂无权限")
+            document.add_paragraph("拼接后返回姓名、电话等信息")
+            document.add_paragraph("数据包如下")
+            document.add_paragraph("GET /api/getuser HTTP/1.1")
+            document.add_paragraph("Host: example.test")
+            document.add_paragraph("修复建议")
+            document.add_paragraph("1.服务端对请求数据和当前用户身份做校验。")
+            document.add_paragraph("安全风险总结")
+            document.add_paragraph("加强访问控制。")
+            document.save(path)
+
+            result = parse_report(path)
+
+        self.assertEqual(result["total"], 1)
+        vuln = result["vulns"][0]
+        self.assertEqual(vuln["name"], "垂直越权访问")
+        self.assertEqual(vuln["level"], "high")
+        self.assertTrue(vuln["level_explicit"])
+        self.assertIn("未校验身份权限", vuln["harm"])
+        self.assertIn("使用低权限账号登录", vuln["description"])
+        self.assertIn("拼接后返回姓名、电话", vuln["description"])
+        self.assertNotIn("数据包如下", vuln["description"])
+        self.assertNotIn("GET /api", vuln["description"])
+        self.assertIn("服务端对请求数据和当前用户身份做校验", vuln["fix_suggestion"])
+        self.assertNotIn("加强访问控制", vuln["fix_suggestion"])
+        self.assertEqual(vuln["urls"], ["https://example.test/api/getuser"])
+
     def test_qijian_rollup_html_groups_by_project(self):
         """麒舰多项目汇总报告按 h2 项目段落出条，取执行摘要里带等级的发现列表。"""
         html = (

@@ -269,6 +269,16 @@ def _merge_heading_with_tables(heading_rows: list[dict], table_rows: list[dict])
     return result
 
 
+# 目录行：正文标题在 Word 里带"制表符+页码"后缀，正文里同样的标题没有
+_DOCX_TOC_LINE = re.compile(r"\t+\d+\s*$")
+# 纯章节标题：渗透报告的目录和正文里大量"二、漏洞类型测试结果"这类标题，
+# 含"漏洞"二字，会被段落解析的关键词规则误收成漏洞条目
+_DOCX_SECTION_TITLE = re.compile(
+    r"(测试结果|状况说明|问题归纳|风险总结|安全现状|测试目的|测试依据|测试工具|"
+    r"测试范围|设计原则|附录)$"
+)
+
+
 def _parse_docx(path: Path) -> list[dict]:
     try:
         from docx import Document
@@ -376,6 +386,11 @@ def _parse_docx(path: Path) -> list[dict]:
     current = None
     current_section = None
     for idx, (line, style) in enumerate(paragraph_records):
+        # 目录行（带页码后缀）和纯章节标题既不当条目名，也不当小节正文：
+        # 渗透报告目录里"二、漏洞类型测试结果"含"漏洞"二字，会被关键词规则
+        # 误收成漏洞；章节标题混进建议正文也是灌水
+        if _DOCX_TOC_LINE.search(line) or _DOCX_SECTION_TITLE.search(_clean(line)):
+            continue
         section = section_re.match(line)
         if section and current:
             label, content = section.groups()
@@ -436,6 +451,146 @@ def _parse_docx(path: Path) -> list[dict]:
         table_rows = [r for r in rows if r.get("漏洞名称") and (r.get("source") != "paragraph")]
         para_rows = [r for r in rows if r.get("source") == "paragraph"]
         rows = _merge_heading_with_tables(para_rows, table_rows)
+    return rows
+
+
+_PENTEST_LABEL = re.compile(
+    r"^(漏洞危害|危害|详细信息|漏洞详情|漏洞描述|漏洞URL|漏洞地址|涉及URL|"
+    r"测试过程|加固建议|修复建议|整改建议|处置建议)[：:]?\s*(.*)$"
+)
+# 证据附录：HTTP 原始包头和"数据包如下"这类引导语，进描述只是灌水
+_PENTEST_HTTP_NOISE = re.compile(
+    r"^(?:[A-Za-z][A-Za-z0-9-]*:\s|"
+    r"(?:GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS|TRACE|CONNECT)\s+\S+\s+HTTP)"
+)
+_PENTEST_PACKET_LEAD = ("数据包如下", "请求如下", "响应如下", "数据包")
+
+
+def _pentest_narrative(paragraphs: list[str], name: str) -> dict:
+    """在叙述段落里按条目名找回 危害/详情/过程/建议/URL 各节。
+
+    条目名在正文里可能比测试项表里的短（表里"垂直越权访问"、正文"垂直越
+    权"），互相包含即算命中；目录行和章节标题不是条目名。
+    """
+    start = None
+    for index, text in enumerate(paragraphs):
+        if _DOCX_TOC_LINE.search(text):
+            continue
+        cleaned = _clean(text)
+        if _DOCX_SECTION_TITLE.search(cleaned):
+            continue
+        if (name in cleaned or cleaned in name) and len(cleaned) <= len(name) + 6:
+            start = index
+            break
+    sections = {"description": "", "harm": "", "fix": "", "url": ""}
+    if start is None:
+        return sections
+    current = None
+    for text in paragraphs[start + 1 :]:
+        cleaned = _clean(text)
+        if not cleaned or cleaned.startswith("图"):
+            continue
+        if (
+            _DOCX_SECTION_TITLE.search(cleaned)
+            or re.match(r"^\d+\.\d", cleaned)
+            or re.match(r"^[一二三四五]、", cleaned)
+        ):
+            break
+        if _PENTEST_HTTP_NOISE.match(cleaned) or cleaned in _PENTEST_PACKET_LEAD:
+            continue
+        label = _PENTEST_LABEL.match(cleaned)
+        if label:
+            head, content = label.groups()
+            # "测试过程如下："这类引导语不是内容
+            if content.strip("：: ") in ("如下", ""):
+                content = ""
+            current = (
+                "fix"
+                if any(word in head for word in ("建议", "措施"))
+                else "harm"
+                if "危害" in head or head == "影响"
+                else "url"
+                if "URL" in head or "地址" in head
+                else "description"
+            )
+            if content:
+                sections[current] = _clean(f"{sections[current]} {content}")
+            continue
+        if current == "url":
+            found = re.search(r"https?://[^\s，。;；]*", cleaned)
+            if found:
+                sections["url"] = found.group(0).rstrip("等")
+            continue
+        if current:
+            sections[current] = _clean(f"{sections[current]} {cleaned}")
+    return {key: value[:1500] for key, value in sections.items()}
+
+
+def _parse_pentest_result_docx(path: Path) -> list[dict]:
+    """渗透测试结果报告：测试项矩阵里非"通过"的那几行才是漏洞。
+
+    这类报告（实测 535109）正文全是叙述段落，通用段落解析会把目录和章节
+    标题当漏洞收进来；漏洞清单其实在一张「测试分类/测试项/测试结果」大表
+    里——125 行只有一行不是"通过"，另有「系统名称/严重漏洞/高危漏洞/…」
+    统计表给等级，叙述段按条目名找回危害/过程/URL/建议。
+    """
+    try:
+        from docx import Document
+    except ImportError as exc:
+        raise RuntimeError("DOCX parsing requires python-docx") from exc
+
+    doc = Document(path)
+    failing: list[str] = []
+    level_counts: dict[str, int] = {}
+    for table in doc.tables:
+        if not table.rows:
+            continue
+        headers = [_clean(cell.text) for cell in table.rows[0].cells]
+        if any("测试项" in h for h in headers) and any("测试结果" in h for h in headers):
+            item_at = next(i for i, h in enumerate(headers) if "测试项" in h)
+            result_at = next(i for i, h in enumerate(headers) if "测试结果" in h)
+            for table_row in table.rows[1:]:
+                values = [_clean(cell.text) for cell in table_row.cells]
+                if len(values) <= max(item_at, result_at):
+                    continue
+                if values[result_at] and values[result_at] != "通过":
+                    failing.append(values[item_at])
+        elif any("严重漏洞" in h for h in headers) and any("高危漏洞" in h for h in headers):
+            level_at = {
+                index: level
+                for index, header in enumerate(headers)
+                for level in ("严重", "高危", "中危", "低危")
+                if level in header
+            }
+            for table_row in table.rows[1:]:
+                values = [_clean(cell.text) for cell in table_row.cells]
+                for index, level in level_at.items():
+                    if index < len(values) and values[index].isdigit():
+                        level_counts[level] = level_counts.get(level, 0) + int(
+                            values[index]
+                        )
+    if not failing:
+        return []
+    level = ""
+    nonzero = [(lv, count) for lv, count in level_counts.items() if count]
+    # 只有一档非零且例数对得上才回填等级；对不上就留空，交给 CVE 情报补
+    if len(nonzero) == 1 and nonzero[0][1] == len(failing):
+        level = nonzero[0][0]
+    paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+    rows = []
+    for name in failing:
+        detail = _pentest_narrative(paragraphs, name)
+        rows.append(
+            {
+                "漏洞名称": name,
+                "风险等级": level,
+                "漏洞描述": detail["description"],
+                "漏洞危害": detail["harm"],
+                "加固建议": detail["fix"],
+                "漏洞地址": detail["url"],
+                "source": "pentest_result_docx",
+            }
+        )
     return rows
 
 
@@ -1352,7 +1507,7 @@ def _parse_legacy_doc(path: Path) -> list[dict]:
                 text=True,
             )
             converted = target_dir / f"{path.stem}.docx"
-            return _parse_docx(converted)
+            return _parse_pentest_result_docx(converted) or _parse_docx(converted)
         antiword = shutil.which("antiword")
         if antiword:
             result = subprocess.run(
@@ -1813,7 +1968,7 @@ def parse_report(path: str | Path) -> dict:
     elif suffix in (".csv", ".tsv"):
         rows = _parse_delimited(report)
     elif suffix == ".docx":
-        rows = _parse_docx(report)
+        rows = _parse_pentest_result_docx(report) or _parse_docx(report)
     elif suffix == ".doc":
         rows = _parse_legacy_doc(report)
     elif suffix == ".pdf":
