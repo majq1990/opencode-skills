@@ -1,4 +1,5 @@
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -6,6 +7,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from report_parser import (
+    _parse_api_security_scan_html,
     _parse_appscan_pdf,
     _parse_fortify_cwe_top25_pdf,
     _parse_fortify_dev_workbook_pdf,
@@ -14,6 +16,7 @@ from report_parser import (
     _parse_trivy_table_txt,
     _parse_zap_html,
     _parse_zap_pdf,
+    parse_report,
 )
 
 
@@ -328,6 +331,151 @@ class JianshiHtmlTests(unittest.TestCase):
             "说明：egova-urbanpro-sms-service 下的两个扫描目录为空。\n"
         )
         self.assertEqual(_parse_jianshi_html(index), [])
+
+
+def _api_card(issue_id, badge, title, method, path, status, note="", analysis=""):
+    return f"""<div class="card {badge.lower()}" id="{issue_id}">
+<span class="badge badge-{badge.lower()}">{badge}</span>
+<strong>{title}</strong>
+<p style="margin-top: 10px;"><code>{method}</code> <span title="http://10.250.4.84:38080{path}">{path}</span></p>
+<p style="color: #888; margin-top: 5px;">{note}</p>
+<p style="margin-top: 6px;"><strong>越权状态:</strong> {status}</p>
+<p style="color: #4ecdc4; margin-top: 8px; font-style: italic;">{analysis}</p>
+</div>"""
+
+
+class ApiSecurityScanHtmlTests(unittest.TestCase):
+    """星揆 API 安全扫描报告；只收回放结论不是"通过"的接口。"""
+
+    REPORT = (
+        '<h2 id="auth-issues" class="section-toggle">鉴权问题 (未授权访问)</h2>'
+        + _api_card(
+            "auth-issue-1",
+            "HIGH",
+            "未授权访问",
+            "POST",
+            "/usercenter-api/oauth/get-token",
+            "",
+            "无需认证即可访问接口",
+            "🤖 未携带任何凭证即可换取访问令牌。",
+        )
+        + '<h2 id="privilege-issues" class="section-toggle">越权问题 (权限控制)</h2>'
+        + _api_card(
+            "privilege-issue-1",
+            "MEDIUM",
+            "越权测试回放",
+            "POST",
+            "/unity/gis/user/updatemenus",
+            "通过",
+            "已完成高低权限回放",
+            "🤖 操作的是当前登录用户自身菜单配置，属正常业务逻辑。",
+        )
+        + _api_card(
+            "privilege-issue-2",
+            "MEDIUM",
+            "越权测试回放",
+            "GET",
+            "/unity/encryption/getencryptkey",
+            "不通过",
+            "已完成高低权限回放",
+            "🤖 返回 256 字符加密密钥，低权限用户不应取得。",
+        )
+        + _api_card(
+            "privilege-issue-3",
+            "MEDIUM",
+            "越权测试回放",
+            "GET",
+            "/unity/gis/wayline/theme/getlist",
+            "待确认",
+            "已完成高低权限回放",
+            "🤖 高低权限响应完全一致，无法判断是否为公开配置。",
+        )
+    )
+
+    def test_only_failing_and_unconfirmed_cards_are_kept(self):
+        rows = _parse_api_security_scan_html(self.REPORT)
+        names = [row["漏洞名称"] for row in rows]
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(
+            names[0], "未授权访问 POST /usercenter-api/oauth/get-token"
+        )
+        self.assertIn("不通过", names[1])
+        self.assertIn("待确认", names[2])
+        self.assertEqual(rows[0]["风险等级"], "high")
+        self.assertEqual(rows[1]["风险等级"], "medium")
+
+    def test_endpoint_comes_from_visible_text_not_title(self):
+        """title 里带着内网 IP 和端口，不能进对外交付物。"""
+        rows = _parse_api_security_scan_html(self.REPORT)
+        blob = repr(rows)
+        self.assertNotIn("10.250.4.84", blob)
+        self.assertNotIn("38080", blob)
+        self.assertIn("/unity/encryption/getencryptkey", blob)
+
+    def test_description_carries_verdict_and_analysis(self):
+        rows = _parse_api_security_scan_html(self.REPORT)
+        self.assertIn("不通过", rows[1]["漏洞描述"])
+        self.assertIn("加密密钥", rows[1]["漏洞描述"])
+
+    def test_rejects_other_html_reports(self):
+        self.assertEqual(_parse_api_security_scan_html("<html><body>无卡片</body></html>"), [])
+        zap = '<div class="alert"><h3>VULN-0001：越权</h3></div>'
+        self.assertEqual(_parse_api_security_scan_html(zap), [])
+
+
+class DependencyCheckCsvTests(unittest.TestCase):
+    """OWASP dependency-check CSV：一行一个「组件 × CVE」，以前几乎全被丢弃。"""
+
+    CSV = (
+        '"Project","ScanDate","DependencyName","Description","License","CVE","CWE",'
+        '"Vulnerability","Source","CVSSv2_Severity","CVSSv3_BaseSeverity","Name",'
+        '"ShortDescription"\n'
+        '"demo","Wed, 2 Sep 2026 21:37:06 +0800",app.jar: commons-compress-1.25.0.jar,'
+        '"compression API",https://www.apache.org/licenses/LICENSE-2.0.txt,'
+        '"CVE-2024-25710","CWE-835 Loop with Unreachable Exit Condition (\'Infinite Loop\')",'
+        '"Loop with Unreachable Exit Condition (\'Infinite Loop\') vulnerability in Apache '
+        'Commons Compress.This issue affects Apache Commons Compress: from 1.3 through 1.25.0.",'
+        '"NVD","","MEDIUM","",""\n'
+        '"demo","Wed, 2 Sep 2026 21:37:06 +0800",app.jar: liquibase-core-4.4.3.jar,'
+        '"DB migration",https://www.apache.org/licenses/LICENSE-2.0.txt,'
+        '"CVE-2022-0839","CWE-611 Improper Restriction of XML External Entity Reference",'
+        '"Improper Restriction of XML External Entity Reference in GitHub repository '
+        'liquibase/liquibase prior to 4.8.0.","NVD","","CRITICAL","",""\n'
+    )
+
+    def _parse(self, text):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "dependency-check-report.csv"
+            path.write_text(text, encoding="utf-8")
+            return parse_report(path)
+
+    def test_every_component_cve_row_becomes_a_vuln(self):
+        result = self._parse(self.CSV)
+        vulns = result["vulns"]
+        self.assertEqual(result["total"], 2)
+        self.assertEqual([v["cve"] for v in vulns], ["CVE-2024-25710", "CVE-2022-0839"])
+        self.assertEqual([v["level"] for v in vulns], ["medium", "critical"])
+        self.assertTrue(all(v["level_explicit"] for v in vulns))
+
+    def test_name_keeps_component_and_short_title(self):
+        result = self._parse(self.CSV)
+        names = [v["name"] for v in result["vulns"]]
+        self.assertIn("commons-compress-1.25.0.jar", names[0])
+        self.assertNotIn("This issue affects", names[0])
+        self.assertIn("liquibase-core-4.4.3.jar", names[1])
+        self.assertEqual(result["vulns"][0]["cwe"], "CWE-835")
+
+    def test_plain_csv_is_untouched(self):
+        """不带 dependency-check 特征列的普通漏扫表仍走原 ALIASES 映射。"""
+        plain = (
+            "漏洞名称,风险等级,漏洞描述\n"
+            "越权,高,未校验资源归属\n"
+            "SQL注入,中,参数未转义\n"
+        )
+        result = self._parse(plain)
+        self.assertEqual(result["total"], 2)
+        self.assertEqual(result["vulns"][0]["name"], "越权")
+        self.assertEqual(result["vulns"][1]["level"], "medium")
 
 
 class MdPentestReportTests(unittest.TestCase):

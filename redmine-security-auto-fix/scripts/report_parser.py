@@ -184,6 +184,43 @@ def _parse_delimited(path: Path) -> list[dict]:
     raise ValueError(f"Unable to decode delimited report: {path}")
 
 
+def _normalize_dependency_check_rows(rows: list[dict]) -> list[dict]:
+    """OWASP dependency-check CSV：一行一个「组件 × CVE」。
+
+    列名是 DependencyName / CVE / Vulnerability / CVSSv3_BaseSeverity 这套，
+    ALIASES 一个都命中不了（只有 NVD 元数据的 Name 列偶尔有值，且多为空），
+    不认这个格式就会出现 49 行只解析出 1 条的漏抽。
+    """
+    if not rows or not {"DependencyName", "CVE", "Vulnerability"} <= set(rows[0].keys()):
+        return []
+    normalized = []
+    for row in rows:
+        cve = _clean(row.get("CVE"))
+        vuln = _clean(row.get("Vulnerability"))
+        if not cve and not vuln:
+            continue
+        # NVD 描述形如「<标题> vulnerability in <产品>.This issue affects ...」，
+        # 标题截到 ".This issue" 或首个句号，全量描述放漏洞描述列
+        title = re.split(r"\.This issue\b|\.\s", vuln)[0].strip(" .") or vuln[:80]
+        dependency = _clean(row.get("DependencyName"))
+        component = dependency.split(":")[-1].strip() if dependency else ""
+        severity = _clean(row.get("CVSSv3_BaseSeverity")) or _clean(
+            row.get("CVSSv2_Severity")
+        )
+        cwe = re.search(r"CWE-\d+", _clean(row.get("CWE")))
+        normalized.append(
+            {
+                "漏洞名称": f"{title}（{component}）" if component else title,
+                "漏洞等级": severity,
+                "漏洞描述": vuln,
+                "加固建议": _clean(row.get("ShortDescription")),
+                "CVE": cve,
+                "CWE": cwe.group(0) if cwe else "",
+            }
+        )
+    return normalized
+
+
 def _parse_excel(path: Path) -> list[dict]:
     try:
         import pandas as pd
@@ -1709,6 +1746,60 @@ def _parse_zap_html(html: str) -> list[dict]:
     return rows
 
 
+def _parse_api_security_scan_html(html: str) -> list[dict]:
+    """星揆 API 安全扫描报告（纵向/水平越权高低权限回放）。
+
+    结构：`测试接口清单` 一段接口矩阵，`鉴权问题 (未授权访问)` 与
+    `越权问题 (权限控制)` 两段 issue 卡片。每张卡片带 badge 等级、
+    `<strong>` 标题、`<code>METHOD</code> + 路径、以及 `越权状态: 通过/
+    不通过/待确认`。和渗透测试结果报告同一条规矩：结论不是"通过"的才出条。
+
+    端点只取 `<span>` 的可见文本（路径），不取 title 属性里的完整地址——
+    那里面带着内网 IP 和端口，不能进对外交付物。
+    """
+    if 'id="auth-issues"' not in html and 'id="privilege-issues"' not in html:
+        return []
+    cards = re.split(
+        r'<div class="card[^"]*"\s+id="(?:auth|privilege)-issue-\d+"\s*>', html
+    )[1:]
+    rows = []
+    for card in cards:
+        badge = re.search(r'badge badge-(\w+)">([^<]*)<', card)
+        kind = re.search(r"<strong>([^<]*)</strong>", card)
+        endpoint = re.search(
+            r"<code>\s*([A-Z]+)\s*</code>\s*<span[^>]*>\s*([^<]*?)\s*</span>", card
+        )
+        status = re.search(r"(?:越权状态|鉴权状态):</strong>\s*([^<]*)<", card)
+        verdict = _clean(status.group(1)) if status else ""
+        if verdict == "通过":
+            continue
+        method = endpoint.group(1) if endpoint else ""
+        path = _clean(endpoint.group(2)) if endpoint else ""
+        if not path:
+            continue
+        analysis = ""
+        for para in re.findall(
+            r'<p style="color: #4ecdc4[^"]*"[^>]*>(.*?)</p>', card, re.S
+        ):
+            analysis = _clean(re.sub(r"<[^>]+>", "", para))
+            break
+        title = _clean(kind.group(1)) if kind else ""
+        is_auth = "未授权" in title or "无需认证" in card[:600]
+        prefix = "未授权访问" if is_auth else "越权"
+        name = f"{prefix} {method} {path}".strip()
+        if verdict:
+            name = f"{prefix}（{verdict}）{method} {path}".strip()
+        row = {
+            "漏洞名称": name,
+            "风险等级": _normalize_level(badge.group(2)) if badge else "",
+            "漏洞描述": (f"{title}。" if title else "")
+            + (f"回放结论：{verdict}。" if verdict else "")
+            + analysis,
+        }
+        rows.append(row)
+    return rows
+
+
 def _parse_qijian_strix_html(html: str) -> list[dict]:
     """麒舰 strix 源码扫描产出的中文 HTML 渗透测试报告。
 
@@ -1979,6 +2070,9 @@ def parse_report(path: str | Path) -> dict:
         rows = _parse_excel(report)
     elif suffix in (".csv", ".tsv"):
         rows = _parse_delimited(report)
+        dependency_rows = _normalize_dependency_check_rows(rows)
+        if dependency_rows:
+            rows = dependency_rows
     elif suffix == ".docx":
         rows = _parse_pentest_result_docx(report) or _parse_docx(report)
     elif suffix == ".doc":
@@ -1998,10 +2092,13 @@ def parse_report(path: str | Path) -> dict:
             raise RuntimeError("HTML parsing requires beautifulsoup4") from exc
         raw = report.read_text(encoding="utf-8", errors="ignore")
         zap_rows = _parse_zap_html(raw)
+        api_rows = _parse_api_security_scan_html(raw)
         qijian_rows = _parse_qijian_strix_html(raw)
         rollup_rows = _parse_qijian_rollup_html(raw)
         if zap_rows:
             rows = zap_rows
+        elif api_rows:
+            rows = api_rows
         elif qijian_rows:
             rows = qijian_rows
         elif rollup_rows:
