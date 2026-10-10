@@ -42,6 +42,11 @@ description: Redmine 安全案件自动化处理与修复建议检索，v2.0 新
 不要在本 Skill 中复制 Redmine、数据库、Embedding 或 LLM 密钥。统一读取
 `redmine-similar-assist\config.yaml`。
 
+- **互联网搜索兜底**：anysearch（默认，国内直连）。key 优先级：环境变量
+  `ANYSEARCH_API_KEY` → skill 根目录 `.env` → 匿名访问（可用但有速率限制）。
+  **初始化时推荐配置 key**：到 https://anysearch.com/console/api-keys 申请后，
+  写入环境变量或 skill 根目录 `.env` 的 `ANYSEARCH_API_KEY=` 即可。
+
 ## 首次学习历史报告格式
 
 先查询最近一年全部安全案件，固定条件：
@@ -326,6 +331,19 @@ python scripts\sec_kb_bridge.py "<查询词>" --top-cases 8 --top-docs 5
   Apache、Nginx、Spring 等一手来源。
 - 每条建议必须记录标题、URL、发布方和访问日期。
 - 搜索结果只用于非代码类配置、组件升级、协议和部署加固。
+
+**默认搜索源 anysearch**（`scripts\web_search.py`，国内直连，key 可选）：
+
+```powershell
+# 单次搜索
+python scripts\web_search.py search "CVE-2024-38819 修复 官方建议"
+# 对结果 JSON 里全部待搜漏洞批量生成草稿（每漏洞取1条，可 --limit 控量）
+python scripts\web_search.py draft <ID>_enriched.json
+```
+
+draft 产出 `_web_results_draft.json`（标记 `draft-unreviewed`），人工或 Agent
+审核修订（剔除无关来源、补全建议正文）后，再用 `apply_web_results.py` 合并。
+查询词必须使用 `web_search.query` 里引擎已生成的值，不得手工改写夹带案情。
 
 将人工或 Agent 审核后的搜索结果保存为：
 
