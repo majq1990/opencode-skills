@@ -82,11 +82,12 @@ Redmine 下载接口会 `302` 跳转至 OSS。下载器优先使用 `curl.exe -L
 
 ## 解析层回归与值守
 
-- **解析回归**：`python scriptsegression_check.py`——14 个样本组（各格式代表附件）
+- **解析回归**：`python scripts
+egression_check.py`——14 个样本组（各格式代表附件）
   与 `tests/baseline/parse_regression.json` 比对，改动解析器/合并逻辑后必跑；
   有意的行为变化用 `--update-baseline` 重录。检索/方案层回归走 12 案 journal 核对流程。
 - **新案件值守**：`python scripts\watch_new_cases.py --days 2 --limit 5`——发现
-  tracker26 新案件逐案出**草稿**（发布与通知仍被抑制，须人工 finalize），
+  tracker26 新案件逐案出**草稿**（发布须人工确认后 finalize），
   已处理案件记入 state 自动跳过，限流按约定等 8 分钟。
 
 ## 验证历史语料解析
@@ -197,7 +198,7 @@ python scripts\process_issue.py <ISSUE_ID>
    `create_document` 把完整 Markdown 创建到钉钉“项目案例”目录
    `dQPGYqjpJYg0vw9osZbj1mpgWakx1Z5N` 下，取得真实 `nodeId/docUrl`。
 10. 调用 `get_document_info` 和 `get_document_content` 回读校验标题、父目录和正文。
-12. 校验通过后运行 `finalize_publication.py` 写回真实链接并推送机器人通知。
+12. 校验通过后运行 `finalize_publication.py` 把真实链接写回结果 JSON——发布即交付，不发群机器人通知。
 
 ## 内部检索
 
@@ -356,9 +357,9 @@ python scripts\apply_web_results.py <issue_enriched.json> <web_results.json>
 - `<ISSUE_ID>_enriched.json`：完整、可审计的数据
 - `<ISSUE_ID>_fix_plan.md`：钉钉文档内容
 
-通知规则：
+发布规则：
 
-- 默认先发布钉钉在线文档，再发送机器人通知。
+- 只发布钉钉在线文档，**不发群机器人通知**（通知模块已按需求移除，发布即交付）。
 - 默认父目录：
   `https://alidocs.dingtalk.com/i/nodes/dQPGYqjpJYg0vw9osZbj1mpgWakx1Z5N`
   （目录名“项目案例”）。
@@ -370,11 +371,9 @@ python scripts\apply_web_results.py <issue_enriched.json> <web_results.json>
   至少包含案件链接、漏洞清单、修复总览、分项方案、实施顺序和验证清单。
 - 优先直接调用钉钉 MCP `create_document(folderId=<父节点 nodeId>)`；禁止把
   nodeId 猜测或转换为其他 ID。
-- 文档发布失败时必须中止通知；禁止发送缺少真实文档链接的“成功通知”。
-- 通知内容包含案件链接、漏洞数量、风险等级统计和真实钉钉文档链接。
-- 机器人 Webhook、加签密钥和关键词统一读取
-  `redmine-similar-assist\config.yaml` 的 `notify` 段。
-- 不允许在 `process_issue.py` 本地生成结束后直接通知。
+- 文档发布并回读校验通过后，运行 `finalize_publication.py` 把真实
+  `nodeId/docUrl` 写回结果 JSON；不得在未发布、未回读的情况下宣称完成。
+- 禁止把本 skill 的产出自动推送到任何群/机器人渠道。
 
 发布并校验后执行：
 

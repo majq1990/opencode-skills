@@ -11,8 +11,7 @@
   case_state_<date>.json     （案件状态持久化，供次日跟踪 track_case_state.py）
 
 只写本地目录；报告头部默认为【待复核】，未经人工签字不得推送。
-推送通道沿用本 skill 既有 notify_dingtalk.py / finalize_publication.py 链路，
-推送目标先测试群后真实群（config/security_case/notify.json）。
+不发群机器人通知（通知模块已移除）；分发由人工把文档/报告链接发给对应人。
 """
 import copy
 import os
