@@ -470,7 +470,7 @@ python scripts/track_case_state.py --date <date+1> --state work/security_case/ou
 2. 三源融合后 0 有效案件 → 停止；如属正常无风险场景，须在报告中显式写明【无有效案件】并经人工确认后归档。
 3. 台账外资产命中 → 不定责不推送，进"未定责清单"等人工确认归属。
 4. 报告默认【待复核】；推送必须经人工复核，且先推测试目标
-   （`config/security_case/notify.json` 的 allowed_targets），确认真实目标前禁止推真实群。
+   （测试群为上线前唯一授权目标），确认真实目标前禁止推真实群。
 5. CVE 情报未经研判转换成 cve_items 前，不得直接喂 triage 当作已研判结论。
 
 ## 安全约束

@@ -2,7 +2,7 @@
 
 > 状态：**{{status}}** ｜ 共 {{case_count}} 项，按责任人分组
 > 回复口径：案件号 + 处置动作 + 预计完成时间；完成后在 `work/security_case/progress/progress_{{date}}.json` 回填 `status=fixed`
-> 推送规则：必须经人工复核后先推送测试目标（config/security_case/notify.json），缺确认只预览
+> 推送规则：必须经人工复核后先推送测试目标（测试群为上线前唯一授权目标），缺确认只预览
 
 ## 一、按责任人分组
 

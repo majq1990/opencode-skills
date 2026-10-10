@@ -46,4 +46,4 @@
 ---
 
 生成脚本：`scripts/gen_security_report.py`（只写本地 work/security_case/output/，不外发）
-复核人：{{reviewer}} ｜ 复核时间：{{review_time}} ｜ 推送须经人工复核并先走测试目标（config/security_case/notify.json）
+复核人：{{reviewer}} ｜ 复核时间：{{review_time}} ｜ 推送须经人工复核并先走测试目标（测试群为上线前唯一授权目标）

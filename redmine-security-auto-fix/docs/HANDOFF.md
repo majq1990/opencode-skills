@@ -97,7 +97,7 @@ written 337 / errors 0（受 5 req/30s 限速约束，60 词约 13 分钟）。
 2. 真实试跑：Redmine tracker_id=26 最近的 1-2 个案件，v1.1 链路照旧跑
    `process_issue.py`；如需三源对照，先跑 `triage_cases.py` 产出 cases JSON，再
    `process_issue.py --with-asset-triage --triage-cases <cases.json>`。
-3. 推送/通知类验证一律先测试目标（`config/security_case/notify.json` allowed_targets），
+3. 推送/通知类验证一律先测试目标（测试群为上线前唯一授权目标），
    确认真实目标前禁止推真实群。
 4. 端到端演练一个真实进行中案件，写 `docs/drill-report.md`。
 5. 收尾：钉钉《AI 提效落地计划》R50 进度"已完成"、落地情况"已落地"、K50 填实测结论；
