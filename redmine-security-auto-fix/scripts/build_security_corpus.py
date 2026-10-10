@@ -10,6 +10,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -35,6 +36,21 @@ def load_download_credentials(config_path: str | None) -> tuple[str, str]:
     return redmine["base_url"], redmine["api_key"]
 
 
+def _acceptable_text_mismatch(attachment: dict, actual_size: int) -> bool:
+    """附件被原地替换后 Redmine 的 filesize 元数据可能不更新（实测 526869：
+    元数据 43851、实际 37662，但 HTML 首尾完整可解析）。文本类内容非空且
+    不少于元数据一半时放行；二进制仍要求严格相等——截断的 PDF/Office
+    解不开或解出来是残章，不能将就。"""
+    expected_size = int(attachment.get("filesize") or 0)
+    content_type = str(attachment.get("content_type") or "").lower()
+    text_like = content_type.startswith("text/") or content_type in (
+        "application/json",
+        "application/xml",
+        "application/xhtml+xml",
+    )
+    return text_like and actual_size >= expected_size // 2
+
+
 def download_attachment(
     base_url: str, api_key: str, attachment: dict, target_dir: Path
 ) -> Path:
@@ -50,46 +66,58 @@ def download_attachment(
     )
     curl = shutil.which("curl.exe") or shutil.which("curl")
     if curl:
-        result = subprocess.run(
-            [
-                curl,
-                "-k",
-                "-L",
-                "--fail",
-                "--silent",
-                "--show-error",
-                "--retry",
-                "2",
-                "-H",
-                f"X-Redmine-API-Key: {api_key}",
-                "-o",
-                str(target),
-                url,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=180,
-        )
-        if result.returncode != 0:
-            target.unlink(missing_ok=True)
-            raise RuntimeError(
-                f"curl download failed ({result.returncode}): {result.stderr.strip()}"
+        # curl --retry 只重试传输层错误；服务端静默截断（200 但内容不全）
+        # 重试不到，按 size mismatch 自吞重拉，最多 3 次
+        last_error = "curl download failed"
+        for attempt in range(1, 4):
+            result = subprocess.run(
+                [
+                    curl,
+                    "-k",
+                    "-L",
+                    "--fail",
+                    "--silent",
+                    "--show-error",
+                    "--retry",
+                    "2",
+                    "-H",
+                    f"X-Redmine-API-Key: {api_key}",
+                    "-o",
+                    str(target),
+                    url,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=180,
             )
-        expected_size = int(attachment.get("filesize") or 0)
-        actual_size = target.stat().st_size
-        content_type = str(attachment.get("content_type") or "")
-        tolerance = (
-            max(1024, int(expected_size * 0.01))
-            if content_type.startswith("text/")
-            else 0
-        )
-        if expected_size and abs(actual_size - expected_size) > tolerance:
-            target.unlink(missing_ok=True)
-            raise RuntimeError(
-                f"Attachment size mismatch: expected={expected_size}, "
-                f"actual={actual_size}"
-            )
-        return target
+            if result.returncode != 0:
+                target.unlink(missing_ok=True)
+                last_error = (
+                    f"curl download failed ({result.returncode}): "
+                    f"{result.stderr.strip()}"
+                )
+            else:
+                expected_size = int(attachment.get("filesize") or 0)
+                actual_size = target.stat().st_size
+                mismatch = expected_size and actual_size != expected_size
+                if mismatch and not _acceptable_text_mismatch(attachment, actual_size):
+                    target.unlink(missing_ok=True)
+                    last_error = (
+                        f"Attachment size mismatch: expected={expected_size}, "
+                        f"actual={actual_size}"
+                    )
+                else:
+                    if mismatch:
+                        print(
+                            f"[warn] 附件 {filename} 与元数据大小不符"
+                            f"（expected={expected_size}, actual={actual_size}），"
+                            f"文本类按实际内容放行",
+                            file=sys.stderr,
+                        )
+                    return target
+            if attempt < 3:
+                time.sleep(2 * attempt)
+        raise RuntimeError(last_error)
 
     import requests
 

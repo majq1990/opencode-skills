@@ -27,6 +27,7 @@ LEVELS = {
     "低危": "low",
     "低风险": "low",
     "low": "low",
+    "建议": "info",
     "信息": "info",
     "提示": "info",
     "info": "info",
@@ -465,6 +466,9 @@ def _parse_pdf(path: Path) -> list[dict]:
                     headers = [_clean(cell) for cell in table[0]]
                     rows.extend(dict(zip(headers, row)) for row in table[1:])
     text = "\n".join(text_parts)
+    specialized = _parse_seczone_iast_pdf(text)
+    if specialized:
+        return specialized
     specialized = _parse_cn_audit_report_pdf(text)
     if specialized:
         return specialized
@@ -497,6 +501,83 @@ def _parse_pdf(path: Path) -> list[dict]:
         if normalized:
             return rows
     return _parse_labeled_text(text)
+
+
+def _parse_seczone_iast_pdf(text: str) -> list[dict]:
+    """安全岛（seczone / vulHunter）IAST 交互式应用安全测试报告。
+
+    结构：`安全弱点分布` 段按弱点类型逐块给
+    `<弱点名> / 严重性：X / 风险：… / 解决方法：…`，块内挂若干
+    `安全弱点：…` 实例条目（位置 + `状态：新发现` + 数据流跟踪）。
+    一个类型出一条（带实例数与代表位置），不展开代码片段——
+    SQL注入一个类型的解决方案跨 17 页代码，展开没有增量价值。
+    """
+    if "安全弱点分布" not in text and "安全弱点详情" not in text:
+        return []
+    if "seczone" not in text and "vulHunter" not in text:
+        return []
+
+    heads = list(
+        re.finditer(
+            r"(?P<name>[^\n：:]{2,60})\n严重性[：:]\s*(?P<sev>[^\n：:]{1,10})",
+            text,
+        )
+    )
+    if not heads:
+        return []
+
+    rows = []
+    seen = set()
+    for index, match in enumerate(heads):
+        name = _clean(match.group("name"))
+        # 页眉页脚、"安全弱点详情:"这类标签不是弱点名
+        if (
+            not name
+            or name in seen
+            or name.startswith("安全弱点")
+            or re.fullmatch(r"[\d\s/]+", name)
+            or "让企业交付更安全" in name
+        ):
+            continue
+        seen.add(name)
+        end = heads[index + 1].start() if index + 1 < len(heads) else len(text)
+        block = text[match.start() : end]
+
+        risk_match = re.search(
+            r"风险[：:]\s*(.*?)(?=\n解决方法[：:]|\n安全弱点[：:]|\Z)", block, re.S
+        )
+        fix_match = re.search(
+            r"解决方法[：:]\s*(.*?)(?=\n安全弱点[：:]|\Z)", block, re.S
+        )
+        locations: list[str] = []
+        for location in re.findall(r"安全弱点[：:]\s*\n?\s*([^\n]{2,200})", block):
+            location = _clean(location)
+            if location and location not in locations:
+                locations.append(location)
+        status_hits = re.findall(r"状态[：:]\s*(\S+)", block)
+        statuses = sorted({_clean(s) for s in status_hits})
+        instances = len(status_hits) or len(locations) or 1
+
+        parts = []
+        if risk_match:
+            parts.append(_clean(risk_match.group(1))[:600])
+        if statuses:
+            parts.append("状态：" + "、".join(statuses))
+        if locations:
+            shown = locations[:4]
+            tail = f"等共 {len(locations)} 处" if len(locations) > len(shown) else ""
+            parts.append("涉及位置：" + "；".join(shown) + tail)
+        rows.append(
+            {
+                "漏洞名称": name,
+                "风险等级": match.group("sev"),
+                "漏洞描述": _clean("；".join(parts))[:1500],
+                "加固建议": _clean(fix_match.group(1))[:3000] if fix_match else "",
+                "实例数": instances,
+                "source": "seczone_iast",
+            }
+        )
+    return rows
 
 
 def _parse_cn_audit_report_pdf(text: str) -> list[dict]:
@@ -1461,6 +1542,79 @@ def _parse_zap_html(html: str) -> list[dict]:
     return rows
 
 
+def _parse_qijian_strix_html(html: str) -> list[dict]:
+    """麒舰 strix 源码扫描产出的中文 HTML 渗透测试报告。
+
+    `<h3>VULN-000X：<漏洞名></h3>` 一个漏洞一块，块首是「严重性/CVSS评分/
+    发现时间/端点/CWE」属性行，后面跟「漏洞描述/影响分析/技术分析/修复建议/
+    修复方案」小节；其中"修复建议"小节常为空，方案正文在"修复方案"里。
+    """
+    if not re.search(r"<h[1-6][^>]*>\s*VULN-\d+\s*[：:]", html):
+        return []
+    starts = [
+        (m.start(), m.end(), _clean(m.group(2)))
+        for m in re.finditer(
+            r"<(h[1-6])[^>]*>\s*(VULN-\d+\s*[：:][^<]*?)\s*</\1>", html
+        )
+    ]
+    if not starts:
+        return []
+    rows = []
+    for index, (_, content_start, heading) in enumerate(starts):
+        end = starts[index + 1][0] if index + 1 < len(starts) else len(html)
+        block = html[content_start:end]
+        text = re.sub(r"<[^>]+>", "\n", block)
+        text = re.sub(r"[ \t]+", " ", text)
+        text = re.sub(r"\n\s*\n+", "\n", text)
+
+        def _after(label: str, stops: tuple[str, ...]) -> str:
+            found = re.search(
+                rf"^\s*{label}\s*$(.*?)(?=^\s*(?:{'|'.join(stops)})\s*$|\Z)",
+                text,
+                re.M | re.S,
+            )
+            return _clean(found.group(1)) if found else ""
+
+        # 严重性是块首独立一行，只在属性区找，避免描述里的"严重影响"误判
+        head_area = text.split("漏洞描述")[0]
+        severity = re.search(r"^\s*(严重|高危|中危|低危|提示)\s*$", head_area, re.M)
+        description = " ".join(
+            part
+            for part in (
+                _after("漏洞描述", ("影响分析", "技术分析", "修复建议", "修复方案")),
+                _after("影响分析", ("技术分析", "修复建议", "修复方案")),
+                _after("技术分析", ("修复建议", "修复方案")),
+            )
+            if part
+        )
+        fix = " ".join(
+            part
+            for part in (
+                _after("修复建议", ("修复方案",)),
+                _after("修复方案", ()),
+            )
+            if part
+        )
+        endpoint = re.search(r"^\s*端点[：:]\s*(.+?)\s*$", text, re.M)
+        cwe = re.search(r"\b(CWE-\d+)\b", head_area)
+        # 端点是"POST /path"这类非 URL 路径，进不了 urls（只收 http(s)），
+        # 并进描述开头，修复方案要拿它定位改动点
+        location = f"端点：{_clean(endpoint.group(1))}。" if endpoint else ""
+        row = {
+            "漏洞名称": re.sub(r"^VULN-\d+\s*[：:]\s*", "", heading),
+            "风险等级": severity.group(1) if severity else "",
+            "漏洞描述": (location + description)[:1500],
+            "实例数": 1,
+            "source": "qijian_strix_html",
+        }
+        if fix:
+            row["加固建议"] = fix[:3000]
+        if cwe:
+            row["CWE"] = cwe.group(1)
+        rows.append(row)
+    return rows
+
+
 def _parse_labeled_text(text: str) -> list[dict]:
     blocks = re.split(r"\n(?=(?:【?(?:严重|高危|中危|低危|信息)】?)?\s*\d*[.、]?\s*[^。\n]{2,60})", text)
     # 条目小标签：出现任一即认为这个块是漏洞详情而不是汇总表/说明文字
@@ -1527,8 +1681,11 @@ def parse_report(path: str | Path) -> dict:
             raise RuntimeError("HTML parsing requires beautifulsoup4") from exc
         raw = report.read_text(encoding="utf-8", errors="ignore")
         zap_rows = _parse_zap_html(raw)
+        qijian_rows = _parse_qijian_strix_html(raw)
         if zap_rows:
             rows = zap_rows
+        elif qijian_rows:
+            rows = qijian_rows
         else:
             text = BeautifulSoup(raw, "html.parser").get_text("\n")
             rows = _parse_jianshi_html(text) or _parse_labeled_text(text)

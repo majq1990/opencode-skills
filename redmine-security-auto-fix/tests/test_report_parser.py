@@ -9,6 +9,9 @@ sys.path.insert(0, str(SCRIPTS))
 from report_parser import (
     _parse_cn_audit_detail_pdf,
     _parse_cn_source_scan_pdf,
+    _parse_qijian_strix_html,
+    _parse_seczone_iast_pdf,
+    normalize_rows,
     parse_report,
 )
 
@@ -139,6 +142,107 @@ class ReportParserTests(unittest.TestCase):
         self.assertIn("MD5Utils.java", rows[1]["漏洞描述"])
         # 没有"（N例）"结构的普通文本不能误入这条路
         self.assertEqual(_parse_cn_source_scan_pdf("一份普通的安全通报正文"), [])
+
+    def test_seczone_iast_pdf_groups_by_weakness_type(self):
+        """安全岛 IAST 报告按弱点类型出条，实例数取状态标记数，等级原样透传。"""
+        text = (
+            "一体化平台 /让企业交付更安全的软件\n"
+            "22 / 60\n"
+            "安全弱点分布\n"
+            "安全弱点详情:\n"
+            "SQL注入\n"
+            "严重性： 高\n"
+            "风险： 用户输入未校验时会破坏sql语句结构。\n"
+            "解决方法： 使用ORM框架与参数化查询。\n"
+            "安全弱点：\n"
+            "DEFEB035099. /api/a 页面存在SQL注入\n"
+            "状态： 新发现\n"
+            "安全弱点：\n"
+            "DEFEB035100. /api/b 页面存在SQL注入\n"
+            "状态： 新发现\n"
+            "一体化平台 /让企业交付更安全的软件\n"
+            "43 / 60\n"
+            "缺少CSP响应头\n"
+            "严重性： 建议\n"
+            "风险： 未配置CSP时攻击者可注入脚本。\n"
+            "解决方法： 设置Content-Security-Policy响应头，参考 vulHunter.seczone.cn。\n"
+            "安全弱点：\n"
+            "DEFEB035095. 有40个页面缺少CSP响应头\n"
+            "状态： 新发现\n"
+        )
+        rows = _parse_seczone_iast_pdf(text)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["漏洞名称"], "SQL注入")
+        self.assertEqual(rows[0]["风险等级"], "高")
+        self.assertEqual(rows[0]["实例数"], 2)
+        self.assertIn("/api/a", rows[0]["漏洞描述"])
+        self.assertEqual(rows[0]["加固建议"], "使用ORM框架与参数化查询。")
+        self.assertEqual(rows[1]["漏洞名称"], "缺少CSP响应头")
+        self.assertEqual(rows[1]["风险等级"], "建议")
+        self.assertEqual(rows[1]["实例数"], 1)
+        # 没有 seczone 结构的普通文本不能误入这条路
+        self.assertEqual(_parse_seczone_iast_pdf("一份普通的安全通报正文"), [])
+
+    def test_seczone_iast_pdf_levels_normalize(self):
+        """"建议"级要落到 info，不能掉默认 medium，否则中危以上过滤会误纳。"""
+        text = (
+            "安全弱点分布\n"
+            "缺少CSP响应头\n"
+            "严重性： 建议\n"
+            "风险： 未配置CSP。\n"
+            "解决方法： 配置响应头。\n"
+            "安全弱点：\n"
+            "DEFEB035095. 有40个页面缺少CSP响应头\n"
+            "状态： 新发现\n"
+            "vulHunter.seczone.cn\n"
+        )
+        vulns = normalize_rows(_parse_seczone_iast_pdf(text), "seczone.pdf")
+        self.assertEqual(vulns[0]["level"], "info")
+        self.assertTrue(vulns[0]["level_explicit"])
+
+    def test_qijian_strix_html_groups_by_vuln_heading(self):
+        """麒舰 strix HTML 报告按 VULN 标题出条，端点并进描述，方案取修复方案节。"""
+        html = (
+            "<html><body><h2>三、漏洞详情</h2>"
+            "<h3>VULN-0002：存储型SpEL注入（通过规则引擎实现RCE）</h3>"
+            "<p>不受限制的StandardEvaluationContext评估可写入的规则表达式</p>"
+            "<p>严重</p><p>CVSS评分：</p><p>9.9</p>"
+            "<p>端点：</p><p>POST /ms/rule/save-or-update</p>"
+            "<p>CWE：</p><p>CWE-94</p>"
+            "<h4>漏洞描述</h4><p>规则引擎执行存储的规则表达式。</p>"
+            "<h4>影响分析</h4><p>可远程执行任意命令。</p>"
+            "<h4>修复建议</h4>"
+            "<h4>修复方案</h4><p>改用SimpleEvaluationContext只读绑定。</p>"
+            "<h3>VULN-0004：存储型SQL注入（通过SQL类型规则）</h3>"
+            "<p>高危</p><p>CVSS评分：</p><p>8.6</p>"
+            "<h4>漏洞描述</h4><p>规则体作为原始SQL执行。</p>"
+            "<h4>修复方案</h4><p>改用参数化查询。</p>"
+            "</body></html>"
+        )
+        rows = _parse_qijian_strix_html(html)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["漏洞名称"], "存储型SpEL注入（通过规则引擎实现RCE）")
+        self.assertEqual(rows[0]["风险等级"], "严重")
+        self.assertEqual(rows[0]["实例数"], 1)
+        self.assertIn("端点：POST /ms/rule/save-or-update", rows[0]["漏洞描述"])
+        self.assertIn("可远程执行任意命令", rows[0]["漏洞描述"])
+        self.assertEqual(rows[0]["加固建议"], "改用SimpleEvaluationContext只读绑定。")
+        self.assertEqual(rows[0]["CWE"], "CWE-94")
+        self.assertEqual(rows[1]["漏洞名称"], "存储型SQL注入（通过SQL类型规则）")
+        self.assertEqual(rows[1]["风险等级"], "高危")
+        self.assertEqual(rows[1]["加固建议"], "改用参数化查询。")
+        # 没有 VULN 编号标题的普通页面不能误入这条路
+        self.assertEqual(_parse_qijian_strix_html("<html><p>普通通报</p></html>"), [])
+
+    def test_qijian_strix_html_levels_normalize(self):
+        html = (
+            "<h3>VULN-0001：越权访问</h3><p>低危</p>"
+            "<h4>漏洞描述</h4><p>未做权限校验。</p>"
+            "<h4>修复方案</h4><p>加权限注解。</p>"
+        )
+        vulns = normalize_rows(_parse_qijian_strix_html(html), "report.html")
+        self.assertEqual(vulns[0]["level"], "low")
+        self.assertTrue(vulns[0]["level_explicit"])
 
     def test_cn_audit_detail_pdf_uses_numbered_heading_as_name(self):
         text = (

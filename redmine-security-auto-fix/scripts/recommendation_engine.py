@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
@@ -257,8 +258,26 @@ def enrich_all(
         sec_future = (
             pool.submit(sec_bridge.search_batch, items) if sec_bridge else None
         )
-        full_batch = full_future.result()
-        sec_batch = sec_future.result() if sec_future else {}
+        # 检索侧不可用（远端超时/服务重启）不该让整个案件的方案胎死腹中，
+        # 与台账一样降级为无增强继续，方案退回报告自带建议
+        try:
+            full_batch = full_future.result()
+        except Exception as exc:
+            print(
+                f"[enrich] 历史案件/知识库检索失败，降级为无增强"
+                f"（{type(exc).__name__}: {exc}）",
+                file=sys.stderr,
+            )
+            full_batch = {}
+        try:
+            sec_batch = sec_future.result() if sec_future else {}
+        except Exception as exc:
+            print(
+                f"[enrich] 安全池检索失败，降级为无增强"
+                f"（{type(exc).__name__}: {exc}）",
+                file=sys.stderr,
+            )
+            sec_batch = {}
 
     def _internal_for(index: int) -> dict[str, Any]:
         representative = key_first_index[key_of_index[index]]

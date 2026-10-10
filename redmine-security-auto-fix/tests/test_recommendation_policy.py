@@ -154,5 +154,42 @@ class RecommendationPolicyTests(unittest.TestCase):
         )
 
 
+class EnrichAllDegradationTests(unittest.TestCase):
+    def test_internal_search_failure_keeps_report_suggestions(self):
+        # 远端检索整体失败（超时/服务重启）不能拖垮整个案件：
+        # 降级为无增强，方案退回报告自带建议
+        import recommendation_engine as engine
+
+        class BatchFailingBridge:
+            def __init__(self, repo_path=None):
+                pass
+
+            def search_internal_batch(self, items):
+                raise RuntimeError("remote retrieval timed out")
+
+        original = engine.SimilarAssistBridge
+        engine.SimilarAssistBridge = BatchFailingBridge
+        try:
+            result = engine.enrich_all(
+                [
+                    {
+                        "name": "SQL注入漏洞",
+                        "description": "参数未过滤",
+                        "fix_suggestion": "改用参数化查询",
+                    }
+                ],
+                repo_path="unused",
+                with_sec_pool=False,
+            )
+        finally:
+            engine.SimilarAssistBridge = original
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["name"], "SQL注入漏洞")
+        self.assertEqual(
+            [row["source"] for row in result[0]["recommendations"]], ["report"]
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
