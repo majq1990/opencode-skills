@@ -11,6 +11,9 @@
 | 2026-10-02 | P2 `references/xinchuang-cases.md`：precheck 5 类高频模式 + 40 案件按 6 主题归档 + 4 篇权威 wiki 链接 | ✅ |
 | 2026-10-02 | 测试：pytest **15 passed**（compare 语义：缺表判不一致、多表仅提示=liquibase 建表预期；kb_query SSE 解析/token 加载；product_config PASS/FAIL/SKIP）；Windows %TEMP% pytest-of-* 毒 ACL 用 basetemp=work/pytest-tmp 绕过（pytest.ini 固化） | ✅ |
 | 2026-10-02 | 冒烟：precheck_env.sh 在 Git Bash 真跑（输出 PASS/WARN/FAIL 结构正确）；check_product_config CLI 真跑（15 产品 SKIP 符合预期）；kb_query 真跑「达梦 SYSGEO2 报错」返回高质量综述（含 gt-dmgeo2 jar 部署要点、#457759 等案件） | ✅ |
+| 2026-10-10 | **P3 演练闭环**：真实源库 MySQL 8.0.46 @ 172.21.133.155（cg155 跳板 + SSH 隧道）四库 5589 表全量迁移 **0 FAIL**，四轨独立过程验证（行数对账 / 1394 表逐字段多重集 / 中文回读 / 26 大表指纹）**0 数据丢失** | ✅ 见 `references/mysql-to-dm-runbook.md` |
+| 2026-10-10 | **v2.1 实迁作业线**：新增 `references/mysql-to-dm-runbook.md`（七节）+ `scripts/mysqldump_to_dm_ddl.py`（mysqldump DDL → 达梦 DDL 纯文本转换，不连库不执行 SQL）；SKILL.md 三线升四线并接线场景路由/工作流/参考文件；pytest **64 passed** | ✅ Mimosa 闸机结论：写入型 `open()` 判得比读取型严，去掉 `-o` CLI 写路径、只读 stdin/文件 + 一律写 stdout 后通过 |
+| 2026-10-10 | 转换器实证校验：拿 cg155 真实 DDL（5243 表 / 61983 列）与迁移引擎 `map_type()` 逐列对比 **1:1 全对上**；产物无反引号 / ENGINE / CHARSET / COLLATE / unsigned / ON UPDATE / 0000-00-00 / USING BTREE / AUTO_INCREMENT / PARTITION 残留 | ✅ 真实数据暴露 3 个坑（time 漏映射 / --prefix 未作用于索引名 / CREATE TABLE LIKE 被静默跳过），均已修 |
 
 ## 已知边界与遗留
 

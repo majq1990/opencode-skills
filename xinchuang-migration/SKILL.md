@@ -1,11 +1,11 @@
 ---
 name: xinchuang-migration
-version: 2.0.0
+version: 2.1.0
 author: majianquan
 license: MIT
 category: project-delivery
 visibility: tech-manager
-description: 信创迁移全流程支持。v2.0 由两条能力线合并而成：①现场作业线——eGova 产品从 MySQL/Tomcat 迁移到达梦DM8/金蝶AAS 的六阶段实操流程（前期准备、新服务器部署、达梦部署、金蝶部署、MySQL替换达梦、启动验证），含 14 条报错速查（SYSGEO2/Liquibase MD5/JDBC连接/Schema不存在/表空间/GBK截断/无效列名/保留字等）、排错决策树、16 产品配置对照表、迁移前标准备份脚本、Oracle 兼容参数速查、全量服务启停管理、77 张现场操作截图索引；②知识检索线——经公网 MCP（precheck/zhengtong_query）查公司 17 万 Redmine 工单 + 4500 篇知识库文档，覆盖达梦/人大金仓/瀚高/海量/麒麟/欧拉/UOS/金蝶(Apusic)/东方通(TongWeb)/鲲鹏/飞腾/海光等全信创场景，自带 REST 降级、vectors.db 直连应急与互联网搜索兜底；③自动化线——迁移前环境预检、迁移前后数据一致性校验、16 产品配置对照检查三个工程化脚本。凡涉及信创迁移、国产化迁移/适配、达梦迁移/部署、人大金仓/瀚高/海量迁移、金蝶/Apusic/东方通中间件、麒麟/欧拉/UOS 部署、DTS 数据迁移、dmPython、statgather 采集服务切换达梦、迁移报错排查、迁移前预检、迁移后校验，都应使用本 Skill。
+description: 信创迁移全流程支持。v2.1 由四条能力线合并而成：①现场作业线——eGova 产品从 MySQL/Tomcat 迁移到达梦DM8/金蝶AAS 的六阶段实操流程（前期准备、新服务器部署、达梦部署、金蝶部署、MySQL替换达梦、启动验证），含 14 条报错速查（SYSGEO2/Liquibase MD5/JDBC连接/Schema不存在/表空间/GBK截断/无效列名/保留字等）、排错决策树、16 产品配置对照表、迁移前标准备份脚本、Oracle 兼容参数速查、全量服务启停管理、77 张现场操作截图索引；②知识检索线——经公网 MCP（precheck/zhengtong_query）查公司 17 万 Redmine 工单 + 4500 篇知识库文档，覆盖达梦/人大金仓/瀚高/海量/麒麟/欧拉/UOS/金蝶(Apusic)/东方通(TongWeb)/鲲鹏/飞腾/海光等全信创场景，自带 REST 降级、vectors.db 直连应急与互联网搜索兜底；③自动化线——迁移前环境预检、迁移前后数据一致性校验、16 产品配置对照检查三个工程化脚本；④实迁作业线——MySQL→达梦真跑全量迁移与迁移后验证（2026-10-10 四库 5589 表全量实证、0 数据丢失），含 MySQL→达梦类型映射表、三个必知判定口径（LENGTH_IN_CHAR=0 须 VARCHAR(n CHAR)/排序规则只影响 MIN-MAX/活库漂移≠丢失）、引擎运行姿势、四轨过程验证方法论、mysqldump DDL 转换器。凡涉及信创迁移、国产化迁移/适配、达梦迁移/部署、人大金仓/瀚高/海量迁移、金蝶/Apusic/东方通中间件、麒麟/欧拉/UOS 部署、DTS 数据迁移、dmPython、statgather 采集服务切换达梦、迁移报错排查、迁移前预检、迁移后校验、MySQL 迁达梦实迁/全量迁移/数据对账/建表脚本转换，都应使用本 Skill。
 trigger_keywords:
   - 信创迁移
   - 国产化迁移
@@ -65,11 +65,12 @@ when_not_to_use: |
 
 # 信创迁移
 
-信创迁移全流程支持 skill。**三条能力线**：
+信创迁移全流程支持 skill。**四条能力线**：
 
 1. **现场作业**（v2.0 自 quiz266 提交物沉淀）：六阶段迁移流程 + 报错速查 + 决策树 + 16 产品配置对照 + 备份/启停 + 77 张现场截图
 2. **知识检索**（v1.0 既有架构）：`skill → MCP（precheck/zhengtong_query）→ demo redmine-assist → live vectors.db`，知识库每次同步后自动最新
 3. **自动化**（v2.0 新增）：迁移前环境预检、迁移前后一致性校验、产品配置对照检查
+4. **实迁作业**（v2.1 新增）：MySQL→达梦**真跑**全量迁移与迁移后验证——类型映射口径、三个必知判定口径、引擎运行姿势、四轨过程验证方法论，见 `references/mysql-to-dm-runbook.md`
 
 ## 迁移流程总览
 
@@ -89,6 +90,7 @@ when_not_to_use: |
 | `scripts/precheck_env.sh` | 迁移前环境预检（OS/磁盘/内存/端口/dmdba 用户/内核限制） | 目标 Linux 节点 | 全程只读，输出 PASS/FAIL/WARN 清单 |
 | `scripts/verify_migration.py` | 迁移基线采集与前后一致性校验（表/视图/存储过程/行数对比） | 本机或节点 | `collect` 采基线，`compare` 出差异报告；判不一致时**停止并报告，不自动修复** |
 | `scripts/check_product_config.py` | 16 产品配置对照检查（jdbc:dm 驱动/方言/模式名） | 本机或节点 | 依赖 `config/product-config-map.json`，核对实际配置文件 |
+| `scripts/mysqldump_to_dm_ddl.py` | mysqldump DDL → 达梦 DDL 纯文本转换（不连库、不执行 SQL） | 本机 | 读 stdin 或 dump 文件、写 stdout（由调用方 `>` 落盘）；类型口径与 runbook 第一节一致；主键/唯一约束/索引后置到第二段；`--prefix` 供同 schema 灰度验证 |
 | `scripts/kb_query.py` | 公网 MCP 直调（precheck/zhengtong_query） | 本机 | token 从 `D:\opencode\config\redmine-assist-mcp.json` 或环境变量 `REDMINE_ASSIST_TOKEN` 读取，**不落源码** |
 | `scripts/query_xc.py` | REST 降级查询（`--sweep` 批量） | 本机 | MCP 不可用时走 `/query` REST |
 | `scripts/backup_web.sh` | 备份 `/egova/web` → `/egova/backup/web` | 老服务器 | tar.gz 全备份、保留 15 份、文件锁防并发、磁盘预检、nohup 后台 |
@@ -475,6 +477,7 @@ ALTER SYSTEM SET 'ORDER_BY_NULLS_FLAG' = 1 SPFILE; -- 升序排序 NULL 排最�
 
 ## 检索工作流
 
+0. **实迁作业（优先判定）**：用户要**真正跑** MySQL→达梦迁移、或要迁移后验证/对账/查数据丢失/转换建表脚本 → 直接按 `references/mysql-to-dm-runbook.md` 执行，不要只给通用步骤
 1. **场景识别**：把用户问题归到"场景路由"表之一
 2. **知识库检索**：优先 `scripts/kb_query.py`（公网 MCP 直调），返回工单 + 文档链接 + 避坑建议
 3. **方案输出**：内置手册（六阶段/报错速查/playbooks）给出通用步骤 + 检索结果中的产品专项说明
@@ -542,6 +545,7 @@ sqlite3 /opt/redmine-assist/data/vectors.db "SELECT title,url FROM docs_meta WHE
 |---|---|---|
 | 迁移流程/怎么迁/实施步骤 | 现场作业 | 本文"迁移流程总览"+ 六阶段 |
 | 达梦 / DM8 / dameng | 现场作业 + 检索 | 阶段三/五 + playbooks B 章 |
+| MySQL 迁达梦实迁 / 全量迁移 / 迁移验证 / 数据对账 / 数据丢失 / 建表脚本转换 | **实迁作业** | `references/mysql-to-dm-runbook.md` |
 | 人大金仓 / Kingbase / KES | 检索为主 | playbooks C 章 + zhengtong_query |
 | 瀚高 / HighGo | 检索为主 | playbooks D 章 |
 | 海量 / Vastbase | 检索为主 | playbooks E 章 |
@@ -558,6 +562,10 @@ sqlite3 /opt/redmine-assist/data/vectors.db "SELECT title,url FROM docs_meta WHE
 | 版本探测 / CVE | 旁路 skill | xinchuang-pkg-probe（本 skill 不做） |
 
 ## 参考文件索引
+
+**实迁作业（v2.1 新增，2026-10-10 四库 5589 表全量实证）**
+- `references/mysql-to-dm-runbook.md` — **MySQL→达梦 DM8 实迁作业规程**：类型映射表、三个必知判定口径（`LENGTH_IN_CHAR=0` 须 `VARCHAR(n CHAR)` / 排序规则只影响 MIN-MAX 用整列多重集判 / 活库漂移≠丢失用自然键集合差）、引擎运行姿势 10 条、四轨过程验证方法论、拓扑与回滚四要素
+- `scripts/mysqldump_to_dm_ddl.py` — mysqldump DDL → 达梦 DDL 转换器（纯文本，不连库不执行；类型口径与 runbook 第一节一致；主键/唯一约束/索引后置到第二段）
 
 **现场作业（v2.0 自 quiz266 提交物沉淀，经脱敏）**
 - `references/migration_steps.md` — 迁移步骤全文（达梦部署/DTS/各产品参数/采集服务 dmPython 切换）
