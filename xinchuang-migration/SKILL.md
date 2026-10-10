@@ -1,11 +1,11 @@
 ---
 name: xinchuang-migration
-version: 2.2.0
+version: 2.2.1
 author: majianquan
 license: MIT
 category: project-delivery
 visibility: tech-manager
-description: 信创迁移全流程支持。v2.2 由五条能力线合并而成：①现场作业线——eGova 产品从 MySQL/Tomcat 迁移到达梦DM8/金蝶AAS 的六阶段实操流程（前期准备、新服务器部署、达梦部署、金蝶部署、MySQL替换达梦、启动验证），含 14 条报错速查（SYSGEO2/Liquibase MD5/JDBC连接/Schema不存在/表空间/GBK截断/无效列名/保留字等）、排错决策树、16 产品配置对照表、迁移前标准备份脚本、Oracle 兼容参数速查、全量服务启停管理、77 张现场操作截图索引；②知识检索线——经公网 MCP（precheck/zhengtong_query）查公司 17 万 Redmine 工单 + 4500 篇知识库文档，覆盖达梦/人大金仓/瀚高/海量/麒麟/欧拉/UOS/金蝶(Apusic)/东方通(TongWeb)/鲲鹏/飞腾/海光等全信创场景，自带 REST 降级、vectors.db 直连应急与互联网搜索兜底；③自动化线——迁移前环境预检、迁移前后数据一致性校验、16 产品配置对照检查三个工程化脚本；④实迁作业线——MySQL→达梦真跑全量迁移与迁移后验证（2026-10-10 四库 5589 表全量实证、0 数据丢失），含 MySQL→达梦类型映射表、三个必知判定口径（LENGTH_IN_CHAR=0 须 VARCHAR(n CHAR)/排序规则只影响 MIN-MAX/活库漂移≠丢失）、引擎运行姿势、四轨过程验证方法论、mysqldump DDL 转换器；⑤PG 系实迁作业线——MySQL→人大金仓 KingbaseES 与瀚高 HighGo 真跑全量迁移与四轨验证（同一份源库双目标库均 0 失败、0 数据丢失），含 MySQL→PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug（位字面量大小写/bit 整字节存/唯一索引须建约束/DROP SCHEMA CASCADE 打爆 max_locks_per_transaction/索引名 schema 唯一/空串静默变 NULL/date 带时间分量）、回读精度四坑（金仓 float4 ::text 只出 8 位有效数字必须改走 ::float8）、索引语义对账口径（不能按名字比）、实时表自动判定、MySQL 视图→PG 系 8 条改写规则与剩余 10 个改不动视图的逐条归因。凡涉及信创迁移、国产化迁移/适配、达梦迁移/部署、人大金仓/瀚高/海量迁移、MySQL 迁金仓/迁瀚高实迁、金蝶/Apusic/东方通中间件、麒麟/欧拉/UOS 部署、DTS 数据迁移、dmPython、statgather 采集服务切换达梦、迁移报错排查、迁移前预检、迁移后校验、MySQL 迁达梦实迁/全量迁移/数据对账/建表脚本转换/视图转换，都应使用本 Skill。
+description: 信创迁移全流程支持。v2.2 由五条能力线合并而成：①现场作业线——eGova 产品从 MySQL/Tomcat 迁移到达梦DM8/金蝶AAS 的六阶段实操流程（前期准备、新服务器部署、达梦部署、金蝶部署、MySQL替换达梦、启动验证），含 14 条报错速查（SYSGEO2/Liquibase MD5/JDBC连接/Schema不存在/表空间/GBK截断/无效列名/保留字等）、排错决策树、16 产品配置对照表、迁移前标准备份脚本、Oracle 兼容参数速查、全量服务启停管理、77 张现场操作截图索引；②知识检索线——经公网 MCP（precheck/zhengtong_query）查公司 17 万 Redmine 工单 + 4500 篇知识库文档，覆盖达梦/人大金仓/瀚高/海量/麒麟/欧拉/UOS/金蝶(Apusic)/东方通(TongWeb)/鲲鹏/飞腾/海光等全信创场景，自带 REST 降级、vectors.db 直连应急与互联网搜索兜底；③自动化线——迁移前环境预检、迁移前后数据一致性校验、16 产品配置对照检查三个工程化脚本；④实迁作业线——MySQL→达梦真跑全量迁移与迁移后验证（2026-10-10 四库 5589 表全量实证、0 数据丢失），含 MySQL→达梦类型映射表、三个必知判定口径（LENGTH_IN_CHAR=0 须 VARCHAR(n CHAR)/排序规则只影响 MIN-MAX/活库漂移≠丢失）、引擎运行姿势、四轨过程验证方法论、mysqldump DDL 转换器；⑤PG 系实迁作业线——MySQL→人大金仓 KingbaseES 与瀚高 HighGo 真跑全量迁移与四轨验证（同一份源库双目标库均 0 失败、0 数据丢失），含 MySQL→PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug（位字面量大小写/bit 整字节存/唯一索引须建约束/DROP SCHEMA CASCADE 打爆 max_locks_per_transaction/索引名 schema 唯一/空串静默变 NULL/date 带时间分量）、回读精度四坑（金仓 float4 ::text 只出 8 位有效数字必须改走 ::float8）、索引语义对账口径（不能按名字比）、实时表自动判定、MySQL 视图→PG 系 8 条改写规则与剩余 10 个改不动视图的逐条归因。所有对外请求与凭据读取均按 Mimosa 扫描口径设边界（endpoint 仅 https+公司域名+拒私网解析、token 只走环境变量、脚本不提供 CLI 可控写路径）。凡涉及信创迁移、国产化迁移/适配、达梦迁移/部署、人大金仓/瀚高/海量迁移、MySQL 迁金仓/迁瀚高实迁、金蝶/Apusic/东方通中间件、麒麟/欧拉/UOS 部署、DTS 数据迁移、dmPython、statgather 采集服务切换达梦、迁移报错排查、迁移前预检、迁移后校验、MySQL 迁达梦实迁/全量迁移/数据对账/建表脚本转换/视图转换，都应使用本 Skill。
 trigger_keywords:
   - 信创迁移
   - 国产化迁移
@@ -98,7 +98,7 @@ when_not_to_use: |
 | `scripts/check_product_config.py` | 16 产品配置对照检查（jdbc:dm 驱动/方言/模式名） | 本机或节点 | 依赖 `config/product-config-map.json`，核对实际配置文件 |
 | `scripts/mysqldump_to_dm_ddl.py` | mysqldump DDL → 达梦 DDL 纯文本转换（不连库、不执行 SQL） | 本机 | 读 stdin 或 dump 文件、写 stdout（由调用方 `>` 落盘）；类型口径与 runbook 第一节一致；主键/唯一约束/索引后置到第二段；`--prefix` 供同 schema 灰度验证；**已在 DM8 V8 上真执行 5243 表零失败** |
 | `scripts/kb_query.py` | 公网 MCP 直调（precheck/zhengtong_query） | 本机 | token 从 `D:\opencode\config\redmine-assist-mcp.json` 或环境变量 `REDMINE_ASSIST_TOKEN` 读取，**不落源码** |
-| `scripts/query_xc.py` | REST 降级查询（`--sweep` 批量） | 本机 | MCP 不可用时走 `/query` REST |
+| `scripts/query_xc.py` | REST 降级查询（`--sweep` 批量） | 本机 | MCP 不可用时走 `/query` REST；token 走 `REDMINE_ASSIST_TOKEN` 环境变量，只写 stdout |
 | `scripts/backup_web.sh` | 备份 `/egova/web` → `/egova/backup/web` | 老服务器 | tar.gz 全备份、保留 15 份、文件锁防并发、磁盘预检、nohup 后台 |
 | `scripts/backup_apps.sh` | 备份 `/egova/apps` → `/egova/backup/apps` | 老服务器 | 同上 |
 | `scripts/backup_egova.sh` | 多目录合并备份（`BACKUP_DIRS` 数组） | 老服务器 | crontab 每月 1 号 03:00 |
@@ -513,12 +513,13 @@ token 配置：默认读 `D:\opencode\config\redmine-assist-mcp.json`（键 `aut
 
 ## REST 降级（脚本模式）
 
-无 MCP 客户端环境时：
+无 MCP 客户端环境时。token 只从环境变量 `REDMINE_ASSIST_TOKEN` 读（脚本内不落凭据；与 kb_query.py 同口径）：
 ```bash
+export REDMINE_ASSIST_TOKEN=<扫码拿到的 token>
 python scripts/query_xc.py "灵珑迁移到达梦后视图查询报错怎么处理"
-python scripts/query_xc.py --sweep "达梦 迁移" --out /tmp/xc_result
+python scripts/query_xc.py --sweep "达梦 迁移" > sweep_result.md
 ```
-参数：`--host`（默认 https://demo.egova.com.cn/redmine-assist）、`--token`、`--out`、`--timeout`。
+参数：`--host`（默认 https://demo.egova.com.cn/redmine-assist）、`--timeout`。脚本只写 stdout，要落盘由 shell 重定向——这是 2026-10-10 Mimosa 扫描后的定稿姿势，CLI 可控的写路径（原 `--out`）已按"高危·路径穿越"移除。
 
 ## 限速与错误
 
