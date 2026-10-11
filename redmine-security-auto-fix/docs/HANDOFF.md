@@ -110,7 +110,9 @@ written 337 / errors 0（受 5 req/30s 限速约束，60 词约 13 分钟）。
    memory 已更新并 mem0 同步。本轮另完成 Redmine 最近一周 23 个未关闭安全案件全量验证
    （全部 rc=0）、505980 在 v2.9 代码上的端到端复跑（110.2 分钟、162 类、129 个 CVE
    零丢失），以及 v2.9.0（`41dc44b`）与 v2.10.0（`dec84cd`）两次推送；使用说明已按
-   v2.10.0 定稿，待用户上传到指定钉钉节点。
+   v2.10.0 定稿并上传到钉钉「企业skill」文件夹
+   （https://alidocs.dingtalk.com/i/nodes/EpGBa2Lm8azvXDpLTzam1513WgN7R35y；
+   用户给的目录节点此前解析失败是 URL 少了 NJ 两个字符，补全后为 32 位 dentryUuid）。
 
 ## 已知问题 / 未解决
 
