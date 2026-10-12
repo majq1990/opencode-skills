@@ -2,7 +2,7 @@
 name: skill-hub
 description: 公司 skill 服务器（skills-manager 企业源）总入口：按需求检索团队 skill 池、下载装载执行、引导安装。Use when 用户想找 skill、"有没有能做 X 的 skill"、不确定有没有现成 skill、想装/启用服务器上的某个 skill、想看公司 skill 库有什么。用户已明确点名本机已安装的 skill 时不经过本 skill；公网 skills.sh 生态找 skill 走 find-skills；向服务器发布/上传 skill 走 skill-publisher。触发词：找skill、找个skill、有没有skill、skill库、技能库、装个skill、企业源、公司skill。
 metadata:
-  version: 1.0.2
+  version: 1.0.3
   author: majianquan
   category: global
   visibility: global
