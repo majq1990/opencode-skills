@@ -1,11 +1,11 @@
 ---
 name: xinchuang-migration
-version: 2.3.1
+version: 2.3.2
 author: majianquan
 license: MIT
 category: project-delivery
 visibility: tech-manager
-description: 信创迁移全流程支持。v2.3 由六条能力线合并而成：①现场作业线——eGova 产品从 MySQL/Tomcat 迁移到达梦DM8/金蝶AAS 的六阶段实操流程（前期准备、新服务器部署、达梦部署、金蝶部署、MySQL替换达梦、启动验证），含 14 条报错速查（SYSGEO2/Liquibase MD5/JDBC连接/Schema不存在/表空间/GBK截断/无效列名/保留字等）、排错决策树、16 产品配置对照表、迁移前标准备份脚本、Oracle 兼容参数速查、全量服务启停管理、77 张现场操作截图索引；②知识检索线——经公网 MCP（precheck/zhengtong_query）查公司 17 万 Redmine 工单 + 4500 篇知识库文档，覆盖达梦/人大金仓/瀚高/海量/麒麟/欧拉/UOS/金蝶(Apusic)/东方通(TongWeb)/鲲鹏/飞腾/海光等全信创场景，自带 REST 降级、vectors.db 直连应急与互联网搜索兜底；③自动化线——迁移前环境预检、迁移前后数据一致性校验、16 产品配置对照检查、Liquibase 达梦覆盖审计、properties 键集合对照五个工程化脚本；④实迁作业线——MySQL→达梦真跑全量迁移与迁移后验证（2026-10-10 四库 5589 表全量实证、0 数据丢失），含 MySQL→达梦类型映射表、三个必知判定口径（LENGTH_IN_CHAR=0 须 VARCHAR(n CHAR)/排序规则只影响 MIN-MAX/活库漂移≠丢失）、引擎运行姿势、四轨过程验证方法论、mysqldump DDL 转换器；⑤PG 系实迁作业线——MySQL→人大金仓 KingbaseES 与瀚高 HighGo 真跑全量迁移与四轨验证（同一份源库双目标库均 0 失败、0 数据丢失），含 MySQL→PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug（位字面量大小写/bit 整字节存/唯一索引须建约束/DROP SCHEMA CASCADE 打爆 max_locks_per_transaction/索引名 schema 唯一/空串静默变 NULL/date 带时间分量）、回读精度四坑（金仓 float4 ::text 只出 8 位有效数字必须改走 ::float8）、索引语义对账口径（不能按名字比）、实时表自动判定、MySQL 视图→PG 系 8 条改写规则与剩余 10 个改不动视图的逐条归因；⑥应用层切库线——数据迁完之后 Tomcat 应用零代码改动切到达梦并起到可用（2026-10-10 真实切换实证）：六项切换清单、方言 jar 必须匹配 Hibernate 主版本、启动期硬 blocker `LiquibaseDatabaseInitException` 的 dbms 过滤根因与官方 API 修法（47 个 replaceChecksum + 4 个 markNextChangeSetRan，零手写 SQL 改 databasechangelog）、两个必知坑（getRanChangeSets() 同进程缓存读到陈旧数据必须另起进程复验 / Tomcat 日志按日期分文件没有 catalina.out）、缺 JSTL 发布缺件的判定与补件、探针自伤归因、以及"怎么证明应用真的在读迁移后的库"的四步验证法（v$sql_history 前后对比 seq_no 抓业务 SQL；SELECT 的 affected_rows 恒 0 不能用来证明命中行数）。所有对外请求与凭据读取均按 Mimosa 扫描口径设边界（endpoint 仅 https+公司域名+拒私网解析、token 只走环境变量、脚本不提供 CLI 可控写路径），解析现场不可信 XML（jar 内 changelog 等）一律 `xml.parsers.expat` 手工建树并拒绝一切 DTD/ENTITY 声明；文档与进度日志同样执行占位符纪律——不写现场明文口令、不写内网 IP 与机器代号、机器与流程状态只写 date/uptime/容器/端口实测可复核的结论，且"敏感字面量已清零"的宣称每轮都要换角度复扫（口令/IP/代号/失实状态记录都算）。凡涉及信创迁移、国产化迁移/适配、达梦迁移/部署、人大金仓/瀚高/海量迁移、MySQL 迁金仓/迁瀚高实迁、金蝶/Apusic/东方通中间件、麒麟/欧拉/UOS 部署、DTS 数据迁移、dmPython、statgather 采集服务切换达梦、迁移报错排查、迁移前预检、迁移后校验、MySQL 迁达梦实迁/全量迁移/数据对账/建表脚本转换/视图转换、切库后应用起不来/页面 404/liquibase 校验值不一致/方言不匹配/证明应用读库，都应使用本 Skill。
+description: 信创迁移全流程支持。v2.3 由六条能力线合并而成：①现场作业线——eGova 产品从 MySQL/Tomcat 迁移到达梦DM8/金蝶AAS 的六阶段实操流程（前期准备、新服务器部署、达梦部署、金蝶部署、MySQL替换达梦、启动验证），含 14 条报错速查（SYSGEO2/Liquibase MD5/JDBC连接/Schema不存在/表空间/GBK截断/无效列名/保留字等）、排错决策树、16 产品配置对照表、迁移前标准备份脚本、Oracle 兼容参数速查、全量服务启停管理、77 张现场操作截图索引；②知识检索线——经公网 MCP（precheck/zhengtong_query）查公司 17 万 Redmine 工单 + 4500 篇知识库文档，覆盖达梦/人大金仓/瀚高/海量/麒麟/欧拉/UOS/金蝶(Apusic)/东方通(TongWeb)/鲲鹏/飞腾/海光等全信创场景，自带 REST 降级、vectors.db 直连应急与互联网搜索兜底；③自动化线——迁移前环境预检、迁移前后数据一致性校验、16 产品配置对照检查、Liquibase 达梦覆盖审计、properties 键集合对照五个工程化脚本；④实迁作业线——MySQL→达梦真跑全量迁移与迁移后验证（2026-10-10 四库 5589 表全量实证、0 数据丢失），含 MySQL→达梦类型映射表、三个必知判定口径（LENGTH_IN_CHAR=0 须 VARCHAR(n CHAR)/排序规则只影响 MIN-MAX/活库漂移≠丢失）、引擎运行姿势、四轨过程验证方法论、mysqldump DDL 转换器；⑤PG 系实迁作业线——MySQL→人大金仓 KingbaseES 与瀚高 HighGo 真跑全量迁移与四轨验证（同一份源库双目标库均 0 失败、0 数据丢失），含 MySQL→PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug（位字面量大小写/bit 整字节存/唯一索引须建约束/DROP SCHEMA CASCADE 打爆 max_locks_per_transaction/索引名 schema 唯一/空串静默变 NULL/date 带时间分量）、回读精度四坑（金仓 float4 ::text 只出 8 位有效数字必须改走 ::float8）、索引语义对账口径（不能按名字比）、实时表自动判定、MySQL 视图→PG 系 12 条改写规则与剩余 7 个改不动视图的逐条归因，以及 2026-10-12 整库复跑暴露的 4 个"小库不暴露、大库才炸"的缺陷（裸 ANALYZE 打爆 max_locks_per_transaction / 验证器同样要 autocommit / PostGIS 污染 public schema / 复合主键大表必须整组排序算 md5）；⑥应用层切库线——数据迁完之后 Tomcat 应用零代码改动切到达梦并起到可用（2026-10-10 真实切换实证）：六项切换清单、方言 jar 必须匹配 Hibernate 主版本、启动期硬 blocker `LiquibaseDatabaseInitException` 的 dbms 过滤根因与官方 API 修法（47 个 replaceChecksum + 4 个 markNextChangeSetRan，零手写 SQL 改 databasechangelog）、两个必知坑（getRanChangeSets() 同进程缓存读到陈旧数据必须另起进程复验 / Tomcat 日志按日期分文件没有 catalina.out）、缺 JSTL 发布缺件的判定与补件、探针自伤归因、以及"怎么证明应用真的在读迁移后的库"的四步验证法（v$sql_history 前后对比 seq_no 抓业务 SQL；SELECT 的 affected_rows 恒 0 不能用来证明命中行数）。所有对外请求与凭据读取均按 Mimosa 扫描口径设边界（endpoint 仅 https+公司域名+拒私网解析、token 只走环境变量、脚本不提供 CLI 可控写路径），解析现场不可信 XML（jar 内 changelog 等）一律 `xml.parsers.expat` 手工建树并拒绝一切 DTD/ENTITY 声明；文档与进度日志同样执行占位符纪律——不写现场明文口令、不写内网 IP 与机器代号、机器与流程状态只写 date/uptime/容器/端口实测可复核的结论，且"敏感字面量已清零"的宣称每轮都要换角度复扫（口令/IP/代号/失实状态记录都算）。凡涉及信创迁移、国产化迁移/适配、达梦迁移/部署、人大金仓/瀚高/海量迁移、MySQL 迁金仓/迁瀚高实迁、金蝶/Apusic/东方通中间件、麒麟/欧拉/UOS 部署、DTS 数据迁移、dmPython、statgather 采集服务切换达梦、迁移报错排查、迁移前预检、迁移后校验、MySQL 迁达梦实迁/全量迁移/数据对账/建表脚本转换/视图转换、切库后应用起不来/页面 404/liquibase 校验值不一致/方言不匹配/证明应用读库，都应使用本 Skill。
 trigger_keywords:
   - 信创迁移
   - 国产化迁移
@@ -84,7 +84,7 @@ when_not_to_use: |
 2. **知识检索**（v1.0 既有架构）：`skill → MCP（precheck/zhengtong_query）→ demo redmine-assist → live vectors.db`，知识库每次同步后自动最新
 3. **自动化**（v2.0 新增）：迁移前环境预检、迁移前后一致性校验、产品配置对照检查
 4. **实迁作业**（v2.1 新增）：MySQL→达梦**真跑**全量迁移与迁移后验证——类型映射口径、三个必知判定口径、引擎运行姿势、四轨过程验证方法论，见 `references/mysql-to-dm-runbook.md`
-5. **PG 系实迁作业**（v2.2 新增）：MySQL→**人大金仓 KingbaseES / 瀚高 HighGo** 真跑全量迁移与四轨验证——同一份源库双目标库均 0 失败、0 数据丢失；含 PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug、回读精度四坑、索引语义对账口径、MySQL 视图→PG 系 8 条改写规则，见 `references/mysql-to-pg-runbook.md`
+5. **PG 系实迁作业**（v2.2 新增）：MySQL→**人大金仓 KingbaseES / 瀚高 HighGo** 真跑全量迁移与四轨验证——同一份源库双目标库均 0 失败、0 数据丢失；含 PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug、回读精度四坑、索引语义对账口径、MySQL 视图→PG 系 12 条改写规则，以及 2026-10-12 在 PostgreSQL 13 + PostGIS 容器上整库复跑修掉的 4 个大库专属缺陷，见 `references/mysql-to-pg-runbook.md`
 6. **应用层切库**（v2.3 新增）：数据迁完之后，Tomcat 应用**零代码改动**切到达梦并起到可用——六项切换清单、方言 jar 与 Hibernate 主版本匹配、`LiquibaseDatabaseInitException` 的 dbms 过滤根因与官方 API 修法、缺 JSTL 发布缺件判定、"证明应用真的在读迁移后的库"四步验证法，见 `references/tomcat-to-dm-app-switch-runbook.md`
 
 ## 迁移流程总览
@@ -193,7 +193,7 @@ when_not_to_use: |
 | 场景 | 覆盖程度 | 说明 |
 |------|---------|------|
 | **MySQL → 达梦** | ✅ 完整覆盖 | 核心场景，含 DTS 迁移全流程 |
-| **MySQL → 金仓 / 瀚高** | ✅ 完整覆盖 | 5589 表全量实证：双目标库均 0 失败、0 数据丢失；类型映射、金仓 7 类真 bug、视图 8 条改写规则见 `references/mysql-to-pg-runbook.md` |
+| **MySQL → 金仓 / 瀚高** | ✅ 完整覆盖 | 5589 表全量实证：双目标库均 0 失败、0 数据丢失；类型映射、金仓 7 类真 bug、视图 12 条改写规则见 `references/mysql-to-pg-runbook.md` |
 | **Oracle → 达梦** | ⚠️ 部分适用 | 部署/配置/置空 MD5 通用；含"Oracle 兼容参数速查"；DTS 类型映射需额外调整 |
 | **纯应用层迁移（金蝶替换 Tomcat）** | ⚠️ 部分适用 | 步骤通用，不涉及数据库 |
 | **MySQL → 海量等其他 PG 系** | ⚠️ 检索为主 | 内核同为 PG，可参照 PG 系 runbook 的通用口径，但 Oracle 兼容层行为需现场实测 |
@@ -597,8 +597,8 @@ sqlite3 /opt/redmine-assist/data/vectors.db "SELECT title,url FROM docs_meta WHE
 - `references/mysql-to-dm-runbook.md` — **MySQL→达梦 DM8 实迁作业规程**：类型映射表、三个必知判定口径（`LENGTH_IN_CHAR=0` 须 `VARCHAR(n CHAR)` / 排序规则只影响 MIN-MAX 用整列多重集判 / 活库漂移≠丢失用自然键集合差）、引擎运行姿势 10 条、四轨过程验证方法论、拓扑与回滚四要素
 - `scripts/mysqldump_to_dm_ddl.py` — mysqldump DDL → 达梦 DDL 转换器（纯文本，不连库不执行；类型口径与 runbook 第一节一致；主键/唯一约束/索引后置到第二段；cgdb 真实 dump 5243 表转换后在 DM8 上真执行零失败，实证记录见 runbook 第六节）
 
-**PG 系实迁作业（v2.2 新增，2026-10-10/11 同一份源库双目标库实证）**
-- `references/mysql-to-pg-runbook.md` — **MySQL→人大金仓 KingbaseES / 瀚高 HighGo 实迁作业规程**：双库实证结果对照、MySQL→PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug、回读精度四坑（金仓 `float4::text` 只出 8 位有效数字必须改走 `::float8`）、索引语义对账口径（不能按名字比，要按 `(表, 唯一性, 有序列清单)`）、实时表自动判定、MySQL 视图→PG 系 8 条改写规则与剩余 10 个改不动视图的逐条归因、引擎运行姿势 9 条
+**PG 系实迁作业（v2.2 新增，2026-10-10/11 同一份源库双目标库实证；2026-10-12 在 PostgreSQL 13 + PostGIS 容器上整库复跑收口）**
+- `references/mysql-to-pg-runbook.md` — **MySQL→人大金仓 KingbaseES / 瀚高 HighGo 实迁作业规程**：双库实证结果对照、MySQL→PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug、回读精度四坑（金仓 `float4::text` 只出 8 位有效数字必须改走 `::float8`）、索引语义对账口径（不能按名字比，要按 `(表, 唯一性, 有序列清单)`）、实时表自动判定、MySQL 视图→PG 系 12 条改写规则与剩余 7 个改不动视图的逐条归因、引擎运行姿势 9 条、**第十节：2026-10-12 整库复跑修掉的 4 个大库专属缺陷**（裸 `ANALYZE` 打爆 `max_locks_per_transaction`、验证器 5000+ 次 `COUNT(*)` 同样要 autocommit、PostGIS 必须建在独立 schema 且要进 `search_path`、复合主键大表必须整组列排序才算 md5）
 
 **应用层切库（v2.3 新增，2026-10-10 真实切换实证）**
 - `references/tomcat-to-dm-app-switch-runbook.md` — **Tomcat 应用层切达梦作业规程**：六项切换清单（零代码改动）、方言 jar 必须匹配 Hibernate 主版本、`LiquibaseDatabaseInitException` 的 dbms 过滤根因、官方 API 修法（`replaceChecksum` / `markNextChangeSetRan`，零手写 SQL 改 `databasechangelog`）、两个必知坑（`getRanChangeSets()` 同进程缓存 / Tomcat 日志按日期分文件没有 `catalina.out`）、缺 JSTL 发布缺件的判定与补件、探针自伤归因、"证明应用真的在读迁移后的库"四步验证法（`v$sql_history` 前后对比 `seq_no` 抓业务 SQL；SELECT 的 `affected_rows` 恒 0 不能用来证明命中行数）、"三层做实"的验收口径与诚实缺口写法

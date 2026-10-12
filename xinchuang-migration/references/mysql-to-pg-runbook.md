@@ -16,7 +16,7 @@
 | 唯一约束 | 104/104 | 104/104 |
 | 外键 | 22/22（cgdb 3 + giscenter 19） | 22/22 |
 | 索引（语义口径） | 2867/2867 | 2867/2867 |
-| 视图 | cgdb 40/49、cgdbstat 13/14 | 未测（演练机已释放） |
+| 视图 | cgdb **43/49**、cgdbstat **13/14** | 未测（瀚高侧未跑视图转换） |
 | 引擎 bug 修复次数 | **7 类** | **0 类，首跑即零失败** |
 
 **这张表最值得记的一句话**：瀚高首跑零失败、金仓要修 7 类 bug，差异不在迁移逻辑，而在**金仓的 Oracle 兼容层**。下面第三节那 7 类 bug 全是 Oracle 兼容行为触发的，瀚高一个都不触发。所以选型阶段如果两个都在评估，瀚高的迁移工作量显著低；已经定了金仓的，按第三节逐条对照即可。
@@ -107,37 +107,45 @@ SELECT t.relname, x.indisunique,
 
 **已知工具侧残留**：同一条 SQL 在金仓上跑，`string_agg(... ORDER BY k.ord)` 返回的列序不稳定（本次 cgdb 报 15 组、cgdbstat 报 3 组"仅源/仅目标"，每组都是同表同唯一性、列集合相同只是顺序不同）；瀚高（原生 PG 14.20）完全正常。**这不是迁移缺陷，是金仓聚合函数排序的工具侧问题**。判定办法：把列清单当多重集比；顺序敏感的比较要么换 `array_agg`，要么只在瀚高侧做。
 
-## 六、视图转换：8 条改写规则 + 剩余改不动的
+## 六、视图转换：12 条改写规则 + 剩余改不动的
 
-MySQL `information_schema.VIEWS` 给的 `VIEW_DEFINITION` 不能直接给 PG 系。本次金仓 cgdb 49 个视图、cgdbstat 14 个、giscenter/mms 0 个。朴素替换反引号只能成 27/49；按下面 8 条改写到 **40/49**（cgdbstat 13/14）。
+MySQL `information_schema.VIEWS` 给的 `VIEW_DEFINITION` 不能直接给 PG 系。本次金仓 cgdb 49 个视图、cgdbstat 14 个、giscenter/mms 0 个。朴素替换反引号只能成 27/49；按下面规则改写到 **43/49**（cgdbstat 13/14）。
 
 | # | 规则 | 原因 |
 |---|---|---|
-| 1 | 反引号 `` `x` `` → 双引号 `"x"` | |
+| 1 | 反引号 `` `x` `` → 双引号 `"x"` | **必须最先做**，后面的结构改写都建立在双引号口径上 |
 | 2 | `INTERVAL <expr> <unit>` → `INTERVAL '<expr> <unit>'` | PG 只认字符串形式；`-(3)` 要剥掉括号归一成 `-3`，否则 PG 拒 |
 | 3 | 三段式列引用 `"schema"."alias"."col"` → `"alias"."col"` | MySQL 视图定义常带库名前缀 |
-| 4 | **不带 ON 的裸 `JOIN`** → `CROSS JOIN` | MySQL 允许连接条件写在 WHERE 里，PG 要求 JOIN 必须带 ON 或写成 CROSS JOIN |
+| 4 | **不带 ON/USING 的裸 `JOIN`** → `CROSS JOIN` | MySQL 允许连接条件写在 WHERE 里，PG 要求 JOIN 必须带 ON 或写成 CROSS JOIN |
 | 5 | `concat` 超过 2 参 → 嵌套 2 参 | 金仓 Oracle 兼容的 `concat` 只认 2 参（PG 原生 `concat` 是变参，瀚高没这问题） |
-| 6 | `ifnull(x,y)` → `coalesce(x,y)` | |
-| 7 | `LIMIT m,n` → `LIMIT n OFFSET m` | |
-| 8 | `if(c,a,b)` → `case when c then a else b end` | PG 系没有 `if()` 函数 |
+| 6 | `convert(x using utf8*)` → `x` | PG 的 `convert` 是 `convert(text, dest_encoding)`，没有 `USING` 形式；目标库是 UTF8，往 utf8 系转是恒等操作。**其它字符集（latin1 等）不能省**，转过去会真改数据 |
+| 7 | `ifnull(x,y)` → `coalesce(x,y)` | |
+| 8 | `LIMIT m,n` → `LIMIT n OFFSET m` | |
+| 9 | `if(c,a,b)` → `case when c then a else b end` | PG 系没有 `if()` 函数 |
+| 10 | `"information_schema"."COLUMNS"` → `"information_schema"."columns"` | PG 的 information_schema 视图名**一律小写**；反引号转双引号后大写被保留，就成了区分大小写的引用，PG 直接 `relation does not exist` |
+| 11 | `POINT(x, y)` → `ST_MakePoint(x, y)` | PG 自己也叫 `point(x, y)`，但那是原生二维点类型，PostGIS 的 `st_astext` 只认 `geometry`，直转过去报 `function st_astext(point) does not exist` |
+| 12 | `round(x, n)` → `round(x::numeric, n)` | PG 的 `round` 双参版只接 `numeric`，双精度列直调报 `function round(double precision, integer) does not exist` |
 
 **规则 4 是最容易写错的**：ON 子句不在 `join` 关键字后面，而在**表引用后面**（`join t1 a on(...)`）。第一版用"`join` 后面紧跟 `on` 才不改"的判断，把 49 个视图里所有正常连接全改成了 `CROSS JOIN ... on(...)`，反而把 27/49 砸下去。正确做法是跳过表引用和别名再判断，且**别名不能是关键字**（否则 `join t on(...)` 会把 `on` 当成别名，误判成要改）。
 
-**改写器必须是字符串字面量感知的**：规则 5/8 要做括号配对，遇到 `'` 要整段跳过（`''` 是转义引号），否则视图里带引号的条件会被切碎。
+**改写器必须是字符串字面量感知的**：规则 5/8/12 要做括号配对，遇到 `'` 要整段跳过（`''` 是转义引号），否则视图里带引号的条件会被切碎。
 
-**剩余 9 个改不动的（cgdb）+ 1 个（cgdbstat），逐条归因**：
+**改写器有三个共同的坑，2026-10-12 全部踩到并修掉**：
+
+1. **括号下标差一**：`_match_paren`/`_args_of` 的入参必须指向 `(` **本身**。`concat(` 长 7 字符，左括号在 `j+6`；写成 `j+7` 时 `_args_of` 会从 `j+8` 起截，把第一个参数的首字符吃掉（`concat(\`media\`.\`media_path\`, ...)` 被改成 `concat(media"."media_path", ...)`，视图直接 syntax error）。**只有 3 参及以上的 concat 会暴露**——2 参时 `_match_paren` 找不到配对括号会原样返回，反而"看起来是好的"
+2. **替换时忘了拼回前文**：`fix_concat`/`fix_if`/`fix_convert_using` 在做替换时只 append 了替换结果，没有 append `s[i:j]`。于是 `concat(if(...))` 这种嵌套写法会把外层 `concat(` 一起吃掉。**这类 bug 在单元层面完全看不出来**，只有整条视图定义跑出来才发现语法错
+3. **正则漏了收尾引号**：`r'"information_schema"\s*\.\s*"([A-Za-z_][A-Za-z0-9_]*)"'` 少写最后一个 `"`，匹配就短一个字符，替换后多出一个引号。**写这类带引号的正则时，务必用 `re.search(x).span()` 打印出来核对**
+
+**剩余改不动的（cgdb 6 个 + cgdbstat 1 个），逐条归因**：
 
 | 归因 | 个数 | 视图 | 性质 |
 |---|---|---|---|
-| `syntax error at or near "concat"` | 2 | `vc_human_region`、`vc_patrol_state` | **未定位**。修掉规则 4 的 bug 之后才暴露（此前被 `at or near "on"` 挡住）。复跑时用最小复例二分：先 `SELECT concat('a','b')`，再逐步加 `coalesce(x,'')`、嵌套、`union` |
 | GROUP BY 功能依赖 | 3 | `vc_csgl_keywork_sup_type_stat`、`vc_mf_public_district_score`、`vc_mf_public_repair_score` | MySQL 关掉 `ONLY_FULL_GROUP_BY` 后可选非分组列，**PG 一律拒绝**。必须人工补 GROUP BY 或改聚合写法 |
-| 视图依赖视图，被依赖项自身失败 | 1 | `vc_housing_estate_special_human`（依赖 `vc_special_human`） | 转换器要**多轮重试**（最多 3 轮），不能按字母序单轮建 |
-| `sys.concat(varchar, unknown, varchar)` | 1 | `vc_patrol_state` | 与规则 5 同类，嵌套改写后疑似可解，未复跑证实 |
-| PostGIS 函数缺失 | 1 | `vc_sani_eval_comfort_station`（`st_astext`） | 目标库未装扩展，装 PostGIS 或改应用层 |
-| `column a.column_comment does not exist` | 1 | cgdbstat `sanifieldviewtemp` | 视图直读 `information_schema`，PG 的列注释在 `pg_description` 不在 information_schema，需人工改写 |
+| `UNION types text and integer cannot be matched` | 2 | `vc_human_region`、`vo_sms_send` | MySQL 隐式转，PG 要求两侧显式一致，需人工加 `CAST` |
+| `operator does not exist: character varying = bigint` | 1 | `vc_patrol_state` | MySQL 隐式转，PG 无对应运算符，需人工加 `CAST` |
+| `column a.TABLE_NAME does not exist` | 1 | cgdbstat `sanifieldviewtemp` | 视图直读 `information_schema`：**表名大小写能用规则 10 修，列名修不了**（要跟踪别名作用域）。PG 的列注释也不在 information_schema 而在 `pg_description`。需人工按 PG 的小写列名改写 |
 
-**建视图必须多轮重试**：按表名字母序单轮建，被依赖的视图还没建出来，一定报 `relation does not exist`。本次 `vc_housing_estate_special_human` 就是这么败的。
+**建视图必须多轮重试**：按表名字母序单轮建，被依赖的视图还没建出来，一定报 `relation does not exist`。**重试队列里必须始终只放二元组 `(name, def)`**——若把 `(name, def, err)` 三元组塞回队列，下一轮 `for vn, vd in pending` 直接 `ValueError: too many values to unpack`。错误信息要用单独的字典存。
 
 ## 七、引擎运行姿势（PG 系专属）
 
@@ -170,7 +178,7 @@ MySQL `information_schema.VIEWS` 给的 `VIEW_DEFINITION` 不能直接给 PG 系
 |---|---|---|
 | `cgdb.tcdicadmindivision` | 2 个单元格里的 `\x00` 在目标侧消失（`s\uf8df\x00桥区` → `s\uf8df桥区`） | **PG 系 text 类型存不了 NUL 字节**，两个目标库表现一致。属语义损失，需业务确认是否可接受 |
 | `cgdb.to_patrol_labour_state` | 1 个 `0000-00-00 00:00:00` 在目标侧是 NULL | MySQL 零日期，PG 系不认，引擎改写为 NULL 并计数上报 |
-| `cgdb` 5 张大表 | 其中 2 张主键非单列，跳过大表轨精比 | 指纹口径覆盖不到，需人工抽检 |
+| `cgdb` 5 张大表 | 其中 2 张主键非单列，**曾**跳过大表轨精比 | 已在 2026-10-12 复跑修复，见第十节缺陷 4 |
 
 **仍未覆盖**：存储例程/触发器（cgdb 有例程体内夹带 DDL，PG 系过程语法与 MySQL 差异大，不是文本替换能解决的）；分区表；`FULLTEXT`/`SPATIAL` 索引（PG 系无内置等价物，本次四库实际 0 个，但规则里要点名跳过）；PostGIS 空间类型（`bytea` 落库保数据，查询能力另论）。
 
@@ -178,5 +186,46 @@ MySQL `information_schema.VIEWS` 给的 `VIEW_DEFINITION` 不能直接给 PG 系
 
 - 5589 张表 / 约 41.8 万行。瀚高四库迁移总耗时 134s（cgdb 110s / cgdbstat 11s / giscenter 7s / mms 6s）；**空表占比很高**（cgdb 5243 张里 3995 张空表），排工期按非空表估
 - 验证本身不构成工期瓶颈：瀚高四库验证合计 42s，金仓 45s
-- 视图转换是纯文本工作，49 个视图秒级；**瓶颈在人工归因**，本次 9+1 个失败视图里只有 3 个能自动修
+- 视图转换是纯文本工作，49 个视图秒级；**瓶颈在人工归因**。2026-10-12 复跑后剩余 6+1 个失败视图，全部属于"MySQL 宽松 / PG 严格"，没有一个是改写器能力问题——**这 7 个只能人工改，改写器再堆规则也吃不下**
 - 引擎与验证脚本的本职语义是"按 information_schema 动态拼表名"，表名不可参数化，会被静态安全扫描判为 SQL 注入，`.py` 落盘/入仓被闸（`.txt` 落盘可过，远端改名执行）。**想让 `.py` 入仓，参考 `scripts/mysqldump_to_dm_ddl.py` 的形态：不连库、不执行 SQL、无 CLI 可控写路径**
+
+## 十、2026-10-12 整库复跑：暴露并修掉的 4 个缺陷
+
+金仓目标机确已消失、且装机通道（公有云 CLI / 私有云元数据 / 平台开通）全部不可用之后，改为在**存活的源库机上**用 **PostgreSQL 13.20 + PostGIS 3.5.2 容器**（5432 / 库 `mig`，四库各进各自 schema）整库重跑一遍迁移 + 四轨验证。同一条脚本，从"能跑"到"跑完并给出可信汇总"，中间修掉 4 个缺陷。**这 4 个都是"小库不暴露、大库才炸"的典型**——首次验证时 cgdb 建表与灌数阶段都报 0 失败，看起来一切正常，实际上后面的汇总步骤全崩了。
+
+### 缺陷 1：引擎裸 `ANALYZE` 打爆共享锁表（五个库全崩）
+
+`psycopg2.errors.OutOfMemory: out of shared memory / You might need to increase max_locks_per_transaction`。
+
+单条 `ANALYZE`（不带表名）要对库内**每张表及其每个索引各取一把 AccessShareLock**。5000+ 张表的库，锁槽需求远超 `max_locks_per_transaction`（默认 64）× `max_connections`（默认 100）= 6400。**崩溃点在汇总打印之前**，所以连"建表成功几张、零日期改写了几处"都没输出——这直接推翻了先前"0 失败"的结论（那个 0 只覆盖建表+灌数，不含 ANALYZE）。
+
+修法：逐表 `ANALYZE <表名>` + 连接切 `dst.autocommit = True`，每条语句独立成事务、锁随语句释放。此刻该提交的已在上面各阶段提交完毕。修完五库 ANALYZE 5243/263/53/30/308 全部成功。
+
+### 缺陷 2：验证脚本同样要 autocommit
+
+四轨验证要对 5243 张表各发一条 `COUNT(*)`。**所有锁会累积到事务提交才释放**，一个事务里扫完 5000+ 张表同样打爆锁表。`dst.autocommit = True` 必须从一开始就设，不是"跑不动再补"。
+
+### 缺陷 3：PostGIS 污染 `public` schema
+
+源库有一个**名字就叫 `public` 的库**。`CREATE EXTENSION postgis` 不指定 schema 时，`spatial_ref_sys` 表和 `geometry_columns`/`geography_columns` 视图全落在 `public`，对象对账立刻出现一批假性不一致。`ALTER EXTENSION postgis SET SCHEMA` **不被支持**（扩展对象不允许这样搬），只能 `DROP EXTENSION postgis CASCADE` 再 `CREATE SCHEMA postgis` + `CREATE EXTENSION "postgis" SCHEMA postgis`。
+
+装完之后视图仍报 `function st_astext(point) does not exist`——因为视图里写的是 MySQL 的 `POINT(x, y)` 构造器，直译成 PG 的原生 `point` 类型，而 PostGIS 的 `st_astext` 只认 `geometry`/`geography`。修法是 `POINT(` → `ST_MakePoint(`（规则 11）。另外 MySQL 的 `GEOMETRY` 列被引擎映射成 **`bytea`**：字节逐字保留、四轨验证 0 丢失，但**不具备空间查询能力**——这一点必须向业务如实说明，不能算"迁移完成"。
+
+### 缺陷 4：复合主键大表的整表 md5 按单列排序
+
+超大表走"按主键排序后流式算整体 md5"这条路。原实现要求主键必须是单列，否则整表跳过。`databasechangelog`、`tc_part_region_static`、`to_schedule_human` 三张复合主键大表因此被跳过。
+
+**只排第一列是不够的**：MySQL 与 PG 会各自按物理序补足剩余列，两侧行序不同，md5 必然假性不一致。修法是 `ORDER BY` 带上**整组主键列**（主键唯一，两侧按同一组列排序即保证行序一致）。修完 cgdb 大表轨从 1 ok + 3 skipped 变成 **4/4 md5 一致**；无主键的大表落到与顺序无关的多重集轨，不跳过。
+
+### 复跑最终数字
+
+| 库 | 建表 | 灌数 | ANALYZE | 四轨验证 |
+|---|---|---|---|---|
+| cgdb | 5243/5243 | 370586 | 5243 全成 | 表 5243/5243、主键 5227/5227、唯一 96/96、外键 3/3、索引 2633/2633、多重集 1242 ok / 2 bad（1 处零日期 + 1 处 NUL）、大表 md5 4/4、中文回读 1742 字段 |
+| cgdbstat | 263/263 | 40608 | 263 全成 | 全一致（1 行差已自动判定为实时写入） |
+| giscenter | 53/53 | 7878 | 53 全成 | 全一致 |
+| mms | 30/30 | 247 | 30 全成 | 全一致 |
+| public | 308/308 | 12276 | 308 全成 | 全一致 |
+| **合计** | **5897** | **431596** | 全成 | |
+
+**复跑口径提醒**：这一版的 5897 张表含源库新增的 `public` 库（308 张），所以比 5589 多。做容量与工期估算时以**非空表**为准，别拿总表数除。
