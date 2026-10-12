@@ -94,8 +94,16 @@ def assign_files(checklist, files):
         n = norm_key(it.get("name") or "")
         if not n:
             continue
-        hits = [f for f in files
-                if f["path"] not in used and n in norm_key(f["name"])]
+        hits = []
+        for f in files:
+            if f["path"] in used:
+                continue
+            fn = norm_key(os.path.splitext(f["name"])[0])
+            # 名称互含：清单名⊆文件名（B-6人员资质报审表），
+            # 或文件名⊆清单名（"内部启动会会议纪要" ⊆ "项目内部启动会会议纪要"）。
+            # 反向要求文件名≥4字符，避免过短文件名误命中。
+            if n in fn or (len(fn) >= 4 and fn in n):
+                hits.append(f)
         if hits:
             owner[k] = hits
             used.update(f["path"] for f in hits)
