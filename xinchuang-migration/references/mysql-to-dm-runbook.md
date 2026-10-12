@@ -1,6 +1,6 @@
-# MySQL → 达梦 DM8 实迁作业规程（2026-10-10 四库 5589 表全量实证）
+# MySQL → 达梦 DM8 实迁作业规程（2026-10-10 四库 5589 表全量实证；2026-10-12 换机复跑收口）
 
-> 本规程来自 2026-10-10 一次真实全量迁移：源库 MySQL 8.0.46（cgdb/cgdbstat/giscenter/mms 四库，5589 张表 / 417934 行）→ 达梦 DM8（DLMIS 实例，四目标用户分 schema）。迁移 0 FAIL，四轨独立验证 0 数据丢失。文中所有结论均为实跑结论，非推断。
+> 本规程来自 2026-10-10 一次真实全量迁移：源库 MySQL 8.0.46（cgdb/cgdbstat/giscenter/mms 四库，5589 张表 / 417934 行）→ 达梦 DM8（DLMIS 实例，四目标用户分 schema）。迁移 0 FAIL，四轨独立验证 0 数据丢失。2026-10-12 在源库所在机器上从零安装 DM8 重跑同一条流水线（第八节），全部结论二次实证。文中所有结论均为实跑结论，非推断。
 
 ## 一、类型映射表（MySQL → DM8，已全量验证）
 
@@ -186,3 +186,40 @@ DM 侧反查元数据，语义确实落地而不是"碰巧建上了"：
 - 5589 张表 / 417934 行，迁移总耗时 268s（单库最大 cgdb 5243 张表 246s）
 - 空表占比很高（cgdb 5243 张里 3995 张是空表）——排工期时按**非空表**估
 - 二轨全量（1394 张 / 88289 行）7s；大表轨（26 张 / 约 3.7 万行）4s。验证本身不构成工期瓶颈，瓶颈在迁移搬运
+
+## 八、环境重构复跑（2026-10-12，达梦装在源库所在机器）
+
+演练场景：没有现成达梦环境时，在**源库所在主机**上从零装 DM8、建四个业务用户、跑同一条迁移流水线并独立验证。全程通过 SSH 密钥 + 脚本文件通道完成，口令全部在远端生成、只落远端 root 目录（600 权限），不进命令行参数、不进任何入仓文件。
+
+### 8.1 从零安装的六个坑（按踩到顺序）
+
+| # | 现象 | 根因 | 处置 |
+|---|---|---|---|
+| 1 | `groupadd` 报"无法打开 /etc/group"（root 身份！） | 安全加固把 `/etc/passwd`、`/etc/group`、`/etc/shadow`、`/etc/gshadow` 全部 `chattr +i`（`lsattr` 可见） | `chattr -i` 四文件 → 建组/建用户 → **立即 `chattr +i` 恢复**。排查口诀：`lsattr /etc/passwd` 一看便知 |
+| 2 | `DMInstall.bin --help` 只回一句"未检测到 dmdba" | 安装器先校验 OS 用户存在，`--help` 不是真帮助 | 先建 `dmdba` 用户（组名 `dinstall` 是约定），console 安装用 `./DMInstall.bin -i`（静默 `-q 配置文件`需要配置文件模板，交互更稳） |
+| 3 | 安装器在 PTY 里画全屏 TUI，日志是 `\x1b[…` 天书 | console 模式仍走光标定位刷屏 | 用 PTY 驱动器：子进程跑安装器、应答写 `in` 文件原子 `mv` 触发、输出落盘后**去 CSI 序列再读**。交互序列实测为：语言 → 是否输 Key(N) → 是否设时区(Y，默认 +08:00) → 安装类型(典型) → 目录 → 确认 Y |
+| 4 | disql 登录报"用法: CONN[ECT]…"进不了 SQL | **口令含 `#`** 被 disql 当成 `#{extend_option}` 登录选项分隔符 | 实例口令用**纯字母数字**（随机 24 位），不要混 `#`/`@`/`/` 等 disql 保留字符 |
+| 5 | `dminit` 源码编译 dmPython：`cannot locate an Dameng software installation` | setup.py 靠 `DM_HOME` 定位 | `export DM_HOME=/opt/dmdbms`；但这不是最优路——见坑 6 |
+| 6 | 编译报 `Python.h: 没有那个文件`，且 `yum install python3-devel` 报"没有任何匹配" | 银河麒麟 V10 源里没有 python3-devel | **直接 `pip3 install dmPython`**：PyPI 有官方预编译 wheel（dmpython 2.5.38，cp37 manylinux2014），秒装免编译。源码编译留作离线备选 |
+
+### 8.2 实例初始化参数（dminit 关键项与取值理由）
+
+```
+dminit PATH=/opt/dmdbms/data DB_NAME=DMDB INSTANCE_NAME=DMSERVER PORT_NUM=5236 \
+  CASE_SENSITIVE=Y CHARSET=1 PAGE_SIZE=32 EXTENT_SIZE=16 LOG_SIZE=4096 BUFFER=4000 TIME_ZONE=+08:00 \
+  SYSDBA_PWD=... SYSAUDITOR_PWD=...
+```
+
+- `CHARSET=1`（UTF-8）：与源库 utf8mb4 同码位，中文无需转码；dmPython 仍建议 `local_code=PG_UTF8`。上轮实例是默认 GB18030 + `local_code=PG_UTF8`，两种组合都已实证可行
+- `CASE_SENSITIVE=Y`：与 MySQL on Linux 的大小写敏感语义对齐。**连带效应**：disql 里不带引号的标识符被转大写，查小写表名/列名必须 `"tc_human"` 双引号包裹（`-2111 无效的列名`多半是这个）
+- `LENGTH_IN_CHAR=0` 保持默认：判定口径①的 `VARCHAR(n CHAR)` 声明就是为此设计，无需改 1
+- `PAGE_SIZE=32`：给长行留余量；`LOG_SIZE=4096` 免得小日志在高吞吐灌数时频繁切换
+- **试用授权不用单独申请**：不挂 `dm.key` 时自带默认授权（`v$license` 可查，DEVELOP 版，有效期到装包次年的同月日）
+- `CASE_SENSITIVE`/`CHARSET`/`PAGE_SIZE` 是**初始化期参数，不进 `v$dm_ini`**——想复核只能看 dminit 回显或 `dminit` 时显式记录，装完查不到
+
+### 8.3 复跑数字与验证结论
+
+- 迁移 5589 表 / 419634 行，**总耗时 363s、0 FAIL**（cgdb 5243 表 336s；其余三库合计 27s）。与本轮 PG 侧同源数据行数对比：cgdb/giscenter/mms 完全一致；cgdbstat 比两日前多 315 行——源库活库持续写入（口径③），非丢失
+- 独立验证三轨：**列数对账** 5589 张实表 mismatch=0；**大表 sha256 指纹**（行数 top3：48603/44546/30372 行，按主键排序全字段流式比对）双侧哈希全 MATCH；**中文回读**按主键对齐抽样逐行同值（含 NULL 与纯中文值）
+- 验证脚本的一个口径坑：用 `information_schema.columns` GROUP BY 出"应有表清单"会把**视图也数进去**（本次假 missing=49+14，恰好等于两库视图数），必须过滤 `table_type='BASE TABLE'` 或改与 DM `all_tables` 同口径比对
+- 迁移期间磁盘占用：库文件约 18G（含日志），59G 盘余 24G——全量验证前先 `df` 核余量
