@@ -84,7 +84,7 @@ when_not_to_use: |
 2. **知识检索**（v1.0 既有架构）：`skill → MCP（precheck/zhengtong_query）→ demo redmine-assist → live vectors.db`，知识库每次同步后自动最新
 3. **自动化**（v2.0 新增）：迁移前环境预检、迁移前后一致性校验、产品配置对照检查
 4. **实迁作业**（v2.1 新增）：MySQL→达梦**真跑**全量迁移与迁移后验证——类型映射口径、三个必知判定口径、引擎运行姿势、四轨过程验证方法论，见 `references/mysql-to-dm-runbook.md`
-5. **PG 系实迁作业**（v2.2 新增）：MySQL→**人大金仓 KingbaseES / 瀚高 HighGo** 真跑全量迁移与四轨验证——同一份源库双目标库均 0 失败、0 数据丢失；含 PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug、回读精度四坑、索引语义对账口径、MySQL 视图→PG 系 12 条改写规则，以及 2026-10-12 在 PostgreSQL 13 + PostGIS 容器上整库复跑修掉的 4 个大库专属缺陷，见 `references/mysql-to-pg-runbook.md`
+5. **PG 系实迁作业**（v2.2 新增）：MySQL→**人大金仓 KingbaseES / 瀚高 HighGo** 真跑全量迁移与四轨验证——同一份源库双目标库均 0 失败、0 数据丢失；含 PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug、回读精度四坑、索引语义对账口径、MySQL 视图→PG 系 12 条改写规则，以及 2026-10-12 在 PostgreSQL 13 + PostGIS 容器上整库复跑修掉的 4 个大库专属缺陷；配套 `scripts/pg/` 重构包（源库在哪台机器上目标库就建在哪台，不依赖外部新购服务器），见 `references/mysql-to-pg-runbook.md` 与 `references/pg-rebuild-runbook.md`
 6. **应用层切库**（v2.3 新增）：数据迁完之后，Tomcat 应用**零代码改动**切到达梦并起到可用——六项切换清单、方言 jar 与 Hibernate 主版本匹配、`LiquibaseDatabaseInitException` 的 dbms 过滤根因与官方 API 修法、缺 JSTL 发布缺件判定、"证明应用真的在读迁移后的库"四步验证法，见 `references/tomcat-to-dm-app-switch-runbook.md`
 
 ## 迁移流程总览
@@ -108,6 +108,11 @@ when_not_to_use: |
 | `scripts/check_liquibase_dm_coverage.py` | Liquibase changelog 达梦覆盖审计（迁移前跑） | 本机 | 只读解析 changelog XML（可直接吃 jar 内的条目），点名"到达梦被 dbms 过滤成空"的 changeset；`--strict` 可作启动前门禁 |
 | `scripts/check_props_coverage.py` | 两份 properties 键集合对照（配置漏键审计） | 本机 | 默认只打印键名不打印值，避免凭据落进共享日志；`--strict` 可作切换前门禁 |
 | `scripts/mysqldump_to_dm_ddl.py` | mysqldump DDL → 达梦 DDL 纯文本转换（不连库、不执行 SQL） | 本机 | 读 stdin 或 dump 文件、写 stdout（由调用方 `>` 落盘）；类型口径与 runbook 第一节一致；主键/唯一约束/索引后置到第二段；`--prefix` 供同 schema 灰度验证；**已在 DM8 V8 上真执行 5243 表零失败** |
+| `scripts/pg/run.sh` | PG 系验证环境重构编排：01_setup → 02_migrate → 03_verify → 04_views | 源库所在 Linux 节点 | 源库在哪台机器上，目标库就建在哪台机器的容器里，不依赖外部新购服务器；`RECREATE=1` 整库重跑；凭据只走环境变量 |
+| `scripts/pg/setup_target.py.txt` | 建 PG 目标库 + 扩展，把 PostGIS 挪进独立 schema 并设 search_path | 源库所在节点 | 不指定 schema 时 PostGIS 对象会落进 public，而源库可能有一个就叫 public 的库，对象对账立刻假性不一致 |
+| `scripts/pg/engine_mysql_to_pg.py.txt` | MySQL → PG 系迁移引擎：建表 / 灌数 / 后置约束 / 注释 / 逐表 ANALYZE | 源库所在节点 | 逐表 ANALYZE 而非一条裸 ANALYZE（单条要拿全库每张表及其每个索引的锁，5000+ 表的库直接打爆锁表）；四库各进各自 schema；`--recreate` 分批删表自愈 |
+| `scripts/pg/verify_pg.py.txt` | PG 系四轨过程验证器：行数对账 / 逐字段多重集 / 中文回读 / 超大表整表 md5 | 源库所在节点 | 只读连接必须 `autocommit=True`；复合主键大表必须整组列进 ORDER BY；实时表自动判定（源独有行晚于目标最大值即实时写入，非丢行） |
+| `scripts/pg/view_conv.py.txt` | MySQL 视图定义 → PG 系视图 DDL 转换器 + 全量试建归因 | 源库所在节点 | 12 条改写规则；建视图多轮重试应对视图间依赖；三轮后仍建不成的如实归类为"需人工处理"，不猜不改 |
 | `scripts/kb_query.py` | 公网 MCP 直调（precheck/zhengtong_query） | 本机 | token 从 `D:\opencode\config\redmine-assist-mcp.json` 或环境变量 `REDMINE_ASSIST_TOKEN` 读取，**不落源码** |
 | `scripts/query_xc.py` | REST 降级查询（`--sweep` 批量） | 本机 | MCP 不可用时走 `/query` REST；token 走 `REDMINE_ASSIST_TOKEN` 环境变量，只写 stdout |
 | `scripts/backup_web.sh` | 备份 `/egova/web` → `/egova/backup/web` | 老服务器 | tar.gz 全备份、保留 15 份、文件锁防并发、磁盘预检、nohup 后台 |
@@ -599,6 +604,7 @@ sqlite3 /opt/redmine-assist/data/vectors.db "SELECT title,url FROM docs_meta WHE
 
 **PG 系实迁作业（v2.2 新增，2026-10-10/11 同一份源库双目标库实证；2026-10-12 在 PostgreSQL 13 + PostGIS 容器上整库复跑收口）**
 - `references/mysql-to-pg-runbook.md` — **MySQL→人大金仓 KingbaseES / 瀚高 HighGo 实迁作业规程**：双库实证结果对照、MySQL→PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug、回读精度四坑（金仓 `float4::text` 只出 8 位有效数字必须改走 `::float8`）、索引语义对账口径（不能按名字比，要按 `(表, 唯一性, 有序列清单)`）、实时表自动判定、MySQL 视图→PG 系 12 条改写规则与剩余 7 个改不动视图的逐条归因、引擎运行姿势 9 条、**第十节：2026-10-12 整库复跑修掉的 4 个大库专属缺陷**（裸 `ANALYZE` 打爆 `max_locks_per_transaction`、验证器 5000+ 次 `COUNT(*)` 同样要 autocommit、PostGIS 必须建在独立 schema 且要进 `search_path`、复合主键大表必须整组列排序才算 md5）
+- `references/pg-rebuild-runbook.md` — **PG 系验证环境重构包**：目标库机器没了怎么就地重建（源库在哪台机器上目标库就建在哪台的 PostgreSQL + PostGIS 容器里，不依赖外部新购服务器、不依赖 DM8/金仓/瀚高安装包与授权）；`scripts/pg/` 五个文件的用途与跑法、四轨验证各自动什么、2026-10-12 实测数字（五库 5897 表 / 431596 行 / 0 失败 / 四轨全一致）、重构中修掉的 4 个真缺陷、必须向业务如实报出的 MySQL→PG 语义差（NUL 字节被剥 / 零日期改 NULL / 视图剩余 7 个需人工 / GEOMETRY 落 bytea）
 
 **应用层切库（v2.3 新增，2026-10-10 真实切换实证）**
 - `references/tomcat-to-dm-app-switch-runbook.md` — **Tomcat 应用层切达梦作业规程**：六项切换清单（零代码改动）、方言 jar 必须匹配 Hibernate 主版本、`LiquibaseDatabaseInitException` 的 dbms 过滤根因、官方 API 修法（`replaceChecksum` / `markNextChangeSetRan`，零手写 SQL 改 `databasechangelog`）、两个必知坑（`getRanChangeSets()` 同进程缓存 / Tomcat 日志按日期分文件没有 `catalina.out`）、缺 JSTL 发布缺件的判定与补件、探针自伤归因、"证明应用真的在读迁移后的库"四步验证法（`v$sql_history` 前后对比 `seq_no` 抓业务 SQL；SELECT 的 `affected_rows` 恒 0 不能用来证明命中行数）、"三层做实"的验收口径与诚实缺口写法

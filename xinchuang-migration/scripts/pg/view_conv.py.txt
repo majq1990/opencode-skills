@@ -1,0 +1,396 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""MySQL 视图定义 → PG 系视图 DDL 转换器 + 全量试建归因。
+
+改写规则（每条都在演练机上实测过）：
+  1. 反引号 → 双引号（最先做，后面的结构改写都建立在双引号口径上）
+  2. INTERVAL <expr> <unit> → INTERVAL '<expr> <unit>'（PG 只认字符串形式，
+     并把 -(3) 归一成 -3）
+  3. 三段式列引用 "schema"."alias"."col" → "alias"."col"（MySQL 视图常带库名前缀）
+  4. 不带 ON/USING 的裸 JOIN → CROSS JOIN（MySQL 允许连接条件写在 WHERE 里，
+     PG 语法要求 JOIN 必须带 ON 或写成 CROSS JOIN）
+  5. concat 超过 2 个参数 → 嵌套 2 参 concat（金仓 Oracle 兼容的 concat 只认 2 参）
+  6. convert(x using utf8*) → x（PG 无 USING 形式；目标库是 UTF8，恒等可省）
+  7. ifnull(x,y) → coalesce(x,y)
+  8. LIMIT m,n → LIMIT n OFFSET m
+  9. "information_schema"."COLUMNS" → "information_schema"."columns"
+     （PG 的 information_schema 视图名全小写，双引号后大写即成区分大小写引用）
+ 10. POINT(x, y) → ST_MakePoint(x, y)（MySQL 空间构造器 → PostGIS 等价物）
+ 11. round(x, n) → round(x::numeric, n)（PG 双参 round 只接 numeric）
+
+仍需人工处理的（改写器改不动，如实归类）：
+  - GROUP BY 功能依赖：MySQL 关掉 ONLY_FULL_GROUP_BY 后可选非分组列，PG 不允许
+  - UNION 两侧类型不一致：MySQL 隐式转，PG 要求显式一致
+  - varchar 与 bigint 直接比较：MySQL 隐式转，PG 无对应运算符
+  - MySQL GEOMETRY 列在目标侧落成 bytea（原样保字节），视图里调 st_astext
+    需要显式 ::geometry 转换；这是引擎的类型映射选择，不是转换器能补的
+"""
+import argparse
+import os
+import re
+import sys
+
+import pymysql
+import psycopg2
+
+DQ = chr(34)
+SQ = chr(39)
+
+
+def log(m):
+    sys.stdout.write(m + "\n")
+    sys.stdout.flush()
+
+
+def qi(n):
+    return DQ + str(n).replace(DQ, DQ + DQ) + DQ
+
+
+BACKTICK_RE = re.compile(r"`([^`]*)`")
+INTERVAL_RE = re.compile(r"(?i)\bINTERVAL\s+([-\w().]+)\s+([A-Za-z]+)\b")
+THREE_RE = re.compile(r'"([^"]+)"\s*\.\s*"([^"]+)"\s*\.\s*"([^"]+)"')
+JOIN_RE = re.compile(r"(?i)\b(?:(LEFT|RIGHT|INNER|CROSS|FULL|OUTER)\s+)?JOIN\b")
+LIMIT_RE = re.compile(r"(?i)\blimit\s+(\d+)\s*,\s*(\d+)")
+IF_RE = re.compile(r"(?i)\bif\s*\(")
+# 表引用 + 可选别名；别名不能是关键字，否则 "join t on(...)" 会把 on 当成别名
+_KW = r"(?!(?:on|using|where|group|order|having|limit|join|left|right|inner|cross|" \
+      r"full|outer|natural|straight_join|union|select|as|and|or|not)\b)"
+_TBLREF = r'(?:"[^"]*"|[\w$]+)(?:\s*\.\s*(?:"[^"]*"|[\w$]+))*'
+_AFTER_JOIN = re.compile(r'(?is)^\s*(?:\(\s*)*' + _TBLREF +
+                         r'(?:\s+(?:AS\s+)?' + _KW + r'(?:"[^"]*"|[\w$]+))?')
+
+
+def _match_paren(s, open_idx):
+    """open_idx 指向 '('，返回配对 ')' 的下标；括号匹配跳过字符串字面量。"""
+    depth, i = 0, open_idx
+    while i < len(s):
+        ch = s[i]
+        if ch == SQ:
+            i += 1
+            while i < len(s):
+                if s[i] == SQ:
+                    if i + 1 < len(s) and s[i + 1] == SQ:
+                        i += 2
+                        continue
+                    break
+                i += 1
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return -1
+
+
+def _args_of(s, open_idx, close_idx):
+    inner = s[open_idx + 1:close_idx]
+    out, depth, start, i = [], 0, 0, 0
+    while i < len(inner):
+        ch = inner[i]
+        if ch == SQ:
+            i += 1
+            while i < len(inner):
+                if inner[i] == SQ:
+                    if i + 1 < len(inner) and inner[i + 1] == SQ:
+                        i += 2
+                        continue
+                    break
+                i += 1
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            out.append(inner[start:i])
+            start = i + 1
+        i += 1
+    out.append(inner[start:])
+    return out
+
+
+def fix_if(s):
+    """if(cond, a, b) → case when cond then a else b end（PG 无 if 函数）。"""
+    out, i, low = [], 0, s.lower()
+    while True:
+        j = low.find("if(", i)
+        if j < 0:
+            out.append(s[i:])
+            break
+        if j > 0 and (s[j - 1].isalnum() or s[j - 1] == "_" or s[j - 1] == "."):
+            out.append(s[i:j + 3])
+            i = j + 3
+            continue
+        close = _match_paren(s, j + 2)
+        if close < 0:
+            out.append(s[i:])
+            break
+        args = _args_of(s, j + 2, close)
+        # 被改写片段之前的原文必须补回去，否则 concat(if(...)) 这种嵌套写法会把
+        # 外层 concat( 一起吃掉，视图直接 syntax error。
+        out.append(s[i:j])
+        if len(args) != 3:
+            out.append(s[j:close + 1])
+        else:
+            out.append("case when %s then %s else %s end"
+                       % (args[0].strip(), args[1].strip(), args[2].strip()))
+        i = close + 1
+    return "".join(out)
+
+
+def fix_concat(s):
+    """concat 参数量 > 2 时改写成嵌套 2 参形式。
+
+    注意 _match_paren/_args_of 的入参必须指向 '(' 本身："concat(" 长 7 字符，
+    左括号在 j+6。传成 j+7 会让 _args_of 从 j+8 起截，把第一个参数的首字符
+    吃掉（2026-10-12 实测：`concat(\`media\`.\`media_path\`, ...)` 被改成
+    `concat(media"."media_path", ...)`，视图直接 syntax error）。
+    """
+    out, i, low = [], 0, s.lower()
+    while True:
+        j = low.find("concat(", i)
+        if j < 0:
+            out.append(s[i:])
+            break
+        if j > 0 and (s[j - 1].isalnum() or s[j - 1] == "_" or s[j - 1] == "."):
+            out.append(s[i:j + 7])
+            i = j + 7
+            continue
+        close = _match_paren(s, j + 6)
+        if close < 0:
+            out.append(s[i:])
+            break
+        # 被改写片段之前的原文必须补回去，见 fix_if 里的同款说明
+        out.append(s[i:j])
+        args = _args_of(s, j + 6, close)
+        if len(args) > 2:
+            expr = args[0].strip()
+            for nxt in args[1:]:
+                expr = "concat(%s, %s)" % (expr, nxt.strip())
+            out.append(expr)
+        else:
+            out.append("concat(" + ", ".join(a.strip() for a in args) + ")")
+        i = close + 1
+    return "".join(out)
+
+
+def _interval_repl(m):
+    expr = m.group(1).replace("(", "").replace(")", "")
+    return "INTERVAL " + SQ + "%s %s" % (expr, m.group(2).lower()) + SQ
+
+
+# PG 的 information_schema 视图名一律小写；MySQL 侧习惯写大写 COLUMNS/TABLES，
+# 反引号转成双引号后大写被保留，就成了区分大小写的引用，PG 直接找不到关系。
+INFOSCHEMA_RE = re.compile(r'"information_schema"\s*\.\s*"([A-Za-z_][A-Za-z0-9_]*)"')
+
+
+def _infoschema_repl(m):
+    return '"information_schema"."%s"' % m.group(1).lower()
+
+
+# MySQL 的 POINT(x, y) 空间构造器。PG 自己也叫 point(x, y)，但那是原生二维点
+# 类型，PostGIS 的 st_astext/st_asbinary 只认 geometry，直转过去会报
+# function st_astext(point) does not exist。
+POINT_RE = re.compile(r"(?i)(?<![\w$.])point\s*\(")
+
+
+def fix_point(s):
+    """POINT(x, y) → ST_MakePoint(x, y)（MySQL 空间构造器 → PostGIS 等价物）。"""
+    return POINT_RE.sub("ST_MakePoint(", s)
+
+
+def fix_round(s):
+    """round(x, n) → round(x::numeric, n)。
+
+    PG 的 round 双参版只接 numeric，双精度列直调报
+    function round(double precision, integer) does not exist。单参 round(x)
+    不用改。
+    """
+    out, i, low = [], 0, s.lower()
+    while True:
+        j = low.find("round(", i)
+        if j < 0:
+            out.append(s[i:])
+            break
+        if j > 0 and (s[j - 1].isalnum() or s[j - 1] == "_" or s[j - 1] == "."):
+            out.append(s[i:j + 6])
+            i = j + 6
+            continue
+        close = _match_paren(s, j + 5)
+        if close < 0:
+            out.append(s[i:])
+            break
+        args = _args_of(s, j + 5, close)
+        out.append(s[i:j])
+        if len(args) == 2:
+            out.append("round(%s::numeric, %s)"
+                       % (args[0].strip(), args[1].strip()))
+        else:
+            out.append(s[j:close + 1])
+        i = close + 1
+    return "".join(out)
+
+
+def fix_convert_using(s):
+    """convert(x using <字符集>) → x。
+
+    MySQL 的 CONVERT(expr USING charset) 在 PG 里没有对应形式（PG 的 convert
+    是 convert(text, dest_encoding)，语法完全不同）。源侧连接字符集 utf8mb4、
+    目标库编码 UTF8，往 utf8 系字符集转是恒等操作，直接去掉 USING 子句即可；
+    其它字符集（latin1 等）转过去会真的改数据，不猜，原样留下让人工处理。
+    """
+    out, i, low = [], 0, s.lower()
+    while True:
+        j = low.find("convert(", i)
+        if j < 0:
+            out.append(s[i:])
+            break
+        if j > 0 and (s[j - 1].isalnum() or s[j - 1] == "_"):
+            out.append(s[i:j + 8])
+            i = j + 8
+            continue
+        close = _match_paren(s, j + 7)
+        if close < 0:
+            out.append(s[i:])
+            break
+        args = _args_of(s, j + 7, close)
+        # 被改写片段之前的原文必须补回去，见 fix_if 里的同款说明
+        out.append(s[i:j])
+        # convert(x using <字符集>) 只有一个参数，USING 子句在同一参数里，
+        # 不是两个参数——不能按 len(args)==2 判。
+        m = re.match(r"(?is)^(.*?)\s+using\s+(\w+)\s*$", args[0]) \
+            if len(args) == 1 else None
+        if m and re.match(r"(?i)^utf8(mb3|mb4)?$", m.group(2)):
+            out.append(m.group(1).strip())
+        else:
+            out.append(s[j:close + 1])
+        i = close + 1
+    return "".join(out)
+
+
+def _three_repl(m):
+    return DQ + m.group(2) + DQ + "." + DQ + m.group(3) + DQ
+
+
+def _join_repl(m):
+    if m.group(1):
+        return m.group(0)
+    tail = m.string[m.end():]
+    mm = _AFTER_JOIN.match(tail)
+    if not mm:
+        return m.group(0)
+    rest = tail[mm.end():].lstrip()
+    if re.match(r"(?i)^(on|using)\b", rest):
+        return m.group(0)
+    return "CROSS JOIN"
+
+
+def convert(sql):
+    s = BACKTICK_RE.sub(lambda m: DQ + m.group(1) + DQ, sql or "")
+    s = INTERVAL_RE.sub(_interval_repl, s)
+    for _ in range(3):
+        s2 = THREE_RE.sub(_three_repl, s)
+        if s2 == s:
+            break
+        s = s2
+    s = JOIN_RE.sub(_join_repl, s)
+    s = INFOSCHEMA_RE.sub(_infoschema_repl, s)
+    s = fix_concat(s)
+    s = fix_convert_using(s)
+    s = fix_if(s)
+    s = fix_point(s)
+    s = fix_round(s)
+    s = re.sub(r"(?i)\bifnull\s*\(", "coalesce(", s)
+    s = LIMIT_RE.sub(lambda m: "LIMIT %s OFFSET %s" % (m.group(2), m.group(1)), s)
+    return s
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--schema", required=True)
+    ap.add_argument("--mysql-host", default="127.0.0.1")
+    ap.add_argument("--mysql-port", type=int, default=3306)
+    ap.add_argument("--mysql-user", default="root")
+    ap.add_argument("--pg-host", default="127.0.0.1")
+    ap.add_argument("--pg-port", type=int, required=True)
+    ap.add_argument("--pg-user", default="postgres")
+    ap.add_argument("--password", default="")
+    ap.add_argument("--db", required=True)
+    ap.add_argument("--label", default="")
+    ap.add_argument("--dump-view", action="append", default=[])
+    a = ap.parse_args()
+    # 目标口令与引擎/验证器保持同一约定：MIG_PG_PWD 优先，兼容旧的 MIG_TARGET_PWD
+    if not a.password:
+        a.password = os.environ.get("MIG_PG_PWD",
+                                    os.environ.get("MIG_TARGET_PWD", ""))
+
+    src = pymysql.connect(host=a.mysql_host, port=a.mysql_port, user=a.mysql_user,
+                          password=os.environ["MIG_MYSQL_PWD"],
+                          charset="utf8mb4")
+    dst = psycopg2.connect(host=a.pg_host, port=a.pg_port, user=a.pg_user,
+                           password=a.password, dbname=a.db,
+                           client_encoding="UTF8")
+    scur, dcur = src.cursor(), dst.cursor()
+    scur.execute("SELECT TABLE_NAME, VIEW_DEFINITION FROM information_schema.VIEWS"
+                 " WHERE TABLE_SCHEMA=%s ORDER BY TABLE_NAME", (a.schema,))
+    views = scur.fetchall()
+    log("[%s] %s 视图 %d 个" % (a.label, a.schema, len(views)))
+
+    for want in a.dump_view:
+        for vn, vd in views:
+            if vn.lower() != want.lower():
+                continue
+            log("\n===== DUMP %s =====\n--- 原始 ---\n%s\n--- 转换后 ---\n%s"
+                % (vn, vd, convert(vd)))
+
+    dcur.execute("""SELECT c.relkind, count(*) FROM pg_class c
+                    JOIN pg_namespace n ON n.oid=c.relnamespace
+                    WHERE n.nspname=%s AND c.relkind IN ('r','p','v')
+                    GROUP BY c.relkind""", (a.schema,))
+    log("[%s] 目标库现状：%s" % (a.label, dict(dcur.fetchall())))
+
+    ok, fails = 0, []
+    last_err = {}
+    pending = list(views)
+    for _pass in range(3):
+        if not pending:
+            break
+        nxt = []
+        for vn, vd in pending:
+            try:
+                dcur.execute("CREATE OR REPLACE VIEW %s.%s AS %s"
+                             % (qi(a.schema), qi(vn), convert(vd)))
+                dst.commit()
+                ok += 1
+            except Exception as ex:
+                dst.rollback()
+                # pending 里必须始终只放二元组：失败要进下一轮重试，若在这里塞
+                # (vn, vd, err) 三元组，下一轮 for vn, vd in pending 直接解包崩
+                # （ValueError: too many values to unpack）。错误信息单独用字典存。
+                nxt.append((vn, vd))
+                last_err[vn] = str(ex).strip().split("\n")[0]
+        if len(nxt) == len(pending):
+            break  # 这一轮毫无进展，再重试也是同样结果
+        pending = nxt
+    fails = [(vn, vd, last_err.get(vn, "三轮重试后仍未建成"))
+             for vn, vd in pending]
+    log("成功 %d / 失败 %d" % (ok, len(fails)))
+
+    buckets = {}
+    for vn, vd, err in fails:
+        buckets.setdefault(err[:80], []).append(vn)
+    log("\n--- 失败归因 ---")
+    for k, v in sorted(buckets.items(), key=lambda x: -len(x[1])):
+        log("  [%2d 个] %s" % (len(v), k))
+        log("        %s" % ", ".join(v[:15]))
+    for vn, vd, err in fails:
+        log("   - %s: %s" % (vn, err[:160]))
+
+    src.close()
+    dst.close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
