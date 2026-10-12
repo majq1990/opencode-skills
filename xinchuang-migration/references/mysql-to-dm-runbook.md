@@ -223,3 +223,34 @@ dminit PATH=/opt/dmdbms/data DB_NAME=DMDB INSTANCE_NAME=DMSERVER PORT_NUM=5236 \
 - 独立验证三轨：**列数对账** 5589 张实表 mismatch=0；**大表 sha256 指纹**（行数 top3：48603/44546/30372 行，按主键排序全字段流式比对）双侧哈希全 MATCH；**中文回读**按主键对齐抽样逐行同值（含 NULL 与纯中文值）
 - 验证脚本的一个口径坑：用 `information_schema.columns` GROUP BY 出"应有表清单"会把**视图也数进去**（本次假 missing=49+14，恰好等于两库视图数），必须过滤 `table_type='BASE TABLE'` 或改与 DM `all_tables` 同口径比对
 - 迁移期间磁盘占用：库文件约 18G（含日志），59G 盘余 24G——全量验证前先 `df` 核余量
+
+## 九、视图迁移与时间日期专项（2026-10-12 第二轮，同环境）
+
+### 9.1 视图：63 个自动建成 57 个（90%），6 个转人工
+
+迁移引擎只迁 `BASE TABLE`，视图要单独走。DM 方言转换器（`scripts/dm/view_conv_mysql_to_dm.py.txt`）从 `SHOW CREATE VIEW` 取**原始定义**（不要用 `information_schema.views.VIEW_DEFINITION`——它是 MySQL 规范化输出，`from ((a join b) join c)` 括号分组连接是它的标配，DM 不认），改写规则 8 条：反引号→双引号、库名限定→大写 schema 前缀、`if(a,b,c)`→`CASE WHEN`、`ifnull`→`coalesce`、`date_add/sub(x, INTERVAL n u)`→`(x ± INTERVAL 'n' u)`、`INTERVAL -(3) month`→`INTERVAL '-3' MONTH`、FROM 子句剥结构括号 + 无 ON 的 join 转逗号连接、`count(布尔)`→`count(case when 布尔 then 1 end)`。失败队列按轮重试 3 次（视图依赖视图靠多轮收敛）。
+
+**踩出来的四个转换器要点**（每条都是一轮返匠换来的）：
+
+1. **DM 无 CROSS JOIN、INNER JOIN 必须带 ON**：MySQL 里无 ON 的 `join` 等价笛卡尔积，DM 只能转成**逗号连接**（转 `CROSS JOIN` 报语法错）
+2. **join 的表引用是两段式** `"schema"."table"`：正则只吃一段会把带 ON 的 join 误判成 bare join 腰斩成 `left , x on...`——**规则必须按两段式写**，且"是否带 ON"的判定要看 join+别名之后第一个关键字
+3. **剥括号要有字符串字面量感知**（单引号、`''` 转义），且只保留 `(select ...`/`(case ...` 开头的括号——"括号体内含 select 就保留"的保守规则遇到"包着子查询的 join 分组括号"会留下悬空 `)`；真正要保留的只有以 select/case 开头的括号本身
+4. **从原始定义入手而不是规范化定义**：同样这批视图，规范定义怎么修都是一堆语法错，原始定义加 8 条规则后 57/63
+
+6 个转人工的逐条归因（与 PG 系侧改不动清单同构，全是"MySQL 宽松 / DM 严格"）：
+
+| 归因 | 数量 | 说明 |
+|---|---|---|
+| GROUP BY 功能依赖 | 3 | MySQL 靠主键功能依赖允许 select 非聚合列不进 GROUP BY（包括 case/round 表达式深处的列），DM 严格——自动补顶层简单列不够，嵌在表达式里的也要补，人工改写 |
+| 空间函数 `POINT(x,y)` | 1 | DM 空间语法不同（需 DMGEO2/ST 系函数），与 PG 侧 PostGIS 缺失同构 |
+| `information_schema` 元数据视图 | 1 | 视图本体就是查 MySQL 数据字典（TABLE_NAME/COLLATION/convert using utf8mb3），DM 无对应结构，要按 `ALL_TABLES`/`USER_TAB_COMMENTS` 重写 |
+| 深嵌套结构+子查询组合 | 1 | 多层 join 分组括号内嵌 on 子查询，自动剥净后仍有残留结构，人工梳理 |
+
+### 9.2 时间日期字段：7145 列映射零缺失，值级逐行全 MATCH
+
+三轨专项（脚本按 .py.txt 约定）：
+
+- **类型映射对账**：MySQL `datetime/timestamp/date/time` 列（四库 7145 个）↔ DM `TIMESTAMP/DATE/VARCHAR(32)`，按 (表,列) 集合比对——**missing=0、mistype=0**。注意验证脚本 DM 侧筛 `VARCHAR char_length<=32` 会把普通短 VARCHAR 也数进来（EXTRA 是脚本口径问题，加 `data_type IN (...)` 白名单可免）
+- **值级比对**：每库行数 top3 的含时间列表 + 零日期表 + 活库分钟表，按主键对齐全量取时间列，python 归一逐行逐列比——**常规表全部 MATCH**（含 48603 行大表；NULL 分布双侧一致，如 tc_human 962 个 NULL）。归一口径：datetime 统一 isoformat 且全零微秒去掉（MySQL datetime(0) 无微秒、DM TIMESTAMP(6) 带 `.000000`）；time 统一比总秒数（MySQL 回 timedelta、DM 回字符串）。**dmPython `local_code=PG_UTF8` 下时间值无时区偏移**，这点值级全对即证明
+- **零日期审计**：引擎把零日期清洗为 NULL 的行为精确命中——`to_patrol_labour_state` 的 1 个 `0000-00-00 00:00:00` 在 DM 侧为 NULL（与 PG 系侧记录过的是同一行），非零日期无一误伤
+- **活库口径再现**：分钟统计表两侧行数差恰等于对不齐行数（785-718=67），源库持续 insert 所致，判定走口径③
