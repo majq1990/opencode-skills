@@ -1,0 +1,642 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+lbpatch.py — 厂商 Liquibase changelog 在目标库路径下的无效 SQL 补丁器
+
+要解决的问题（信创迁移实战缺陷类）：
+    厂商 changelog 里有大量 dbms 条件分支，某些分支从来没在源库执行过
+    （例如 dbms="oracle" 的 changeset 在 MySQL 侧被跳过）。切到信创库后这些
+    changeset 第一次执行，暴露出语法缺陷，直接让 Servlet Context 启动失败。
+    实测案例：pubbase-ext-changelog-2021.xml 里 31 处
+        select ${schema.dlsys_}.so_pub_city_module_config.nextval ...
+    schema.dlsys_ 在目标库解析为空串（同库部署），字面量的那个点就变成前导点，
+    达梦报「第 2 行, 第 20 列[.]附近出现错误」，context 起不来。
+
+补丁原则（不是瞎替换）：
+    规则是「属性感知」的——先读 changelog 里该属性的声明值，只有声明值为空串
+    或以点结尾时，属性后面那个字面点才是冗余的，才删。属性值为其它内容时不动，
+    避免把 EGOVAPUBLIC.so_x.nextval 改成 EGOVAPUBLICso_x.nextval。
+    每个命中都会打印文件、行号、改前改后，先 --scan 看清单再 --fix。
+
+    另外：只补「目标库未登记」的 changeset 所在的无效 SQL。已登记的 changeset
+    一旦被改内容，校验和就对不上，会引发另一类启动失败（那类用
+    lbchecksumfix.py 按应用自己报出的新值回写）。
+
+规则（可叠加，--rules 选择）：
+    empty-prefix-dot            属性值为空/以点结尾时删掉属性引用后那个字面点。
+                                只处理所属 changeSet 在目标库确实会执行的那些
+                                ——属性可能按 dbms 声明了不同值（MySQL 分支有值、
+                                达梦分支为空），去改 MySQL 分支会把源库那条路径
+                                改坏。
+    sqlserver-identity-insert  删掉 SQL Server 专有的
+                                SET IDENTITY_INSERT <表> ON/OFF; —— 达梦和甲骨文
+                                都没有这条语句，而这些 changeset 的 INSERT 走
+                                序列 nextval，压根不需要显式插入开关。厂商把它
+                                写在 dbms="oracle" 的 changeset 里（原意只在 SQL
+                                Server 路径生效），MySQL 上 dbms 不匹配从未执行；
+                                切到达梦后 egova fork 以 OracleDatabase 适配使
+                                dbms 匹配，执行即报「表不存在IDENTITY列」。
+
+用法：
+    # 1) 先扫描，只看不改
+    python3 lbpatch.py --scan --webapp /egova/web/eGovaPublic \
+        --db-user EGOVAPUBLIC --db-pw-file /root/.dm_user_pw_EGOVAPUBLIC \
+        --db-host 127.0.0.1 --db-port 5236
+
+    # 2) 确认后应用（自动备份 jar / 磁盘文件）
+    python3 lbpatch.py --fix  --webapp /egova/web/eGovaPublic ...
+
+    # 3) 不接数据库，只做静态规则扫描
+    python3 lbpatch.py --scan --webapp <path> --no-db
+
+环境变量（凭据一律从文件读，不落字面量）：
+    DB_HOST / DB_PORT / DB_USER / DB_PW_FILE
+"""
+
+import argparse
+import os
+import posixpath
+import re
+import shutil
+import subprocess
+import sys
+import zipfile
+from pathlib import Path
+
+# ---------------------------------------------------------------- 规则定义
+
+# 属性引用后面紧跟一个字面点：${name}.seq.nextval
+PROP_DOT = re.compile(r"\$\{\s*([A-Za-z0-9_.\-]+?)\s*\}\.")
+
+# SQL Server 专有的显式插入开关，整条语句（含结尾分号和行尾换行）
+IDENT_STMT = re.compile(
+    r"[ \t]*SET\s+IDENTITY_INSERT\s+[A-Za-z0-9_$.{}\-]+\s+(?:ON|OFF)"
+    r"\s*;?[ \t]*\r?\n?",
+    re.I)
+
+RULES = ("empty-prefix-dot", "sqlserver-identity-insert")
+
+
+def strip_ns(tag):
+    return tag
+
+
+# ----------------------------------------------------------------  changelog 清单
+
+PROP_RE = re.compile(r"<property\b([^>]*?)/?>", re.S)
+CS_RE = re.compile(r"<changeSet\b([^>]*?)>", re.S)
+INC_RE = re.compile(r"<include\b([^>]*?)/?>", re.S)
+INCALL_RE = re.compile(r"<includeAll\b([^>]*?)/?>", re.S)
+
+
+def attr(tagtext, name):
+    m = re.search(r'\b%s\s*=\s*"([^"]*)"' % re.escape(name), tagtext)
+    return m.group(1) if m else None
+
+
+def attr_single(tagtext, name):
+    m = re.search(r"\b%s\s*=\s*'([^']*)'" % re.escape(name), tagtext)
+    return m.group(1) if m else None
+
+
+def attr_any(tagtext, name):
+    """双引号优先，单引号兜底。注意不能用 `or` 串起来：属性值合法地可以是
+    空串（厂商大量 schema 前缀属性就是 value=""），空串是假值会被 or 吞掉。"""
+    v = attr(tagtext, name)
+    return v if v is not None else attr_single(tagtext, name)
+
+
+class Source:
+    """一个 changelog 文件：要么在磁盘上，要么在某个 jar 里。"""
+
+    def __init__(self, key, kind, container, entry, text):
+        self.key = key            # liquibase 视角的 classpath 风格 key
+        self.kind = kind          # disk | jar
+        self.container = container  # jar 路径或目录路径
+        self.entry = entry        # jar 内条目名或文件名
+        self.text = text
+        self.includes = []        # 原始 include file 值
+        self.include_alls = []
+
+    def where(self):
+        if self.kind == "jar":
+            return "%s!%s" % (self.container, self.entry)
+        return str(Path(self.container, self.entry))
+
+
+def read_text(path):
+    return Path(path).read_bytes().decode("utf-8", "replace")
+
+
+def inventory(webapp):
+    """收集 webapp 能看到的所有 changelog：磁盘 liquibase 目录 + 各 jar。"""
+    files = {}
+
+    disk_dir = Path(webapp, "liquibase")
+    if disk_dir.is_dir():
+        for p in sorted(disk_dir.glob("*.xml")):
+            files[p.name] = Source(p.name, "disk", str(disk_dir), p.name,
+                                   read_text(p))
+
+    libdir = Path(webapp, "WEB-INF", "lib")
+    if libdir.is_dir():
+        for jar in sorted(libdir.glob("*.jar")):
+            try:
+                with zipfile.ZipFile(str(jar)) as z:
+                    for n in z.namelist():
+                        if (n.startswith("META-INF/resources/")
+                                and n.endswith(".xml")
+                                and not n.endswith("/")):
+                            try:
+                                txt = z.read(n).decode("utf-8", "replace")
+                            except Exception:
+                                continue
+                            files[n] = Source(n, "jar", str(jar), n, txt)
+            except zipfile.BadZipFile:
+                print("[WARN] 不是有效 jar，跳过: %s" % jar)
+    return files
+
+
+def resolve(inc, base_key, files):
+    """按 liquibase 的 classpath 语义解析 include。"""
+    cands = []
+    if inc.startswith("/"):
+        cands.append(inc.lstrip("/"))
+    else:
+        d = posixpath.dirname(base_key)
+        if d:
+            cands.append(posixpath.normpath(posixpath.join(d, inc)))
+        cands.append(inc)
+    cands.append("META-INF/resources/" + posixpath.basename(inc))
+    cands.append(posixpath.basename(inc))
+    for c in cands:
+        if c in files:
+            return c
+    return None
+
+
+def parse_sources(files):
+    for s in files.values():
+        for m in INC_RE.finditer(s.text):
+            f = attr_any(m.group(1), "file")
+            if f:
+                s.includes.append(f)
+        for m in INCALL_RE.finditer(s.text):
+            p = attr_any(m.group(1), "path")
+            if p:
+                s.include_alls.append(p)
+
+
+def roots(files):
+    """入口 = 没有被任何 include 引用的文件。
+    厂商包里常有 template-changelog.xml 这类模板文件（自身不在主的 include
+    链上，里面的 include 也解析不到），不能当入口，否则会扫进一堆噪音。
+    优先认磁盘上的主 changelog；只有磁盘上没有时才退到 jar 里的。"""
+    referenced = set()
+    for s in files.values():
+        for inc in s.includes:
+            k = resolve(inc, s.key, files)
+            if k:
+                referenced.add(k)
+    cand = [k for k in files if k not in referenced]
+    disk = [k for k in cand if files[k].kind == "disk"]
+    return disk if disk else cand
+
+
+def walk(files, start):
+    seen, order, stack = set(), [], [start]
+    while stack:
+        k = stack.pop(0)
+        if k in seen or k not in files:
+            continue
+        seen.add(k)
+        order.append(k)
+        s = files[k]
+        for inc in s.includes:
+            r = resolve(inc, k, files)
+            if r and r not in seen:
+                stack.append(r)
+            elif r is None:
+                print("[WARN] include 解析不到: %s (from %s)" % (inc, k))
+        for p in s.include_alls:
+            base = "META-INF/resources/" + p.strip("/")
+            for kk in sorted(files):
+                if kk.startswith(base) and kk not in seen:
+                    stack.append(kk)
+    return order
+
+
+def collect_props(files):
+    """name -> {dbms: value}；dbms 为 None 表示无条件声明。"""
+    props = {}
+    for s in files.values():
+        for m in PROP_RE.finditer(s.text):
+            t = m.group(1)
+            name = attr_any(t, "name")
+            if not name:
+                continue
+            val = attr_any(t, "value")
+            if val is None:
+                continue
+            dbms = attr_any(t, "dbms")
+            props.setdefault(name, {})[dbms or "*"] = val
+    return props
+
+
+def resolve_prop(props, name, shortname):
+    """按目标库 shortName 取属性值；取不到返回 None。"""
+    ent = props.get(name)
+    if not ent:
+        return None
+    if shortname in ent:
+        return ent[shortname]
+    if "*" in ent:
+        return ent["*"]
+    return None
+
+
+# ----------------------------------------------------------------  changeset
+
+def changesets(s):
+    out = []
+    for m in CS_RE.finditer(s.text):
+        t = m.group(1)
+        cid = attr_any(t, "id")
+        au = attr_any(t, "author")
+        if cid is None or au is None:
+            continue
+        dbms = attr_any(t, "dbms")
+        line = s.text.count("\n", 0, m.start()) + 1
+        out.append({"id": cid, "author": au, "dbms": dbms, "line": line})
+    return out
+
+
+def dbms_applies(dbms, shortname):
+    """None/空 = 无条件执行；否则看列表里有没有目标库 shortName。
+    注意：达梦被 egova fork 按 OracleDatabase 适配，shortName 是 oracle 不是 dm，
+    所以 dbms="oracle" 的 changeset 在达梦路径下同样生效。"""
+    if not dbms:
+        return True
+    return shortname in [x.strip().lower() for x in dbms.split(",")]
+
+
+# ----------------------------------------------------------------  补丁
+
+def cs_spans(text):
+    """所有 changeSet 的 (start, end, 开标签属性文本)。正则只做结构定位，
+    属性交给 attr_any 解，避免为一条规则引入 XML 解析器。"""
+    out = []
+    for m in CS_RE.finditer(text):
+        e = text.find("</changeSet>", m.end())
+        e = len(text) if e < 0 else e + len("</changeSet>")
+        out.append((m.start(), e, m.group(1)))
+    return out
+
+
+def owner_cs(spans, pos):
+    """返回包含位置 pos 的 changeSet 属性文本，找不到返回 None。"""
+    for st, en, attrs in spans:
+        if st <= pos < en:
+            return attrs
+    return None
+
+
+def scan_rule_empty_prefix_dot(files, order, props, shortname):
+    """属性声明值为空或以点结尾时，属性引用后那个字面点是冗余的。
+
+    只处理所属 changeSet 在目标库确实会执行的那些：属性可能按 dbms 声明了不同
+    值（MySQL 分支有值、达梦分支为空），去改 MySQL 分支会把源库那条路径改坏。
+    """
+    hits = []
+    for k in order:
+        s = files[k]
+        spans = cs_spans(s.text)
+        for m in PROP_DOT.finditer(s.text):
+            attrs = owner_cs(spans, m.start())
+            if attrs is not None and not dbms_applies(
+                    attr_any(attrs, "dbms"), shortname):
+                continue
+            name = m.group(1)
+            val = resolve_prop(props, name, shortname)
+            if val is None:
+                continue
+            if val == "" or val.endswith("."):
+                line = s.text.count("\n", 0, m.start()) + 1
+                hits.append({
+                    "file": k, "line": line, "name": name, "value": val,
+                    "before": m.group(0),
+                    "after": "${%s}" % name,
+                    "span": (m.start(), m.end()),
+                    "ctx": s.text[max(0, m.start() - 40):m.end() + 60]
+                    .replace("\n", " "),
+                })
+    return hits
+
+
+def scan_rule_sqlserver_identity_insert(files, order, props, shortname):
+    """SQL Server 专有的 SET IDENTITY_INSERT <表> ON/OFF; 在达梦/甲骨文上不存在，
+    而且这类 changeset 的 INSERT 走序列 nextval（不是显式主键值），压根不需要显式
+    插入开关。厂商把它写在 dbms="oracle" 的 changeset 里（原意只在 SQL Server 路径
+    生效），MySQL 上因 dbms 不匹配从未执行；迁到达梦后 egova fork 以 OracleDatabase
+    适配使 dbms 匹配，执行即报『表不存在IDENTITY列』。整条删除，保留 INSERT 本体。
+
+    只处理所属 changeSet 在目标库确实会执行的那些，dbms 限定在别处的原样不动。"""
+    hits = []
+    for k in order:
+        s = files[k]
+        if not IDENT_STMT.search(s.text):
+            continue
+        spans = cs_spans(s.text)
+        for m in IDENT_STMT.finditer(s.text):
+            attrs = owner_cs(spans, m.start())
+            if attrs is None:
+                continue
+            dbms = attr_any(attrs, "dbms")
+            if not dbms_applies(dbms, shortname):
+                continue
+            line = s.text.count("\n", 0, m.start()) + 1
+            hits.append({
+                "file": k, "line": line, "name": "SET IDENTITY_INSERT",
+                "before": m.group(0).strip(),
+                "after": "",
+                "span": (m.start(), m.end()),
+                "ctx": s.text[max(0, m.start() - 40):m.end() + 60]
+                .replace("\n", " "),
+            })
+    return hits
+
+
+SCAN_RULES = {
+    "empty-prefix-dot": scan_rule_empty_prefix_dot,
+    "sqlserver-identity-insert": scan_rule_sqlserver_identity_insert,
+}
+
+
+def apply_hits(files, hits, backup_dir):
+    """按文件分组打补丁；jar 内文件用 jar 工具回写，磁盘文件直接写回。
+    每个命中自带 span(起,止) 与 after(替换文本)，规则之间不耦合。"""
+    backup = Path(backup_dir)
+    backup.mkdir(parents=True, exist_ok=True)
+    by_file = {}
+    for h in hits:
+        by_file.setdefault(h["file"], []).append(h)
+
+    changed = []
+    for key, hs in sorted(by_file.items()):
+        s = files[key]
+        text = s.text
+        # 从后往前替换，避免行号/偏移漂移；同片段被多条规则命中时保留靠前的那条
+        spans = sorted({(h["span"][0], h["span"][1], h["after"]) for h in hs},
+                       key=lambda x: x[0], reverse=True)
+        kept = []
+        limit = len(text)
+        for st, en, rep in spans:
+            if en > limit:
+                continue
+            kept.append((st, en, rep))
+            limit = st
+        if not kept:
+            continue
+        new = text
+        for st, en, rep in kept:
+            new = new[:st] + rep + new[en:]
+        if new == text:
+            continue
+
+        if s.kind == "jar":
+            bak = backup / (Path(s.container).name + ".orig")
+            if not bak.exists():
+                shutil.copy2(s.container, str(bak))
+            # 落到与 jar 内条目同相对路径的临时目录，再用 jar uf 回写
+            tmp = backup / "stage"
+            dst = Path(tmp, s.entry)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_bytes(new.encode("utf-8"))
+            r = subprocess.run(
+                ["jar", "uf", s.container, "-C", str(tmp), s.entry],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            if r.returncode != 0:
+                print("[FAIL] jar 回写失败 %s\n%s"
+                      % (s.container, r.stdout.decode("utf-8", "replace")))
+                continue
+            print("[OK] 已补丁 jar 条目 %s (%d 处)" % (s.entry, len(kept)))
+        else:
+            bak = backup / (Path(s.entry).name + ".orig")
+            if not bak.exists():
+                shutil.copy2(Path(s.container, s.entry), str(bak))
+            Path(s.container, s.entry).write_bytes(new.encode("utf-8"))
+            print("[OK] 已补丁磁盘文件 %s (%d 处)"
+                  % (Path(s.container, s.entry), len(kept)))
+        s.text = new
+        changed.append(key)
+    return changed
+
+
+# ----------------------------------------------------------------  数据库
+
+def db_counts(user, pwfile, host, port):
+    try:
+        import dmPython
+    except ImportError:
+        print("[WARN] 没有 dmPython，跳过目标库登记比对")
+        return None, None
+    pw = Path(pwfile).read_text().strip()
+    conn = dmPython.connect(user=user, password=pw, host=host,
+                            port=int(port), local_code=1)
+    try:
+        with conn.cursor() as c:
+            c.execute("SELECT id, author, filename, md5sum, "
+                      "to_char(dateexecuted,'YYYY-MM-DD HH24:MI:SS') "
+                      "FROM databasechangelog")
+            rows = c.fetchall()
+    finally:
+        conn.close()
+    reg = {}
+    last = None
+    for cid, au, fn, md5, dt in rows:
+        reg[(cid, au, fn)] = md5
+        if last is None or (dt or "") > last:
+            last = dt
+    return reg, last
+
+
+def mysql_counts(db, pwfile, host, port, muser):
+    try:
+        import pymysql
+    except ImportError:
+        print("[WARN] 没有 pymysql，跳过源库登记比对")
+        return None, None
+    pw = Path(pwfile).read_text().strip()
+    conn = pymysql.connect(host=host, port=int(port), user=muser,
+                           password=pw, database=db, charset="utf8mb4")
+    try:
+        with conn.cursor() as c:
+            c.execute("SELECT id, author, filename, md5sum FROM "
+                      "databasechangelog")
+            rows = c.fetchall()
+    finally:
+        conn.close()
+    return {(r[0], r[1], r[2]): r[3] for r in rows}, None
+
+
+# ----------------------------------------------------------------  main
+
+PROPS_CACHE = {}
+SHORTNAME = "oracle"
+
+
+def main(argv=None):
+    global PROPS_CACHE, SHORTNAME
+    ap = argparse.ArgumentParser(description="厂商 changelog 目标库无效 SQL 补丁器")
+    ap.add_argument("--webapp", required=True, help="webapp 根目录")
+    ap.add_argument("--master", help="主 changelog key，默认自动找未被 include 的")
+    ap.add_argument("--shortname", default=os.environ.get("DB_SHORTNAME", "oracle"),
+                    help="目标库 shortName，达梦被适配成 OracleDatabase 所以是 oracle")
+    ap.add_argument("--scan", action="store_true", help="只扫描报告")
+    ap.add_argument("--fix", action="store_true", help="应用补丁")
+    ap.add_argument("--rules", default=",".join(RULES))
+    ap.add_argument("--backup-dir", default="/root/_lbpatch_backup")
+    ap.add_argument("--no-db", action="store_true", help="不连数据库")
+    ap.add_argument("--db-host", default=os.environ.get("DB_HOST", "127.0.0.1"))
+    ap.add_argument("--db-port", default=os.environ.get("DB_PORT", "5236"))
+    ap.add_argument("--db-user", default=os.environ.get("DB_USER"))
+    ap.add_argument("--db-pw-file", default=os.environ.get("DB_PW_FILE"))
+    ap.add_argument("--mysql-db", default=os.environ.get("MYSQL_DB"))
+    ap.add_argument("--mysql-host", default=os.environ.get("MYSQL_HOST", "127.0.0.1"))
+    ap.add_argument("--mysql-port", default=os.environ.get("MYSQL_PORT", "3306"))
+    ap.add_argument("--mysql-user", default=os.environ.get("MYSQL_USER", "root"))
+    ap.add_argument("--mysql-pw-file", default=os.environ.get("MYSQL_PW_FILE"))
+    args = ap.parse_args(argv)
+
+    if args.scan == args.fix:
+        ap.error("必须二选一：--scan 或 --fix")
+    SHORTNAME = args.shortname.lower()
+
+    files = inventory(args.webapp)
+    if not files:
+        print("[ERR] 没找到任何 changelog：%s" % args.webapp)
+        return 2
+    parse_sources(files)
+    PROPS_CACHE = collect_props(files)
+
+    if args.master:
+        starts = [args.master] if args.master in files else []
+        if not starts:
+            print("[ERR] master 不在清单里: %s" % args.master)
+            return 2
+    else:
+        starts = roots(files)
+    order = []
+    for r in starts:
+        order.extend(walk(files, r))
+    order = list(dict.fromkeys(order))
+
+    print("== changelog 清单 ==")
+    print("  入口: %s" % ", ".join(starts))
+    print("  可达文件: %d（磁盘 %d / jar 内 %d）"
+          % (len(order),
+             sum(1 for k in order if files[k].kind == "disk"),
+             sum(1 for k in order if files[k].kind == "jar")))
+
+    # ---- changeset 统计
+    total = run = skip = 0
+    for k in order:
+        for cs in changesets(files[k]):
+            total += 1
+            if dbms_applies(cs["dbms"], SHORTNAME):
+                run += 1
+            else:
+                skip += 1
+    print("== changeset 统计 ==")
+    print("  解析到 changeset: %d" % total)
+    print("  会在目标库执行(dbms 空或含 %s): %d" % (SHORTNAME, run))
+    print("  目标库会跳过(仅 mysql/postgresql 等): %d" % skip)
+
+    reg = None
+    pend_run, pend_skip = [], []
+    if not args.no_db and args.db_user and args.db_pw_file:
+        reg, last = db_counts(args.db_user, args.db_pw_file,
+                              args.db_host, args.db_port)
+        if reg is not None:
+            print("== 目标库登记 ==")
+            print("  databasechangelog 行数: %d  最后执行: %s" % (len(reg), last))
+            for k in order:
+                for cs in changesets(files[k]):
+                    if (cs["id"], cs["author"], k) in reg:
+                        continue
+                    if dbms_applies(cs["dbms"], SHORTNAME):
+                        pend_run.append((k, cs))
+                    else:
+                        pend_skip.append((k, cs))
+            print("  未登记且会在目标库执行: %d" % len(pend_run))
+            print("  未登记但会被 dbms 跳过: %d" % len(pend_skip))
+            if pend_run:
+                print("  --- 待执行清单(前 40) ---")
+                for k, cs in pend_run[:40]:
+                    print("    %s :: %s :: %s  (line %s)"
+                          % (k, cs["id"], cs["author"], cs["line"]))
+                if len(pend_run) > 40:
+                    print("    ... 其余 %d 条" % (len(pend_run) - 40))
+
+    if args.mysql_db and args.mysql_pw_file:
+        mreg, _ = mysql_counts(args.mysql_db, args.mysql_pw_file,
+                               args.mysql_host, args.mysql_port,
+                               args.mysql_user)
+        if mreg and reg:
+            only_dm = [k for k in reg if k not in mreg]
+            only_my = [k for k in mreg if k not in reg]
+            print("== 目标库 vs 源库登记差异 ==")
+            print("  源库 %s 行数: %d" % (args.mysql_db, len(mreg)))
+            print("  仅目标库有(已在目标库多执行): %d" % len(only_dm))
+            print("  仅源库有: %d" % len(only_my))
+            if only_dm[:5]:
+                for k in only_dm[:5]:
+                    print("    + %s :: %s :: %s" % k)
+
+    # ---- 规则扫描
+    rules = [r.strip() for r in args.rules.split(",") if r.strip()]
+    unknown = [r for r in rules if r not in SCAN_RULES]
+    if unknown:
+        print("[ERR] 未知规则: %s（可用: %s）"
+              % (", ".join(unknown), ", ".join(sorted(SCAN_RULES))))
+        return 2
+    hits = []
+    per_rule = {}
+    for rname in rules:
+        rh = SCAN_RULES[rname](files, order, PROPS_CACHE, SHORTNAME)
+        per_rule[rname] = len(rh)
+        hits.extend(rh)
+    print("== 规则命中 ==")
+    for rname in rules:
+        print("  %-26s %d 处" % (rname, per_rule[rname]))
+    if not hits:
+        print("  （合计 0 处）")
+    else:
+        byfile = {}
+        for h in hits:
+            byfile.setdefault(h["file"], []).append(h)
+        for f, hs in sorted(byfile.items()):
+            print("  %s : %d 处" % (files[f].where(), len(hs)))
+        print("  --- 明细(前 40) ---")
+        for h in hits[:40]:
+            print("    %s:%s  %s -> %s" % (h["file"], h["line"],
+                                            h["before"], h["after"]))
+            print("        ...%s..." % h["ctx"])
+        if len(hits) > 40:
+            print("    ... 其余 %d 处" % (len(hits) - 40))
+
+    if args.fix:
+        if not hits:
+            print("没有可应用的补丁。")
+            return 0
+        Path(args.backup_dir).mkdir(parents=True, exist_ok=True)
+        print("== 应用补丁（备份目录 %s）==" % args.backup_dir)
+        apply_hits(files, hits, args.backup_dir)
+        print("补丁完成。请重启应用并复扫：--scan 复核应显示 0 处命中。")
+    else:
+        print("（--scan 模式，未修改任何文件）")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,471 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+fix_autoincrement.py — MySQL AUTO_INCREMENT → 达梦「列 DEFAULT 指向序列」补齐器
+
+要解决的问题（信创迁移实战缺陷类）：
+    MySQL 侧 3312 个自增列，迁到达梦后 0 个 IDENTITY、0 个 default。应用和
+    厂商 changelog 都按「不给主键值就自动生成」的语义写 SQL，到达梦上就是
+        ORA-01400: 违反列[id]非空约束
+        [Failed SQL: INSERT INTO EGOVAPUBLIC.pub_encrypt_interface
+                   (type, expression, enable_flag) VALUES ('4', '...', '1')]
+    Servlet Context 直接起不来。
+
+三种候选方案的实测结论（都在达梦上真跑过）：
+    A. 改列成 IDENTITY          不给值能自增，但**显式给值插入会失败**。厂商
+                                changelog 里有大量显式给主键的 INSERT，会连带
+                                炸一片，否决。
+    B. 列 DEFAULT 指向序列      不给值走序列，显式给值按给的走，两种都对。
+                                已灌过数据的表用 ALTER 加上去，原数据不动。
+                                **采用本方案。**
+    C. BEFORE INSERT 触发器+序列 行为同 B，但多一个 PL 对象、多一层编译失败
+                                风险，收益为零，否决。
+
+    补充实测：对**已经是 IDENTITY 的列**执行本方案的 ALTER 是静默无效的
+    （data_default 仍是 NULL，插入仍走 identity，不报错）。所以修之前必须
+    用 dbms_metadata.get_ddl 识别 IDENTITY 列并跳过，否则会漏修还不报错。
+
+种子值由目标库在脚本内实测：GREATEST(max(列)+1, 源库 auto_increment, 1)。
+为什么不直接用源库 information_schema.tables.auto_increment：实测
+public.pub_encrypt_interface 的 MySQL 侧 count=46、max(id)=46、而
+auto_increment 也等于 46，两者相等——这个字段不是可靠的「下一个值」，拿它当
+种子会从 46 开始分配，直接撞已占用的主键。所以必须回到目标库实测 max(列)。
+现场若有人工插入过更大 id，GREATEST 会自动兜住，不需要额外干预。
+
+形态：本脚本只读库 + 生成 SQL 脚本，**不在 Python 里执行任何 DDL**。DDL 不能
+参数绑定，交给 Python execute 就是把注入面交给静态分析看不出来的地方；生成脚本
+由人过一遍再用 disql 跑，既符合「变更 SQL 先展示后执行」，也让回滚有据可查。
+每条被改表的原 DDL 同时存进 backup-dir。
+
+用法：
+    # 1) 看缺口（只读）。单库跑只给一个口令文件即可
+    python3 fix_autoincrement.py --scan --my-dbs public \
+        --mysql-pw-file /root/.mysql_root_pw \
+        --dm-pw-file /root/.dm_user_pw_EGOVAPUBLIC
+
+    # 2) 多库跑必须给口令文件映射（各用户口令不同）
+    python3 fix_autoincrement.py --scan \
+        --mysql-pw-file /root/.mysql_root_pw \
+        --dm-pw-map "CGDB=/root/.dm_user_pw_CGDB,CGDBSTAT=/root/.dm_user_pw_CGDBSTAT,GISCENTER=/root/.dm_user_pw_GISCENTER,MMS=/root/.dm_user_pw_MMS,EGOVAPUBLIC=/root/.dm_user_pw_EGOVAPUBLIC"
+
+    # 3) 生成待执行脚本 + 备份原 DDL
+    python3 fix_autoincrement.py --emit-sql /root/fix_ai.sql \
+        --mysql-pw-file /root/.mysql_root_pw --dm-pw-map "..."
+
+    # 4) 人工过一遍，然后按 schema 执行（口令从 600 权限文件读，不落参数）
+    for u in CGDB CGDBSTAT GISCENTER MMS EGOVAPUBLIC; do
+        /opt/dmdbms/bin/disql $u/"$(cat /root/.dm_user_pw_$u)"@127.0.0.1:5236 \
+            "@/root/fix_ai.$u.sql"
+    done
+
+    # 5) 复核，需要补的应为 0
+    python3 fix_autoincrement.py --scan ...
+环境变量（均可用同名选项覆盖）：
+    MY_HOST/MY_PORT/MY_USER/MY_PW_FILE   源 MySQL，默认 127.0.0.1:3306 root
+    MY_DBS             要处理的库，逗号分隔，默认全部 5 个业务库
+    DM_HOST/DM_PORT/DM_USER/DM_PW_FILE   目标达梦，默认 127.0.0.1:5236
+    DM_PW_MAP          多库跑时必须：达梦用户=口令文件，逗号分隔。单库跑可以
+                       只给 --dm-pw-file；多库跑若只给一个文件，就等于用同一个
+                       口令去连所有用户，现场各用户口令通常不同，会连不上。
+    DM_SCHEMA_MAP      MySQL库名=达梦用户名，逗号分隔；缺省用下方默认映射
+    BACKUP_DIR         默认 /root/_ai_fix_backup
+"""
+import argparse
+import hashlib
+import os
+import re
+import sys
+from pathlib import Path
+
+# MySQL 库名 → 达梦用户名。public 是达梦保留字，厂商规则是 EGOVA+原库名大写。
+DEFAULT_MAP = {
+    "cgdb": "CGDB",
+    "cgdbstat": "CGDBSTAT",
+    "giscenter": "GISCENTER",
+    "mms": "MMS",
+    "public": "EGOVAPUBLIC",
+}
+
+# 标识符白名单：DDL 不能参数绑定，只能靠校验把注入面压到零
+IDENT_RE = re.compile(r"[A-Za-z0-9_$]{1,60}")
+# 达梦列类型串，如 VARCHAR / NUMBER / INT / TIMESTAMP(6) / NUMBER(10,2)
+TYPE_RE = re.compile(r"[A-Za-z0-9_]+(\([0-9]+(,[0-9]+)?\))?")
+INT_TYPES = ("INT", "BIGINT", "SMALLINT", "TINYINT", "NUMBER", "DECIMAL",
+             "FLOAT", "DOUBLE")
+
+# 语句模板：占位符替换，不用 % 格式化 / f-string / 加号拼接。
+# 种子不在 Python 里算，写成 ' || v_seed || ' 让库自己实测 max(列)。
+PL_TMPL = """BEGIN
+  EXECUTE IMMEDIATE 'DROP SEQUENCE @SEQ@';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+DECLARE
+  v_max INTEGER;
+  v_seed INTEGER;
+BEGIN
+  SELECT NVL(MAX("@COL@"), 0) INTO v_max FROM "@TAB@";
+  v_seed := GREATEST(v_max + 1, @AI@, 1);
+  EXECUTE IMMEDIATE 'CREATE SEQUENCE @SEQ@ START WITH ' || v_seed || ' INCREMENT BY 1 NOCACHE';
+  EXECUTE IMMEDIATE 'ALTER TABLE "@TAB@" MODIFY '
+                    || '("@COL@" @TYPE@ DEFAULT @SEQ@.NEXTVAL@NOTNULL@)';
+END;
+/"""
+# 生成后的整块必须落在这个语法里，否则不许进脚本。这是第三道闸。
+PL_OK = re.compile(
+    r"BEGIN\n  EXECUTE IMMEDIATE 'DROP SEQUENCE [A-Za-z0-9_$]{1,60}';\n"
+    r"EXCEPTION WHEN OTHERS THEN NULL;\nEND;\n/\n"
+    r"DECLARE\n  v_max INTEGER;\n  v_seed INTEGER;\nBEGIN\n"
+    r'  SELECT NVL\(MAX\("[A-Za-z0-9_$]{1,60}"\), 0\) INTO v_max '
+    r'FROM "[A-Za-z0-9_$]{1,60}";\n'
+    r"  v_seed := GREATEST\(v_max \+ 1, [0-9]{1,19}, 1\);\n"
+    r"  EXECUTE IMMEDIATE 'CREATE SEQUENCE [A-Za-z0-9_$]{1,60} START WITH ' "
+    r"\|\| v_seed \|\| ' INCREMENT BY 1 NOCACHE';\n"
+    r"  EXECUTE IMMEDIATE 'ALTER TABLE \"[A-Za-z0-9_$]{1,60}\" MODIFY '\n"
+    r"                    \|\| "
+    r"'\(\"[A-Za-z0-9_$]{1,60}\" [A-Za-z0-9_]+(\([0-9]+(,[0-9]+)?\))? "
+    r"DEFAULT [A-Za-z0-9_$]{1,60}\.NEXTVAL( NOT NULL)?\)';\n"
+    r"END;\n/")
+
+
+def rd(path):
+    return Path(path).read_text().strip()
+
+
+def ident(name, what):
+    """白名单 fullmatch 才算标识符。第一道闸。"""
+    s = str(name or "")
+    if not IDENT_RE.fullmatch(s):
+        raise ValueError("%s 不合规，拒绝生成 DDL: %r" % (what, s))
+    return s
+
+
+def _sub(tmpl, **kw):
+    """占位符替换 + 整句语法校验。第二、三道闸都在这。"""
+    out = tmpl
+    for k, v in kw.items():
+        out = out.replace("@" + k + "@", v)
+    if "@" in out:
+        raise ValueError("模板占位符未填满: %r" % out)
+    if not PL_OK.fullmatch(out):
+        raise ValueError("生成的 PL 块不合语法，拒绝写入脚本: %r" % out)
+    return out
+
+
+def type_str(dt, length, prec, scale):
+    """按数据字典重建列类型串。长度/精度为 0 表示不适用。"""
+    dt = (dt or "").strip().upper()
+    if dt in ("VARCHAR", "VARCHAR2", "CHAR", "CHARACTER", "NVARCHAR",
+              "NVARCHAR2", "RAW", "BINARY", "VARBINARY"):
+        if length and int(length) > 0:
+            return "%s(%d)" % (dt, int(length))
+        return dt
+    if dt == "NUMBER":
+        if prec and int(prec) > 0:
+            if scale is not None and int(scale) > 0:
+                return "NUMBER(%d,%d)" % (int(prec), int(scale))
+            return "NUMBER(%d)" % int(prec)
+        return "NUMBER"
+    return dt
+
+
+def seq_name(table, col):
+    base = re.sub(r"[^A-Z0-9_$]", "_",
+                  "SEQ_%s_%s" % (str(table).upper(), str(col).upper()))
+    if len(base) > 56:
+        base = (base[:48] + "_" + hashlib.sha256(
+            ("%s.%s" % (table, col)).encode("utf-8")).hexdigest()[:7].upper())
+    return base
+
+
+# ---------------------------------------------------------------- 源库
+
+def mysql_autoincrement(host, port, user, pwfile, dbs):
+    """返回 {库: [(表, 列, auto_increment 下一个值 or None)]}。全参数化。"""
+    import pymysql
+    out = {}
+    conn = pymysql.connect(host=host, port=int(port), user=user,
+                           password=rd(pwfile), charset="utf8mb4")
+    try:
+        with conn.cursor() as c:
+            c.execute("SELECT schema_name FROM information_schema.schemata")
+            have = {r[0] for r in c.fetchall()}
+        for db in dbs:
+            if db not in have:
+                print("[WARN] 源库没有 %s，跳过" % db)
+                continue
+            with conn.cursor() as c:
+                c.execute(
+                    "SELECT table_name, column_name "
+                    "FROM information_schema.columns "
+                    "WHERE table_schema=%s "
+                    "AND extra LIKE '%%auto_increment%%' "
+                    "ORDER BY table_name, ordinal_position", (db,))
+                cols = c.fetchall()
+            nxt = {}
+            if cols:
+                with conn.cursor() as c:
+                    c.execute(
+                        "SELECT table_name, auto_increment "
+                        "FROM information_schema.tables "
+                        "WHERE table_schema=%s", (db,))
+                    nxt = {t: ai for t, ai in c.fetchall()}
+            out[db] = [(t, col, nxt.get(t)) for t, col in cols]
+    finally:
+        conn.close()
+    return out
+
+
+# ---------------------------------------------------------------- 目标库
+
+def dm_connect(host, port, user, pwfile):
+    import dmPython
+    return dmPython.connect(user=user, password=rd(pwfile), host=host,
+                            port=int(port), local_code=1)
+
+
+def pw_file_for(args, dm_user):
+    """按达梦用户取口令文件。多库跑必须给 --dm-pw-map，否则会拿同一个文件
+    去连所有用户，现场各用户口令通常不同，连不上还看不出为什么。"""
+    hit = args.dm_pw_map.get(dm_user)
+    if hit:
+        return hit
+    if args.dm_pw_file:
+        return args.dm_pw_file
+    raise SystemExit(
+        "[ERR] 没有 %s 的口令文件：多库跑请给 --dm-pw-map "
+        "\"用户=文件,用户=文件\"" % dm_user)
+
+
+def dm_col(conn, table, col):
+    """列的类型/可空/默认值。参数化查询。"""
+    with conn.cursor() as c:
+        c.execute(
+            "SELECT data_type, data_length, data_precision, data_scale, "
+            "       nullable, data_default "
+            "FROM user_tab_columns WHERE table_name=:t AND column_name=:c",
+            {"t": table, "c": col})
+        return c.fetchone()
+
+
+def dm_table_ddl(conn, table):
+    """整表 DDL，用来识别 IDENTITY 列。参数化查询。"""
+    with conn.cursor() as c:
+        c.execute("SELECT dbms_metadata.get_ddl('TABLE', :t)", {"t": table})
+        r = c.fetchone()
+    return r[0] if r and r[0] else ""
+
+
+def is_identity(ddl, col):
+    """DDL 里该列的定义行出现 IDENTITY 才算。"""
+    want = str(col).upper()
+    for line in ddl.splitlines():
+        parts = line.strip().rstrip(",").split()
+        if parts and parts[0].strip('"').upper() == want:
+            if "IDENTITY" in line.upper():
+                return True
+    return False
+
+
+# ---------------------------------------------------------------- 主流程
+
+def build_plan(args):
+    my = mysql_autoincrement(args.mysql_host, args.mysql_port,
+                             args.mysql_user, args.mysql_pw_file, args.my_dbs)
+    override = {}
+    for kv in (args.seed_override or "").split(","):
+        if "=" in kv:
+            k, v = kv.split("=", 1)
+            override[k.strip().upper()] = int(v)
+    plan, ok, skipped = [], [], []
+    for db, rows in my.items():
+        dm_user = args.dm_schema_map[db]
+        try:
+            conn = dm_connect(args.dm_host, args.dm_port, dm_user,
+                              pw_file_for(args, dm_user))
+        except Exception as e:
+            print("[ERR] 连不上达梦 %s: %s" % (dm_user, e))
+            continue
+        try:
+            for table, col, ai_next in rows:
+                key = "%s.%s" % (str(table).upper(), str(col).upper())
+                got = dm_col(conn, table, col)
+                if not got:
+                    skipped.append((db, dm_user, table, col, "目标库无此列"))
+                    continue
+                dt, dl, dp, ds, nullable, dflt = got
+                dflt = dflt or ""
+                if is_identity(dm_table_ddl(conn, table), col):
+                    ok.append((db, dm_user, table, col, "IDENTITY 列，已能自增"))
+                    continue
+                if "NEXTVAL" in dflt.upper():
+                    ok.append((db, dm_user, table, col,
+                               "已有 default=%s" % dflt.strip()))
+                    continue
+                if not dt.upper().startswith(INT_TYPES):
+                    skipped.append((db, dm_user, table, col,
+                                    "类型 %s 非整数，不做" % dt))
+                    continue
+                if key in override:
+                    ai_floor = override[key]
+                elif ai_next:
+                    ai_floor = int(ai_next)
+                else:
+                    ai_floor = 1
+                plan.append({
+                    "db": db, "dm_user": dm_user, "table": table, "col": col,
+                    "type": type_str(dt, dl, dp, ds),
+                    "nullable": nullable, "ai_next": ai_next,
+                    "ai_floor": ai_floor, "seq": seq_name(table, col),
+                })
+        finally:
+            conn.close()
+    return plan, ok, skipped
+
+
+def ddl_for(p):
+    """生成该列的 PL 块。种子由块内 GREATEST(max+1, 源库auto_increment, 1) 实测。"""
+    t = ident(p["table"], "表名")
+    c = ident(p["col"], "列名")
+    s = ident(p["seq"], "序列名")
+    tp = p["type"]
+    if not TYPE_RE.fullmatch(tp):
+        raise ValueError("类型串不合规: %r" % tp)
+    notnull = "" if p["nullable"] == "Y" else " NOT NULL"
+    return _sub(PL_TMPL, SEQ=s, COL=c, TAB=t, TYPE=tp,
+                NOTNULL=notnull, AI=str(int(p["ai_floor"])))
+
+
+def emit(args, plan):
+    """按 schema 分别写脚本，同时备份每条被改表的原 DDL。"""
+    backup_dir = Path(args.backup_dir)
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    by_user = {}
+    for p in plan:
+        by_user.setdefault(p["dm_user"], []).append(p)
+    total = 0
+    for user, rows in sorted(by_user.items()):
+        conn = dm_connect(args.dm_host, args.dm_port, user,
+                          pw_file_for(args, user))
+        lines = [
+            "-- 由 fix_autoincrement.py 生成，执行前请人工过一遍",
+            "-- schema: %s   列数: %d" % (user, len(rows)),
+            "-- 每块独立：块内 DDL 执行成功即自动提交，某块失败不影响其他块。",
+            "-- 重跑会先 DROP SEQUENCE 再建，序列进度归零重算，对此无副作用。",
+        ]
+        backup = ["\n===== %s =====" % user]
+        try:
+            for p in rows:
+                try:
+                    block = ddl_for(p)
+                except ValueError as e:
+                    lines.append("-- [SKIP] %s.%s %s"
+                                 % (p["table"], p["col"], e))
+                    continue
+                lines.append("-- %s.%s  type=%s  源库 auto_increment=%s"
+                             % (p["table"], p["col"], p["type"],
+                                p["ai_next"]))
+                lines.append(block)
+                lines.append("")
+                total += 1
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "SELECT dbms_metadata.get_ddl('TABLE', :t)",
+                            {"t": ident(p["table"], "表名")})
+                        r = cur.fetchone()
+                    if r and r[0]:
+                        backup.append("-- %s\n%s" % (p["table"], r[0]))
+                except Exception as e:
+                    backup.append("-- %s 取 DDL 失败: %s" % (p["table"], e))
+        finally:
+            conn.close()
+        out = Path("%s.%s.sql" % (args.emit_sql, user))
+        lines.append("COMMIT;")
+        out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        print("[写出] %s  (%d 列)" % (out, len(rows)))
+
+        bak = backup_dir / ("original_ddl_%s.sql" % user)
+        with open(str(bak), "a", encoding="utf-8") as lf:
+            lf.write("\n".join(backup) + "\n")
+        print("[备份] %s" % bak)
+    print("共 %d 列待处理。" % total)
+    return total
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(
+        description="MySQL AUTO_INCREMENT → 达梦列DEFAULT指向序列补齐器")
+    ap.add_argument("--scan", action="store_true", help="只报告缺口（只读）")
+    ap.add_argument("--emit-sql", metavar="PREFIX",
+                    help="生成待执行 SQL 脚本，按 schema 写成 PREFIX.<用户>.sql")
+    ap.add_argument("--mysql-host",
+                    default=os.environ.get("MY_HOST", "127.0.0.1"))
+    ap.add_argument("--mysql-port", default=os.environ.get("MY_PORT", "3306"))
+    ap.add_argument("--mysql-user", default=os.environ.get("MY_USER", "root"))
+    ap.add_argument("--mysql-pw-file", default=os.environ.get("MY_PW_FILE"))
+    ap.add_argument("--my-dbs", default=os.environ.get("MY_DBS"),
+                    help="逗号分隔，默认全部业务库")
+    ap.add_argument("--dm-host", default=os.environ.get("DM_HOST", "127.0.0.1"))
+    ap.add_argument("--dm-port", default=os.environ.get("DM_PORT", "5236"))
+    ap.add_argument("--dm-user", default=os.environ.get("DM_USER", "CGDB"))
+    ap.add_argument("--dm-pw-file", default=os.environ.get("DM_PW_FILE"))
+    ap.add_argument("--dm-pw-map", default=os.environ.get("DM_PW_MAP"),
+                    help="达梦用户=口令文件，逗号分隔；多库跑必须给")
+    ap.add_argument("--dm-schema-map", default=os.environ.get("DM_SCHEMA_MAP"))
+    ap.add_argument("--seed-override", default=os.environ.get("SEED_OVERRIDE"),
+                    help="表.列=种子，逗号分隔，覆盖自动推算")
+    ap.add_argument("--backup-dir", default=os.environ.get(
+        "BACKUP_DIR", "/root/_ai_fix_backup"))
+    args = ap.parse_args(argv)
+
+    if args.scan == bool(args.emit_sql):
+        ap.error("必须二选一：--scan 或 --emit-sql")
+    if not args.mysql_pw_file or not (args.dm_pw_file or args.dm_pw_map):
+        ap.error("必须给 --mysql-pw-file，以及 --dm-pw-file 或 --dm-pw-map")
+
+    dbs = ([x.strip() for x in args.my_dbs.split(",") if x.strip()]
+           if args.my_dbs else list(DEFAULT_MAP))
+    mapping = dict(DEFAULT_MAP)
+    if args.dm_schema_map:
+        for kv in args.dm_schema_map.split(","):
+            if "=" in kv:
+                k, v = kv.split("=", 1)
+                mapping[k.strip()] = v.strip()
+    pw_map = {}
+    for kv in (args.dm_pw_map or "").split(","):
+        if "=" in kv:
+            k, v = kv.split("=", 1)
+            pw_map[k.strip()] = v.strip()
+    args.my_dbs = dbs
+    args.dm_schema_map = mapping
+    args.dm_pw_map = pw_map
+
+    plan, ok, skipped = build_plan(args)
+    print("== 已有自增机制的列: %d ==" % len(ok))
+    for db, u, t, c, why in ok[:10]:
+        print("  [%s] %s.%s.%s  %s" % (db, u, t, c, why))
+    if len(ok) > 10:
+        print("  ... 其余 %d" % (len(ok) - 10))
+    print("== 跳过的列: %d ==" % len(skipped))
+    for db, u, t, c, why in skipped[:20]:
+        print("  [%s] %s.%s.%s  %s" % (db, u, t, c, why))
+    if len(skipped) > 20:
+        print("  ... 其余 %d" % (len(skipped) - 20))
+    print("== 需要补 default 的列: %d ==" % len(plan))
+    for p in plan[:40]:
+        print("  [%s] %s.%s  type=%s ai_next=%s ai_floor=%d seq=%s"
+              % (p["db"], p["table"], p["col"], p["type"], p["ai_next"],
+                 p["ai_floor"], p["seq"]))
+    if len(plan) > 40:
+        print("  ... 其余 %d" % (len(plan) - 40))
+
+    if args.emit_sql:
+        emit(args, plan)
+    else:
+        print("（--scan 模式，只读，未生成任何脚本）")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
