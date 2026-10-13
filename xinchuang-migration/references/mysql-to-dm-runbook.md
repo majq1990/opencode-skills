@@ -206,12 +206,12 @@ DM 侧反查元数据，语义确实落地而不是"碰巧建上了"：
 
 ```
 dminit PATH=/opt/dmdbms/data DB_NAME=DMDB INSTANCE_NAME=DMSERVER PORT_NUM=5236 \
-  CASE_SENSITIVE=Y CHARSET=1 PAGE_SIZE=32 EXTENT_SIZE=16 LOG_SIZE=4096 BUFFER=4000 TIME_ZONE=+08:00 \
+  CASE_SENSITIVE=N CHARSET=1 PAGE_SIZE=32 EXTENT_SIZE=16 LOG_SIZE=4096 BUFFER=4000 TIME_ZONE=+08:00 \
   SYSDBA_PWD=... SYSAUDITOR_PWD=...
 ```
 
 - `CHARSET=1`（UTF-8）：与源库 utf8mb4 同码位，中文无需转码；dmPython 仍建议 `local_code=PG_UTF8`。上轮实例是默认 GB18030 + `local_code=PG_UTF8`，两种组合都已实证可行
-- `CASE_SENSITIVE=Y`：与 MySQL on Linux 的大小写敏感语义对齐。**连带效应**：disql 里不带引号的标识符被转大写，查小写表名/列名必须 `"tc_human"` 双引号包裹（`-2111 无效的列名`多半是这个）
+- `CASE_SENSITIVE=N`（2026-10-13 修正，原 Y 决策已推翻）：**面向产品应用的实例必须 N**——eGova 产品的 liquibase 与 SQL 用不带引号标识符访问 `DATABASECHANGELOG` 等表，Y 实例下这些表是小写带引号的，liquibase 把迁移历史读成空、启动全量重放 changeset 撞主键（`MigrationFailedException: INSERT INTO ... TC_SYS_CONFIG_ITEM 无效的表或视图名`）。Y 只对自研引擎成立（引擎全程带引号访问）。改 N 无法在线做，须 dminit 重建 + 重迁（5589 表 335s）。N 实例下 disql 不带引号可直接命中小写表名
 - `LENGTH_IN_CHAR=0` 保持默认：判定口径①的 `VARCHAR(n CHAR)` 声明就是为此设计，无需改 1
 - `PAGE_SIZE=32`：给长行留余量；`LOG_SIZE=4096` 免得小日志在高吞吐灌数时频繁切换
 - **试用授权不用单独申请**：不挂 `dm.key` 时自带默认授权（`v$license` 可查，DEVELOP 版，有效期到装包次年的同月日）

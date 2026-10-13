@@ -47,3 +47,4 @@
 - **雷同事项未裁决**（用户侧）：李涵/武扬孪生包评分复查由用户决定，与本 skill 技术线无关。
 - `verify_migration.py` 行数抽查为人工交互 SQL（模板在 migration_steps.md 4.0/4.4），自动 COUNT 因"标识符无法参数绑定"被安全闸拦截，v2.1 可评估 DM 系统视图统计口径替代。
 - skills-manager 发现页导入需用户在应用内操作（双层结构，见记忆 skills-manager-discovery-import）。
+- **v2.3.5（2026-10-13）**：三组信创库切换 web 应用统一测试——达梦/金仓双组实证（双应用 200 + 数据库活会话），新增 references/triple-db-app-switch-runbook.md（CASE_SENSITIVE=N 根因、KingbaseDatabase 桥接、A1Fix/B1Fix 校验值修复 47+4/48、JSTL 缺件、systemd/egova 纪律、瀚高容器参数），scripts/liquifix/（A1Fix/B1Fix/KingbaseDatabase），mysql-to-dm-runbook.md 8.2 的 CASE_SENSITIVE 决策修正为 N。
