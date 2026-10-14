@@ -1,11 +1,11 @@
 ---
 name: ops-patrol-toolkit
-version: 1.2.2
-author: 工程技术中心
-license: MIT
-category: ops
-visibility: tech-center
 description: 运维巡检与故障排查通用工具集（R48）。凡涉及：运维巡检、故障排查、巡查数据汇总、人巡/机巡/部件三源合并、巡查日报标准输入、巡查明细表生成、MySQL 只读副本高 I/O 分诊、iostat 解析、慢查询 digest 分析、全表扫描/回表放大/排序落盘/大字段溢出/复制回放根因判定、项目维护手册规范化生成、手册章节完整性与要素缺失检测、月度运维报告生成、服务器/网址批量巡检、月报 Word 模板回填、运维材料脱敏、auto-check 巡检报告告警分诊、巡检问题处置引导、Zabbix 告警处理、Prometheus 告警处理、SkyWalking APM 告警处理、监控告警分诊——都应使用本 Skill。
+metadata:
+  version: 1.2.2
+  author: 工程技术中心
+  category: ops
+  visibility: tech-center
 ---
 
 # ops-patrol-toolkit · 运维巡检与故障排查工具集
