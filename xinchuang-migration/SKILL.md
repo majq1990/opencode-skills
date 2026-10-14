@@ -1,11 +1,11 @@
 ---
 name: xinchuang-migration
-version: 2.3.6
+version: 2.4.0
 author: majianquan
 license: MIT
 category: project-delivery
 visibility: tech-manager
-description: 信创迁移全流程支持。v2.3 由六条能力线合并而成：①现场作业线——eGova 产品从 MySQL/Tomcat 迁移到达梦DM8/金蝶AAS 的六阶段实操流程（前期准备、新服务器部署、达梦部署、金蝶部署、MySQL替换达梦、启动验证），含 14 条报错速查（SYSGEO2/Liquibase MD5/JDBC连接/Schema不存在/表空间/GBK截断/无效列名/保留字等）、排错决策树、16 产品配置对照表、迁移前标准备份脚本、Oracle 兼容参数速查、全量服务启停管理、77 张现场操作截图索引；②知识检索线——经公网 MCP（precheck/zhengtong_query）查公司 17 万 Redmine 工单 + 4500 篇知识库文档，覆盖达梦/人大金仓/瀚高/海量/麒麟/欧拉/UOS/金蝶(Apusic)/东方通(TongWeb)/鲲鹏/飞腾/海光等全信创场景，自带 REST 降级、vectors.db 直连应急与互联网搜索兜底；③自动化线——迁移前环境预检、迁移前后数据一致性校验、16 产品配置对照检查、Liquibase 达梦覆盖审计、properties 键集合对照五个工程化脚本；④实迁作业线——MySQL→达梦真跑全量迁移与迁移后验证（2026-10-10 四库 5589 表全量实证、0 数据丢失；2026-10-12 在源库所在机器从零安装 DM8 复跑 5589 表 419634 行 363 秒零失败复证；视图 63 个自动转换建成 57 个、时间日期 7145 列值级全 MATCH 专项收口），含 MySQL→达梦类型映射表、三个必知判定口径（LENGTH_IN_CHAR=0 须 VARCHAR(n CHAR)/排序规则只影响 MIN-MAX/活库漂移≠丢失）、引擎运行姿势、四轨过程验证方法论、mysqldump DDL 转换器、MySQL 视图→DM8 方言转换器（8 规则：无 ON join 转逗号/两段式表引用/剥结构括号/负 INTERVAL 等）、DM8 从零装机六坑（passwd 不可变位/口令含#碎 disql/dmPython 走 PyPI wheel 等）；⑤PG 系实迁作业线——MySQL→人大金仓 KingbaseES 与瀚高 HighGo 真跑全量迁移与四轨验证（同一份源库双目标库均 0 失败、0 数据丢失），含 MySQL→PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug（位字面量大小写/bit 整字节存/唯一索引须建约束/DROP SCHEMA CASCADE 打爆 max_locks_per_transaction/索引名 schema 唯一/空串静默变 NULL/date 带时间分量）、回读精度四坑（金仓 float4 ::text 只出 8 位有效数字必须改走 ::float8）、索引语义对账口径（不能按名字比）、实时表自动判定、MySQL 视图→PG 系 12 条改写规则与剩余 7 个改不动视图的逐条归因，以及 2026-10-12 整库复跑暴露的 4 个"小库不暴露、大库才炸"的缺陷（裸 ANALYZE 打爆 max_locks_per_transaction / 验证器同样要 autocommit / PostGIS 污染 public schema / 复合主键大表必须整组排序算 md5）；⑥应用层切库线——数据迁完之后 Tomcat 应用零代码改动切到达梦并起到可用（2026-10-10 真实切换实证）：六项切换清单、方言 jar 必须匹配 Hibernate 主版本、启动期硬 blocker `LiquibaseDatabaseInitException` 的 dbms 过滤根因与官方 API 修法（47 个 replaceChecksum + 4 个 markNextChangeSetRan，零手写 SQL 改 databasechangelog）、两个必知坑（getRanChangeSets() 同进程缓存读到陈旧数据必须另起进程复验 / Tomcat 日志按日期分文件没有 catalina.out）、缺 JSTL 发布缺件的判定与补件、探针自伤归因、以及"怎么证明应用真的在读迁移后的库"的四步验证法（v$sql_history 前后对比 seq_no 抓业务 SQL；SELECT 的 affected_rows 恒 0 不能用来证明命中行数）。所有对外请求与凭据读取均按 Mimosa 扫描口径设边界（endpoint 仅 https+公司域名+拒私网解析、token 只走环境变量、脚本不提供 CLI 可控写路径），解析现场不可信 XML（jar 内 changelog 等）一律 `xml.parsers.expat` 手工建树并拒绝一切 DTD/ENTITY 声明；文档与进度日志同样执行占位符纪律——不写现场明文口令、不写内网 IP 与机器代号、机器与流程状态只写 date/uptime/容器/端口实测可复核的结论，且"敏感字面量已清零"的宣称每轮都要换角度复扫（口令/IP/代号/失实状态记录都算）。⑦三组信创库切换 web 应用统一测试线（达梦 DM8 与金仓 KES V9 与瀚高 HG 9.0.5.1 三组全部收官，eGovaPublic 亦已切换可用）——产品 liquibase 的坑与修法（达梦实例 CASE_SENSITIVE 必须=N 否则历史表读空全量重放撞主键/金仓无人认领 KingbaseES 需 KingbaseDatabase 桥接 jar/校验值修复器 47+4 与 48 实证/eGovaMMS 缺 JSTL 同款缺件/tomcat 必须 egova 用户走 systemd）、jdbc.properties 切换要点（eUrbanGIS jdbc.* 与 eGovaMMS mms.jdbc.* 两套键、kingbase8 驱动 Maven Central 9.0.1、瀚高容器 registry.highgo.com/hgdb/hgdb:9.0.5.1 + license.dat 挂载 + HGDB_PASSWORD）、切换前必须先把**全部应用及其每一处数据库引用列成清单**（本次 4 个 tomcat 实际挂 6 个应用，tomcat-other 里还藏着一个 /IMserver，只按 tomcat 数量数必漏）；⑧厂商 changelog 与自增列缺陷修复线（2026-10-14 eGovaPublic 实证，三类缺陷全部有对应脚本、不靠手改绕过去）——`${schema.X}.序列` 空前缀+多点致前导点语法错（31 处）、SQL Server 专有 `SET IDENTITY_INSERT` 被厂商写进 `dbms="oracle"` changeset（12 处，达梦被 fork 按 OracleDatabase 适配所以 dbms 匹配才第一次执行）、MySQL 3312 个自增列迁到达梦 0 IDENTITY/0 default 致 `ORA-01400 违反列非空约束`；自增列的三种方案实测结论（IDENTITY 否决：显式给主键插入会失败；列 DEFAULT 指向序列采用；BEFORE INSERT 触发器否决：零收益多一层风险），以及两条必知硬事实——对已是 IDENTITY 的列 ALTER 加 default **静默无效不报错**（必须先用 `dbms_metadata.get_ddl` 识别并跳过），MySQL `information_schema.tables.auto_increment` **不是可靠的"下一个值"**（实测 count/max/auto_increment 三者相等，当种子会撞已占用主键，种子必须在目标库实测 `GREATEST(max+1, 源库值, 1)`）。凡涉及信创迁移、国产化迁移/适配、达梦迁移/部署、人大金仓/瀚高/海量迁移、MySQL 迁金仓/迁瀚高实迁、金蝶/Apusic/东方通中间件、麒麟/欧拉/UOS 部署、DTS 数据迁移、dmPython、statgather 采集服务切换达梦、迁移报错排查、迁移前预检、迁移后校验、MySQL 迁达梦实迁/全量迁移/数据对账/建表脚本转换/视图转换、切库后应用起不来/页面 404/liquibase 校验值不一致/方言不匹配/证明应用读库/自增列丢失/ORA-01400/IDENTITY_INSERT/厂商 changelog 补丁，都应使用本 Skill。
+description: 信创迁移全流程支持。v2.3 由六条能力线合并而成：①现场作业线——eGova 产品从 MySQL/Tomcat 迁移到达梦DM8/金蝶AAS 的六阶段实操流程（前期准备、新服务器部署、达梦部署、金蝶部署、MySQL替换达梦、启动验证），含 14 条报错速查（SYSGEO2/Liquibase MD5/JDBC连接/Schema不存在/表空间/GBK截断/无效列名/保留字等）、排错决策树、16 产品配置对照表、迁移前标准备份脚本、Oracle 兼容参数速查、全量服务启停管理、77 张现场操作截图索引；②知识检索线——经公网 MCP（precheck/zhengtong_query）查公司 17 万 Redmine 工单 + 4500 篇知识库文档，覆盖达梦/人大金仓/瀚高/海量/麒麟/欧拉/UOS/金蝶(Apusic)/东方通(TongWeb)/鲲鹏/飞腾/海光等全信创场景，自带 REST 降级、vectors.db 直连应急与互联网搜索兜底；③自动化线——迁移前环境预检、迁移前后数据一致性校验、16 产品配置对照检查、Liquibase 达梦覆盖审计、properties 键集合对照五个工程化脚本；④实迁作业线——MySQL→达梦真跑全量迁移与迁移后验证（2026-10-10 四库 5589 表全量实证、0 数据丢失；2026-10-12 在源库所在机器从零安装 DM8 复跑 5589 表 419634 行 363 秒零失败复证；视图 63 个自动转换建成 57 个、时间日期 7145 列值级全 MATCH 专项收口），含 MySQL→达梦类型映射表、三个必知判定口径（LENGTH_IN_CHAR=0 须 VARCHAR(n CHAR)/排序规则只影响 MIN-MAX/活库漂移≠丢失）、引擎运行姿势、四轨过程验证方法论、mysqldump DDL 转换器、MySQL 视图→DM8 方言转换器（8 规则：无 ON join 转逗号/两段式表引用/剥结构括号/负 INTERVAL 等）、DM8 从零装机六坑（passwd 不可变位/口令含#碎 disql/dmPython 走 PyPI wheel 等）；⑤PG 系实迁作业线——MySQL→人大金仓 KingbaseES 与瀚高 HighGo 真跑全量迁移与四轨验证（同一份源库双目标库均 0 失败、0 数据丢失），含 MySQL→PG 系类型映射表、金仓 Oracle 兼容层触发的 7 类真 bug（位字面量大小写/bit 整字节存/唯一索引须建约束/DROP SCHEMA CASCADE 打爆 max_locks_per_transaction/索引名 schema 唯一/空串静默变 NULL/date 带时间分量）、回读精度四坑（金仓 float4 ::text 只出 8 位有效数字必须改走 ::float8）、索引语义对账口径（不能按名字比）、实时表自动判定、MySQL 视图→PG 系 12 条改写规则与剩余 7 个改不动视图的逐条归因，以及 2026-10-12 整库复跑暴露的 4 个"小库不暴露、大库才炸"的缺陷（裸 ANALYZE 打爆 max_locks_per_transaction / 验证器同样要 autocommit / PostGIS 污染 public schema / 复合主键大表必须整组排序算 md5）；⑥应用层切库线——数据迁完之后 Tomcat 应用零代码改动切到达梦并起到可用（2026-10-10 真实切换实证）：六项切换清单、方言 jar 必须匹配 Hibernate 主版本、启动期硬 blocker `LiquibaseDatabaseInitException` 的 dbms 过滤根因与官方 API 修法（47 个 replaceChecksum + 4 个 markNextChangeSetRan，零手写 SQL 改 databasechangelog）、两个必知坑（getRanChangeSets() 同进程缓存读到陈旧数据必须另起进程复验 / Tomcat 日志按日期分文件没有 catalina.out）、缺 JSTL 发布缺件的判定与补件、探针自伤归因、以及"怎么证明应用真的在读迁移后的库"的四步验证法（v$sql_history 前后对比 seq_no 抓业务 SQL；SELECT 的 affected_rows 恒 0 不能用来证明命中行数）。所有对外请求与凭据读取均按 Mimosa 扫描口径设边界（endpoint 仅 https+公司域名+拒私网解析、token 只走环境变量、脚本不提供 CLI 可控写路径），解析现场不可信 XML（jar 内 changelog 等）一律 `xml.parsers.expat` 手工建树并拒绝一切 DTD/ENTITY 声明；文档与进度日志同样执行占位符纪律——不写现场明文口令、不写内网 IP 与机器代号、机器与流程状态只写 date/uptime/容器/端口实测可复核的结论，且"敏感字面量已清零"的宣称每轮都要换角度复扫（口令/IP/代号/失实状态记录都算）。⑦三组信创库切换 web 应用统一测试线（达梦 DM8 与金仓 KES V9 与瀚高 HG 9.0.5.1 三组全部收官，eGovaPublic 亦已切换可用）——产品 liquibase 的坑与修法（达梦实例 CASE_SENSITIVE 必须=N 否则历史表读空全量重放撞主键/金仓无人认领 KingbaseES 需 KingbaseDatabase 桥接 jar/校验值修复器 47+4 与 48 实证/eGovaMMS 缺 JSTL 同款缺件/tomcat 必须 egova 用户走 systemd）、jdbc.properties 切换要点（eUrbanGIS jdbc.* 与 eGovaMMS mms.jdbc.* 两套键、kingbase8 驱动 Maven Central 9.0.1、瀚高容器 registry.highgo.com/hgdb/hgdb:9.0.5.1 + license.dat 挂载 + HGDB_PASSWORD）、切换前必须先把**全部应用及其每一处数据库引用列成清单**（本次 4 个 tomcat 实际挂 6 个应用，tomcat-other 里还藏着一个 /IMserver，只按 tomcat 数量数必漏）；⑧厂商 changelog 与自增列缺陷修复线（2026-10-14 eGovaPublic 实证，三类缺陷全部有对应脚本、不靠手改绕过去）——`${schema.X}.序列` 空前缀+多点致前导点语法错（31 处）、SQL Server 专有 `SET IDENTITY_INSERT` 被厂商写进 `dbms="oracle"` changeset（12 处，达梦被 fork 按 OracleDatabase 适配所以 dbms 匹配才第一次执行）、MySQL 3312 个自增列迁到达梦 0 IDENTITY/0 default 致 `ORA-01400 违反列非空约束`；自增列的三种方案实测结论（IDENTITY 否决：显式给主键插入会失败；列 DEFAULT 指向序列采用；BEFORE INSERT 触发器否决：零收益多一层风险），以及两条必知硬事实——对已是 IDENTITY 的列 ALTER 加 default **静默无效不报错**（必须先用 `dbms_metadata.get_ddl` 识别并跳过），MySQL `information_schema.tables.auto_increment` **不是可靠的"下一个值"**（实测 count/max/auto_increment 三者相等，当种子会撞已占用主键，种子必须在目标库实测 `GREATEST(max+1, 源库值, 1)`）；⑨金仓切换执行包线（v2.4.0 封版，`scripts/kingbase/`）——目标库判诊/重建/切应用三件事全部脚本化：`kb_health.py` 只读体检七组证据（容器/端口/mig 连接/四 schema 表数与抽样行数——只有表没有行等于数据也没了/源库 MySQL/eUrbanMIS 当前 jdbc 指向/驱动与桥接 jar 在位），探活必须协议级 connect 后 recv（MySQL 与 PG 系服务端先说话，带透明代理的机器上裸 connect 成功零信息量、会把"库没了"报成"源库可达"）；`kb_rebuild.py` 先体检判定到底没了什么再分支重建（容器不在→起容器+建 mig 角色+四 schema 重迁；容器在数据不全→不动容器只补数据；表行都全→不动作直接转切换），镜像名一律 `docker images` 发现不硬编码、mig 角色口令 `docker exec -e MIG_PW` 不带等号从父进程环境透传防 ps 泄露；`emis_kb.py` eUrbanMIS 端到端四段门禁（预检只读/切换先备份写回自检/重启独立开关/验证四判据 HTTP+pg_stat_activity 会话+真实业务 SQL+3306 零残留），双前缀 biz→cgdb、stat→cgdbstat，口令键 `jdbc.cryptogram` 与 `jdbc.password` 两种拼法并存必须照原键名改；五个真 bug 教训入册 README 第七/八节（口令键按裸名写成顶层键致原口令留在原键——自检必须同时查旧值还在不在原键/桥接 jar 按文件路径 glob 永远查不到因其是 jar 内条目必须 zipfile 逐个开/FAILS 与 STAGE 进程级泄漏 skill 反复调用必踩/schema 名必须按大小写不敏感从 pg_namespace 查库中真名不能硬编码——金仓与 PG 同样折叠成小写/subprocess 必须显式 encoding+errors 防 GBK 输出崩 UnicodeDecodeError）。凡涉及信创迁移、国产化迁移/适配、达梦迁移/部署、人大金仓/瀚高/海量迁移、切金仓/金仓库没了/金仓重建、MySQL 迁金仓/迁瀚高实迁、金蝶/Apusic/东方通中间件、麒麟/欧拉/UOS 部署、DTS 数据迁移、dmPython、statgather 采集服务切换达梦、迁移报错排查、迁移前预检、迁移后校验、MySQL 迁达梦实迁/全量迁移/数据对账/建表脚本转换/视图转换、切库后应用起不来/页面 404/liquibase 校验值不一致/方言不匹配/证明应用读库/自增列丢失/ORA-01400/IDENTITY_INSERT/厂商 changelog 补丁，都应使用本 Skill。
 trigger_keywords:
   - 信创迁移
   - 国产化迁移
@@ -23,6 +23,11 @@ trigger_keywords:
   - 人大金仓
   - Kingbase
   - KES
+  - 金仓切换
+  - 切金仓
+  - 金仓库没了
+  - 金仓重建
+  - emis_kb
   - 瀚高
   - HighGo
   - 海量
@@ -71,6 +76,7 @@ when_to_use: |
   - 迁移中：达梦安装初始化、DTS 数据迁移、金蝶部署应用、各产品配置参数修改、报错排查
   - 迁移后：对象数量/行数一致性校验、服务启动验证、SQL 统计信息调优
   - **数据已迁完，要把 Tomcat 上的应用切到达梦/金仓并起到可用**（应用层切库、切库后起不来、页面 404、证明应用在读迁移后的库）
+  - **金仓目标库的「库在不在」判诊、没了重建重迁、把应用 jdbc 切到金仓**（切金仓、金仓库没了、金仓重建）
   - 询问信创相关历史经验：公司工单/知识库检索（达梦/金仓/瀚高/海量/各中间件/各国产CPU）
   - 采集服务 statgather 切换达梦（dmPython/libdmdpi 专项）
 when_not_to_use: |
@@ -83,7 +89,7 @@ when_not_to_use: |
 
 # 信创迁移
 
-信创迁移全流程支持 skill。**八条能力线**：
+信创迁移全流程支持 skill。**九条能力线**：
 
 1. **现场作业**（v2.0 自 quiz266 提交物沉淀）：六阶段迁移流程 + 报错速查 + 决策树 + 16 产品配置对照 + 备份/启停 + 77 张现场截图
 2. **知识检索**（v1.0 既有架构）：`skill → MCP（precheck/zhengtong_query）→ demo redmine-assist → live vectors.db`，知识库每次同步后自动最新
@@ -93,6 +99,7 @@ when_not_to_use: |
 6. **应用层切库**（v2.3 新增）：数据迁完之后，Tomcat 应用**零代码改动**切到达梦并起到可用——六项切换清单、方言 jar 与 Hibernate 主版本匹配、`LiquibaseDatabaseInitException` 的 dbms 过滤根因与官方 API 修法、缺 JSTL 发布缺件判定、"证明应用真的在读迁移后的库"四步验证法，见 `references/tomcat-to-dm-app-switch-runbook.md`
 7. **三组信创库切换**（v2.3.5 新增）：达梦 / 人大金仓 / 瀚高三组目标库逐组切换 web 应用并验证"系统可用"的统一测试规程——产品切换机制七条（含**切换前必须先把全部应用及其每一处数据库引用列成清单**，本次 4 个 tomcat 实际挂 6 个应用、tomcat-other 里还藏着一个 `/IMserver`）、三组各自的坑（达梦 `CASE_SENSITIVE=N` / 金仓需 `KingbaseDatabase` 桥接 jar / 瀚高硬性要 license.dat）、`V$SESSIONS` 与 `V$SQL_HISTORY` 的取证口径，见 `references/triple-db-app-switch-runbook.md`
 8. **厂商 changelog 与自增列缺陷修复**（v2.3.6 新增）：切库后 context 起不来的三类缺陷及其修法——`${schema.X}.序列` 空前缀+多点（31 处）、SQL Server 专有 `SET IDENTITY_INSERT` 混进 `dbms="oracle"` changeset（12 处）、MySQL 3312 个自增列迁到达梦全丢致 `ORA-01400`；自增列三方案实测结论（IDENTITY 否决 / 列 DEFAULT 指向序列采用 / BEFORE INSERT 触发器否决）与两条硬事实（ALTER 对 IDENTITY 列静默无效、`auto_increment` 不是可靠种子），见 `references/triple-db-app-switch-runbook.md` 第六节、`scripts/dm/lbpatch.py.txt` 与 `scripts/dm/fix_autoincrement.py.txt`
+9. **金仓切换执行包**（v2.4.0 封版）：目标库判诊（`kb_health.py` 七组证据，含抽样行数与协议级探活）、库没了分支重建（`kb_rebuild.py` 先体检后动手：容器不在→起容器建角色重迁 / 数据不全→不动容器只补数据 / 都在→不动作）、应用切换端到端（`emis_kb.py` 四段门禁，eUrbanMIS 双前缀 biz→cgdb / stat→cgdbstat）与全量通用三件套（preflight/switch/verify）；五个真 bug 教训入册，见 `scripts/kingbase/README-金仓切换执行包.md`
 
 ## 迁移流程总览
 
@@ -123,6 +130,12 @@ when_not_to_use: |
 | `scripts/pg/engine_mysql_to_pg.py.txt` | MySQL → PG 系迁移引擎：建表 / 灌数 / 后置约束 / 注释 / 逐表 ANALYZE | 源库所在节点 | 逐表 ANALYZE 而非一条裸 ANALYZE（单条要拿全库每张表及其每个索引的锁，5000+ 表的库直接打爆锁表）；四库各进各自 schema；`--recreate` 分批删表自愈 |
 | `scripts/pg/verify_pg.py.txt` | PG 系四轨过程验证器：行数对账 / 逐字段多重集 / 中文回读 / 超大表整表 md5 | 源库所在节点 | 只读连接必须 `autocommit=True`；复合主键大表必须整组列进 ORDER BY；实时表自动判定（源独有行晚于目标最大值即实时写入，非丢行） |
 | `scripts/pg/view_conv.py.txt` | MySQL 视图定义 → PG 系视图 DDL 转换器 + 全量试建归因 | 源库所在节点 | 12 条改写规则；建视图多轮重试应对视图间依赖；三轮后仍建不成的如实归类为"需人工处理"，不猜不改 |
+| `scripts/kingbase/kb_health.py.txt` | 金仓库健在性只读体检（容器/端口/mig 连接/四 schema 表数与抽样行数/源库/当前 jdbc/驱动与桥接 jar 七组证据） | 金仓所在 Linux 节点 | 协议级探活（connect 后 recv，透明代理机器上裸 connect 零信息量）；退出码 0=健在；`--json` 落证据文件 |
+| `scripts/kingbase/kb_rebuild.py.txt` | 金仓"库没了"分支重建：先体检判定没了什么再动手 | 金仓所在 Linux 节点 | 容器不在→起容器+建 mig 角色+四 schema 重迁；数据不全→不动容器只补数据；都在→不动作；镜像名从 `docker images` 发现不硬编码；默认 dry-run，`--apply` 才动真 |
+| `scripts/kingbase/emis_kb.py.txt` | eUrbanMIS 单应用端到端切金仓（预检→切换→重启→验证四段门禁） | web 服务器 | 前段不过不进后段；重启单独 `--restart` 开关；口令从 600 文件读、回显脱敏；写回自检同时查新值与旧值 |
+| `scripts/kingbase/preflight_kb.py.txt` | 全应用只读预检（枚举 webapp/jdbc 前缀/tomcat 单元/金仓端点/驱动 jar） | web 服务器 | 全量推多应用前先跑 |
+| `scripts/kingbase/switch_kb.py.txt` | 全应用 jdbc 切金仓（自动发现前缀→schema） | web 服务器 | 默认 dry-run，`--apply` 才写 |
+| `scripts/kingbase/verify_kb.py.txt` | 重启+探活+证明在读金仓数据 | web 服务器 | `--restart` 才重启 |
 | `scripts/kb_query.py` | 公网 MCP 直调（precheck/zhengtong_query） | 本机 | token 从 `D:\opencode\config\redmine-assist-mcp.json` 或环境变量 `REDMINE_ASSIST_TOKEN` 读取，**不落源码** |
 | `scripts/query_xc.py` | REST 降级查询（`--sweep` 批量） | 本机 | MCP 不可用时走 `/query` REST；token 走 `REDMINE_ASSIST_TOKEN` 环境变量，只写 stdout |
 | `scripts/backup_web.sh` | 备份 `/egova/web` → `/egova/backup/web` | 老服务器 | tar.gz 全备份、保留 15 份、文件锁防并发、磁盘预检、nohup 后台 |
@@ -592,6 +605,7 @@ sqlite3 /opt/redmine-assist/data/vectors.db "SELECT title,url FROM docs_meta WHE
 | 达梦 / DM8 / dameng | 现场作业 + 检索 | 阶段三/五 + playbooks B 章 |
 | MySQL 迁达梦实迁 / 全量迁移 / 迁移验证 / 数据对账 / 数据丢失 / 建表脚本转换 / 达梦视图迁移 / MySQL 视图转达梦 | **实迁作业** | `references/mysql-to-dm-runbook.md` |
 | MySQL 迁金仓/瀚高实迁 / 全量迁移 / 迁移验证 / 数据对账 / 视图转换 / Kingbase / HighGo / KES | **PG 系实迁作业** | `references/mysql-to-pg-runbook.md` |
+| 切金仓 / 金仓切换 / 金仓库没了 / 金仓重建 / eUrbanMIS 切金仓 | **金仓切换执行包** | `scripts/kingbase/`（kb_health 判 → kb_rebuild 修 → emis_kb 切） |
 | 数据迁完了 / 应用切库 / 切库后起不来 / 页面 404 / liquibase 校验值 / 方言不匹配 / 证明应用读库 | **应用层切库** | `references/tomcat-to-dm-app-switch-runbook.md` |
 | 人大金仓 / 瀚高 / 海量（非 MySQL 迁入，如部署、报错排查、版本兼容） | 检索为主 | playbooks C/D/E 章 + zhengtong_query |
 | 金蝶 / Apusic 中间件 | 现场作业 + 检索 | 阶段四 + playbooks I.金蝶 |
@@ -626,6 +640,10 @@ sqlite3 /opt/redmine-assist/data/vectors.db "SELECT title,url FROM docs_meta WHE
 - `references/triple-db-app-switch-runbook.md` — **三组信创库切换 web 应用统一测试规程**：产品切换机制七条（jdbc.properties 键位、驱动 jar 随产品分发唯独缺 kingbase8、tomcat 必须 egova 用户走 systemd、JSTL 缺件、达梦实例必须 `CASE_SENSITIVE=N`、**切换前必须先把全部应用及其每一处数据库引用列成清单**、`hibernate.dialect=MySQLDialect` 是厂商系统性选择不要去"修"）、达梦/金仓/瀚高三组切换步骤与实证数字、`V$SESSIONS` 列名口径（`CURR_SCH`/`CLNT_IP`，不是 `curr_schema`；连接池空闲只有 `select 1` 心跳，要证明读库得走 `V$SQL_HISTORY` 按 `SESS_ID`+`SESS_SEQ` 关联取 `CURR_SCH`）、以及**第六节三类缺陷**（`${schema.X}.序列` 空前缀 31 处 / SQL Server `SET IDENTITY_INSERT` 12 处 / MySQL 自增列 3312 个全丢）的根因、修法与实测数字
 - `scripts/dm/lbpatch.py.txt` — 厂商 changelog 无效 SQL 补丁器（两条规则，jar 内条目与磁盘文件都能改；`--scan` 先看清单再 `--fix`，自动备份原文件）
 - `scripts/dm/fix_autoincrement.py.txt` — MySQL 自增列 → 达梦列 DEFAULT 补齐器（只读扫描 + 生成可人工过目的 SQL，不在 Python 里执行 DDL；三条硬结论见脚本 docstring：IDENTITY 方案否决、ALTER 对 IDENTITY 列静默无效必须先用 `dbms_metadata.get_ddl` 识别、`auto_increment` 不是可靠种子必须目标库实测）
+
+**金仓切换执行包（v2.4.0 封版，2026-10-14）**
+- `scripts/kingbase/README-金仓切换执行包.md` — **金仓判诊/重建/切换执行包总册**：三步流程（kb_health 判 → kb_rebuild 修 → emis_kb 切）、eUrbanMIS 一把跑完三条命令、金仓特有四坑（fork liquibase 需桥接 jar / kingbase8 驱动产品不分发 / schema 名折叠小写 / 空串即 NULL）、五个真 bug 完整记录（口令键裸名写顶层 / 桥接 jar 按路径 glob 永远查不到 / 进程级状态泄漏 / schema 大小写必须查库中真名 / 裸 connect 假阳性）与共同教训（自检必须同时查旧值还在不在原键；带透明代理机器上 connect() 成功零信息量）
+- `scripts/kingbase/kb_health.py.txt` / `kb_rebuild.py.txt` / `emis_kb.py.txt` / `preflight_kb.py.txt` / `switch_kb.py.txt` / `verify_kb.py.txt` — 见"自动化脚本总表"；自测 `tests/test_kb_scripts.py`（24 项）与 `tests/test_emis_kb.py`（21 项），双布局自适应（_kit 同目录与 skill tests/ 分离两种结构都能跑）
 
 **现场作业（v2.0 自 quiz266 提交物沉淀，经脱敏）**
 - `references/migration_steps.md` — 迁移步骤全文（达梦部署/DTS/各产品参数/采集服务 dmPython 切换）

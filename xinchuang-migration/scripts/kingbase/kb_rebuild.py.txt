@@ -1,0 +1,399 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""金仓"库没了"重建 + 四 schema 重迁——skill 能力，不是一次性命令。
+
+设计前提：**容器可能没了、角色可能没了、数据可能没了**，三种情况的修法不同，
+所以先只读体检判定"到底没了什么"，再按结论走对应的重建动作。
+
+四个阶段，每阶段有门禁：
+  1. 体检（只读）  ：容器 / 端口 / mig 连接 / 四 schema 表数与行数 / 源库 MySQL
+                     —— 结论决定后面做不做、做哪段
+  2. 备料          ：引擎脚本、kingbase8 驱动 jar、金仓镜像（**镜像名一律从
+                     docker images 发现，不硬编码**——硬编码猜错会拉个不相干的镜像）
+  3. 重建（--apply）：按需起容器 / 建 mig 角色 / 四 schema 重迁
+  4. 对账（--apply）：四 schema 表数对齐 + 抽样行数，然后交接 B1Fix 与切换脚本
+
+口令纪律：全部从环境变量或 600 文件读，脚本与输出里不出现任何口令字面量。
+
+用法：
+    python3 kb_rebuild.py                     # 体检 + dry-run，什么都不改
+    python3 kb_rebuild.py --apply             # 真重建真重迁
+    python3 kb_rebuild.py --apply --image <name>   # 手工指定镜像（体检发现不了时）
+"""
+import os
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+SCHEMAS = ("cgdb", "cgdbstat", "giscenter", "mms")
+KB_NAME = "kingbase"          # 2026-10-13 实测容器名
+KB_PORT = 54321
+KB_DB = "test"
+KB_USER = "mig"
+KB_BIN = "/home/kingbase/install/kingbase/bin"
+KIT = Path("/root/_keskit")   # 引擎与驱动 jar 的落地目录（_b_migrate.sh.txt 同款）
+ENGINE = KIT / "engine_mysql_to_pg.py.txt"
+DRIVER = KIT / "kingbase8-9.0.1.jar"
+MY_HOST, MY_PORT, MY_USER = "172.21.133.155", 3306, "root"
+MY_PW_FILE = "/root/.mysql_root_pw_cg155"
+KB_PW_FILE = "/root/.kb_mig_pw"
+
+FAILS = []
+STAGE = "体检"
+
+
+def head(t):
+    print("\n" + "=" * 74)
+    print(t)
+    print("=" * 74)
+
+
+def sh(cmd, timeout=1800):
+    try:
+        r = subprocess.run(cmd, shell=True, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace",
+                           timeout=timeout)
+        return r.returncode, (r.stdout or "") + (r.stderr or "")
+    except Exception as ex:
+        return 127, "ERR %s" % ex
+
+
+def sh_env(env, cmd, timeout=1800):
+    """带环境执行。口令走这里传给子进程，不拼进命令行——
+    命令行会进 ps 输出和 shell 历史，环境变量不会。"""
+    try:
+        r = subprocess.run(cmd, shell=True, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace",
+                           timeout=timeout, env=env)
+        return r.returncode, (r.stdout or "") + (r.stderr or "")
+    except Exception as ex:
+        return 127, "ERR %s" % ex
+
+
+def note(ok, label, detail=""):
+    print("  [%s] %-30s %s" % ("OK  " if ok else "FAIL", label, detail))
+    if not ok:
+        FAILS.append("%s：%s" % (label, detail))
+
+
+def tcp(host, port, timeout=6):
+    """协议级探活，不是裸 connect。
+
+    裸 connect 在本机（以及任何有 sing-box TUN 之类的透明代理的机器上）会
+    对**所有**地址成功——包括 RFC 5737 保留测试网段这种不可能有主机的地址。
+    握手在本机栈就完成了，代理替真机应答，送数据才 reset。所以只 connect
+    等于零信息量，会把"库没了"报成"源库可达"。
+
+    MySQL 和 PostgreSQL/金仓都是**服务端先说话**：连上后立刻发握手/问候包。
+    所以 connect 之后 recv，收到字节才是真服务；超时或 reset 就是没有。
+    """
+    s = socket.socket()
+    s.settimeout(timeout)
+    try:
+        s.connect((host, port))
+    except Exception as ex:
+        s.close()
+        return False, "connect 失败 %s" % type(ex).__name__
+    try:
+        s.settimeout(4)
+        data = s.recv(16)
+        if not data:
+            return False, "连上但对方不发数据（代理伪造握手，非真服务）"
+        return True, "服务端主动发 %d 字节，是真服务" % len(data)
+    except socket.timeout:
+        return False, "连上但 4s 无响应（代理伪造握手，非真服务）"
+    except Exception as ex:
+        return False, "收发失败 %s" % type(ex).__name__
+    finally:
+        s.close()
+
+
+def kb_env(pw):
+    """迁移进程的环境。口令只在这里出现一次，且不打印。"""
+    env = dict(os.environ)
+    env["MIG_PG_PWD"] = pw
+    if os.path.isfile(MY_PW_FILE):
+        with open(MY_PW_FILE, encoding="utf-8") as fh:
+            env["MIG_MYSQL_PWD"] = fh.read().strip()
+    return env
+
+
+def kb_pw():
+    if not os.path.isfile(KB_PW_FILE):
+        return None
+    with open(KB_PW_FILE, encoding="utf-8") as fh:
+        return fh.read().strip() or None
+
+
+# ---------------------------------------------------------------- 阶段 1
+def stage_preflight(kb_pw_value):
+    """只读体检。返回 (容器在否且运行, 四 schema 是否都有表有行)。"""
+    head("阶段 1/4 体检（只读，不改任何东西）")
+    global STAGE
+    STAGE = "体检"
+
+    rc, out = sh("docker ps -a --no-trunc --format "
+                 "'{{.Names}}|{{.Status}}|{{.Ports}}'")
+    rows = [ln for ln in out.splitlines() if ln.strip()]
+    hit = [ln for ln in rows if KB_NAME in ln or "%d" % KB_PORT in ln]
+    if not hit:
+        note(False, "容器 %s" % KB_NAME, "docker 里没有——库没了，要重建")
+        cont_ok = False
+    else:
+        parts = hit[0].split("|")
+        running = (parts[1] if len(parts) > 1 else "").lower().startswith("up")
+        note(running, "容器 %s" % KB_NAME,
+             "%s | %s" % (parts[1] if len(parts) > 1 else "?",
+                          (parts[2] if len(parts) > 2 else "")[:60]))
+        cont_ok = running
+
+    ok, err = tcp("127.0.0.1", KB_PORT)
+    note(ok, "端口 %d" % KB_PORT, "本地可达" if ok else err)
+
+    # schema 是否真有表有行。只有表没有行 = 数据也没了，一样要重迁。
+    # 端口探活只是参考；psycopg2 自己会做完整握手，那才是权威证据，
+    # 所以有口令就试连，不因为端口探活的结果跳过。
+    data_ok = False
+    if kb_pw_value:
+        try:
+            import psycopg2
+            from psycopg2 import sql
+            conn = psycopg2.connect(host="127.0.0.1", port=KB_PORT,
+                                    user=KB_USER, dbname=KB_DB,
+                                    password=kb_pw_value, connect_timeout=8)
+            conn.autocommit = True
+            cur = conn.cursor()
+            cur.execute("SELECT version()")
+            print("  版本：%s" % cur.fetchone()[0][:70])
+            have, withrows = 0, 0
+            for s in SCHEMAS:
+                cur.execute("SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n "
+                            "ON n.oid=c.relnamespace WHERE n.nspname=%s "
+                            "AND c.relkind='r'", (s,))
+                n = cur.fetchone()[0]
+                if not n:
+                    print("    schema %-10s 表 0 张" % s)
+                    continue
+                have += 1
+                cur.execute("SELECT tablename FROM pg_tables WHERE schemaname=%s "
+                            "ORDER BY tablename LIMIT 1", (s,))
+                row = cur.fetchone()
+                if row:
+                    # 表名来自 pg_tables，不是外部输入；仍用 Identifier 拼，
+                    # 免得以后有人把外部值传进来时这里是条注入口。
+                    cur.execute(sql.SQL("SELECT COUNT(*) FROM {}.{}")
+                                .format(sql.Identifier(s), sql.Identifier(row[0])))
+                    if cur.fetchone()[0] > 0:
+                        withrows += 1
+                        print("    schema %-10s 表 %d 张，抽样 %s 有行"
+                              % (s, n, row[0]))
+                    else:
+                        print("    schema %-10s 表 %d 张，抽样 %s **0 行**"
+                              % (s, n, row[0]))
+            print("  四 schema：%d 个有表，%d 个有行" % (have, withrows))
+            data_ok = (have == len(SCHEMAS) and withrows == len(SCHEMAS))
+            conn.close()
+        except Exception as ex:
+            note(False, "mig 连接", str(ex).split("\n")[0][:90])
+
+    ok, err = tcp(MY_HOST, MY_PORT)
+    note(ok, "源库 MySQL %s:%d" % (MY_HOST, MY_PORT),
+         "可达（可重迁）" if ok else "不可达——不通就无法重迁：" + err)
+    if not os.path.isfile(MY_PW_FILE):
+        note(False, "MySQL 口令文件", "缺 %s" % MY_PW_FILE)
+
+    if data_ok:
+        print("\n  体检结论：**金仓库和数据都在**，不需要重建。")
+        print("  要切应用请直接跑 emis_kb.py。")
+        return cont_ok, data_ok
+    if not cont_ok:
+        print("\n  体检结论：容器不在/没跑 → 走「起容器 + 建角色 + 重迁」。")
+    else:
+        print("\n  体检结论：容器在但数据不全 → 走「重迁」（容器不动）。")
+    return cont_ok, data_ok
+
+
+# ---------------------------------------------------------------- 阶段 2
+def stage_materials(image):
+    """备料。镜像是唯一不能硬编码的东西——没有实证记录它叫什么。"""
+    head("阶段 2/4 备料")
+    global STAGE
+    STAGE = "备料"
+    note(ENGINE.is_file(), "迁移引擎", str(ENGINE) if ENGINE.is_file() else "缺失")
+    note(DRIVER.is_file(), "kingbase8 驱动 jar",
+         str(DRIVER) if DRIVER.is_file() else "缺失")
+    if not image:
+        rc, out = sh("docker images --no-trunc --format "
+                     "'{{.Repository}}:{{.Tag}}'")
+        cands = [ln.strip() for ln in out.splitlines()
+                 if re.search(r"(?i)king", ln)]
+        if len(cands) == 1:
+            image = cands[0]
+            print("  发现唯一金仓镜像：%s" % image)
+        elif not cands:
+            note(False, "金仓镜像", "本机没有，且无实证镜像名——需 --image 指定")
+        else:
+            note(False, "金仓镜像", "多个候选，不猜：%s" % ", ".join(cands[:5]))
+    else:
+        print("  使用指定镜像：%s" % image)
+    return image
+
+
+# ---------------------------------------------------------------- 阶段 3
+def stage_rebuild(image, kb_pw_value, need_container, recreate):
+    head("阶段 3/4 重建（APPLY）")
+    global STAGE
+    STAGE = "重建"
+    if not image:
+        print("[阻断] 没有镜像，无法起容器")
+        FAILS.append("缺金仓镜像")
+        return False
+    if need_container:
+        sh("docker rm -f %s" % KB_NAME, timeout=300)
+        print("  旧容器已清（如有）")
+        # 端口映射 + 名字 + 镜像。金仓 V9 镜像自带试用授权，不需要 license。
+        rc, out = sh("docker run -d --name %s --restart=always "
+                     "-p %d:%d %s" % (KB_NAME, KB_PORT, KB_PORT, image),
+                     timeout=600)
+        print("  docker run rc=%d %s" % (rc, out.strip()[:160]))
+        if rc != 0:
+            FAILS.append("容器起不来")
+            return False
+        ok = False
+        for _ in range(36):
+            time.sleep(5)
+            ok, _ = tcp("127.0.0.1", KB_PORT, timeout=3)
+            if ok:
+                break
+        note(ok, "容器就绪", "端口 %d 已监听" % KB_PORT if ok else "等待超时")
+        if not ok:
+            return False
+    else:
+        print("  容器已在运行，不动它——只补角色和数据。")
+
+    # system 是内置用户，不能改它的口令；mig 要自己建。
+    # 口令用 `docker exec -e MIG_PW`（不带 =值）从父进程环境透传——
+    # 写成 -e MIG_PW=值 会把口令暴露在 docker 的命令行里，ps 一眼看见。
+    env = kb_env(kb_pw_value)
+    rc, out = sh_env(env, "docker exec -e MIG_PW %s %s/ksql -U system -d %s "
+                          "-c \"CREATE ROLE mig LOGIN SUPERUSER\" 2>&1"
+                     % (KB_NAME, KB_BIN, KB_DB), timeout=300)
+    print("  建角色 stdout：%s" % out.strip()[:150])
+    rc2, out2 = sh_env(env, "docker exec -e MIG_PW %s %s/ksql -U system -d %s "
+                            "-c \"ALTER ROLE mig WITH PASSWORD '$MIG_PW'\" 2>&1"
+                     % (KB_NAME, KB_BIN, KB_DB), timeout=300)
+    print("  设口令 rc=%d %s" % (rc2, out2.strip()[:120]))
+    if "ERROR" in out2.upper() and "does not exist" not in out2.lower():
+        FAILS.append("mig 角色口令设置失败")
+    rc3, out3 = sh_env(env, "docker exec -e MIG_PW %s %s/ksql -U system -d %s "
+                            "-c \"GRANT ALL ON DATABASE %s TO mig\" 2>&1"
+                     % (KB_NAME, KB_BIN, KB_DB, KB_DB), timeout=300)
+    print("  授权 rc=%d %s" % (rc3, out3.strip()[:120]))
+
+    extra = " --recreate" if recreate else ""
+    for s in SCHEMAS:
+        print("\n  ---- 重迁 %s ----" % s)
+        cmd = ("python3 %s --schema %s --label %s "
+               "--mysql-host %s --mysql-port %d --mysql-user %s "
+               "--pg-host 127.0.0.1 --pg-port %d --pg-user %s --db %s%s"
+               % (ENGINE, s, s, MY_HOST, MY_PORT, MY_USER,
+                  KB_PORT, KB_USER, KB_DB, extra))
+        rc, out = sh_env(env, cmd, timeout=3600)
+        tail = [ln for ln in out.splitlines() if ln.strip()][-3:]
+        print("    rc=%d" % rc)
+        for ln in tail:
+            print("    " + ln[:150])
+        if rc != 0:
+            FAILS.append("重迁 %s 失败 rc=%d" % (s, rc))
+    return not FAILS
+
+
+# ---------------------------------------------------------------- 阶段 4
+def stage_reconcile(kb_pw_value):
+    head("阶段 4/4 对账")
+    global STAGE
+    STAGE = "对账"
+    try:
+        import psycopg2
+        conn = psycopg2.connect(host="127.0.0.1", port=KB_PORT, user=KB_USER,
+                                dbname=KB_DB, password=kb_pw_value,
+                                connect_timeout=8)
+        conn.autocommit = True
+        cur = conn.cursor()
+        for s in SCHEMAS:
+            cur.execute("SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n "
+                        "ON n.oid=c.relnamespace WHERE n.nspname=%s "
+                        "AND c.relkind='r'", (s,))
+            n = cur.fetchone()[0]
+            note(n > 0, "schema %s 表数" % s, "%d 张" % n)
+        conn.close()
+    except Exception as ex:
+        note(False, "对账连接", str(ex).split("\n")[0][:90])
+    print("\n  后续固定动作（本次不自动做，按规程来）：")
+    print("    1. B1Fix 金仓变体修 liquibase 校验值（URL 带 currentSchema=cgdb）")
+    print("    2. 驱动 jar 与桥接 jar 确认在各 webapp 的 WEB-INF/lib")
+    print("    3. python3 emis_kb.py --apply --restart  切 eUrbanMIS 并验证")
+
+
+def report(rc):
+    print("\n" + "=" * 74)
+    if FAILS:
+        print("结论：**未通过，%d 项（阶段：%s）**" % (len(FAILS), STAGE))
+        for f in FAILS:
+            print("  [FAIL] %s" % f)
+    else:
+        print("结论：通过")
+    print("=" * 74)
+    return rc
+
+
+def main():
+    global STAGE
+    del FAILS[:]
+    argv = sys.argv[1:]
+    apply_mode = False
+    image = None
+    recreate = False
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--apply":
+            apply_mode = True; i += 1
+        elif argv[i] == "--image":
+            image = argv[i + 1]; i += 2
+        elif argv[i] == "--recreate":
+            # 只在"容器在但表结构对不上"时用。引擎是否真收这个参数要先
+            # `python3 engine_mysql_to_pg.py.txt --help` 核对，没核对过别加。
+            recreate = True; i += 1
+        else:
+            print("未知参数 %s" % argv[i]); return 2
+
+    pw = kb_pw()
+    cont_ok, data_ok = stage_preflight(pw)
+    if data_ok:
+        # 表行都全，不需要重建。但预检里记的别的缺失项（比如源库口令文件）
+        # 仍要如实报出来——那会影响以后想重迁的时候，不能一句"通过"盖掉。
+        return report(0 if not FAILS else 1)
+    if not apply_mode:
+        head("DRY-RUN")
+        print("  体检显示需要重建/重迁。以上是只读结论，没有改任何东西。")
+        print("  确认后加 --apply 执行；镜像名没有实证记录时用 --image 指定。")
+        return report(0 if not FAILS else 1)
+
+    if not pw:
+        print("[阻断] 读不到金仓口令 %s" % KB_PW_FILE)
+        FAILS.append("缺金仓口令文件")
+        return report(1)
+    image = stage_materials(image)
+    if not stage_rebuild(image, pw, need_container=not cont_ok,
+                         recreate=recreate):
+        return report(1)
+    stage_reconcile(pw)
+    return report(1 if FAILS else 0)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

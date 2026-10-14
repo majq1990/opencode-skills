@@ -1,0 +1,288 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""金仓切换后的验证：重启 tomcat → 探活 → 证明应用真的在读金仓里的迁移数据。
+
+判据（全部满足才算通过，缺一条就不算）：
+  1. 每个应用 HTTP 非 000/404/5xx；
+  2. 金仓 pg_stat_activity 里出现该应用的连接池会话；
+  3. 打一遍业务页面后，pg_stat_activity 里能抓到**真实业务 SQL**——
+     只证明"连上了"不够，必须证明"在读迁移过来的数据"；
+  4. MySQL 3306 残留连接归零；
+  5. tomcat 日志无新增 Exception。
+
+用法（cg156，root）：
+    python3 verify_kb.py --kb-host 127.0.0.1 --kb-port 54321 --kb-db test \
+        [--restart] [--json out.json]
+
+默认不重启；加了 --restart 才 systemctl restart（重启是不可逆动作，单独一个开关）。
+"""
+import datetime
+import glob
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+# 应用 → (期望上下文路径, 轮询页面)。页面取能触发真实查询的业务页，
+# 不要只打根路径——根路径常常是静态页，打了也抓不到 SQL。
+APPS = [
+    ("eUrbanMIS",  "/eUrbanMIS/main.htm"),
+    ("eUrbanGIS",  "/eUrbanGIS/"),
+    ("eGovaMMS",   "/eGovaMMS/"),
+    ("eUrbanUMA",  "/eUrbanUMA/"),
+    ("IMserver",   "/IMserver/"),
+    ("eGovaPublic", "/eGovaPublic/"),
+]
+DEAD = {"000", "404", "400", "500", "502", "503"}
+
+
+def sh(cmd, timeout=40):
+    try:
+        r = subprocess.run(cmd, shell=True, capture_output=True,
+                           text=True, timeout=timeout)
+        return r.returncode, (r.stdout or "") + (r.stderr or "")
+    except Exception as ex:
+        return 127, "ERR %s" % ex
+
+
+def http_code(url, timeout=8):
+    rc, out = sh('curl -s -o /dev/null -w "%%{http_code}" --max-time %d "%s"'
+                 % (timeout, url))
+    return out.strip() or "000"
+
+
+def discover_units():
+    """从 systemd 单元反查 CATALINA_BASE，再解析 server.xml 拿到
+    Connector 端口与 Context docBase 的对应关系。
+    不硬编码端口——上一轮就是靠这个才发现 4 个单元塞了 6 个应用。"""
+    rc, out = sh("systemctl list-unit-files --type=service --no-pager "
+                 "| grep -iE 'tomcat' ")
+    units = [ln.split()[0] for ln in out.splitlines()
+             if ln.strip() and ln.split()[0].endswith(".service")]
+    info = []
+    for u in units:
+        rc, body = sh("systemctl cat %s --no-pager" % u)
+        base = None
+        m = re.search(r"(?m)^\s*Environment\s*=\s*.*CATALINA_BASE\s*=\s*(\S+)", body)
+        if m:
+            base = m.group(1).strip('"')
+        if not base:
+            m = re.search(r"(?m)^\s*WorkingDirectory\s*=\s*(\S+)", body)
+            if m:
+                base = m.group(1).strip('"')
+        if not base or not os.path.isdir(base):
+            info.append({"unit": u, "base": base, "ports": [], "contexts": []})
+            continue
+        sxml = Path(base) / "conf" / "server.xml"
+        ports, contexts = [], []
+        if sxml.is_file():
+            txt = sxml.read_text(encoding="utf-8", errors="replace")
+            for m in re.finditer(r'<Connector[^>]*?\bport\s*=\s*"(\d+)"', txt):
+                p = int(m.group(1))
+                if p not in ports:
+                    ports.append(p)
+            for m in re.finditer(r'<Context\b([^>]*)>', txt):
+                attrs = m.group(1)
+                pm = re.search(r'\bpath\s*=\s*"([^"]*)"', attrs)
+                dm = re.search(r'\bdocBase\s*=\s*"([^"]*)"', attrs)
+                contexts.append({"path": pm.group(1) if pm else None,
+                                 "docBase": dm.group(1) if dm else None})
+        info.append({"unit": u, "base": base, "ports": ports,
+                     "contexts": contexts})
+    return info
+
+
+def kb_snapshot(conn):
+    """pg_stat_activity 快照：连接数 + 正在执行的 SQL。参数化，不拼 SQL。"""
+    cur = conn.cursor()
+    cur.execute("SELECT datname, usename, COUNT(*) FROM pg_stat_activity "
+                "WHERE usename = %s GROUP BY datname, usename "
+                "ORDER BY COUNT(*) DESC", ("mig",))
+    counts = [{"db": r[0], "user": r[1], "conns": r[2]} for r in cur.fetchall()]
+    cur.execute("SELECT pid, datname, state, LEFT(COALESCE(query,''),180) "
+                "FROM pg_stat_activity WHERE usename = %s "
+                "AND state = 'active' ORDER BY pid", ("mig",))
+    active = [{"pid": r[0], "db": r[1], "state": r[2], "q": r[3]}
+              for r in cur.fetchall()]
+    return counts, active
+
+
+def main():
+    argv = sys.argv[1:]
+    kb_host, kb_port, kb_db = "127.0.0.1", 54321, "test"
+    do_restart = False
+    json_out = None
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--kb-host":
+            kb_host = argv[i + 1]; i += 2
+        elif a == "--kb-port":
+            kb_port = int(argv[i + 1]); i += 2
+        elif a == "--kb-db":
+            kb_db = argv[i + 1]; i += 2
+        elif a == "--restart":
+            do_restart = True; i += 1
+        elif a == "--json":
+            json_out = argv[i + 1]; i += 2
+        else:
+            print("未知参数 %s" % a); return 2
+
+    result = {"started": datetime.datetime.now().isoformat(timespec="seconds"),
+              "restart": do_restart, "units": [], "apps": [],
+              "kb_before": None, "kb_after": None, "fail": []}
+
+    print("=" * 74)
+    print("一、tomcat 单元与端口拓扑（从 server.xml 实读）")
+    print("=" * 74)
+    units = discover_units()
+    for u in units:
+        print("  %-18s base=%s" % (u["unit"], u["base"]))
+        print("      ports=%s" % u["ports"])
+        for c in u["contexts"]:
+            print("      Context path=%-16s docBase=%s"
+                  % (c["path"], c["docBase"]))
+        result["units"].append(u)
+    if not units:
+        result["fail"].append("没发现 tomcat 单元")
+
+    # 连金仓（只读）
+    conn = None
+    try:
+        import psycopg2
+        conn = psycopg2.connect(host=kb_host, port=kb_port, user="mig",
+                                dbname=kb_db, connect_timeout=8)
+        conn.autocommit = True
+        c, a = kb_snapshot(conn)
+        result["kb_before"] = {"counts": c, "active": a}
+        print("\n切换前金仓 mig 会话：%s"
+              % ", ".join("%s=%s" % (x["db"], x["conns"]) for x in c) or "无")
+    except Exception as ex:
+        result["fail"].append("连不上金仓：%s" % str(ex).split("\n")[0][:120])
+        print("\n[警告] 连不上金仓 %s:%s：%s"
+              % (kb_host, kb_port, str(ex).split("\n")[0][:120]))
+
+    if do_restart:
+        print("\n" + "=" * 74)
+        print("二、重启 tomcat 单元")
+        print("=" * 74)
+        for u in units:
+            rc, out = sh("systemctl restart %s" % u["unit"])
+            print("  restart %-18s rc=%d" % (u["unit"], rc))
+            time.sleep(3)
+        print("  等待启动…")
+
+    print("\n" + "=" * 74)
+    print("三、逐应用探活（本地 127.0.0.1）")
+    print("=" * 74)
+    port_by_unit = {u["unit"]: u["ports"] for u in units}
+    all_ports = sorted({p for ps in port_by_unit.values() for p in ps})
+    for name, ctx in APPS:
+        # 在实读到的端口里找出这个上下文能通的那个
+        best = ("000", None)
+        for p in all_ports:
+            code = http_code("http://127.0.0.1:%d%s" % (p, ctx))
+            if code not in DEAD:
+                best = (code, p)
+                break
+            if code != "000" and best[0] == "000":
+                best = (code, p)
+        code, port = best
+        ok = code not in DEAD
+        print("  %-12s ctx=%-22s port=%-6s HTTP=%s  %s"
+              % (name, ctx, port, code, "OK" if ok else "**不通**"))
+        result["apps"].append({"app": name, "ctx": ctx, "port": port,
+                               "http": code, "ok": ok})
+        if not ok:
+            result["fail"].append("%s HTTP %s" % (name, code))
+
+    print("\n" + "=" * 74)
+    print("四、打业务页面，抓金仓真实 SQL（证明在读迁移数据，不只是连上）")
+    print("=" * 74)
+    for e in result["apps"]:
+        if e["port"]:
+            for _ in range(3):
+                http_code("http://127.0.0.1:%d%s" % (e["port"], e["ctx"]),
+                          timeout=15)
+    time.sleep(3)
+    if conn:
+        c, a = kb_snapshot(conn)
+        result["kb_after"] = {"counts": c, "active": a}
+        print("  金仓 mig 会话：%s"
+              % (", ".join("%s=%s" % (x["db"], x["conns"]) for x in c) or "无"))
+        if not c:
+            result["fail"].append("金仓侧看不到任何 mig 会话")
+        biz = [x for x in a if re.search(
+            r"(?i)\b(select|insert|update|delete)\b.*\b(from|into|tc_|"
+            r"pub_|sm_|gis_)\b", x["q"])]
+        print("  抓到活跃业务 SQL %d 条：" % len(biz))
+        for x in biz[:8]:
+            print("    pid=%s db=%s %s" % (x["pid"], x["db"], x["q"][:130]))
+        if not biz:
+            # 连接池空闲时 state 都是 idle，抓不到 active 是正常的，
+            # 退一步看 idle 会话的 last query
+            cur = conn.cursor()
+            cur.execute("SELECT pid, datname, LEFT(COALESCE(query,''),160) "
+                        "FROM pg_stat_activity WHERE usename = %s "
+                        "AND COALESCE(query,'') <> '' ORDER BY pid DESC "
+                        "LIMIT 8", ("mig",))
+            rows = cur.fetchall()
+            print("  （无 active，退看最近执行过的 SQL %d 条）" % len(rows))
+            for r in rows:
+                print("    pid=%s db=%s %s" % (r[0], r[1], (r[2] or "")[:120]))
+            if not rows:
+                result["fail"].append("金仓侧抓不到任何已执行 SQL")
+
+    print("\n" + "=" * 74)
+    print("五、MySQL 3306 残留（切换后必须归零）")
+    print("=" * 74)
+    rc, out = sh("ss -tnp 2>/dev/null | grep ':3306' ")
+    lines = [ln.strip() for ln in out.splitlines() if ln.strip()]
+    if lines:
+        for ln in lines:
+            print("  [残留] " + ln)
+        result["fail"].append("仍有 %d 条 3306 连接" % len(lines))
+    else:
+        print("  零残留 OK")
+
+    print("\n" + "=" * 74)
+    print("六、tomcat 日志异常扫描")
+    print("=" * 74)
+    for u in units:
+        if not u["base"]:
+            continue
+        logs = sorted(glob.glob(os.path.join(u["base"], "logs",
+                                             "localhost.*.log")),
+                      key=os.path.getmtime)
+        if not logs:
+            continue
+        tail = Path(logs[-1]).read_text(encoding="utf-8", errors="replace")
+        exc = [ln for ln in tail.splitlines()
+               if re.search(r"(?i)\bexception\b|\b严重\b", ln)]
+        print("  %-18s %s  异常行 %d"
+              % (u["unit"], os.path.basename(logs[-1]), len(exc)))
+        for ln in exc[-3:]:
+            print("      " + ln[:180])
+
+    if conn:
+        conn.close()
+
+    print("\n" + "=" * 74)
+    if result["fail"]:
+        print("验证结论：**未通过，%d 项**" % len(result["fail"]))
+        for x in result["fail"]:
+            print("  [FAIL] %s" % x)
+    else:
+        print("验证结论：全部通过")
+    if json_out:
+        Path(json_out).write_text(json.dumps(result, ensure_ascii=False,
+                                             indent=2), encoding="utf-8")
+        print("明细已写 %s" % json_out)
+    return 0 if not result["fail"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

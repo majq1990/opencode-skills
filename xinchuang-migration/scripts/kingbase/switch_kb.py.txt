@@ -1,0 +1,265 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""把 cg156 上全部 web 应用的数据源从当前库（达梦）切到金仓 KingbaseES V9。
+
+与达梦那轮的口径保持一致（parity），只改数据源五项，不动其它任何键：
+    url / driverClassName / username / 口令 / validation query
+  * hibernate.dialect 一律不动——三个已切应用都是 MySQLDialect，这是厂商系统性
+    选择，单独改一个应用会造成不一致；方言问题作为独立缺陷记录，不在切换里动。
+  * 键名风格跟随原文件（cryptogram 还是 password、validationQuery 还是
+    validation.query），照原键名写值，不凭空造键——造了 Spring 不读等于没切。
+  * giscenter 不走 jdbc.properties，它读 giscenter.env 的 --DATASOURCE_URL=，
+    单独一段处理。
+
+用法：
+    python3 switch_kb.py --kb-host 127.0.0.1 --kb-port 54321 --kb-db test \
+        --kb-pw-file /root/.kb_mig_pw \
+        [--map app:prefix=SCHEMA,...] [--apply]
+
+默认 dry-run：只打印将改什么，不落盘。加 --apply 才真写。
+"""
+import datetime
+import glob
+import json
+import os
+import re
+import shutil
+import sys
+from pathlib import Path
+
+WEB_ROOT = Path("/egova/web")
+PROPS_REL = "WEB-INF/classes/jdbc.properties"
+
+KB_DRIVER = "com.kingbase8.Driver"
+KB_VERSION = "KINGBASE"
+KB_VALID = "select 1"
+
+# 已知拓扑的前缀→schema 默认映射。没列到的前缀脚本一律拒绝执行，
+# 不猜——猜错会把 A 库的数据指到 B 库的 schema 上，而且不报错。
+DEFAULT_MAP = {
+    ("eUrbanGIS", ""): "CGDB",
+    ("eGovaMMS", "mms"): "MMS",
+    ("eUrbanMIS", "biz"): "CGDB",
+    ("eUrbanMIS", "stat"): "CGDBSTAT",
+    ("eGovaPublic", "biz"): "EGOVAPUBLIC",
+}
+
+
+def sh(cmd, timeout=25):
+    import subprocess
+    try:
+        r = subprocess.run(cmd, shell=True, capture_output=True,
+                           text=True, timeout=timeout)
+        return r.returncode, (r.stdout or "") + (r.stderr or "")
+    except Exception as ex:
+        return 127, "ERR %s" % ex
+
+
+def jk(pre, name):
+    """拼数据源键名。空前缀时必须是 jdbc.url 而不是 .jdbc.url——
+    eUrbanGIS 就是空前缀，写成 .jdbc.url Spring 根本不读，等于没切还看不出来。"""
+    return name if not pre else "%s.%s" % (pre, name)
+
+
+def chown_like(path, uid, gid):
+    """属主/属组跟随原文件。os.chown 在 Windows 上不存在，本机自测时跳过。"""
+    if hasattr(os, "chown"):
+        try:
+            os.chown(str(path), uid, gid)
+        except Exception:
+            pass
+
+
+def parse_props(text):
+    d = {}
+    for line in text.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#") or s.startswith("!") or "=" not in s:
+            continue
+        k, v = s.split("=", 1)
+        d[k.strip()] = v.strip()
+    return d
+
+
+def set_key(text, key, value):
+    """按原键名赋值；键不存在就追加一行。保留原有行尾风格。"""
+    pat = re.compile(r"(?m)^(\s*)" + re.escape(key) + r"(\s*=\s*).*$")
+    if pat.search(text):
+        return pat.sub(lambda m: m.group(1) + key + m.group(2) + value,
+                       text, count=1)
+    return text.rstrip("\n") + "\n" + key + "=" + value + "\n"
+
+
+def mask(text):
+    out = []
+    for ln in text.splitlines():
+        s = ln.strip()
+        if re.search(r"(?i)(cryptogram|password)\s*=", s):
+            k = s.split("=", 1)[0]
+            out.append("%s=<len=%d>" % (k, len(s.split("=", 1)[1])))
+        else:
+            out.append(s)
+    return out
+
+
+def find_props():
+    return sorted(WEB_ROOT.glob("*/" + PROPS_REL))
+
+
+def app_of(p):
+    return p.parts[p.parts.index("web") + 1]
+
+
+def main():
+    argv = sys.argv[1:]
+    kb_host, kb_port, kb_db = "127.0.0.1", 54321, "test"
+    kb_pw_file = "/root/.kb_mig_pw"
+    apply_mode = False
+    umap = {}
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--kb-host":
+            kb_host = argv[i + 1]; i += 2
+        elif a == "--kb-port":
+            kb_port = int(argv[i + 1]); i += 2
+        elif a == "--kb-db":
+            kb_db = argv[i + 1]; i += 2
+        elif a == "--kb-pw-file":
+            kb_pw_file = argv[i + 1]; i += 2
+        elif a == "--map":
+            for item in argv[i + 1].split(","):
+                if not item.strip():
+                    continue
+                head, _, sch = item.partition("=")
+                ap, _, pre = head.partition(":")
+                umap[(ap.strip(), pre.strip())] = sch.strip()
+            i += 2
+        elif a == "--apply":
+            apply_mode = True; i += 1
+        else:
+            print("未知参数 %s" % a); return 2
+
+    if not os.path.isfile(kb_pw_file):
+        print("REFUSE: 金仓口令文件 %s 不存在" % kb_pw_file)
+        return 2
+    with open(kb_pw_file) as f:
+        kb_pw = f.read().strip()
+    if len(kb_pw) < 8:
+        print("REFUSE: 金仓口令长度异常（<8），不像有效口令")
+        return 2
+
+    files = find_props()
+    if not files:
+        print("REFUSE: /egova/web 下没有 jdbc.properties")
+        return 2
+
+    print("=" * 74)
+    print("金仓切换：%s:%s/%s  驱动=%s  jdbc.version=%s"
+          % (kb_host, kb_port, kb_db, KB_DRIVER, KB_VERSION))
+    print("模式：%s" % ("APPLY（真写盘）" if apply_mode else "DRY-RUN（只打印）"))
+    print("=" * 74)
+
+    # 先扫一遍，把所有待改项和所有未知映射都列出来，一个未知就整体拒绝
+    plan = []
+    unknown = []
+    for f in files:
+        app = app_of(f)
+        props = parse_props(f.read_text(encoding="utf-8", errors="replace"))
+        pres = set()
+        for k in props:
+            m = re.match(r"^(.*)\.jdbc\.url$", k)
+            if m:
+                pres.add(m.group(1))
+            elif k == "jdbc.url":
+                pres.add("")
+        for pre in sorted(pres):
+            schema = umap.get((app, pre)) or DEFAULT_MAP.get((app, pre))
+            if not schema:
+                unknown.append("%s:%s" % (app, pre or "(空前缀)"))
+                continue
+            plan.append((app, f, pre, schema, props))
+
+    if unknown:
+        print("REFUSE: 这些数据源没有 schema 映射，我不猜，请用 --map 显式指定：")
+        for u in unknown:
+            print("   %s" % u)
+        print("\n例：--map eUrbanUMA:uma=CGDB,IMserver:im=CGDB")
+        return 3
+
+    ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    changed = []
+    for app, f, pre, schema, props in plan:
+        pkey = next((k for k in (jk(pre, "jdbc.cryptogram"),
+                                 jk(pre, "jdbc.password")) if k in props), None)
+        vkey = next((k for k in (jk(pre, "jdbc.validation.query"),
+                                 jk(pre, "jdbc.validationQuery"))
+                     if k in props), None)
+        if pkey is None:
+            print("REFUSE: %s 前缀 %r 找不到口令键（cryptogram/password 都没有）"
+                  % (app, pre))
+            return 4
+        url = "jdbc:kingbase8://%s:%d/%s?currentSchema=%s" % (
+            kb_host, kb_port, kb_db, schema)
+        newvals = {
+            jk(pre, "jdbc.url"): url,
+            jk(pre, "jdbc.driverClassName"): KB_DRIVER,
+            jk(pre, "jdbc.username"): "mig",
+            pkey: kb_pw,
+            (vkey or jk(pre, "jdbc.validation.query")): KB_VALID,
+        }
+        print("\n[%s] 前缀=%r -> schema=%s" % (app, pre or "(空)", schema))
+        for k, v in newvals.items():
+            if k == pkey:
+                print("    %-34s = <len=%d>" % (k, len(v)))
+            else:
+                print("    %-34s = %s" % (k, v))
+        if not apply_mode:
+            continue
+
+        raw = f.read_text(encoding="utf-8", errors="replace")
+        st = f.stat()
+        bak = f.with_name("%s.bak.%s.dm" % (f.name, ts))
+        shutil.copy2(f, bak)
+        chown_like(bak, st.st_uid, st.st_gid)
+        os.chmod(str(bak), st.st_mode)
+        text = raw
+        for k, v in newvals.items():
+            text = set_key(text, k, v)
+        if not re.search(r"(?m)^\s*jdbc\.version\s*=", text):
+            text = set_key(text, "jdbc.version", KB_VERSION)
+        f.write_text(text, encoding="utf-8")
+        chown_like(f, st.st_uid, st.st_gid)
+        os.chmod(str(f), st.st_mode)
+        changed.append((app, str(f), str(bak)))
+        print("    已写回，备份 -> %s" % bak.name)
+        print("    回显（脱敏）：")
+        for m in mask(text):
+            if m and not m.startswith("#"):
+                print("      " + m)
+
+    # giscenter 这类 .env 数据源
+    env_files = []
+    for pat in ("/egova/web/*/giscenter/*.env", "/egova/web/*/conf/*.env"):
+        env_files.extend(sorted(glob.glob(pat)))
+    if env_files:
+        print("\n" + "=" * 74)
+        print("发现 .env 数据源，需单独切（口令走 stdin，不落中间文件）")
+        print("=" * 74)
+        for e in env_files:
+            print("  %s" % e)
+        print("  这些文件用 gc156switch.py 同款改写（--DATASOURCE_URL= 形式），")
+        print("  本次不自动处理，避免误改。")
+
+    print("\n" + "=" * 74)
+    if not apply_mode:
+        print("DRY-RUN 结束：以上是将要发生的改动。确认无误后加 --apply 执行。")
+        return 0
+    print("已切换 %d 个数据源。" % len(changed))
+    print("回滚：把对应 .bak.%s.dm 拷回原文件名即可。" % ts)
+    print("下一步：verify_kb.sh 重启并验证。")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
