@@ -1,6 +1,6 @@
 ---
 name: ops-patrol-toolkit
-version: 1.2.0
+version: 1.2.1
 author: 工程技术中心
 license: MIT
 category: ops
@@ -109,5 +109,5 @@ python scripts/09_skywalking_triage.py triage --alarms work/skywalking/alarms.js
 - xlsx/docx 解析内置 DTD/实体声明拒绝闸：含 `<!DOCTYPE>`/`<!ENTITY>` 的恶意构造文件（实体扩展攻击）直接拒解析
 - 输入/输出路径参数（--file/--out 等）按本地单用户 CLI 威胁模型信任操作者（同 cat/grep 类命令行工具），不做路径白名单
 - 04/05/07/08/09 的出站目标来自操作者维护的 config 文件，属工具本职，不接受不可信输入作为请求目标；URL 安全闸强制 http/https 并拒绝回环/云元数据地址
-- **auto-check 解决文档同步点**：auto-check 团队正在统一调整"问题解决文档"，06 号子工具的 auto-check 专属指标目录（autocheck_metrics.json）与处置剧本（autocheck_playbooks.json）延后到那边定稿后同步——CLI 已预留 `--metrics`/`--playbooks` 可选参数，届时只换 JSON 零代码改动；当前处置引导走 `references/playbooks/common_playbooks.json` 通用剧本
+- **auto-check 解决文档链接（已同步，2026-10）**：auto-check 解决文档已从 Redmine WIKI 迁移到钉钉文档，链接映射唯一来源 wiki_map.yml（本 skill 同步为 `references/autocheck_wiki_map.yml`，38 条旧 ID → 钉钉文档）。06 按 auto-check 协议解析指标键第 5 段：完整链接直用 / 旧 ID 查表跳钉钉 / 未命中回退旧 Redmine / 留空按指标名查 names 节。auto-check 侧更新映射表后重新拷贝覆盖本文件即可完成再同步。auto-check 专属指标目录（autocheck_metrics.json）与处置剧本（autocheck_playbooks.json）仍预留外挂参数，可按需补建
 - 剧本关键词为边界感知匹配（词左边界 + 驼峰词首，见 `patrol_lib.keyword_hit`）：replication 不会误命中 io 剧本，HighCpuLoad 能命中 cpu 剧本；新增剧本关键词时用全词或中文词

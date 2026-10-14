@@ -63,6 +63,65 @@ import patrol_lib  # noqa: E402
 
 WIKI_BASE = "http://faq.egova.com.cn:7777/projects/redmine/wiki/"
 
+# 链接映射表（同步自 auto-check 的 ansible/roles/report/vars/wiki_map.yml）。
+# 协议（doc/wiki_links.md）：指标 key 第5段 `#xxx` 的解析顺序——
+#   1) `#https://...` 完整链接直接使用
+#   2) `#<旧Redmine数字ID>` 查 legacy 表跳钉钉文档；未命中回退旧 Redmine 地址
+#   3) 留空/缺省 按"指标名"查 names 表补链接，无则纯文本
+_WIKI_MAP = {"legacy": {}, "names": {}}
+
+
+def load_wiki_map(path):
+    """加载 wiki_map.yml（auto-check 维护的极简 YAML 子集：两节、平铺 "键": 值 行）。
+
+    纯标准库逐行解析，不引入 PyYAML；文件缺失返回 False（调用方记 warning，
+    此时退化为旧行为：数字锚点全部回退旧 Redmine 地址）。
+    """
+    global _WIKI_MAP
+    if not path or not Path(path).is_file():
+        return False
+    _WIKI_MAP = {"legacy": {}, "names": {}}
+    cur = None
+    sec_re = re.compile(r"^\"?(\w+)\"?\s*:\s*$")
+    kv_re = re.compile(r"^\"([^\"]+)\"\s*:\s*(\S+)")
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            s = line.strip()
+            if not s or s.startswith("#") or s == "---":
+                continue
+            if s.startswith('"'):
+                m = kv_re.match(s)
+                if m and cur in ("legacy", "names"):
+                    _WIKI_MAP[cur][m.group(1)] = m.group(2)
+                continue
+            m = sec_re.match(s)
+            if m and m.group(1) in ("legacy", "names"):
+                cur = m.group(1)
+    return True
+
+
+def resolve_wiki(wiki_raw, metric_name=""):
+    """按钉钉文档迁移后的协议解析第 5 段锚点，返回完整 URL（空串=无链接）。"""
+    w = str(wiki_raw or "").strip()
+    if not w:
+        # names 节按指标名补链接
+        return _WIKI_MAP.get("names", {}).get(str(metric_name or ""), "")
+    low = w.lower()
+    if low.startswith("http://") or low.startswith("https://"):
+        return w  # 完整链接直用
+    m = re.match(r"^(\d+)", w)  # 纯数字或带尾随杂质（如 "#9845:"）的旧 ID，取前导数字查表
+    if m:
+        wid = m.group(1)
+        return _WIKI_MAP.get("legacy", {}).get(wid, WIKI_BASE + wid)  # 未命中回退旧 Redmine
+    return w  # 其他形式原样透出，交人工判断
+
+
+def wiki_url(key, metric_name=""):
+    info = parse_metric_key(key)
+    if info:
+        return resolve_wiki(info["wiki"], metric_name or info["name"])
+    return ""
+
 # 与参考实现 get_comp_expr 的 comp_dict 逐项一致，顺序即替换顺序（dict 保序）
 COMP_DICT = [
     ("lt_", "<"),
@@ -92,8 +151,13 @@ FALLBACK_STEPS = [
 # ---------------------------------------------------------------- 指标键解析
 
 def parse_metric_key(key):
-    """解析 `序号:名称:单位:预警表达式:WIKI锚点`，返回 dict；非指标键（段数<2）返回 None。"""
-    parts = str(key).split(":")
+    """解析 `序号:名称:单位:预警表达式:WIKI锚点`，返回 dict；非指标键（段数<2）返回 None。
+
+    必须按 maxsplit=4 切分（对齐 auto-check Go 侧 SplitN(key, ":", 5)）：
+    第 5 段允许放完整钉钉链接（#https://alidocs.dingtalk.com/...），URL 里的
+    "https:" 冒号不能把第 5 段截断。
+    """
+    parts = str(key).split(":", 4)
     if len(parts) < 2:
         return None
     wiki = ""
@@ -101,8 +165,8 @@ def parse_metric_key(key):
         tail = parts[4].strip()
         if tail.startswith("#"):
             wiki = tail[1:]
-        elif tail.isdigit():
-            wiki = tail  # 兼容无 # 前缀的纯数字锚点
+        elif tail.isdigit() or tail.lower().startswith("http"):
+            wiki = tail  # 兼容无 # 前缀的纯数字锚点/完整链接
     return {
         "seq": parts[0],
         "name": parts[1],
@@ -113,15 +177,8 @@ def parse_metric_key(key):
 
 
 def has_expr(key):
-    parts = str(key).split(":")
+    parts = str(key).split(":", 4)
     return len(parts) >= 4 and len(parts[3]) > 0
-
-
-def wiki_url(key):
-    info = parse_metric_key(key)
-    if info and info["wiki"]:
-        return WIKI_BASE + info["wiki"]
-    return ""
 
 
 def topic_display(topic):
@@ -691,7 +748,7 @@ def scan_block(block, custom, metrics_layer, common, now=None):
                 "raw_value": v,
                 "value": format_by_key(v, k),
                 "threshold": human_threshold(k),
-                "wiki": wiki_url(k),
+                "wiki": wiki_url(k, name),
                 "severity": entry.get("severity_hint") or "warn",
                 "playbook_title": entry.get("title") or "",
                 "playbook_steps": steps,
@@ -827,6 +884,9 @@ def cmd_triage(args):
     custom = load_playbook_layer(args.playbooks, "autocheck_playbooks", warnings)
     metrics_layer = load_playbook_layer(args.metrics, "autocheck_metrics", warnings)
     common = load_common_playbooks(args.common, warnings)
+    if not load_wiki_map(getattr(args, "wiki_map", None)):
+        warnings.append("链接映射表缺失（%s），旧数字锚点全部回退旧 Redmine 地址"
+                        % getattr(args, "wiki_map", ""))
 
     all_alerts = []
     topics_total = 0
@@ -875,6 +935,9 @@ def build_parser():
     t.add_argument("--common",
                    default=str(root / "references" / "playbooks" / "common_playbooks.json"),
                    help="通用剧本库 JSON")
+    t.add_argument("--wiki-map",
+                   default=str(root / "references" / "autocheck_wiki_map.yml"),
+                   help="链接映射表（同步自 auto-check wiki_map.yml；缺文件退化为旧 Redmine 直链）")
     t.add_argument("--out", default=str(patrol_lib.WORK_DIR / "autocheck" / "guide.md"),
                    help="处置引导报告输出路径")
     return p

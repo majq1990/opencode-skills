@@ -48,6 +48,11 @@
 
 ## 变更记录
 
+- 2026-10-14：**v1.2.1**——auto-check 解决文档钉钉化同步（用户确认 auto-check 已完成调整并切换钉钉文档）：
+  - 链接映射表原样同步：`D:/git/auto-check/ansible/roles/report/vars/wiki_map.yml` → `references/autocheck_wiki_map.yml`（sha256 一致，38 条旧 Redmine ID → 钉钉文档；names 节当前为空）。**再同步方式：auto-check 侧更新后重拷覆盖此文件即可，零代码改动**
+  - 06 链接解析按 auto-check 新协议（doc/wiki_links.md）改造：指标键第 5 段完整链接直用 / 旧 ID 查 legacy 表跳钉钉 / 未命中回退旧 Redmine / 留空按指标名查 names 节；`load_wiki_map` 纯标准库解析该 YAML 子集，缺文件记 warning 退化为旧行为
+  - **修复冒号截断缺陷**：parse_metric_key 原用裸 split(":")，第 5 段放完整钉钉链接会被 "https:" 截断——改 SplitN(:4) 对齐 auto-check Go 侧 SplitN(key,":",5)（has_expr 同步）；resolve 对 "9845:" 式尾随杂质取前导数字查表
+  - 测试：+5 用例（URL 不截断/查表/回退/names 层/缺表降级），2 条旧断言更新为钉钉链接预期；全仓 **179 用例**全绿
 - 2026-10-08：**v1.2.0**——监控告警分诊与处置引导（用户需求：结合 auto-check 代码，覆盖 Zabbix/Prometheus/SkyWalking 监控发现的问题并引导处理）：
   - **06 autocheck_triage**（893 行）：摄取 auto-check JSON 巡检报告；指标键 `序号:名称:单位:预警表达式:WIKI锚点` 解码；预警表达式**递归下降安全求值器**（复刻 auto-check filters.py 的 comp_dict 语法，替代其 eval，parse 失败保守判告警对齐源码行为）；26 用例
   - **07 zabbix / 08 prometheus / 09 skywalking**：三阶段同构（拉取→归一落盘→离线分诊），JSON-RPC/REST/GraphQL 各一，全走 monitor_http 安全闸；12+14+13 用例

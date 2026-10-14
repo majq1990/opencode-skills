@@ -1,0 +1,49 @@
+---
+# 巡检预警"处理建议"链接映射表（由 ansible/filter_plugins/filters.py 的 format_key 自动加载）
+#
+# 用法:
+#   legacy: 存量检查脚本指标 key 第5段形如 "#4864"，按旧 Redmine wiki ID 查本表跳转钉钉知识库；
+#           未列入本表的旧 ID 自动回退到原 Redmine wiki 地址（迁移过渡期兜底）
+#   names:  新增巡检指标按"指标名"（key 第2段）在本节配置链接，脚本无需写任何链接；
+#           注意 names 按指标名全局匹配，不同报告类型下的同名指标请拆分命名
+#   也可以在指标 key 第5段直接放完整链接: "#https://alidocs.dingtalk.com/i/nodes/xxx"
+legacy:
+  "263": https://alidocs.dingtalk.com/i/nodes/o14dA3GK8g5NmXnLfKbD26ezV9ekBD76      # 网格索引生成
+  "3375": https://alidocs.dingtalk.com/i/nodes/R1zknDm0WR3eownjix4Gg4rqVBQEx5rG     # Redis中人员轨迹迁移
+  "7486": https://alidocs.dingtalk.com/i/nodes/amweZ92PV6vZaGX4TKXBl4A5VxEKBD6p     # GIS全量更新
+  "9775": https://alidocs.dingtalk.com/i/nodes/amweZ92PV6vZaGX4TKM2Rxy9VxEKBD6p     # auto-check 时间不同步问题整改方案
+  "9776": https://alidocs.dingtalk.com/i/nodes/kDnRL6jAJM3Ao52viXqL9vE2WyMoPYe1     # auto-check fstab检查
+  "9779": https://alidocs.dingtalk.com/i/nodes/gvNG4YZ7JneM3nBvc9N5oLxgV2LD0oRE     # auto-check netstat超过5000
+  "9780": https://alidocs.dingtalk.com/i/nodes/QG53mjyd80RjkLDMTgwOzegyV6zbX04v     # auto-check ulimit修改
+  "9783": https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89gq7LzDsPmaBvDxV3kdP0wQ     # auto-check 日志目录占用空间过多
+  "9784": https://alidocs.dingtalk.com/i/nodes/Y1OQX0akWm3gYmA4ivb5DDZ3JGlDd3mE     # auto-check logrotate error
+  "9785": https://alidocs.dingtalk.com/i/nodes/NZQYprEoWoer17A9cDBoEMKjJ1waOeDk     # Auto-check_导出统计分离部署检查
+  "9786": https://alidocs.dingtalk.com/i/nodes/6LeBq413JAzGoLKETr3bYZE28DOnGvpb     # Auto-check_openresty健康检查配置
+  "9817": https://alidocs.dingtalk.com/i/nodes/YndMj49yWjPvRz0LcwRQpEaLJ3pmz5aA     # auto-check tomcat配置不正确
+  "9847": https://alidocs.dingtalk.com/i/nodes/QOG9lyrgJP3OowagizvDjDpYVzN67Mw4     # auto-check mysql慢日志分析
+  "9924": https://alidocs.dingtalk.com/i/nodes/20eMKjyp81RNXGgjT4enRD44WxAZB1Gv     # auto-check redis警告问题处理方法
+  "10001": https://alidocs.dingtalk.com/i/nodes/MNDoBb60VLrOowp4SBm4ZRYp8lemrZQ3    # auto-check mysql备份失败警告
+  "10003": https://alidocs.dingtalk.com/i/nodes/ydxXB52LJq7l145giMKqPodeWqjMp697    # auto-check jobmanager检查处理办法
+  "11547": https://alidocs.dingtalk.com/i/nodes/m9bN7RYPWdlgzjZLfkELoRLxWZd1wyK0    # 通图基础地理信息平台-全量更新
+  "17730": https://alidocs.dingtalk.com/i/nodes/mExel2BLV54XZLkKSmPX5wM5Wgk9rpMq    # 安全加固（原 Auto-check_安全加固检查）
+  "18679": https://alidocs.dingtalk.com/i/nodes/ZgpG2NdyVXrO4wvGSGPObezv8MwvDqPk    # 安全隐患处理-Nginx日志分析有无拦截记录
+  "9822": https://alidocs.dingtalk.com/i/nodes/20eMKjyp81RNXGgjTrXEzX7gWxAZB1Gv   # auto-check mysql或cetus连接数大于1200
+  "9823": https://alidocs.dingtalk.com/i/nodes/XPwkYGxZV3RX2GjkTpe6aR1BWAgozOKL   # auto-check mysql或cetus连接时间 more than 100s
+  "9825": https://alidocs.dingtalk.com/i/nodes/EpGBa2Lm8azvXDpLTzaQLAwXWgN7R35y   # auto-check mysql或cetus活跃连接数大于10
+  "9845": https://alidocs.dingtalk.com/i/nodes/Y1OQX0akWm3gYmA4ijLo59NeJGlDd3mE   # auto-check mysql或cetus从库延迟过大
+  "9788": https://alidocs.dingtalk.com/i/nodes/AR4GpnMqJzML1Xr9sL4o59BPVKe0xjE3   # auto-check jvm统计信息说明
+  "9813": https://alidocs.dingtalk.com/i/nodes/QOG9lyrgJP3OowagildLDkEEVzN67Mw4   # auto-check openresty节点下线排查
+  "9816": https://alidocs.dingtalk.com/i/nodes/20eMKjyp81RNXGgjTrXEzrPlWxAZB1Gv   # auto-check nginx 配置错误检查
+  "10148": https://alidocs.dingtalk.com/i/nodes/EpGBa2Lm8azvXDpLTzaQ52YKWgN7R35y  # auto-check nginx 存在多个master进程
+  "4864": https://alidocs.dingtalk.com/i/nodes/o14dA3GK8g5NmXnLfE1o0NxaV9ekBD76   # CPU使用率超过95%
+  "4870": https://alidocs.dingtalk.com/i/nodes/lyQod3RxJK3moqXKilmpMnjQJkb4Mw9r   # 磁盘空间不足
+  "4891": https://alidocs.dingtalk.com/i/nodes/93NwLYZXWygl1kevsG6oeDYQJkyEqBQm   # 可用内存不足200M
+  "4908": https://alidocs.dingtalk.com/i/nodes/r1R7q3QmWe7MZNaLi6ronNorJxkXOEP2   # 可用inodes不足
+  "5027": https://alidocs.dingtalk.com/i/nodes/P7QG4Yx2Jp7N1K5DiqdoZXy2V9dEq3XD   # Redis占用内存超过3GB
+  "9925": https://alidocs.dingtalk.com/i/nodes/YMyQA2dXW793mLpvS1NEErGpJzlwrZgb   # Redis阻塞问题排查
+  "17731": https://alidocs.dingtalk.com/i/nodes/jb9Y4gmKWr7l1v5MieXoo1LlVGXn6lpz  # auto-check 达梦问题处理
+  "18460": https://alidocs.dingtalk.com/i/nodes/QOG9lyrgJP3OowagildLL2pYVzN67Mw4  # 系统修改管理员账户不为egovaadmin的方法
+  "9814": https://alidocs.dingtalk.com/i/nodes/93NwLYZXWygl1kevsG1r9aMDJkyEqBQm   # auto-check nginx access异常响应排查
+  "9815": https://alidocs.dingtalk.com/i/nodes/o14dA3GK8g5NmXnLfERNwB6xV9ekBD76   # auto-check nginx access后端耗时过久排查
+  "9824": https://alidocs.dingtalk.com/i/nodes/QG53mjyd80RjkLDMTe2m35NrV6zbX04v   # auto-check mysql表行数大于100万
+names: {}

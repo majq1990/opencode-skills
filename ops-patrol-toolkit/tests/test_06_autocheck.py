@@ -286,7 +286,8 @@ class TestEndToEnd(unittest.TestCase):
         self.assertIn("值 > 3.00GB", rep)
         self.assertIn("CPU 使用率/负载过高", rep)          # common 剧本命中
         self.assertIn("MySQL 连接数接近/达到上限", rep)
-        self.assertIn("wiki/4864", rep)
+        # 旧锚点 4864 经同步的 wiki_map 查表 → 钉钉文档（v1.2.1 钉钉链接迁移）
+        self.assertIn("WIKI：https://alidocs.dingtalk.com/i/nodes/o14dA3GK8g5NmXnLfE1o0NxaV9ekBD76", rep)
         self.assertIn("/egova/data", rep)                # 多行 topic 的行标识
         self.assertIn("05_kb_similar_search", rep)       # 兜底步骤示例命令
         self.assertNotIn("无告警项", rep)
@@ -413,9 +414,74 @@ class TestScanDetails(unittest.TestCase):
         self.assertEqual(disk["playbook_title"], "磁盘空间/ inode 不足")
         cpu = [a for a in alerts if a["name"] == "cpu_used%"][0]
         self.assertEqual(cpu["severity"], "high")
+        # 4864 在同步的 wiki_map 中已迁移 → 钉钉文档链接
         self.assertEqual(cpu["wiki"],
-                         "http://faq.egova.com.cn:7777/projects/redmine/wiki/4864")
+                         "https://alidocs.dingtalk.com/i/nodes/o14dA3GK8g5NmXnLfE1o0NxaV9ekBD76")
         self.assertEqual(warnings, [])
+
+
+class TestDingtalkWikiMap(unittest.TestCase):
+    """钉钉文档链接迁移同步（v1.2.1）：SplitN(:4) 协议 + wiki_map 查表。
+
+    背景：auto-check 解决文档从 Redmine WIKI 迁移到钉钉文档，链接映射唯一来源为
+    wiki_map.yml（本 skill 同步为 references/autocheck_wiki_map.yml）。
+    """
+
+    def test_parse_full_url_key_no_truncation(self):
+        # 第 5 段放完整钉钉链接，URL 里的 "https:" 冒号不得截断（对齐 Go 侧 SplitN(:5)）
+        k = ("09:disk_full::DATA_gt_90:"
+             "#https://alidocs.dingtalk.com/i/nodes/lyQod3RxJK3moqXKilmpMnjQJkb4Mw9r")
+        info = triage06.parse_metric_key(k)
+        self.assertEqual(info["expr"], "DATA_gt_90")
+        self.assertEqual(info["wiki"],
+                         "https://alidocs.dingtalk.com/i/nodes/lyQod3RxJK3moqXKilmpMnjQJkb4Mw9r")
+
+    def test_load_synced_map(self):
+        p = ROOT / "references" / "autocheck_wiki_map.yml"
+        self.assertTrue(p.is_file(), "同步的映射表应存在于 references/")
+        self.assertTrue(triage06.load_wiki_map(str(p)))
+        try:
+            self.assertEqual(len(triage06._WIKI_MAP["legacy"]), 38)
+            # 已迁移旧 ID → 钉钉文档
+            self.assertTrue(triage06.resolve_wiki("4870").startswith("https://alidocs.dingtalk.com/"))
+            self.assertTrue(triage06.resolve_wiki("9775").startswith("https://alidocs.dingtalk.com/"))
+            # 未迁移旧 ID → 回退旧 Redmine
+            self.assertEqual(triage06.resolve_wiki("999999"),
+                             "http://faq.egova.com.cn:7777/projects/redmine/wiki/999999")
+            # 完整链接直用；空锚点 + names 未命中 → 无链接
+            self.assertEqual(triage06.resolve_wiki("https://a.b/c"), "https://a.b/c")
+            self.assertEqual(triage06.resolve_wiki("", "nonexistent_metric"), "")
+        finally:
+            triage06._WIKI_MAP = {"legacy": {}, "names": {}}  # 还原全局态，防串扰
+
+    def test_wiki_url_with_map(self):
+        triage06.load_wiki_map(str(ROOT / "references" / "autocheck_wiki_map.yml"))
+        try:
+            url = triage06.wiki_url("04:size_available::DATA_lt_10240000:#4870")
+            self.assertTrue(url.startswith("https://alidocs.dingtalk.com/"))
+            # 尾随杂质旧 ID（"#9845:"）取前导数字查表
+            url2 = triage06.wiki_url("07:slave_delay::DATA_gt_10000:#9845:")
+            self.assertTrue(url2.startswith("https://alidocs.dingtalk.com/"))
+        finally:
+            triage06._WIKI_MAP = {"legacy": {}, "names": {}}
+
+    def test_names_layer_by_metric_name(self):
+        p = TMP / "wm_names.yml"
+        p.write_text('---\nlegacy: {}\nnames:\n  "cpu_used%": https://alidocs.dingtalk.com/i/nodes/names_test\n',
+                     encoding="utf-8")
+        triage06.load_wiki_map(str(p))
+        try:
+            # 第 5 段留空 → 按指标名查 names 节
+            self.assertEqual(triage06.wiki_url("01:cpu_used%::DATA_gt_90"),
+                             "https://alidocs.dingtalk.com/i/nodes/names_test")
+        finally:
+            triage06._WIKI_MAP = {"legacy": {}, "names": {}}
+
+    def test_missing_map_graceful(self):
+        # 缺文件：返回 False（调用方记 warning），解析退化为旧 Redmine 直链
+        self.assertFalse(triage06.load_wiki_map(str(TMP / "no_such_map.yml")))
+        self.assertEqual(triage06.wiki_url("01:cpu_used%:%:DATA_gt_60:#4864"),
+                         "http://faq.egova.com.cn:7777/projects/redmine/wiki/4864")
 
 
 if __name__ == "__main__":
