@@ -484,5 +484,102 @@ class TestDingtalkWikiMap(unittest.TestCase):
                          "http://faq.egova.com.cn:7777/projects/redmine/wiki/4864")
 
 
+class TestDocBody(unittest.TestCase):
+    """dws 拉取钉钉处理文档正文（v1.2.2）。fetcher 注入 mock，不真联网。"""
+
+    def _alerts(self, urls):
+        return [{"name": "m%d" % i, "wiki": u, "severity": "warn"} for i, u in enumerate(urls)]
+
+    def test_fetch_and_dedup(self):
+        calls = []
+
+        def fake_fetch(url):
+            calls.append(url)
+            return "文档标题A", "第一步：检查配置\n第二步：重启服务"
+
+        alerts = self._alerts(["https://alidocs.dingtalk.com/i/nodes/AAA",
+                               "https://alidocs.dingtalk.com/i/nodes/AAA",
+                               "https://alidocs.dingtalk.com/i/nodes/BBB"])
+        n = triage06.attach_doc_bodies(alerts, [], fetcher=fake_fetch)
+        self.assertEqual(n, 2)                      # 相同链接只拉一次
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(alerts[0]["doc_body"]["title"], "文档标题A")
+        self.assertEqual(alerts[1]["doc_body"], alerts[0]["doc_body"])  # 缓存复用
+        self.assertIn("重启服务", alerts[2]["doc_body"]["body"])
+
+    def test_non_dingtalk_link_skipped(self):
+        calls = []
+
+        def fake_fetch(url):
+            calls.append(url)
+            return "t", "b"
+
+        alerts = self._alerts(["http://faq.egova.com.cn:7777/projects/redmine/wiki/4864", ""])
+        triage06.attach_doc_bodies(alerts, [], fetcher=fake_fetch)
+        self.assertEqual(calls, [])                 # 旧 Redmine/空链接不拉
+        self.assertNotIn("doc_body", alerts[0])
+
+    def test_fetch_failure_degrades_with_warning(self):
+        def bad_fetch(url):
+            raise RuntimeError("dws 未登录")
+
+        alerts = self._alerts(["https://alidocs.dingtalk.com/i/nodes/CCC"])
+        warns = []
+        n = triage06.attach_doc_bodies(alerts, warns, fetcher=bad_fetch)
+        self.assertEqual(n, 0)
+        self.assertEqual(alerts[0]["doc_body"]["body"], "")
+        self.assertTrue(any("拉取失败" in w for w in warns))
+
+    def test_truncation(self):
+        def big_fetch(url):
+            return "长文档", "x" * 2000
+
+        alerts = self._alerts(["https://alidocs.dingtalk.com/i/nodes/DDD"])
+        triage06.attach_doc_bodies(alerts, [], fetcher=big_fetch)
+        self.assertLessEqual(len(alerts[0]["doc_body"]["body"]),
+                             triage06.DOC_BODY_MAX_CHARS + 40)  # 截断 + 提示语
+        self.assertIn("已截断", alerts[0]["doc_body"]["body"])
+
+    def test_with_body_false_noop(self):
+        def boom(url):
+            raise AssertionError("不应调用")
+
+        alerts = self._alerts(["https://alidocs.dingtalk.com/i/nodes/EEE"])
+        triage06.attach_doc_bodies(alerts, [], with_body=False, fetcher=boom)
+        self.assertNotIn("doc_body", alerts[0])
+
+    def test_render_report_embeds_body(self):
+        alerts = self._alerts(["https://alidocs.dingtalk.com/i/nodes/FFF"])
+        alerts[0].update({"key": "01:x::gt_1", "value": "9", "raw_value": "9",
+                          "severity": "high", "section_disp": "topic x",
+                          "row_label": "", "threshold": "值 > 1",
+                          "playbook_title": "剧本", "playbook_steps": ["做某事"],
+                          "playbook_source": "common", "expr": "9 > 1",
+                          "expr_raw": "gt_1", "parse_failed": False,
+                          "block": "os_h1", "type": "os", "host": "h1",
+                          "doc_body": {"title": "处理文档", "body": "步骤一\n步骤二"}})
+        blocks = [{"key": "os_h1", "type": "os", "host": "h1", "source": "r.json",
+                   "version": "1", "report_time": "", "basic": {}, "topics": {}}]
+        rep = triage06.render_report(blocks, alerts, 1, [])
+        self.assertIn("处置指引文档：《处理文档》正文节选", rep)
+        self.assertIn("  > 步骤一", rep)
+        self.assertIn("  > 步骤二", rep)
+
+    def test_cmd_doc_out_traversal_blocked(self):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            with self.assertRaises(SystemExit) as cm:
+                triage06.cmd_doc(type("A", (), {"url": "https://alidocs.dingtalk.com/i/nodes/OK",
+                                                "out": "../evil.md"})())
+        self.assertEqual(cm.exception.code, 2)
+
+    def test_cmd_doc_rejects_non_dingtalk(self):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            with self.assertRaises(SystemExit) as cm:
+                triage06.cmd_doc(type("A", (), {"url": "http://faq.egova.com.cn/x", "out": None})())
+        self.assertEqual(cm.exception.code, 2)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,6 @@
 ---
 name: ops-patrol-toolkit
-version: 1.2.1
+version: 1.2.2
 author: 工程技术中心
 license: MIT
 category: ops
@@ -65,8 +65,10 @@ python scripts/05_kb_similar_search.py query --text "MySQL只读副本磁盘IO�
 # 02→05 闭环：用分诊结果自动拼检索词
 python scripts/05_kb_similar_search.py from-triage --triage work/io_triage/triage.json
 
-# 06 auto-check 巡检报告分诊（离线；处置引导含 WIKI 链接与 05 检索命令）
+# 06 auto-check 巡检报告分诊（默认经 dws 拉取钉钉处理文档正文嵌入报告；离线环境加 --no-doc-body）
 python scripts/06_autocheck_triage.py triage --report out/json/os_web01.json --dir out/json --out work/autocheck/guide.md
+# 单篇拉取处理文档正文
+python scripts/06_autocheck_triage.py doc --url "https://alidocs.dingtalk.com/i/nodes/<DOC_UUID>" --out work/autocheck/doc.md
 
 # 07/08/09 监控告警拉取 + 分诊（端点配置 config/patrol/monitors.json，enabled 置 true）
 python scripts/07_zabbix_triage.py problems --config config/patrol/monitors.json --out work/zabbix/problems.json
@@ -109,5 +111,6 @@ python scripts/09_skywalking_triage.py triage --alarms work/skywalking/alarms.js
 - xlsx/docx 解析内置 DTD/实体声明拒绝闸：含 `<!DOCTYPE>`/`<!ENTITY>` 的恶意构造文件（实体扩展攻击）直接拒解析
 - 输入/输出路径参数（--file/--out 等）按本地单用户 CLI 威胁模型信任操作者（同 cat/grep 类命令行工具），不做路径白名单
 - 04/05/07/08/09 的出站目标来自操作者维护的 config 文件，属工具本职，不接受不可信输入作为请求目标；URL 安全闸强制 http/https 并拒绝回环/云元数据地址
-- **auto-check 解决文档链接（已同步，2026-10）**：auto-check 解决文档已从 Redmine WIKI 迁移到钉钉文档，链接映射唯一来源 wiki_map.yml（本 skill 同步为 `references/autocheck_wiki_map.yml`，38 条旧 ID → 钉钉文档）。06 按 auto-check 协议解析指标键第 5 段：完整链接直用 / 旧 ID 查表跳钉钉 / 未命中回退旧 Redmine / 留空按指标名查 names 节。auto-check 侧更新映射表后重新拷贝覆盖本文件即可完成再同步。auto-check 专属指标目录（autocheck_metrics.json）与处置剧本（autocheck_playbooks.json）仍预留外挂参数，可按需补建
+- **auto-check 解决文档链接（已同步，2026-10）**：auto-check 解决文档已从 Redmine WIKI 迁移到钉钉文档，链接映射唯一来源 wiki_map.yml（本 skill 同步为 `references/autocheck_wiki_map.yml`，38 条旧 ID → 钉钉文档）。06 按 auto-check 协议解析指标键第 5 段：完整链接直用 / 旧 ID 查表跳钉钉 / 未命中回退旧 Redmine / 留空按指标名查 names 节。auto-check 侧更新映射表后重新拷贝覆盖本文件即可完成再同步
+- **处置引导终态（用户拍板）**：与 auto-check 一致走链接方式，且 06 **默认经 dws 拉取钉钉文档正文嵌入处置引导报告**（按链接去重、超 1500 字截断、拉取失败降级为仅链接并记 warning 不中断）；`06 doc --url <链接>` 可单篇拉取。无 dws 环境加 `--no-doc-body` 跳过。`--metrics`/`--playbooks` 外挂参数保留作扩展位，缺文件静默跳过
 - 剧本关键词为边界感知匹配（词左边界 + 驼峰词首，见 `patrol_lib.keyword_hit`）：replication 不会误命中 io 剧本，HighCpuLoad 能命中 cpu 剧本；新增剧本关键词时用全词或中文词

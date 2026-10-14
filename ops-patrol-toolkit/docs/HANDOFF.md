@@ -48,6 +48,12 @@
 
 ## 变更记录
 
+- 2026-10-14：**v1.2.2——处置引导嵌入钉钉文档正文（用户需求：skill 要能通过 dws 看到链接对应文档的内容）**：
+  - 06 triage **默认**对告警项的钉钉文档链接经 `dws doc read --node <URL>` 拉取正文嵌入报告（按链接缓存去重、超 1500 字截断注明、失败降级 warning 不中断）；`--no-doc-body` 供无 dws 环境关闭；信封新增 `doc_bodies` 计数
+  - 新子命令 `doc --url <钉钉链接> [--out md]` 单篇拉取；输出路径禁止 `..` 穿越（Mimosa 门禁要求）
+  - dws 调用经 `shutil.which("dws")` 定位 + subprocess，stdout JSON 解析（success/title/markdown），兼容裸 markdown 输出形态；`_run_dws_read` 可 monkeypatch（8 个 mock 用例不真联网）
+  - 真机冒烟：fixture 10 告警项 → **9 篇文档正文真实嵌入**（如《可用内存不足200M》的适用场景+处理方案直接进报告）
+  - 全仓 **187 用例**全绿。此前"不建正文剧本"的表述作废——正文内容经 dws 实时拉取，无需建静态剧本
 - 2026-10-14：**v1.2.1**——auto-check 解决文档钉钉化同步（用户确认 auto-check 已完成调整并切换钉钉文档）：
   - 链接映射表原样同步：`D:/git/auto-check/ansible/roles/report/vars/wiki_map.yml` → `references/autocheck_wiki_map.yml`（sha256 一致，38 条旧 Redmine ID → 钉钉文档；names 节当前为空）。**再同步方式：auto-check 侧更新后重拷覆盖此文件即可，零代码改动**
   - 06 链接解析按 auto-check 新协议（doc/wiki_links.md）改造：指标键第 5 段完整链接直用 / 旧 ID 查 legacy 表跳钉钉 / 未命中回退旧 Redmine / 留空按指标名查 names 节；`load_wiki_map` 纯标准库解析该 YAML 子集，缺文件记 warning 退化为旧行为

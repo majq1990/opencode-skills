@@ -37,6 +37,7 @@ python -m pytest tests/ -p no:cacheprovider -q
 
 ## 版本历史
 
+- 1.2.2（2026-10）：处置引导嵌入钉钉文档正文——06 默认经 dws 拉取告警项对应的钉钉处理文档正文嵌入报告（去重/截断/失败降级），新增 `doc` 子命令单篇拉取；全仓 187 用例。
 - 1.2.1（2026-10）：auto-check 解决文档钉钉化同步——链接映射表 wiki_map.yml 原样同步入 references/（38 条旧 ID→钉钉文档）；06 按 auto-check 新协议解析指标键第 5 段（完整链接直用/旧 ID 查表/未命中回退旧 Redmine/留空按名查 names 节）；修复指标键解析对含完整 URL 第 5 段的冒号截断（SplitN(:4) 对齐 auto-check Go 侧）。全仓 179 用例。
 - 1.2.0（2026-10）：监控告警分诊与处置引导——06 auto-check 巡检报告摄取（预警表达式递归下降安全求值器，替代源 eval；WIKI 链接引导）+ 07 Zabbix（JSON-RPC）+ 08 Prometheus（REST）+ 09 SkyWalking（GraphQL）四条告警链路；共享 monitor_http URL 安全闸；通用处置剧本库（references/playbooks）+ 边界感知关键词匹配（驼峰词首可命中、词中片段不误命中）。
 - 1.1.0（2026-10）：真实场景兼容性修复——中文 Word 纯数字 styleId 标题识别（docx_io 读 styles.xml，03 双 token 检测）；02 DDL 首字段丢失修复（外层左括号污染）；DTD/实体声明拒绝闸（安全加固）。

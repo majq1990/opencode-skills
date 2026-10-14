@@ -52,7 +52,10 @@ stdout 最后一行 JSON 信封：
 
 import argparse
 import json
+import json
 import re
+import shutil
+import subprocess
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -121,6 +124,75 @@ def wiki_url(key, metric_name=""):
     if info:
         return resolve_wiki(info["wiki"], metric_name or info["name"])
     return ""
+
+
+# ---------------------------------------------------------------- 钉钉文档正文拉取（dws）
+
+DWS_TIMEOUT_S = 90          # 单篇文档拉取超时（dws 冷启动 + 网络往返）
+DOC_BODY_MAX_CHARS = 1500   # 报告内嵌正文节选上限
+_DINGTALK_DOC_PREFIX = "https://alidocs.dingtalk.com/"
+
+
+def _run_dws_read(url, timeout_s=DWS_TIMEOUT_S):
+    """调 dws doc read 拉取钉钉文档正文，返回 (title, markdown)。
+
+    失败抛 RuntimeError（dws 未安装/未登录/超时/返回失败）。测试可 monkeypatch 本函数。
+    """
+    exe = shutil.which("dws")
+    if not exe:
+        raise RuntimeError("未找到 dws CLI（需已安装并登录钉钉）")
+    try:
+        proc = subprocess.run(
+            [exe, "doc", "read", "--node", url],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("dws 拉取超时（%ss）" % timeout_s)
+    out = (proc.stdout or "").strip()
+    try:
+        data = json.loads(out)
+    except json.JSONDecodeError:
+        if proc.returncode == 0 and out:
+            return "", out  # 兼容直接输出 markdown 的形态
+        raise RuntimeError("dws 输出不可解析: %s" % out[:120])
+    if isinstance(data, dict) and data.get("success"):
+        return str(data.get("title") or ""), str(data.get("markdown") or "")
+    err = data.get("error") or data.get("message") if isinstance(data, dict) else None
+    raise RuntimeError("dws 返回失败: %s" % (err or out[:120]))
+
+
+def attach_doc_bodies(all_alerts, warnings, with_body=True, fetcher=None):
+    """给告警项附加钉钉处理文档正文（doc_body={"title","body"}），按链接缓存去重。
+
+    - 仅拉钉钉文档链接（alidocs.dingtalk.com）；旧 Redmine 回退链接不拉
+    - 拉取失败降级：warning + 不嵌正文（报告仍有链接），不中断
+    - with_body=False 或 fetcher 注入供测试/离线关闭
+    """
+    if not with_body:
+        return
+    fetcher = fetcher or _run_dws_read
+    cache = {}
+    fetched = 0
+    for a in all_alerts:
+        url = str(a.get("wiki") or "")
+        if not url.lower().startswith(_DINGTALK_DOC_PREFIX):
+            continue
+        if url in cache:
+            a["doc_body"] = cache[url]
+            continue
+        try:
+            title, md = fetcher(url)
+            body = (md or "").strip()
+            if len(body) > DOC_BODY_MAX_CHARS:
+                body = body[:DOC_BODY_MAX_CHARS] + "\n…（正文过长已截断，完整内容点链接查看）"
+            entry = {"title": title, "body": body}
+            fetched += 1
+        except Exception as e:
+            entry = {"title": "", "body": ""}
+            warnings.append("钉钉文档正文拉取失败（%s）：%s" % (url, e))
+        cache[url] = entry
+        a["doc_body"] = entry
+    return fetched
 
 # 与参考实现 get_comp_expr 的 comp_dict 逐项一致，顺序即替换顺序（dict 保序）
 COMP_DICT = [
@@ -829,6 +901,13 @@ def render_report(blocks, all_alerts, files_total, warnings, out_text=True):
                 lines.append("- 阈值：%s" % a["threshold"])
             lines.append("- 严重度：%s" % a["severity"])
             lines.append("- WIKI：%s" % (a["wiki"] if a["wiki"] else "无"))
+            db = a.get("doc_body") or {}
+            if db.get("body"):
+                head = "处置指引文档：《%s》正文节选：" % db["title"] if db.get("title") \
+                    else "处置指引文档正文节选："
+                lines.append("- %s" % head)
+                for bl in db["body"].splitlines():
+                    lines.append("  > %s" % bl if bl.strip() else "  >")
             if a["parse_failed"]:
                 lines.append("- 注意：预警表达式无法安全解析（原表达式 `%s`），按告警保守处理，请人工确认是否真告警"
                              % a["expr_raw"])
@@ -895,6 +974,9 @@ def cmd_triage(args):
         all_alerts.extend(alerts)
         topics_total += n_topics
 
+    with_body = not getattr(args, "no_doc_body", False)
+    doc_bodies = attach_doc_bodies(all_alerts, warnings, with_body=with_body) or 0
+
     by_severity = {}
     for a in all_alerts:
         by_severity[a["severity"]] = by_severity.get(a["severity"], 0) + 1
@@ -911,9 +993,37 @@ def cmd_triage(args):
         "topics": topics_total,
         "alert_items": len(all_alerts),
         "by_severity": by_severity,
+        "doc_bodies": doc_bodies if with_body else 0,
         "report": str(out_path),
         "warnings": warnings,
     })
+    return 0
+
+
+def cmd_doc(args):
+    """拉取单篇钉钉处理文档正文（供人工快速查看）。"""
+    url = str(args.url or "").strip()
+    if not url.lower().startswith(_DINGTALK_DOC_PREFIX):
+        patrol_lib.stop("仅支持钉钉文档链接（https://alidocs.dingtalk.com/...），收到: %s" % url)
+    out_p = None
+    if getattr(args, "out", None):
+        out_p = Path(args.out)
+        if ".." in out_p.parts:
+            patrol_lib.stop("输出路径禁止 .. 穿越: %s" % args.out)
+    try:
+        title, md = _run_dws_read(url)
+    except RuntimeError as e:
+        patrol_lib.stop("文档正文拉取失败: %s" % e)
+    body = (md or "").strip()
+    if not body:
+        patrol_lib.stop("文档正文为空: %s" % url)
+    out_path = None
+    if out_p is not None:
+        out_path = str(patrol_lib.write_text(out_p, "# %s\n\n%s\n" % (title or url, body)))
+    print("文档：%s" % (title or "(无标题)"))
+    print("正文字符数：%d" % len(body))
+    patrol_lib.emit({"ok": True, "title": title, "chars": len(body),
+                     "output": out_path})
     return 0
 
 
@@ -940,6 +1050,13 @@ def build_parser():
                    help="链接映射表（同步自 auto-check wiki_map.yml；缺文件退化为旧 Redmine 直链）")
     t.add_argument("--out", default=str(patrol_lib.WORK_DIR / "autocheck" / "guide.md"),
                    help="处置引导报告输出路径")
+    t.add_argument("--no-doc-body", action="store_true",
+                   help="不拉取钉钉处理文档正文（默认经 dws 拉取并嵌入报告；无 dws 环境可用此项）")
+
+    d = sub.add_parser("doc", help="拉取单篇钉钉处理文档正文（经 dws）")
+    d.add_argument("--url", required=True,
+                   help="钉钉文档链接（https://alidocs.dingtalk.com/i/nodes/...）")
+    d.add_argument("--out", default=None, help="正文另存为 markdown 文件路径（禁止 .. 穿越）")
     return p
 
 
