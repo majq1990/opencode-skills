@@ -147,6 +147,46 @@ ssh root@demo.egova.com.cn 'docker logs --tail 200 dingtalk-report-v3'
 | 模板管理 + 职位映射配置 | `src/api/routes.py` `admin_templates_page`（传 `tpl_names`）；模板 `admin_templates.html` 可配 `job_template_mapping` 职位→周报映射 |
 | 模型 | `src/models/`（`DailyReport`, `WeeklyReport`, `DailyReportStatistics`, `WeeklyReportStatistics`, `EmployeeDailyStats`, `DailyReportWhitelist`, `LeaveApproval`, `Department`, `Employee`, `Holiday`, `PushHistory`） |
 
+## 离职人员判定（2026-10-22 修复，务必理解后再改）
+
+`sync_employees()` 每日 02:30 跑，把「不在钉钉部门成员列表里」的员工当离职候选，
+调钉钉 `listdimission`（`/topapi/smartwork/hrm/employee/listdimission`）确认。
+
+**接口返回语义（实测）**：
+
+| 字段 | 含义 |
+|------|------|
+| `status=2` | **已离职** ← 唯一可靠的离职信号 |
+| `status=3` | 在职 |
+| `last_work_day` | 最后工作日（ms），**仅在 HR 登记了最后工作日时才返回** |
+
+**判定优先级**（`_sweep_dimissions`）：
+
+1. `last_work_day` → 权威，直接用
+2. `status=2` 但无 `last_work_day` → 用 `employees.last_seen_date` 兜底
+3. `status=3` → **保持在职**，仅告警
+
+> ⚠️ **「不在花名册」≠「离职」**。实测有同事调岗到工程技术中心之外（平台只同步
+> 工程技术中心的部门树），或钉钉花名册未及时同步，人不在花名册但仍在正常交日报
+> （如丑永辉、胡思杰）。**绝不能仅凭"连续不在花名册"判定离职**——那会误伤在岗同事。
+> 曾设计"连续 7 天不在花名册即判离"的规则，实测会误伤，已移除。`absent_days`
+> 现仅用于监控告警。
+
+**修复前的 bug**：原代码 `if not rec.get("last_work_day"): continue`，导致 HR 侧
+未登记最后工作日的离职者被永远跳过（王祥印连续 15 天 unmatched），在平台里一直是
+「在职」并持续产生漏报（9-08~10-20 共 27 个漏报日）。
+
+**新字段**（迁移 `c3f8a91d4e20`）：
+- `employees.last_seen_date` —— 最后一次出现在部门成员列表的日期
+- `employees.absent_days` —— 连续缺席天数（仅告警用）
+
+**回填脚本**：`scripts/backfill_employee_left_date.py`（真实花名册 + 钉钉状态双重校验，
+只处理 `status=2`）。在容器里用 `docker exec -i dingtalk-report-v3 python - < 脚本` 运行
+（`scripts/` 未挂载进容器，不要直接 `docker exec python scripts/...`）。
+
+**排查这类问题**：日志里搜 `dimission sweep unmatched uids`，带姓名和 absent 天数。
+持续出现同一批人 = 钉钉 HR 侧状态没更新，需要 HR 补登记离职或确认调岗。
+
 ## 常见坑
 
 1. **改 enum 必须带 NOT NULL** 否则列会被改为可空：`ALTER TABLE push_history MODIFY push_type ENUM(...) NOT NULL;`
@@ -154,17 +194,53 @@ ssh root@demo.egova.com.cn 'docker logs --tail 200 dingtalk-report-v3'
 3. **机器人 webhook 不支持附件**，大列表必须走「短 markdown + 静态 URL 下载」方式。
 4. **PUBLIC_BASE_URL 改动后必须 `up -d`** 才能生效，`restart` 无效。
 5. 钉钉请假条的 `exempt_daily_report` 由 LeaveApproval 流程审批元数据解析，改采集逻辑要小心不要误丢弃请假条。
+6. **scp 部署会覆盖服务器工作区的未提交改动**。2026-10-22 就把马健权自己的 MJQ
+   anomaly 特例（`if is_anomaly and uid == MJQ_USER_ID: status = "late"`）覆盖掉了，
+   从 `.backup/` 恢复后才提交入库。**部署前先 `git diff` 看有没有别人的未提交改动。**
+7. **不要用 `employees.updated_at` 近似"最后出现日期"**。SQLAlchemy 在字段值未变时
+   不发 UPDATE，在职员工的 `updated_at` 可能停在几个月前（李逢华/吴昊等高管停在 6-28），
+   拿它回填会把在职员工误判为长期缺席。正确做法是用真实花名册反查。
+8. **本地 Windows 检出默认转 CRLF**。服务器多数文件是 LF（`scheduler.py` 是 CRLF），
+   scp 前先 `git config core.autocrlf false` 并统一行尾，否则 git diff 全是噪声。
+9. **容器内 `scripts/` 不是宿主机挂载的**，宿主机 `scripts/*.py` 要用
+   `docker exec -i dingtalk-report-v3 python - < 文件` 执行。
 
-## 版本控制（2026-06-28 建立）
+## 版本控制（2026-06-28 建立，2026-10-21 重整）
 
 之前服务器目录是裸目录、无版本控制，本地只有零散补丁。现已建仓：
 
 - 服务器 `/opt/dingtalk-report-v3/` 已 `git init`（`master`，git 1.8.3.1），首提交 = 生产快照。
-- 本地工作仓 `D:\git\dingtalk-report-v3`：`git clone root@demo.egova.com.cn:/opt/dingtalk-report-v3`，`origin` 指服务器。
-- 本地裸仓备份 `D:\git\dingtalk-report-v3.git`，作为 `backup` remote。
-- `.gitignore` 排除：`.env`（密钥）、`logs/*`、`static/exports/*`、`__pycache__`。共 87 个跟踪文件。
-- 改完代码三步走：`git commit` → `git push origin master`（回写服务器，需 `up -d` 生效）/ 或服务器本地改完 `git pull` 到本地 → `git push backup master` 留备份。
-- ⚠️ 服务器是 non-bare 仓且工作区即生产目录，`push origin master` 不会自动更新工作区文件；推完需在服务器 `git checkout -- .` 或直接在服务器侧改+commit。建议以"服务器侧改 → 本地 pull"为主方向。
+  **服务器上没有任何 remote**，也未配置 GitHub 凭据。
+- 本地工作仓 `D:\git\dingtalk-report-v3`（**2026-10-21 恢复，此前已丢失**）：
+  `git clone root@demo.egova.com.cn:/opt/dingtalk-report-v3`。
+- 本地裸仓备份 `D:\git\dingtalk-report-v3.git`（**2026-10-21 重建**），作为 `backup` remote。
+- GitHub 备份 `majq1990/dingtalk-report-v3`（private，2026-06-28 建，**GitLab 上没有本项目**）。
+- `.gitignore` 排除：`.env`（密钥）、`logs/*`、`static/exports/*`、`__pycache__`。
+
+**当前 remote 配置**（本地工作仓）：
+
+```
+origin  → https://github.com/majq1990/dingtalk-report-v3.git
+prod    → root@demo.egova.com.cn:/opt/dingtalk-report-v3
+backup  → D:/git/dingtalk-report-v3.git
+```
+
+**改完代码三步走**（服务器侧改 → 本地 pull → 推 GitHub/裸仓）：
+
+```bash
+# 1. 服务器侧改完并 commit（工作区即生产目录）
+ssh root@demo.egova.com.cn 'cd /opt/dingtalk-report-v3 && git add -A && git commit -m "..."'
+
+# 2. 本地拉取
+cd D:\git\dingtalk-report-v3 && git fetch prod master && git reset --hard FETCH_HEAD
+
+# 3. 推 GitHub（需 token）与裸仓
+git push origin master && git push backup master
+```
+
+⚠️ **服务器是 non-bare 仓且工作区即生产目录**，`git push` 不会自动更新工作区文件。
+⚠️ 推 GitHub 需临时注入 token（`gh auth token`），**推完必须把 token 从 remote URL 移除**。
+⚠️ 本地 Windows 检出默认转 CRLF，先 `git config core.autocrlf false`。
 
 ## 参考
 
