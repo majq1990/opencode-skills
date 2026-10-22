@@ -17,13 +17,20 @@ FastAPI + SQLAlchemy + APScheduler 架构，部署于 `demo.egova.com.cn`，负�
 |----|----|
 | 服务器 | `demo.egova.com.cn`（SSH 免密，用户 root） |
 | 项目路径 | `/opt/dingtalk-report-v3/`（**已 git init**，分支 `master`，git 1.8.3.1，**无 remote**） |
-| 本地工作仓 | `D:\git\dingtalk-report-v3`（**2026-10-21 恢复**，此前丢失）<br>origin → GitHub、prod → 服务器、backup → 本地裸仓 |
+| 本地工作仓 | `D:\git\dingtalk-report-v3`（**2026-10-21 恢复**，此前丢失）<br>origin → GitHub、prod → 服务器、backup → 本地裸仓、gitlab → 公司 GitLab |
 | 本地裸仓备份 | `D:\git\dingtalk-report-v3.git`（**2026-10-21 重建**） |
-| GitHub 备份 | `majq1990/dingtalk-report-v3`（private，2026-06-28 建，**GitLab 上没有本项目**） |
+| GitHub 备份 | `majq1990/dingtalk-report-v3`（private，2026-06-28 建） |
+| 公司 GitLab | `devops/jszc/dingtalk-report-v3`（private，**2026-10-22 push-to-create 建仓**）<br>Web: http://gitlab.egova.com.cn:8000/devops/jszc/dingtalk-report-v3<br>SSH: `ssh://git@gitlab.egova.com.cn:222/devops/jszc/dingtalk-report-v3.git`（~/.ssh/config 已配 Port 222 + ed25519 密钥） |
 | 容器名 | `dingtalk-report-v3`（docker-compose v1 语法） |
 | 数据库 | 阿里云 RDS MySQL，库 `ops_log`，用户 `ops_log` |
 | 对外域名 | `https://demo.egova.com.cn`（nginx 443 → 127.0.0.1:81；8080 已转发到 443） |
 | 根部门 | 工程技术中心 `MAIN_DEPARTMENT_ID=668486038` |
+
+> ⚠️ **GitLab pre-receive hook 强制公司邮箱**：提交作者/提交者必须
+> `<拼音全拼>@egova.com.cn`（如 `majianquan@egova.com.cn`），gmail 等私人邮箱会被拒。
+> 2026-10-22 已用 `git filter-branch --env-filter` 把全部 8 个提交重写为公司邮箱
+> （commit hash 因此全部变更，旧 hash c621d8e → 新 588d761，内容不变），
+> 并已同步到 GitHub（force push）/服务器/裸仓/GitLab 五处。
 
 ## 关键配置（`.env`）
 
@@ -220,23 +227,27 @@ ssh root@demo.egova.com.cn 'docker logs --tail 200 dingtalk-report-v3'
 **当前 remote 配置**（本地工作仓）：
 
 ```
-origin  → https://github.com/majq1990/dingtalk-report-v3.git
-prod    → root@demo.egova.com.cn:/opt/dingtalk-report-v3
-backup  → D:/git/dingtalk-report-v3.git
+origin  → https://github.com/majq1990/dingtalk-report-v3.git   （GitHub 备份）
+prod    → root@demo.egova.com.cn:/opt/dingtalk-report-v3        （生产）
+backup  → D:/git/dingtalk-report-v3.git                          （本地裸仓）
+gitlab  → ssh://git@gitlab.egova.com.cn:222/devops/jszc/dingtalk-report-v3.git （公司 GitLab，走 ~/.ssh/config）
 ```
 
-**改完代码三步走**（服务器侧改 → 本地 pull → 推 GitHub/裸仓）：
+**改完代码四步走**（服务器侧改 → 本地 pull → 推各远端）：
 
 ```bash
-# 1. 服务器侧改完并 commit（工作区即生产目录）
+# 1. 服务器侧改完并 commit（工作区即生产目录；作者邮箱必须是 majianquan@egova.com.cn）
 ssh root@demo.egova.com.cn 'cd /opt/dingtalk-report-v3 && git add -A && git commit -m "..."'
 
 # 2. 本地拉取
 cd D:\git\dingtalk-report-v3 && git fetch prod master && git reset --hard FETCH_HEAD
 
-# 3. 推 GitHub（需 token）与裸仓
-git push origin master && git push backup master
+# 3. 推四个远端（GitHub 需临时注入 token，推完移除）
+git push origin master && git push backup master && git push gitlab master
 ```
+
+> GitLab 建仓不需要 API token：对 `devops/jszc/<新项目名>.git` 直接 push 即可
+> （push-to-create）。但注意 hook 会校验提交人邮箱。
 
 ⚠️ **服务器是 non-bare 仓且工作区即生产目录**，`git push` 不会自动更新工作区文件。
 ⚠️ 推 GitHub 需临时注入 token（`gh auth token`），**推完必须把 token 从 remote URL 移除**。
