@@ -16,9 +16,10 @@ FastAPI + SQLAlchemy + APScheduler 架构，部署于 `demo.egova.com.cn`，负�
 | 项 | 值 |
 |----|----|
 | 服务器 | `demo.egova.com.cn`（SSH 免密，用户 root） |
-| 项目路径 | `/opt/dingtalk-report-v3/`（**已 git init**，分支 `master`，git 1.8.3.1） |
-| 本地工作仓 | `D:\git\dingtalk-report-v3`（origin → 服务器；backup → 本地裸仓） |
-| 本地裸仓备份 | `D:\git\dingtalk-report-v3.git` |
+| 项目路径 | `/opt/dingtalk-report-v3/`（**已 git init**，分支 `master`，git 1.8.3.1，**无 remote**） |
+| 本地工作仓 | `D:\git\dingtalk-report-v3`（**2026-10-21 恢复**，此前丢失）<br>origin → GitHub、prod → 服务器、backup → 本地裸仓 |
+| 本地裸仓备份 | `D:\git\dingtalk-report-v3.git`（**2026-10-21 重建**） |
+| GitHub 备份 | `majq1990/dingtalk-report-v3`（private，2026-06-28 建，**GitLab 上没有本项目**） |
 | 容器名 | `dingtalk-report-v3`（docker-compose v1 语法） |
 | 数据库 | 阿里云 RDS MySQL，库 `ops_log`，用户 `ops_log` |
 | 对外域名 | `https://demo.egova.com.cn`（nginx 443 → 127.0.0.1:81；8080 已转发到 443） |
@@ -58,20 +59,42 @@ TIMEZONE=Asia/Shanghai
    - `weekly_report_collect` 周一 22:00 采集（喂周一 22:00 的 `weekly_summary_push`），另有 `weekly_report_recollect` 周二 02:00 **补采+补算上周**，捞回周一 22:00–23:59（截止前）的迟到提交。upsert 幂等、不动推送。（2026-07 加）
 11. **周报整周请假免交**（2026-07 起）：某周「所有工作日」都落在已批准免填请假（`LeaveApproval.exempt_daily_report=True` 且 `result='agree'`）区间内的人，本周免交，从应交里扣除。判定统一走 `statistics_service.week_leave_exempt_ids(db, week_start, week_end, candidate_ids=None)`。已在 `_calc_weekly_one`（聚合 `exempt_employees/required/missing`）与反查页 `stats_weekly_detail_page`（`required`/`missing` 模式排除、新增 `exempt` 模式看免交名单）两处应用。改了免交规则后需 `calc_weekly` 重算相关周。
 
-## 调度任务（13 个，`src/scheduler/scheduler.py`）
+## 调度任务（18 个，`src/scheduler/scheduler.py`）
 
 | job id | 触发 | 说明 |
 |--------|------|------|
-| `weekly_missing_push` | `mon-fri 11:00`，guard `should_push_summary()` 只在本周首个工作日真实推送 | 推送上周工程技术中心漏报清单到机器人（CSV+Excel 下载链接） |
+| `weekly_missing_push` | `mon-fri 11:00`，guard `should_push_summary()` 只在本周首个工作日真实推送 | 推送上周工程技术中心漏报清单到**省份技术总群**（CSV+Excel 下载链接）。2026-10-21 恢复，2026-05-27 重构时被误删导致停推 21 周 |
+| `monthly_missing_push` / `_second` | 每天 11:00，内部判「25 号后首/第二个工作日」 | 推送月度漏报清单到**两个群**：「工程日报统计群」+「省份技术总群」 |
 | 其余 | 日报采集、统计、周报采集、统计、员工月度、白名单同步、人员同步等 | 参考 `scheduler.py` JOBS 常量 |
 
-## 推送格式（`push_weekly_missing_report`）
+## 漏报清单推送（2026-10-21 恢复并改造）
 
-- 消息体：markdown。必须包含关键词 `漏报`。
-- 段落：标题 → 漏报范围 → 漏报人数（总）→ **一级部门分布表**（L1 部门名 | 人数 | 人次 | 合计）→ CSV / Excel 下载链接。
-- 文件：`static/exports/missing_{weekstart}_{weekend}_{stamp}.{csv,xlsx}`，列 = `一级部门, 部门路径, 部门, 姓名, 漏报天数, 漏报日期`。CSV 使用 `utf-8-sig`。
-- L1 归属：从员工部门沿 `parent_id` 向上走，直到 `parent_id == MAIN_DEPARTMENT_ID`，该节点即一级部门。
-- `PushHistory.push_type = 'weekly_missing_summary'`（枚举值需要 DB 中存在，DB 改动：`ALTER TABLE push_history MODIFY push_type ENUM(..., 'weekly_missing_summary') NOT NULL;`）。
+| 项 | 值 |
+|----|----|
+| 周度 | `PushService.push_weekly_missing_report(week_start, week_end)`，push_type=`weekly_missing_summary`，webhook=`MISSING_REPORT_WEBHOOK` → 省份技术总群 |
+| 月度 | `PushService.push_monthly_missing_summary(start, end)`，push_type=`monthly_missing_summary`，webhook=`MONTHLY_MISSING_REPORT_WEBHOOK` → 工程日报统计群 **+** `MISSING_REPORT_WEBHOOK` → 省份技术总群 |
+| 共用逻辑 | `_build_missing_content()` 拼 markdown；`_send_missing_robot(history, content, title, targets)` 多群发送，targets=[(群名, webhook), ...]，每群一条 `PushDetail`（`user_id="robot"`, `user_name=群名`），任一群失败 → `status=partial` |
+| 周度窗口 | 上一个自然周周一~周日：`last_monday = today - (today.weekday()+7)`，`last_sunday = last_monday + 6` |
+| 数据源 | `v_emp_day_status`（`status='missing'`）+ `v_emp_l1_dept`，**与工程技术中心月度面板同源**，自带新人免填/请假/白名单/待填不计漏报规则 |
+| 导出 | `ExportService.export_weekly_missing()` → `static/exports/missing_{start}_{end}_{stamp}.{xlsx,csv}`，列 = 一级部门/部门路径/部门/工号/姓名/漏报天数/漏报日期，CSV 用 `utf-8-sig` |
+| SSRF 防护 | `_validate_robot_webhook()`：https + 主机白名单 `oapi.dingtalk.com` + 路径 `/robot/send` + DNS 解析后 IP 须为公网；请求 `follow_redirects=False` |
+| 机器人安全关键词 | `漏报`（markdown 正文必含，否则被钉钉拦截） |
+
+**重要**：周度数字会比 2026-05-25 之前小——旧实现缺新人免填/请假/白名单/待填规则
+（同窗口旧算法 133 人/460 人次，现役口径 56 人/80 人次）。这是口径修正，周度与月度面板现在对得上账。
+
+**周度明细名单口径**（与历史 4-15/5-25 推送的逐行格式一致）：
+标题 → 漏报范围（含工作日数）→ 漏报人数 → 一级部门分布表（人数 | 人次 | 合计）→ Excel/CSV 下载链接。
+
+## 漏报推送历史
+
+- 2026-05-27 12:36 重构把 `push_weekly_missing_report`/`push_monthly_missing_report`/`_push_missing_report`
+  三件套整体删除，当晚只补回月度版 `push_monthly_missing_summary`，**周度版从未恢复**，
+  导致省份技术总群自 2026-05-25 11:00 起停推 21 周。2026-10-21 已重建。
+- 旧实现原文可从 Codex 归档找回：
+  `C:\Users\majq1\.codex\archived_sessions\rollout-2026-05-16T21-23-14-019e30f4-8fe8-70f2-b6b4-f31c7686b727.jsonl`
+  第 112/113 行 = 两个包装函数，第 124/125 行 = `_push_missing_report` 前 ~80 行。
+- `push_history` 表中 `push_type='weekly_missing_summary'` 的历史 11 条（2026-04-15 ~ 2026-05-25）仍完整保留。
 
 ## 常见运维操作
 
