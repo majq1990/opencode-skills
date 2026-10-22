@@ -154,45 +154,60 @@ ssh root@demo.egova.com.cn 'docker logs --tail 200 dingtalk-report-v3'
 | 模板管理 + 职位映射配置 | `src/api/routes.py` `admin_templates_page`（传 `tpl_names`）；模板 `admin_templates.html` 可配 `job_template_mapping` 职位→周报映射 |
 | 模型 | `src/models/`（`DailyReport`, `WeeklyReport`, `DailyReportStatistics`, `WeeklyReportStatistics`, `EmployeeDailyStats`, `DailyReportWhitelist`, `LeaveApproval`, `Department`, `Employee`, `Holiday`, `PushHistory`） |
 
-## 离职人员判定（2026-10-22 修复，务必理解后再改）
+## 离职 / 调离人员判定（2026-10-22 修复，务必理解后再改）
 
-`sync_employees()` 每日 02:30 跑，把「不在钉钉部门成员列表里」的员工当离职候选，
-调钉钉 `listdimission`（`/topapi/smartwork/hrm/employee/listdimission`）确认。
+`sync_employees()` 每日 02:30 跑，把「不在钉钉部门成员列表里」的在职员工当**离场候选**，
+走三分支判定（`_sweep_dimissions`）：**离职(resigned) / 调离中心(transferred) / 保持在职**。
 
-**接口返回语义（实测）**：
+**钉钉接口信号（实测）**：
 
-| 字段 | 含义 |
-|------|------|
-| `status=2` | **已离职** ← 唯一可靠的离职信号 |
-| `status=3` | 在职 |
-| `last_work_day` | 最后工作日（ms），**仅在 HR 登记了最后工作日时才返回** |
+| 来源 | 信号 | 含义 |
+|------|------|------|
+| `listdimission` `status=2` | 已离职 | HR 确认离职（唯一可靠离职信号） |
+| `listdimission` `status=3` | 在职 | HR 侧仍在职 |
+| `listdimission` `last_work_day` | 最后工作日(ms) | **仅 HR 登记了才返回** |
+| `user/get` errcode `50002` | 不在授权范围 | 人已**调离**工程技术中心（人可能仍在职，只是不在本中心） |
 
 **判定优先级**（`_sweep_dimissions`）：
 
-1. `last_work_day` → 权威，直接用
-2. `status=2` 但无 `last_work_day` → 用 `employees.last_seen_date` 兜底
-3. `status=3` → **保持在职**，仅告警
+1. `last_work_day` → 权威，直接用，`exit_type=resigned`
+2. `status=2` 但无 `last_work_day` → 用 `employees.last_seen_date` 兜底，`exit_type=resigned`
+3. `status=3`/无记录，但 `probe_user_scope()==out_of_scope`（errcode 50002）
+   → 人已调离中心，用 `last_seen_date` 兜底设 `left_date`，`exit_type=transferred`
+4. 其余（仍 in_scope / unknown）→ **保持在职**，仅告警
 
-> ⚠️ **「不在花名册」≠「离职」**。实测有同事调岗到工程技术中心之外（平台只同步
-> 工程技术中心的部门树），或钉钉花名册未及时同步，人不在花名册但仍在正常交日报
-> （如丑永辉、胡思杰）。**绝不能仅凭"连续不在花名册"判定离职**——那会误伤在岗同事。
-> 曾设计"连续 7 天不在花名册即判离"的规则，实测会误伤，已移除。`absent_days`
-> 现仅用于监控告警。
+两种离场都设 `left_date` + `is_active=False`（统计视图 `v_emp_day_status` 靠 `left_date`
+截断历史窗口，人离开工程技术中心就不该再计入其日报统计）；区别只在 `exit_type`：
+`resigned` 是真离职，`transferred` 是调离（人仍在职，将来若调回中心可据此恢复）。
+
+> ⚠️ **「不在花名册」≠「离职」**。实测丑永辉调岗到工程技术中心之外（钉钉联系可搜到、
+> 人仍在职），`user/get` 返回 50002 → 判 `transferred`；胡思杰实为在岗（四川区域），
+> 只有一条脏的陕西区域 `employee_departments` 关联，已由 `_prune_emp_dept_links` 按钉钉
+> 权威 `dept_id_list` 清理。**绝不能仅凭"连续不在花名册"判定离场**——那会误伤在岗同事
+> （曾用"连续 7 天不在花名册即判离"规则，实测误伤已移除）。`absent_days` 现仅用于监控告警。
 
 **修复前的 bug**：原代码 `if not rec.get("last_work_day"): continue`，导致 HR 侧
 未登记最后工作日的离职者被永远跳过（王祥印连续 15 天 unmatched），在平台里一直是
 「在职」并持续产生漏报（9-08~10-20 共 27 个漏报日）。
 
-**新字段**（迁移 `c3f8a91d4e20`）：
-- `employees.last_seen_date` —— 最后一次出现在部门成员列表的日期
-- `employees.absent_days` —— 连续缺席天数（仅告警用）
+**新字段**：
+- 迁移 `c3f8a91d4e20`：`employees.last_seen_date`（最后出现在成员列表日期）、`employees.absent_days`（连续缺席天数，仅告警）
+- 迁移 `d5e7b2c91a04`：`employees.exit_type`（`resigned` / `transferred`，带索引；历史 111 条离职回填为 `resigned`）
 
-**回填脚本**：`scripts/backfill_employee_left_date.py`（真实花名册 + 钉钉状态双重校验，
-只处理 `status=2`）。在容器里用 `docker exec -i dingtalk-report-v3 python - < 脚本` 运行
-（`scripts/` 未挂载进容器，不要直接 `docker exec python scripts/...`）。
+**关联清理**：`_prune_emp_dept_links(uid, dept_id_list)` 在每次 `sync_employees` 按钉钉
+权威 `dept_id_list` 删除该员工已不属于的 `employee_departments` 关联（调岗/调离后残留的
+旧部门），空 `dept_id_list` 不清理（防接口抖动误删）。
 
-**排查这类问题**：日志里搜 `dimission sweep unmatched uids`，带姓名和 absent 天数。
-持续出现同一批人 = 钉钉 HR 侧状态没更新，需要 HR 补登记离职或确认调岗。
+**回填脚本**：`scripts/backfill_employee_left_date.py`（花名册 + 钉钉状态 + 授权范围三重校验，
+处理 `status=2` 离职与 50002 调离两类）。容器里用 `docker exec -i dingtalk-report-v3 python - < 脚本`
+运行（`scripts/` 未挂载进容器，不要直接 `docker exec python scripts/...`）。
+
+**审计「还有没有漏认的」**（全量在职约 370 人，跑一次即可）：
+- 漏认离职：`listdimission` 里 `status=2` 但平台 `is_active=1` 的人（实测 0）
+- 漏认调离：`probe_user_scope()` 返回 `out_of_scope` 但平台 `is_active=1` 的人（实测仅丑永辉，已处理）
+
+**排查**：日志搜 `dimission sweep unmatched uids`（带姓名+absent 天数）。同一批人持续出现 =
+钉钉 HR 侧状态没更新，需 HR 补登记或确认调岗。
 
 ## 常见坑
 
