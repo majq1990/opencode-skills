@@ -1,1 +1,0 @@
-C:/Users/majq1/.agent-memory/project_qijian_scan_20260521_delivery.md

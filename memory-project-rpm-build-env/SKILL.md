@@ -1,1 +1,0 @@
-C:/Users/majq1/.agent-memory/project_rpm_build_env.md

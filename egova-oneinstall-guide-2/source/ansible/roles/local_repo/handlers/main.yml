@@ -1,3 +1,0 @@
----
-- name: update repo
-  command: "{{ ansible_pkg_mgr }}  update  -y"

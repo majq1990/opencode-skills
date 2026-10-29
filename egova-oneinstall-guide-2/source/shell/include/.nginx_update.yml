@@ -1,3 +1,0 @@
-nginx:
-  nginx_1:
-    port: "8080"

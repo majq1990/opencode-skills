@@ -1,1 +1,0 @@
-C:/Users/majq1/.agent-memory/feedback_mobile_mcp_screenshot_click_scale.md

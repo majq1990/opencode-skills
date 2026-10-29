@@ -1,1 +1,0 @@
-C:/Users/majq1/.agent-memory/project_wk_kg_mcp_deploy.md

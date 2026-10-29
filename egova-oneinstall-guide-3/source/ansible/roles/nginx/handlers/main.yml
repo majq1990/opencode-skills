@@ -1,6 +1,0 @@
----
-# handlers for nginx
-- name: restart nginx
-  service: name=nginx state=restarted enabled=yes
-- name: reload nginx
-  shell: nginx -s reload

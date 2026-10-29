@@ -1,1 +1,0 @@
-C:/Users/majq1/.agent-memory/reference_redmine_mcp.md

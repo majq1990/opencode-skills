@@ -1,1 +1,0 @@
-C:/Users/majq1/.agent-memory/project_egova_scanner_egova_cli_v2.md

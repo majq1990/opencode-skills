@@ -1,1 +1,0 @@
-C:/Users/majq1/.agent-memory/project_koodo_reader_deploy.md

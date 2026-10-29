@@ -1,1 +1,0 @@
-C:/Users/majq1/.agent-memory/2026-07-15-fix-bash-spawn-eftype.md

@@ -1,1 +1,0 @@
-C:/Users/majq1/.agent-memory/2026-08-28-auto-check-sec-wording.md

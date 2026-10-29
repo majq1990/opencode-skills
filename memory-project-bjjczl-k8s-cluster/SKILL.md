@@ -1,1 +1,0 @@
-C:/Users/majq1/.agent-memory/project_bjjczl_k8s_cluster.md
