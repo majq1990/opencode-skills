@@ -1,0 +1,158 @@
+列表顶部操作【批量打印】
+1 简介
+使用灵珑配置的打印模板，通过接口批量打印，下载为.zip文件。#361434
+2 使用说明
+接口说明
+接口地址：
+/linglongcloudbeta-api/unity/establish/printing_template/binding-data/document-url?printingTemplateId=5862378f-0558-44f4-a604-2ef787da10d1
+printingTemplateId：是打印模板的id
+接口参数
+Query参数：fileName，可以为空，不为空时命名用于下载.zip包的名称；
+Body参数：
+打印模板对应数据集字段条件，例如：{"schoolid":"-1"}；
+body传入批量打印的参数：当列表需要【批量打印】时使用如下脚本格式
+{
+    "tableConditionDescriptor": {
+        "members": [
+            {
+                "operate": "In",
+                "field": "50f80134-339a-42f8-82d7-31392b4ad038",
+                "valueType": "Constant",
+                "values": [
+                    "B229FC48ECA8056C9B9EBC2AFDB90336F2E5028F",
+                    "9F42145B6D571957D3F0CFECEB4D5A5B92D23E3B"
+                ],
+                "tableId": "9e92dd61-da40-4b62-a35e-4f05a7172d0e",
+                "className": "Single",
+                "text": null,
+                "type": "Single",
+                "fieldType": "array"
+            }
+        ],
+        "className": "List",
+        "type": "List",
+        "combine": "And"
+    }
+}
+各字段说明：
+className：类型名称，分为三种类型：List、Formula、Single，分别对应“条件组合”、“公式”、“单值条件”，在条件组合中，该值为List。
+combine：组合条件，表示member字段下多个条件的组合规则，共有“And”，“Or”两个类型，分别为“并且”，“或者”条件。
+members：查询条件列表，可以存放多个查询条件，每个查询条件可以为条件组合、单值条件。可以将TableConditionDescriptor理解为树结构，通过members指向多个查询条件。
+type：类型，对应ClassName，分为List、Formula、Single三种类型。
+其余参数保持不变。该接口的响应结果为url，打开该url进行进行文件下载。但查询结果为单个文件时，返回单个文档；多个文件时为压缩包。
+Header：use-web-Authorization=true
+响应地址
+result：文档压缩包下载地址，例如：http://ip:port/linglongcloudbeta-api/unity/establish/file/download-zip?id=ef836f44b1f7491d9cc1af06a751eee9&access_token=SNi-_sj4LKHhWMkRoo0P0ySCMe8
+功能实现
+下载文件名称
+当fileName为空时，下载的.zip包名称为“打印模板名称+字符串和时间后缀”，例如：级联表1_bqdn1k_20240613191044933.zip;
+当fileName不为空时，下载的.zip包名称为“指定的名称+时间后缀”，例如：打印批量导出_20240613190942765.zip
+下载的文件包内容
+当Body参数只查到一条记录时，.zip包里只有一个打印文件；
+当Body参数查到多条记录时，.zip包里包含多个打印文件，系统自动增加数字别名；
+下载的打印文件内容：按照打印模板和查询的数据集内容打印生成的真实内容。
+3 场景
+3.1 列表选中记录【批量打印】
+3.1.1 使用效果
+在列表里勾选一个或多个记录，点击顶部按钮【批量打印】
+（1）当选中一条记录时，下载文件为 ***.doc文件；
+（2）当选中多条记录时，下载文件为 ***.zip文件；
+（3）存在翻页时，可以连续选择并一起批量打印，也就是多页可以一起批量打印。注意：暂时打印的最大条数没有限制，后续完善。
+3.1.2 配置
+配置打印模板。注意：只支持doc模板。
+API配置按照上述说明配置body参数
+{
+    "tableConditionDescriptor": {
+        "members": [
+            {
+                "operate": "In",
+                "field": "50f80134-339a-42f8-82d7-31392b4ad038",
+                "valueType": "Constant",
+                "values": [
+                    "B229FC48ECA8056C9B9EBC2AFDB90336F2E5028F",
+                    "9F42145B6D571957D3F0CFECEB4D5A5B92D23E3B"
+                ],
+                "tableId": "9e92dd61-da40-4b62-a35e-4f05a7172d0e",
+                "className": "Single",
+                "text": null,
+                "type": "Single",
+                "fieldType": "array"
+            }
+        ],
+        "className": "List",
+        "type": "List",
+        "combine": "And"
+    }
+}
+各字段说明：
+className：类型名称，分为三种类型：List、Formula、Single，分别对应“条件组合”、“公式”、“单值条件”，在条件组合中，该值为List。
+combine：组合条件，表示member字段下多个条件的组合规则，共有“And”，“Or”两个类型，分别为“并且”，“或者”条件。
+members：查询条件列表，可以存放多个查询条件，每个查询条件可以为条件组合、单值条件。可以将TableConditionDescriptor理解为树结构，通过members指向多个查询条件。
+type：类型，对应ClassName，分为List、Formula、Single三种类型。
+其余参数保持不变。该接口的响应结果为url，打开该url进行进行文件下载。但查询结果为单个文件时，返回单个文档；多个文件时为压缩包。
+tableId：打印模板引用的数据集id；
+注意：
+如果现场存在内外网的区别，需要在API接口的“后置脚本”增加如下配置，替换URL地址。
+def newJsonString = data.replaceAll("http://172.10.10.1:8014","https://ygf.***.cn")
+println(newJsonString)
+data = newJsonString
+在列表页面顶部操作配置【批量打印】按钮，自定义脚本如下
+function main() {
+    var self = this;
+    var tableId = "t_b4ef86258bfc444fb7e84216560a665e"; // 实体或视图id  实体：t_b4ef86258bfc444fb7e84216560a665e
+    var columnId = "f_3c8e87bc04b84f70bf685e84491a4a7b"; // 实体或视图中的过滤字段，此处为列documentNo的id
+    var tableComp = self.findElement("table_1ohjtm"); // 获取表格元素
+    var fileName = "案卷清单";
+    var queryParams = {
+        name: "fileName",
+        valueContent: fileName
+    }
+    
+    //debugger
+    // 获取当前表格选中的行的documentNo
+    const values = (tableComp.rowSelection.selectedRows || []).map(f => f.id.value);
+    const jsonParams = getCondition(columnId, values, tableId);
+    //debugger;
+    api.DATA_SOURCE_EXECUTE("dbd73d0e-02d2-464d-b4a5-ff5027f6403f", "api", [queryParams], [], JSON.stringify(jsonParams)).then(res => {
+        console.log(res);
+        self.$message.success("文件开始下载")
+        debugger;
+        var downloadUrl = JSON.parse(res.result).result;
+        downloadFile(downloadUrl);//下载文件
+        self.$message.success("文件下载完成")
+    }).catch(err => {
+        console.error(err);
+    });
+}
+
+function getCondition(columnId, values, tableId) {
+    return {
+        "tableConditionDescriptor": {
+            "members": [
+                {
+                    "operate": "In",
+                    "field": columnId,
+                    "valueType": "Constant",
+                    "values": values,
+                    "tableId": tableId,
+                    "className": "Single",
+                    "text": null,
+                    "type": "Single",
+                    "fieldType": "array"
+                }
+            ],
+            "className": "List",
+            "type": "List",
+            "combine": "And"
+        }
+    }
+}
+function downloadFile(fileUrl) {
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+.map(f => f.id.value：把id替换为使用的实际字段名

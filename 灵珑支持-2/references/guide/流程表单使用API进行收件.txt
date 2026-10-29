@@ -1,0 +1,387 @@
+流程表单使用API进行收件
+1 使用场景
+在实际的应用中，业务表中不存在documentNo字段，但是流程表单是需要通过documentNo这个字段与业务表进行关联，默认收件方式无法和流程表单关联。于是使用API进行收件时将业务表中的唯一id（主键）作为关联条件，则在收件时需要将业务表中的id值赋值给流程表单的documentNo用来对两个表的关联。
+示例：业务表（law_card_info）
+流程表单的配置可参考：《PC应用搭建步骤（含流程）》
+2 效果
+在使用按钮点击后用脚本执行api收件操作，触发后会有当前业务表的信息与当前触发的流程相关的信息进行绑定，以便于可以查看当前业务数据的所在流程。
+3 配置
+在需要触发收件的按钮中编辑相关的脚本，用来实现使用api进行流程表单的收件
+function main(defaultParams) {
+    var self = this;
+    debugger
+    var root = self.$$roots();
+    var tableComp = root[0].$$("table_g7mtmw"); // 获取表格元素
+    // 获取页面列表组件
+    var pageListEle = self.$$("page_widget_list_75griz");
+    // 获取列表渲染页实例
+    var listRenderView = pageListEle.$$getRenderElement();
+    // 获取当前显示的组件，表格或者卡片
+    var currentListEle = listRenderView.$$getListElement();
+    // 获取当前表格选中的行
+    var { selectedRows } = tableComp.$$getSelection();
+    console.log(selectedRows)
+    // 获取表格绑定的数据集
+    var dataset = tableComp.$$getDataset();
+    console.log(dataset);
+
+    if (selectedRows.length === 0) {
+        self.$message.warning("请选择要提交申请的人员！");
+        return;
+    }
+    //只能对待提交和审核未通过数据进行提交申请！
+    for (let i = 0; i < selectedRows.length; i++) {
+        if (selectedRows[i].qualification_code.value !== "0" && selectedRows[i].qualification_code.value !== "3") {
+            self.$message.warning("只能对待提交和审核未通过数据进行提交申请！");
+            return;
+        }
+    }
+
+
+    tableComp.loading = true;
+    new Promise((resolve, reject) => {
+        self.$lc_Confirm({
+            content: "确定发起问题上报流程？",
+            type: "info",  // danger info warning
+            headerTitle: "提示", //确认框头部标题 提示、警告、告警
+            showOkBtn: true, // 是否展示确认按钮
+            showCancelBtn: true, // 是否展示取消按钮
+            cancelText: "取消", //取消按钮 展示文字
+            okText: "确定",  //确认按钮 展示文字  
+            onOk: () => {
+                
+                const promises = selectedRows.map(row => {
+                    const documentNo = row["id"].value
+                    submitProcess(self, defaultParams,documentNo).then((res) => {
+                        if (res && res.result) {
+                            // 将资格审核的字段修改为待审核
+                            api.EXEC_FORMULA("UPDATE('t_4beacafcf80b4dee89519ea39f573b31', QUERY_EQ('identity_no','" + row["identity_no"].value + "'), '', ['qualification_code', 1,'qualification_name', '待审核'])").then((res) => {
+                                if (res && res.result) {
+                                    // setTimeout(() => {
+                                    //     self.$nextTick(() => {
+                                    //         currentListEle.$$refreshData();
+                                    //         console.log("数据修改成功")
+                                    //     });
+                                    // }, 1000)
+
+                                }
+                            }).catch(err => {
+                                console.log(err);
+                            });
+                        }
+                    }).catch(err => {
+                        console.log(err);
+                    });
+                });
+                Promise.all(promises).then(() => {
+                    self.$message.success("提交成功！");
+                    // 调用刷新方法
+                    setTimeout(() => {
+                        self.$nextTick(() => {
+                            currentListEle.$$refreshData();
+                            console.log("数据修改成功")
+                            tableComp.loading = false;
+                        });
+                    }, 2000)
+
+                    tableComp.$$clearSelection();
+
+                }).catch(err => {
+                    reject(err);
+                });
+            },
+            onCancel: () => {
+                tableComp.loading = false;
+                return;
+            }
+        })
+    })
+
+
+}
+
+function submitProcess(self, defaultParams, documentNo) {
+    return new Promise((resolve, reject) => {
+        // console.log(defaultParams);
+        var queryParams = [{
+            "name": "pageId",
+            "valueContent": "a77f469a-3151-47c9-bb50-2785c17b50e5"
+        }];
+
+        var jsonParams = {
+            "documentNo": documentNo
+        };
+
+        // self.$lc_Confirm({
+        //     content: "确定发起问题上报流程？",
+        //     type: "info",  // danger info warning
+        //     headerTitle: "提示", //确认框头部标题 提示、警告、告警
+        //     showOkBtn: true, // 是否展示确认按钮
+        //     showCancelBtn: true, // 是否展示取消按钮
+        //     cancelText: "取消", //取消按钮 展示文字
+        //     okText: "确定",  //确认按钮 展示文字  
+        // onOk: () => {
+        api.DATA_SOURCE_EXECUTE("330e5dec-f6a2-4cce-9e6b-5a354620c840", "api", queryParams, [], JSON.stringify(jsonParams)).then((res) => {
+            console.log("响应", res);
+            if (!res.hasError) {
+                resolve(res);
+                // self.$message.success("收件成功！");
+                // jumpToPage(self, res.result.content, defaultParams);
+                // jumpToPage(self, res.result.content || res.result, defaultParams);
+                // window.open("http://www.egova.top:30091/linglong/app.html?id=bb8c0ac2-385b-4707-b1b9-3b30b1424451&devMode=1#/path0/path00?menuId=a3c135e1-8ca8-4d58-8767-47185aa1b650")
+            } else {
+                self.$message.error(res.message);
+            }
+        }).catch(err => {
+            self.$message.error(err.message);
+            reject(err)
+        });
+        //         }
+        //     })
+    });
+}
+
+function jumpToPage(self, result, defaultParams) {
+    var element = self;
+    var rootPageElement = null;
+    result = JSON.parse(result);
+
+    while (element) {
+        if (element.getPageInfo && element.goHistory) {
+            rootPageElement = element;
+            break;
+        } else {
+            element = element.$parent;
+        }
+    }
+    if (rootPageElement) {
+        var data = result.result;
+        data.detail = 1;
+        data.boxType = 1;
+        //data['listId'] = defaultParams['e9bb8f19-df28-48e5-8177-778fb72ed988'];
+        //data['listName'] = defaultParams['515d7375-93f1-490f-adab-457648c08c46'];
+        //data['listAccount'] = defaultParams['37473ff6-b727-4aa0-904c-da6e0ed5016e'];
+        //data['listSponsorAccount'] = defaultParams['2eb012ee-59f7-4a50-9d2d-b60940d872be'];
+        //data['listIndicatorName'] = defaultParams['f707371b-c756-4717-afd9-9d4fce38e8e3'];
+        //data['reportFlag'] = "上报时赋值标记";
+        // 更新页面数据
+        rootPageElement.getPageInfo("1823247371116580864");
+        // 设置其他参数
+        rootPageElement.extraParams_ = data;
+    }
+    setTimeout(() => {
+        console.log(rootPageElement);
+    }, 2000)
+}
+注意：
+pageId：为流程表单的id
+documentNo：为业务部需要与流程表单关联的字段值，在本示例中是使用law_card_info中的id
+submitProcess(self, defaultParams, documentNo)为API收件的方法，在需要发起收件时调用，调用后会调用api进行收件
+/**
+ * 
+ * @param {*} self 为当前页面的对象，用于报错消息弹窗提醒
+ * @param {*} defaultParams 当前对象的默认参数
+ * @param {*} documentNo 为业务表（law_card_info）中的逻辑主键，即id字段的值
+ * @returns 
+ */
+function submitProcess(self, defaultParams, documentNo) {
+    return new Promise((resolve, reject) => {
+
+        var queryParams = [{
+            "name": "pageId",
+            "valueContent": "a77f469a-3151-47c9-bb50-2785c17b50e5"
+        }];
+
+        var jsonParams = {
+            "documentNo": documentNo
+        };
+
+        /**
+         * 330e5dec-f6a2-4cce-9e6b-5a354620c840 : api对应的id可以通过ctrl + shift + C 进行选中
+         * queryParams ： 发起流程所需的参数
+         * JSON.stringify(jsonParams) ： 将业务表（law_card_info）中的逻辑主键，即id字段的值转为json格式传递给api，对流程表单进行赋值
+         */
+        api.DATA_SOURCE_EXECUTE("330e5dec-f6a2-4cce-9e6b-5a354620c840", "api", queryParams, [], JSON.stringify(jsonParams)).then((res) => {
+            console.log("响应", res);
+            if (!res.hasError) {
+                resolve(res);
+            } else {
+                self.$message.error(res.message);
+            }
+        }).catch(err => {
+            self.$message.error(err.message);
+            reject(err)
+        });
+
+    });
+}
+配置API
+说明：
+Query参数需要传递pageId
+Body参数需要修改为json方式值为{}
+视图编写，以待办为示例
+select 
+  taskId,
+  processInstanceId,
+  defineId,
+  userId,
+  createTime,
+  nodeName,
+  nodeId,
+  recordId,
+  recordName,
+  documentNo,
+  teamId,
+  pageId,
+  id,
+  patrol_flag,
+  law_cert_code,
+  create_time,
+  update_time,
+  card_type_code,
+  card_type_name,
+  work_unit_id,
+  work_unit_name,
+  human_name,
+  gender_id,
+  gender_name,
+  nation_code,
+  nation_name,
+  birthday,
+  politics_type_code,
+  politics_type_name,
+  education_degree_code,
+  education_degree_name,
+  identity_no,
+  duty,
+  work_type_code,
+  work_type_name,
+  start_work_time,
+  certificate_validity_time_start,
+  certificate_validity_time_end,
+  professional_law_scores,
+  exam_time,
+  law_qualification_flag,
+  qualification_certificate_flag,
+  public_lawyer_flag,
+  law_major_flag,
+  remark,
+  qualification_code,
+  qualification_name,
+  card_status_code,
+  card_status_name,
+  law_area_code,
+  law_area_name,
+  law_region_code,
+  law_region_name,
+  enforcement_category_code,
+  enforcement_category_name,
+  enforcement_type_code,
+  enforcement_type_name,
+  law_enforcement_post,
+  law_enforcement_duties,
+  valid_flag,
+  delete_flag,
+  effective_date,
+  litigant_type_id,
+  litigant_type_name,
+  card_code,
+  phone,
+  major,
+  tableAlias.rank AS rankName,
+  work_status_code,
+  work_status_name,
+  illegal_history,
+  business_institution,
+  qualification_update_time
+ from (  SELECT
+      _main.ID_ taskId,
+      _main.PROC_INST_ID_ processInstanceId,
+      _main.PROC_DEF_ID_ defineId,
+      _main.ASSIGNEE_ userId,
+      _main.CREATE_TIME_ createTime,
+      _main.NAME_ nodeName,
+      _main.TASK_DEF_KEY_ nodeId,
+      record.id recordId,
+      record.name recordName,
+      record.documentNo documentNo,
+      record.teamId teamId,
+      record.pageId pageId,
+      card.id,
+      card.patrol_flag,
+      card.law_cert_code,
+      card.create_time,
+      card.update_time,
+      card.card_type_code,
+      card.card_type_name,
+      card.work_unit_id,
+      card.work_unit_name AS card_work_unit_name,
+      card.human_name AS card_human_name,
+      card.gender_id,
+      card.gender_name AS card_gender_name,
+      card.nation_code,
+      card.nation_name,
+      card.birthday,
+      card.politics_type_code,
+      card.politics_type_name,
+      card.education_degree_code,
+      card.education_degree_name,
+      card.identity_no,
+      card.duty AS card_duty,
+      card.work_type_code,
+      card.work_type_name,
+      card.start_work_time,
+      card.certificate_validity_time_start,
+      card.certificate_validity_time_end,
+      card.professional_law_scores,
+      card.exam_time,
+      card.law_qualification_flag,
+      card.qualification_certificate_flag,
+      card.public_lawyer_flag,
+      card.law_major_flag,
+      card.remark,
+      card.qualification_code,
+      card.qualification_name,
+      card.card_status_code,
+      card.card_status_name,
+      card.law_area_code,
+      card.law_area_name,
+      card.law_region_code,
+      card.law_region_name,
+      card.enforcement_category_code,
+      card.enforcement_category_name,
+      card.enforcement_type_code,
+      card.enforcement_type_name,
+      card.law_enforcement_post,
+      card.law_enforcement_duties,
+      card.valid_flag,
+      card.delete_flag,
+      card.effective_date,
+      card.litigant_type_id,
+      card.litigant_type_name,
+      card.card_code,
+      card.phone,
+      card.major,
+      card.rank,
+      card.work_status_code,
+      card.work_status_name,
+      card.illegal_history,
+      card.business_institution,
+      card.qualification_update_time,
+      human.human_name,
+      human.work_unit_name,
+      human.gender_name,
+      human.duty
+
+FROM
+act_ru_task _main
+INNER JOIN lcwf_process_record record ON _main.PROC_INST_ID_ = record.processInstanceId 
+    INNER JOIN law_card_info card ON record.documentNo = card.id
+    INNER JOIN law_human_extend_info human ON card.identity_no = human.identity_no
+WHERE
+_main.ASSIGNEE_ IS NOT NULL 
+ORDER BY
+_main.CREATE_TIME_ DESC  ) tableAlias where tableAlias.defineId like '1fb6de9a87%'
+law_card_info为业务表
+//将业务表与流程表单id进行关联
+INNER JOIN law_card_info card ON record.documentNo = card.id

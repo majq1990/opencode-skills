@@ -1,0 +1,29 @@
+{
+  "source": "2025星桥高级一期认证-考核试题 - v3试题版—母中林.docx",
+  "quiz_id": 263,
+  "total_max": 100,
+  "reference_images": 51,
+  "items": {
+    "S1-01": {"std_min_imgs": 2, "need_url": false}, "S1-02": {"std_min_imgs": 1, "need_url": false},
+    "S1-03": {"std_min_imgs": 1, "need_url": false}, "S1-04": {"std_min_imgs": 1, "need_url": false},
+    "S1-05": {"std_min_imgs": 1, "need_url": false}, "S1-06": {"std_min_imgs": 1, "need_url": true},
+    "S1-07": {"std_min_imgs": 1, "need_url": false}, "S1-08": {"std_min_imgs": 1, "need_url": false},
+    "S1-09": {"std_min_imgs": 1, "need_url": true},
+    "S2-01": {"std_min_imgs": 1, "need_url": false}, "S2-02": {"std_min_imgs": 1, "need_url": false},
+    "S2-03": {"std_min_imgs": 1, "need_url": false}, "S2-04": {"std_min_imgs": 1, "need_url": false},
+    "S2-05": {"std_min_imgs": 1, "need_url": true}, "S2-06": {"std_min_imgs": 1, "need_url": false},
+    "S2-07": {"std_min_imgs": 2, "need_url": true},
+    "S3-01": {"std_min_imgs": 2, "need_url": false}, "S3-02": {"std_min_imgs": 1, "need_url": false},
+    "S3-03": {"std_min_imgs": 2, "need_url": false}, "S3-04": {"std_min_imgs": 1, "need_url": false},
+    "S3-05": {"std_min_imgs": 2, "need_url": true}, "S3-06": {"std_min_imgs": 5, "need_url": false},
+    "S3-07": {"std_min_imgs": 1, "need_url": false},
+    "S4-01": {"std_min_imgs": 2, "need_url": false}, "S4-02": {"std_min_imgs": 1, "need_url": false},
+    "S4-03": {"std_min_imgs": 2, "need_url": false}, "S4-04": {"std_min_imgs": 1, "need_url": false},
+    "S4-05": {"std_min_imgs": 1, "need_url": false}, "S4-06": {"std_min_imgs": 1, "need_url": false},
+    "S4-07": {"std_min_imgs": 1, "need_url": false}, "S4-08": {"std_min_imgs": 2, "need_url": false},
+    "S5-01": {"std_min_imgs": 1, "need_url": false}, "S5-02": {"std_min_imgs": 1, "need_url": false},
+    "S5-03": {"std_min_imgs": 1, "need_url": false}, "S5-04": {"std_min_imgs": 1, "need_url": false},
+    "S5-05": {"std_min_imgs": 1, "need_url": false}, "S5-06": {"std_min_imgs": 1, "need_url": false},
+    "S5-07": {"std_min_imgs": 1, "need_url": false}, "S5-08": {"std_min_imgs": 1, "need_url": false}
+  }
+}

@@ -1,0 +1,84 @@
+移动端配置倒计时按钮动态赋值
+1 使用场景
+移动端在阅读文书或需要根据某一情况，在车辆违停管理中，针对违规停车的车主可以限期在10分钟内令其进行挪车处理，在10分钟内执法人员不可进行违规上报，则需要对违规上报按钮进行显示，并给出倒计时提醒。
+2 效果
+当限期在10分钟内时，执法队员不可对违停车主进行处罚提交。再下一次进入详情页面时，倒计时应该是符合当前的时间进行动态倒计时。
+3 配置
+在移动端中的页面加入倒计时按钮
+在页面加载完成是，获取当前倒计时剩余秒数，并给按钮进行动态赋值。当倒计时结束时需要使已挪车按钮不可用（详细操作见代码注释）
+function main() {
+    var self = this;
+    var home_countdown_button_92cje6 = this.$$("home_countdown_button_92cje6");
+    var custom_button_9cs0jd = this.$$("custom_button_9cs0jd"); //已挪车
+    
+    var page_detail_f4b1a4 = this.$$("page_detail_f4b1a4");
+    var pageDetail = this.$$("page_detail_f4b1a4").$$getRenderElement().state.record;
+    var deadline_time_value = pageDetail.deadline_time.value;
+    var create_time_value = pageDetail.create_time.value;
+    var deadline_time = new Date(deadline_time_value);
+    var now_time = new Date();
+    var countdown = deadline_time - now_time;
+    // 获取剩余时间
+    var countdownSeconds = Math.floor(countdown / 1000);
+    home_countdown_button_92cje6._props.data.props.countdown = countdownSeconds;
+
+    //当剩余时间大于0时
+    if (countdown > 0) {
+        //对按钮的状态进行监听
+        setTimeout(function () {
+            let value = home_countdown_button_92cje6._props.data.props.countdown;
+            debugger
+            if (value <= 0) {
+                // clearInterval(interval);
+                console.log("custom_button_9cs0jd");
+              //设置已挪车按钮不可用
+                this.$$model("custom_button_9cs0jd").props.behavior.value = "DISABLE";
+            }
+            console.log("当前值: ", value);
+        }, countdown + 1000);
+    } else {
+     
+        console.log("123");
+        this.$$model("custom_button_9cs0jd").props.behavior.value = "DISABLE";
+        document.querySelector("#custom_button_9cs0jd_csshandler_generate > button").disabled = true;
+    }
+
+    var showHumanInfo = this._routerRoot.$route.query.showHumanInfo;
+    if(showHumanInfo === 1){
+        self.$$m('custom_button_2urr5q').props.behavior.value = 'NORMAL';
+        self.$$m('custom_button_2xts04').props.behavior.value = 'NORMAL';
+        self.$$m('custom_button_detirn').props.behavior.value = 'NORMAL';
+    }
+    // fetchValueEverySecond(custom_button_9cs0jd, home_countdown_button_92cje6);
+
+    // 修改今日违规次数状态
+    var license_plate_number = pageDetail.license_plate_number.value
+    let params = [{
+        name: "license_plate_number",
+        valueContent: license_plate_number
+    }];
+
+    getApiValue(params).then(res => {
+        console.log(res);
+        page_detail_f4b1a4.$$("custom_button_detirn").data.props.operateItem.title = "今日违停 " + res.result[0].count + " 次";
+    });
+}
+
+function getApiValue(params) {
+
+    return new Promise(resolve => {
+        api.DATA_SOURCE_EXECUTE("6646a27b-c321-4975-8f70-73425c5258ef", "api", params, [], "").then(res => {
+
+            var resValue = JSON.parse(res.result);
+            console.log(resValue);
+
+            resolve(resValue);
+        });
+    });
+}
+
+function getValue(custom_button_9cs0jd, home_countdown_button_92cje6) {
+    return home_countdown_button_92cje6._props.data.props.countdown; 
+}
+4 常见问题
+无。

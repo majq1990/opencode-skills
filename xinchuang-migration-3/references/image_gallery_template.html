@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<!--
+  信创迁移 Skill — 截图画册 HTML 模板
+  ====================================
+  用途：当 Read 工具无法读取 PNG 图片时（非多模态模型），生成此 HTML 并用 preview_url 展示。
+  使用方法：
+    1. 复制本模板到工作目录，重命名如 dts_screenshots_gallery.html
+    2. 将 {{SKILL_DIR}} 替换为 skill 的实际绝对路径（即 SKILL.md 所在目录）
+       Windows 示例: file:///C:/Users/lihan/.workbuddy/skills/xinchuang-migration/assets/XX.png
+       Linux 示例:   file:///home/user/.workbuddy/skills/xinchuang-migration/assets/XX.png
+    3. 将 {{图片编号}} {{图片标题}} {{图片说明}} 替换为 image_catalog.md 中查到的实际内容
+    4. 按阶段用 <div class="section-divider"> 分区块
+    5. 用 preview_url 工具打开生成的 HTML 文件
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{图册标题}}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #f5f5f5;
+    color: #333;
+    padding: 20px;
+  }
+  h1 { text-align: center; font-size: 24px; margin-bottom: 8px; color: #1a1a1a; }
+  .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 24px; }
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(560px, 1fr));
+    gap: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+  .card-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+  }
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #1890ff;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+  .card-title { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+  .card-context { font-size: 12px; color: #888; margin-left: auto; }
+  .card-image { padding: 12px; text-align: center; background: #fafafa; }
+  .card-image img { max-width: 100%; height: auto; border-radius: 4px; border: 1px solid #e0e0e0; }
+  .card-footer { padding: 8px 16px 12px; font-size: 12px; color: #666; line-height: 1.6; }
+  .section-divider {
+    grid-column: 1 / -1;
+    margin: 10px 0 5px;
+    padding: 8px 16px;
+    background: linear-gradient(90deg, #1890ff, #36cfc9);
+    color: #fff;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; color: #c41d7f; }
+</style>
+</head>
+<body>
+
+<h1>{{图册标题}}</h1>
+<p class="subtitle">{{副标题（共 N 张截图 · 涵盖 XXX 全流程）}}</p>
+
+<div class="gallery">
+
+  <!-- ===== 阶段区块示例（复制此块按需修改） ===== -->
+  <div class="section-divider">{{阶段名称}}</div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="step-num">{{编号}}</span>
+      <span class="card-title">{{图片标题}}</span>
+      <span class="card-context">{{文档上下文}}</span>
+    </div>
+    <div class="card-image">
+      <img src="file:///{{SKILL_DIR}}/assets/{{图片文件名}}.png" alt="{{图片标题}}">
+    </div>
+    <div class="card-footer">{{关键配置说明/注意事项}}</div>
+  </div>
+
+  <!-- 更多卡片... -->
+
+</div>
+
+</body>
+</html>

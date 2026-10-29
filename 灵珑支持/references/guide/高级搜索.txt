@@ -1,0 +1,75 @@
+高级搜索
+1.概述
+列表顶部操作，新增高级搜索按钮，支持自定义配置查询条件。
+目前支持在卡片列表，以及表格列表中配置使用。
+需求案件#418581。
+注意：
+目前不支持查询面板和高级查询同时使用（会存在一些问题），建议搜索框和高级搜索搭配使用
+如果是列表走hook，按照数据模型里的查询条件来，匹配符不生效，应该是合理的
+支持版本：灵珑>1.5.3.40
+2.使用
+1.点击高级搜索按钮；
+选择条件进行查询。
+3.配置
+3.1 配置步骤
+（1）在列表或者页面上配置，新增顶部操作
+（2）点击按钮的编辑按钮，可以调整按钮的常规属性
+（3）点击设计组件设计，打开高级搜索的配置页面，实际为复用表单配置页面
+（4）可直接拖拽相关组件，配置布局，进行配置单个组件，绑定字段，设置默认的匹配规则，按照组件相关属性配置
+注意：开放设置，开启则在高级搜索页面上可切换匹配符
+（5）组件支持定义默认值，但查询面板不会自动查询，需要手动点击查询
+（6）配置完成后，点击【保存并退出】，退出到页面或者部件设计器，点击保存。预览即可查看配置效果。
+3.2 日期范围选择
+如果需要配置介于这种查询条件，需要使用日期范围选择组件
+但是他的匹配符只支持介于，不支持切换别的匹配符
+注意：查询的时间范围是以下这种，传入的时分秒为00:00:00，暂时只支持查询以下时间范围
+3-10 00:00:00 ~ 3-11 00:00:00
+但是后面修改后，支持为00:00:00 -23:59:59 #435765，灵珑1.5.3.61、灵珑1.6.0.13及以后支持
+3.3 标题宽度设置
+1.选中组件，点击页面
+2.调整标题宽度
+s
+3.4 重置
+点击重置，目前支持清空搜索框的内容，暂时还不支持重置匹配符
+另外高级搜索选择条件后，在不关闭页面的情况下，下次打开条件保留，因此如果是配置的实时赋值时间类型的，下次打开时间不会刷新
+3.5 支持的组件及vue3说明
+目前支持常用的组件，经过验证的组件有以下，并且支持显示匹配符：
+区域选择、级联选择、多选、日期选择、部门选择、下拉多选、数字输入、人员选择、 单选、下拉单选、 多行输入、单行文本、时间选择、树形下拉多选、树形下拉选择、日期范围选择。
+目前vue3在不同灵珑版本下，组件支持情况不一样：
+1.5.3.X系列，人员选择、部门选择、区域选择组件不支持vue3
+3.6 传参填充到高级搜索
+相关案件：http://faq.egova.com.cn:7777/issues/432787#
+function main(params) {
+
+    // 节点参数
+    console.log(params);
+
+    const pageRootList = this.$$roots();
+    let rootPageElement = pageRootList[0];
+    // 找到页面中的列表组件元素
+    let pageTableList = rootPageElement.$$element("page_widget_list_fvvrx0");
+    if (pageTableList) {
+        if (pageTableList.dataEngine && pageTableList.dataEngine.state) {
+            // 如果要给列表的查询组件传参赋值，需要找到组件的model进行赋值，见如下示例
+            let queryElement = pageTableList.dataEngine.state.getElement("query_field_wrapper_cbwzlx");
+            let advanceSearchEle = pageTableList.dataEngine.state.getElement("list_button_advanced_search_88gxeh");
+            if (queryElement && queryElement.data && queryElement.data.members) {
+                const queryProjectIdModel = queryElement.data.members[0];
+                queryProjectIdModel.props.defaultValue.value = params.name;
+                if (advanceSearchEle) {
+                    advanceSearchEle.$$setDefaultValues({
+                        "text_input_2vzyqx": params.name
+                    });
+                }
+
+            }
+
+            this.$nextTick(() => {
+                let tableCondition = pageTableList.dataEngine.state.getElement("condition_gve44t");
+                if (tableCondition) {
+                    tableCondition.onQuery();
+                }
+            });
+        }
+    }
+}

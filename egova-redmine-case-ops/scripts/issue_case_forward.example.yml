@@ -1,0 +1,98 @@
+product_aliases:
+  悟空: 悟空
+  灵珑: 灵珑
+  统一用户中心2.0: 统一用户中心2.0
+  麒舰平台: 麒舰平台
+  智能体平台: 智能体平台
+  星桥: 星桥
+
+task_type_aliases:
+  需求分析流转: 需求分析流转
+  研发分派流转: 研发分派流转
+  研发完成流转: 研发完成流转
+  研发验证流转: 研发验证流转
+  产品验证流转: 产品验证流转
+  测试验证流转: 测试验证流转
+  研发关闭流转: 研发关闭流转
+  工程验证流转: 工程验证流转
+
+operation_status_ids:
+  需求分析流转: "17"       # 研发分派
+  研发分派流转: "2"        # 开发中
+  研发完成流转: "3"        # 已解决
+  研发验证流转: "25"       # 产品验证
+  产品验证流转: "18"       # 测试中
+  测试验证流转: "3"        # 已解决
+  研发关闭流转: "5"        # 已关闭
+  工程验证流转: "5"        # 已关闭
+
+report_user_id_fields: []
+report_user_name_fields: []
+
+base_payload:
+  target_department: ""
+  target_user: ""
+  deadline: ""
+  priority_id: ""
+  start_date: ""
+  due_date: ""
+  done_ratio: ""
+  affected_version_id: ""
+  tester_id: ""
+  product: ""
+  module_id: ""
+  sprint_id: ""
+  project_id: ""
+  tracker_id: ""
+  parent_issue_id: ""
+  estimated_hours: ""
+  extra_fields: {}
+
+products:
+  悟空:
+    assigned_to_kf: "897"
+    assigned_to_zg: "897"
+    assigned_to_cp: "897"
+    assigned_to_cs: "897"
+    assigned_to_gc: "897"
+    target_version: "171"
+
+  灵珑:
+    assigned_to_kf: "897"
+    assigned_to_zg: "897"
+    assigned_to_cp: "897"
+    assigned_to_cs: "897"
+    assigned_to_gc: "897"
+    target_version: "347"
+
+  统一用户中心2.0:
+    assigned_to_kf: "897"
+    assigned_to_zg: "897"
+    assigned_to_cp: "897"
+    assigned_to_cs: "897"
+    assigned_to_gc: "897"
+    target_version: "528"
+
+  麒舰平台:
+    assigned_to_kf: "897"
+    assigned_to_zg: "897"
+    assigned_to_cp: "897"
+    assigned_to_cs: "897"
+    assigned_to_gc: "897"
+    target_version: "554"
+
+  智能体平台:
+    assigned_to_kf: "897"
+    assigned_to_zg: "897"
+    assigned_to_cp: "897"
+    assigned_to_cs: "897"
+    assigned_to_gc: "897"
+    target_version: ""
+
+  星桥:
+    assigned_to_kf: "897"
+    assigned_to_zg: "897"
+    assigned_to_cp: "897"
+    assigned_to_cs: "897"
+    assigned_to_gc: "897"
+    target_version: "453"

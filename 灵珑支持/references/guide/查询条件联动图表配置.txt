@@ -1,0 +1,146 @@
+查询条件联动图表配置
+1 使用场景
+当需要改变echarts图标的展示维度时，可以使用表单部件在页面中引入下拉组件通过传参交互来实现，例如：”天/周/月“这种不同时间维度来控制图表的展示
+2 效果
+通过点击下拉框选择不同的时间维度来控制表格的展示内容
+3 配置
+3.1 下拉表单部件配置
+创建一个表单部件，添加一个下拉组件，设置下拉单选的值与ddcat的入参对应day/week/month
+在值改变事件里把下拉组件的值挂载到window上供全局使用。下拉选项值改变后重新调用页面的queryCircleData()方法
+export function onChange() {
+  var typeValue = this.$$('single_select_6o6rlx').$$getValue();
+  window.circleTypeValue = typeValue;
+  if (window.queryCircleData) {
+    window.queryCircleData(this);
+  }
+}
+3.2 统计页面的交互配置
+获取到window.circleTypeValue传入queryParams数组中然后调用initTrendChart(queryParams)来渲染联单趋势echarts图。
+// 联单趋势查询方法
+function queryCircleData(self) {
+  var params = getParams(self);
+  var queryParams = getQueryParams(params);
+
+  queryParams.push({
+    name: 'cicleType',
+    valueContent: window.circleTypeValue || 'day'
+  })
+  queryParams.push({
+    name: 'pageSize',
+    valueContent: 1000
+  })
+  console.log(queryParams, params)
+  initTrendChart(queryParams);
+}
+// 联单趋势
+function initTrendChart(queryParams) {
+  var chartDom = document.getElementById('container_hmcckb_csshandler_generate');
+  if (!chartDom) return;
+  var myChart = echarts.init(chartDom);
+
+  api.DATA_SOURCE_EXECUTE("ds_mod_8ec9c69d-1c88-419b-a172-7b11e26fb009", 'ddcat', queryParams, [], "").then(res => {
+    let xData = [], countData = [], abcountData = [];
+
+    if (res && !res.hasError && res.result && res.result.length) {
+      xData = res.result.map(item => item.stat_date);
+      countData = res.result.map(item => item.record_count);
+      abcountData = res.result.map(item => item.abnormal_count);
+    }
+    debugger
+    const isEmpty = xData.length === 0;
+
+    const gradient1 = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+      { offset: 0, color: '#85C0FF' },
+      { offset: 1, color: '#3388FF' }
+    ]);
+
+    const option = {
+      title: { text: '', left: 'center', textStyle: { fontSize: 14 } },
+      legend: isEmpty ? undefined : {
+        data: ['电子联单', '异常联单'],
+        top: '5%',
+        left: 'center',
+        textStyle: { fontSize: 12 },
+        itemWidth: 12,
+        itemHeight: 8
+      },
+      tooltip: isEmpty ? {} : {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        backgroundColor: 'rgba(8, 17, 38, 0.8)',
+        formatter: function (params) {
+          const date = params[0].axisValue;
+          let content = `<div style="padding: 5px; font-size: 12px;color: #fff">${date}</div>`;
+          params.forEach(item => {
+            if (item.seriesName === '电子联单') {
+              content += `<div style="color:#FFFFFF;"><span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:#3388FF;"></span><strong>${item.seriesName}:</strong> ${item.value} 单</div>`;
+            } else if (item.seriesName === '异常联单') {
+              content += `<div style="color:#FFFFFF;"><span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:#FF6600;"></span><strong>${item.seriesName}:</strong> ${item.value} 单</div>`;
+            }
+          });
+          return content;
+        }
+      },
+      xAxis: isEmpty ? {} : {
+        type: 'category',
+        data: xData,
+        axisLabel: {
+          fontSize: 12,
+          interval: Math.max(Math.floor(xData.length / 10), 1),
+          rotate: 35
+        }
+      },
+      yAxis: isEmpty ? [] : [{
+        type: 'value',
+        name: '单位：单',
+        min: 0,
+        max: 'dataMax',
+        axisLabel: { formatter: '{value}', fontSize: 12 },
+        splitLine: { show: true, lineStyle: { color: '#eee' } }
+      }],
+      series: isEmpty ? [] : [
+        {
+          name: '电子联单',
+          type: 'bar',
+          barWidth: `${Math.max(10, 80 / xData.length)}px`,
+          barGap: '10%',
+          data: countData,
+          itemStyle: {
+            color: gradient1,
+            barBorderRadius: [5, 5, 0, 0]
+          }
+        },
+        {
+          name: '异常联单',
+          type: 'line',
+          smooth: true,
+          lineStyle: { width: 2, color: '#FF6600' },
+          data: abcountData,
+          symbol: 'circle',
+          symbolSize: 6,
+          itemStyle: { color: '#FF6600' }
+        }
+      ],
+      grid: {
+        left: '10%',
+        right: '10%',
+        bottom: '10%',
+        containLabel: true
+      },
+      graphic: isEmpty ? {
+        type: 'text',
+        left: 'center',
+        top: 'middle',
+        style: {
+          text: '暂无数据',
+          fill: '#999',
+          fontSize: 14
+        }
+      } : undefined
+    };
+
+    myChart.setOption(option, true);
+  });
+}
+4 常见问题
+无。

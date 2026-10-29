@@ -1,0 +1,35 @@
+列表数据地图撒点定位
+1 使用场景
+列表当页数据，撒点定位在地图上显示。
+2 效果
+打开列表，右侧展示当页限停区域定位，放大地图展示对应定位位置及图标。
+3 配置
+1.列表新增onTableChange动作
+function handleData(dataList) {
+    console.log("表格数据变化回调", dataList)
+    debugger
+    //将列表当前页数据赋予list
+    list = dataList.map(row => {
+        return {
+            id: row.id.value,
+            y: row.coordinate_y.value,
+            x: row.coordinate_x.value,
+            address: row.address.value
+        }
+    });
+    // 获取列表组件
+    let widgetListCom = this.$$element("page_widget_list_abcde");
+    // 获取地图组件的model
+    let mapData = this.$$model("map_base_2233z");
+    // 设置图层数据
+    mapData.members[0].props.defaultValue.value = list;
+    // 设置中心点
+    if (list.length) {
+        mapData.props.mapConfig.coordX = list[0].x;
+        mapData.props.mapConfig.coordY = list[0].y;
+    }
+}
+2.地图增加图层，配置样式
+勾选自动聚焦，点击时可自动跳转到该位置
+4 常见问题
+如果撒点失败，可以通过调试，需要注意脚本里会取几个重要字段，需要保证在列表里配置了相关字段，id一般为主键，x、y、address分别为坐标、地址信息。

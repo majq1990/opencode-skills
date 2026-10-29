@@ -1,0 +1,37 @@
+树部件联动卡片和列表
+1 使用场景
+在页面中会存在卡片展示列表中对应的数据量并且在点击数的节点时列表和卡片对应刷新，展示该树节点下的对应的数据和数据量。
+2 效果
+点击树节点时右侧的卡片和列表进行对应该节点的值进行刷新
+3 配置
+点击树面板，在树的属性面板中配置组件动作on-click
+2. 编写js脚本
+function main(params) {
+    console.log("选中的树节点", params);
+    // 列表
+    let pageTableList = this.$$element("page_widget_list_3brui0");//页面列表标识
+    let queryElement = pageTableList.dataEngine.state.getElement("query_field_wrapper_24pjk");//列表查询字段标识
+    if (queryElement && queryElement.data && queryElement.data.members) {
+        const queryProjectIdModel = queryElement.data.members[0];
+        queryProjectIdModel.props.defaultValue.value = params.id;
+    }
+    let tableCondition = pageTableList.dataEngine.state.getElement("condition_dao5wu");//列表查询组件标识
+    if (tableCondition) {
+        setTimeout(function () {
+            tableCondition.onQuery();
+        })
+    }
+    // 卡片
+    let cardTableList = this.$$element("page_widget_list_89imc0");//页面卡片标识
+    let cardQueryElement = cardTableList.dataEngine.state.getElement("query_field_wrapper_4lufsd");//卡片查询标识
+    if (cardQueryElement && cardQueryElement.data && cardQueryElement.data.members) {
+        const queryProjectIdModel = cardQueryElement.data.members[0];
+        queryProjectIdModel.props.defaultValue.value = params.id;
+    }
+    let cardCondition = cardTableList.dataEngine.state.getElement("condition_8ig9m8");//卡片查询组件标识
+    if (cardCondition) {
+        setTimeout(function () {
+            cardCondition.onQuery();
+        })
+    }
+}

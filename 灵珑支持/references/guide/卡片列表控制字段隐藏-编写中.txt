@@ -1,0 +1,30 @@
+卡片列表控制字段隐藏-编写中
+1 使用场景
+卡片列表中，需要按照特定规则需要控制某一些字段的显示隐藏的时候，如下面效果所示动态控制显示隐藏
+2 效果
+3 配置
+1、新建一个数据模型，主要用documentNo关联查询到对应的数据(灵珑媒体表)；
+select
+"ID" as id,
+"DOCUMENTNO" as documentNo,
+"PAGEID" as pageId,
+"VERSION" as version,
+"UNIQUEID" as uniqueId,
+"UNIQUEINDEX" as uniqueIndex,
+"UNIQUECODE" as uniqueCode,
+"FILEID" as fileId,
+"FILENAME" as fileName,
+"FILESIZE" as fileSize,
+"MEDIATYPE" as mediaType,
+"CREATOR" as creator,
+"CREATETIME" as createTime,
+"DATAID" as dateId,
+"SERVICETYPE" as serviceType
+from lcpage_form_datum
+where documentNo = ${id}
+2、找到数据模型的请求地址；
+3、配置api，注意需要在headers配置下图二的授权（固定格式）如果出现第一次不生效第二次生效的情况，是由于灵珑的节点问题，需要找现场或者研发询问所用灵珑的内网地址拼接上去；
+4、详情部件里面使用公式调用api，公式如下；
+5、设置字段展示为附件样式。
+4 常见问题
+无

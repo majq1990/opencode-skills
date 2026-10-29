@@ -1,0 +1,114 @@
+列表页面上方展示统计卡片
+使用场景
+上方卡片展示列表中对应的数据，可以根据搜索栏所在道路同时对下面列表以及卡片进行数据的修改。
+效果
+配置
+卡片的数据是基于表单中的数据进行修改
+这四个相加就是规划前总数
+这四个相加减去拆除就是规划后
+接口函数说明：
+配置脚本需要先将卡片组件加入进去
+function main() {
+    // 统计组件
+    const stat1 = this.findElement("zfyy_page_statistics_card_cjhcp5");
+    const stat2 = this.findElement("zfyy_page_statistics_card_bulc5b");
+    const stat3 = this.findElement("zfyy_page_statistics_card_9o9wjx");
+    const stat4 = this.findElement("zfyy_page_statistics_card_66savr");
+    const stat5 = this.findElement("zfyy_page_statistics_card_d6ih96");
+    const stat6 = this.findElement("zfyy_page_statistics_card_fwuumu");
+    const stat7 = this.findElement("zfyy_page_statistics_card_krq91");
+    let pageTableList = this.$$element("page_widget_list_8wqemo");
+参数为road_id，没有选择道路时传空
+再根据道路搜索组件进行交互，并且初始化一个空数组params，用于存储将要发送的参数。
+if(pageTableList){
+        if (pageTableList.dataEngine && pageTableList.dataEngine.state) {
+            let qe = pageTableList.dataEngine.state.getElement("query_field_wrapper_29af69");
+            new Promise((resolve, reject) => {
+                // 取到组件输入的值
+                let curValue = qe.getCurrentValue();
+
+                curValue.then((curDate) => {
+                    let params = [];
+                    if (curDate) {
+                        params = [{
+                            name: 'road_id',
+                            valueContent: curDate
+                        }];
+                    }
+                    api.DATA_SOURCE_EXECUTE("d6720bc4-dc81-4a0f-9d56-5246b78abcc2", "api", params, [], "").then((res) => {
+                        const statisticJson = JSON.parse(res['result']);
+                        console.log(statisticJson);
+                        if (statisticJson && !statisticJson.hasError > 0) {
+                            stat1._props.data.props.defaultValue.value = statisticJson.result.beforeNum || 0;
+                            stat2._props.data.props.defaultValue.value = statisticJson.result.remainNum || 0;
+                            stat3._props.data.props.defaultValue.value = statisticJson.result.upgradeNum || 0;
+                            stat4._props.data.props.defaultValue.value = statisticJson.result.rectifyNum || 0;
+                            stat5._props.data.props.defaultValue.value = statisticJson.result.removeNum || 0;
+                            stat6._props.data.props.defaultValue.value = statisticJson.result.addNum || 0;
+                            stat7._props.data.props.defaultValue.value = statisticJson.result.afterNum || 0;
+
+                        }
+
+                    }).catch(err => {
+                        console.error(err);
+                    });
+                
+                }).catch(err => {
+                    
+                });
+            });
+        }
+    }
+function main() {
+    // 统计组件
+    const stat1 = this.findElement("zfyy_page_statistics_card_cjhcp5");
+    const stat2 = this.findElement("zfyy_page_statistics_card_bulc5b");
+    const stat3 = this.findElement("zfyy_page_statistics_card_9o9wjx");
+    const stat4 = this.findElement("zfyy_page_statistics_card_66savr");
+    const stat5 = this.findElement("zfyy_page_statistics_card_d6ih96");
+    const stat6 = this.findElement("zfyy_page_statistics_card_fwuumu");
+    const stat7 = this.findElement("zfyy_page_statistics_card_krq91");
+    let pageTableList = this.$$element("page_widget_list_8wqemo");
+    if(pageTableList){
+        if (pageTableList.dataEngine && pageTableList.dataEngine.state) {
+            let qe = pageTableList.dataEngine.state.getElement("query_field_wrapper_29af69");
+            new Promise((resolve, reject) => {
+                // 取到组件输入的值
+                let curValue = qe.getCurrentValue();
+
+                curValue.then((curDate) => {
+                    let params = [];
+                    if (curDate) {
+                        params = [{
+                            name: 'road_id',
+                            valueContent: curDate
+                        }];
+                    }
+                    api.DATA_SOURCE_EXECUTE("d6720bc4-dc81-4a0f-9d56-5246b78abcc2", "api", params, [], "").then((res) => {
+                        const statisticJson = JSON.parse(res['result']);
+                        console.log(statisticJson);
+                        if (statisticJson && !statisticJson.hasError > 0) {
+                            stat1._props.data.props.defaultValue.value = statisticJson.result.beforeNum || 0;
+                            stat2._props.data.props.defaultValue.value = statisticJson.result.remainNum || 0;
+                            stat3._props.data.props.defaultValue.value = statisticJson.result.upgradeNum || 0;
+                            stat4._props.data.props.defaultValue.value = statisticJson.result.rectifyNum || 0;
+                            stat5._props.data.props.defaultValue.value = statisticJson.result.removeNum || 0;
+                            stat6._props.data.props.defaultValue.value = statisticJson.result.addNum || 0;
+                            stat7._props.data.props.defaultValue.value = statisticJson.result.afterNum || 0;
+
+                        }
+
+                    }).catch(err => {
+                        console.error(err);
+                    });
+                
+                }).catch(err => {
+                    
+                });
+            });
+        }
+    }
+    
+}
+api的id查找
+或者在导航中选择道路组件进行查询

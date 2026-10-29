@@ -1,0 +1,27 @@
+网格布局表格详情隐藏字段不显示边框
+1 使用场景
+详情使用网格布局实现表格样式，但是在使用脚本控制字段隐藏时，字段隐藏了但是对应的网格没有隐藏，文本讲解如何配置避免这一问题。
+支持版本：网格布局组件，灵珑>=1.5.3.56、1.6.0.12，需求案件：#434088
+2 效果
+1.预览时隐藏region_name和文本组件，不显示边框
+vue2下隐藏region_name和文本组件
+vue3下隐藏region_name和文本组件
+3 配置
+网格布局，单个网格项新增属性，支持显示或隐藏，注意移动端网格布局无此属性
+注意：建议是对整行进行隐藏（将需要隐藏的字段单独放一行），如果对某个中间网格隐藏，布局不会自动处理，可能存在问题
+详情部件渲染上新增onDataLoad方法，隐藏region_name
+以下脚本，cell_gvw5ht代表对应需要隐藏的网格项的唯一标识，代表详情部件里region_name所在的网格项的唯一标识，info.region_name.value代表条件，可依据实际需求修改条件，控制网格项的显隐
+function main(dataEngine) {    
+    let info = undefined;
+    if (dataEngine && dataEngine.state) {
+        info = dataEngine.state.record;
+    }
+    let layoutCellModel = this.$$m("cell_gvw5ht");
+    if (layoutCellModel && info) {
+        // 编写具体业务逻辑
+        if (info.region_name.value) {
+            // 隐藏 HIDDEN；显示 NORMAL 
+            layoutCellModel = "HIDDEN";
+        }
+    }
+}

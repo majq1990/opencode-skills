@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""建 PG 目标库 + 扩展（重构验证包第一步）。
+
+CREATE DATABASE 不能在事务里跑，必须 autocommit；扩展要在目标库内建。
+口令从环境变量 MIG_PG_PWD 取，不落盘。
+
+  MIG_PG_PWD=... python3 setup_target.py.txt \
+      --pg-host 127.0.0.1 --pg-port 5432 --pg-user postgres --db mig
+"""
+import argparse
+import os
+
+import psycopg2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+EXTS = ("postgis", "pg_trgm", "uuid-ossp")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--pg-host", default="127.0.0.1")
+    ap.add_argument("--pg-port", type=int, default=5432)
+    ap.add_argument("--pg-user", default="postgres")
+    ap.add_argument("--db", required=True)
+    a = ap.parse_args()
+    pw = os.environ.get("MIG_PG_PWD", "")
+
+    admin = psycopg2.connect(host=a.pg_host, port=a.pg_port, user=a.pg_user,
+                             password=pw, dbname="postgres")
+    admin.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    cur = admin.cursor()
+    cur.execute("SELECT 1 FROM pg_database WHERE datname=%s", (a.db,))
+    if cur.fetchone():
+        print("目标库 %s 已存在，跳过创建" % a.db)
+    else:
+        # 标识符不能做占位符绑定，库名来自命令行固定清单，用双写引号转义
+        cur.execute('CREATE DATABASE "%s" ENCODING \'UTF8\' '
+                    'LC_COLLATE \'C\' LC_CTYPE \'C\' TEMPLATE template0'
+                    % a.db.replace('"', '""'))
+        print("目标库 %s 已创建（UTF8 / C 排序规则）" % a.db)
+    cur.close()
+    admin.close()
+
+    tgt = psycopg2.connect(host=a.pg_host, port=a.pg_port, user=a.pg_user,
+                           password=pw, dbname=a.db)
+    tgt.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    cur = tgt.cursor()
+    for e in EXTS:
+        cur.execute('CREATE EXTENSION IF NOT EXISTS "%s"' % e.replace('"', '""'))
+        print("扩展 %s 就绪" % e)
+    # PostGIS 的对象必须落在独立 schema：源库有一个就叫 public 的库，若扩展建在
+    # public 里，spatial_ref_sys / geometry_columns 会混进目标 public 库的对象
+    # 清单，对象对账立刻假性不一致（2026-10-12 重构复跑实测）。ALTER EXTENSION
+    # ... SET SCHEMA 对 postgis 不支持，只能 DROP 后按 schema 重建。
+    cur.execute("SELECT e.extname, n.nspname FROM pg_extension e"
+                " JOIN pg_namespace n ON n.oid=e.extnamespace"
+                " WHERE e.extname IN ('postgis','pg_trgm','uuid-ossp')")
+    where = dict(cur.fetchall())
+    if where.get("postgis") != "postgis":
+        print("把 postgis 挪到独立 schema（当前在 %s）" % where.get("postgis"))
+        cur.execute("DROP EXTENSION IF EXISTS postgis CASCADE")
+        cur.execute("CREATE SCHEMA IF NOT EXISTS postgis")
+        cur.execute('CREATE EXTENSION "postgis" SCHEMA postgis')
+    for e in ("pg_trgm", "uuid-ossp"):
+        if where.get(e) not in (None, "postgis"):
+            cur.execute('ALTER EXTENSION "%s" SET SCHEMA postgis' % e)
+    # 视图里是裸调 st_astext 之类、不带 schema 前缀的（MySQL 侧就是这么写的），
+    # 所以承载扩展的 schema 必须进 search_path，否则报 function does not exist。
+    # 这一步在把扩展挪进 postgis schema 之后是必须的。
+    cur.execute("ALTER DATABASE \"%s\" SET search_path TO \"$user\", public, postgis"
+                % a.db.replace('"', '""'))
+    print("search_path 已设为 $user, public, postgis")
+    cur.close()
+    tgt.close()
+
+
+if __name__ == "__main__":
+    main()

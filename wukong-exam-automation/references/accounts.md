@@ -23,6 +23,11 @@
 ## SQL 注意事项
 
 - 不改 `admin`。
-- 写入前备份或至少导出将影响的账号列表。
+- 写入前备份或至少导出将影响的账号列表（`create table if not exists com_user_bak like com_user; replace into com_user_bak select * from com_user;`）。
 - 密码、盐值和加密方式沿用当前环境约定；最终答复不要明文展开密码散列。
 - 对失败账号单独列出姓名、账号、原因。
+- **com_user 列序漂移教训（2026-10-28）**： positional INSERT 的 VALUES 比列名少一个元素（passwordExpireTime 位缺 NULL），导致其后全部左移一位，报 `Incorrect datetime value: 'Sm3WithSalt' for column 'passwordExpireTime'`。导入脚本已改为列表构造 + `assert len(values)==37`；手写 SQL 时先 `desc com_user` 核对列数。
+- **2026-09-02 实测必补**（缺这三项会导致 unity/page-group/list 403、新建大屏失败）：`regionId='420000'`、`userType='0'`、`accountExpireTime=DATE_ADD(NOW(), INTERVAL 1 YEAR)`、`createTime=NOW()`；另 `passwordExpireTime=NULL`（防登录被拦截）。
+- 角色关联：`com_role_member` 插 roleId=`00003`（工程，含大屏页面权限），memberType=0，幂等（`id NOT IN (SELECT memberId FROM com_role_member WHERE roleId='00003')`）。
+- **延期考生的账号处理**：批准延期的，把其 `accountExpireTime` 改成当晚结束时间（如 `2026-10-28 23:00:00`），`remark` 标注 `<姓名> <工号> 延至23:00结束`——考后改密和无操作查询按备注排除这批人，走单独时间线。
+- 登录抽查走 SM2 流程（`references/license.md` 末节），不要用明文密码直接打 token 端点。

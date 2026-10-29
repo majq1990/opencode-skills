@@ -1,0 +1,126 @@
+---
+name: ops-patrol-toolkit
+description: 运维巡检与故障排查通用工具集（R48）。凡涉及：运维巡检、故障排查、巡查数据汇总、人巡/机巡/部件三源合并、巡查日报标准输入、巡查明细表生成、MySQL 只读副本高 I/O 分诊、iostat 解析、慢查询 digest 分析、全表扫描/回表放大/排序落盘/大字段溢出/复制回放根因判定、项目维护手册规范化生成、手册章节完整性与要素缺失检测、月度运维报告生成、服务器/网址批量巡检、月报 Word 模板回填、运维材料脱敏、auto-check 巡检报告告警分诊、巡检问题处置引导、Zabbix 告警处理、Prometheus 告警处理、SkyWalking APM 告警处理、监控告警分诊——都应使用本 Skill。
+metadata:
+  version: 1.2.2
+  author: 工程技术中心
+  category: ops
+  visibility: tech-center
+---
+
+# ops-patrol-toolkit · 运维巡检与故障排查工具集
+
+## 目标
+
+把巡查/巡检/诊断/月报/监控告警分诊五类高频运维工作固化为一套零依赖、可独立调用的脚本工具集：
+
+1. **巡查数据三源汇总**：人巡/机巡/部件 Excel 源表 → 统一 9 列明细表（巡查日报标准输入）
+2. **MySQL 只读副本高 I/O 分诊**：iostat + 慢查询 digest + 表 DDL → 根因候选 + 置信度 + 证据链 → 中文诊断报告
+3. **维护手册规范化**：零散立项资料 → 标准章节手册初稿（待补项占位）+ 章节完整性/要素缺失检测
+4. **月度运维报告**：批量网址/服务器巡检 + 业务统计数据（JSON 输入）→ 回填 Word 月报模板
+5. **监控告警分诊与处置引导**：auto-check 巡检报告 / Zabbix / Prometheus / SkyWalking 告警 → 归一化 → 处置剧本匹配 → 处置引导报告（含 WIKI 链接与 05 历史案例检索衔接）
+
+## 依赖
+
+- Python 3.8+，**只用标准库**，无第三方包，01-04/06 离线可跑
+- 05 需访问公司 redmine-assist MCP（网络出站），token 经环境变量 `DEMO_EGOVA_MCP_TOKEN` 注入（钉钉扫码获取，见 `config/patrol/kb_search.json`），缺失即 gap 停止
+- 07/08/09 需访问对应监控端点（`config/patrol/monitors.json` 显式声明 URL，token 经 `*_env_ref` 环境变量注入）；URL 安全闸强制 http/https、拒绝回环与云元数据地址，内网私有网段由配置 `allow_private_targets=true` 显式放行
+- 不需要数据库连接；输出统一写到 `work/` 或显式 `--out` 路径；模板与配置原件永不改写
+
+## 子工具路由
+
+| 步骤 | 脚本 | 说明 |
+|---|---|---|
+| 01 | `scripts/01_patrol_merge.py` | 三源巡查 Excel → 9 列明细表（xlsx/csv） |
+| 02 | `scripts/02_mysql_io_triage.py` | MySQL 只读副本高 I/O 根因分诊（只读，零连接） |
+| 03 | `scripts/03_manual_standardize.py` | 维护手册生成 + 规范检测（双模式，生成后自动回检） |
+| 04 | `scripts/04_monthly_report.py` | 服务器巡检 + 月报模板回填 |
+| 05 | `scripts/05_kb_similar_search.py` | 历史相似案例检索（redmine-assist MCP：17 万工单 + 4500 篇知识库文档） |
+| 06 | `scripts/06_autocheck_triage.py` | auto-check 巡检报告摄取 → 预警表达式安全求值 → 告警项 + WIKI 链接 + 处置引导 |
+| 07 | `scripts/07_zabbix_triage.py` | Zabbix 告警拉取（JSON-RPC problem.get/trigger.get）→ 分诊 → 处置引导 |
+| 08 | `scripts/08_prometheus_triage.py` | Prometheus 告警拉取（/api/v1/alerts）→ 分诊 → 处置引导 |
+| 09 | `scripts/09_skywalking_triage.py` | SkyWalking OAP 告警拉取（GraphQL queryAlarms）→ 分诊 → 处置引导 |
+| 公共 | `scripts/redact.py` | 材料脱敏（先脱敏再分析，保留数值口径） |
+| 公共 | `scripts/monitor_http.py` | 监控出站共享客户端与 URL 安全闸（06-09 专用） |
+
+## 快速开始
+
+```powershell
+# 01 三源汇总（--yes 确认字段映射后写产物；不带 --yes 只预览映射与样例行）
+python scripts/01_patrol_merge.py --config config/patrol/sources.json --yes --out work/patrol/summary.xlsx
+
+# 02 I/O 分诊（iostat 必填，digest/ddl 缺失自动降级并在报告中标注）
+python scripts/02_mysql_io_triage.py run --iostat examples/iostat.txt --digest examples/digest.csv --ddl examples/schema.sql --out work/io_triage
+
+# 03 手册生成（生成后自动回跑检测，P0 应为 0）
+python scripts/03_manual_standardize.py generate --info project_info.json --sources 资料1.docx 资料2.docx --out work/manual/draft.docx
+python scripts/03_manual_standardize.py check --manual work/manual/draft.docx
+
+# 04 服务器巡检 + 月报回填（业务统计数据由人工/其他工具产出为 JSON，本工具不直连业务系统）
+python scripts/04_monthly_report.py check-servers --config config/patrol/servers.json
+python scripts/04_monthly_report.py fill --template assets/monthly-report-template.docx --stats stats.json --out work/monthly/2026-09月报.docx
+
+# 05 历史相似案例检索（需联网；token 环境变量 DEMO_EGOVA_MCP_TOKEN，钉钉扫码获取）
+python scripts/05_kb_similar_search.py query --text "MySQL只读副本磁盘IO高，慢查询全表扫描" --out work/kb/result.md
+# 02→05 闭环：用分诊结果自动拼检索词
+python scripts/05_kb_similar_search.py from-triage --triage work/io_triage/triage.json
+
+# 06 auto-check 巡检报告分诊（默认经 dws 拉取钉钉处理文档正文嵌入报告；离线环境加 --no-doc-body）
+python scripts/06_autocheck_triage.py triage --report out/json/os_web01.json --dir out/json --out work/autocheck/guide.md
+# 单篇拉取处理文档正文
+python scripts/06_autocheck_triage.py doc --url "https://alidocs.dingtalk.com/i/nodes/<DOC_UUID>" --out work/autocheck/doc.md
+
+# 07/08/09 监控告警拉取 + 分诊（端点配置 config/patrol/monitors.json，enabled 置 true）
+python scripts/07_zabbix_triage.py problems --config config/patrol/monitors.json --out work/zabbix/problems.json
+python scripts/07_zabbix_triage.py triage --problems work/zabbix/problems.json --out work/zabbix/guide.md
+python scripts/08_prometheus_triage.py alerts --config config/patrol/monitors.json --out work/prometheus/alerts.json
+python scripts/08_prometheus_triage.py triage --alerts work/prometheus/alerts.json --out work/prometheus/guide.md
+python scripts/09_skywalking_triage.py alarms --config config/patrol/monitors.json --out work/skywalking/alarms.json
+python scripts/09_skywalking_triage.py triage --alarms work/skywalking/alarms.json --out work/skywalking/guide.md
+```
+
+## 输出契约
+
+- 每个脚本 stdout **最后一行**是 JSON 信封：成功 `{"ok": true, ...}`；失败 `{"ok": false, "gap": "一句可行动的缺失说明"}` 并以退出码 2 结束
+- 中间过程信息打印在信封之前的行；**控制台不使用 emoji**
+- 报告类产物默认带 **【待复核】** 标记，未经人工复核不得外发
+
+## 停止条件（触发即停，输出 gap，不猜测不伪装成功）
+
+1. 输入文件缺失/损坏/无法识别工作表或分隔符
+2. 01：字段映射无法确认（`--yes` 未给且样例行待确认）
+3. 02：iostat 内容为空或识别不到设备段
+4. 03：项目信息 JSON 缺必备键或资料全部无法解析
+5. 04：模板文件缺失，或 stats.json 结构不符合约定
+6. 05：环境变量 `DEMO_EGOVA_MCP_TOKEN` 未设置，或 MCP 端点不可达/超时/返回错误
+7. 任何凭证类环境变量（`*_env_ref`）未设置——缺前置即停，不猜测
+
+## 安全约束
+
+- 材料先脱敏（`scripts/redact.py`）再分析；数据库密码、API 密钥、token、客户/人员/合同信息、未脱敏生产数据**禁止输入**
+- 02 全程只读：不连接数据库、不执行任何 DDL/DML/KILL/参数修改，只读入参文件
+- 所有建议均为建议，需人工复核 + 测试环境验证，禁止直接上生产
+- 配置只放阈值/路径/清单；真实客户 IP、签名密钥、账号一律不进本仓库
+- 涉密/敏感数据（个人标识、政府内部、公司内部、精确坐标、密级文件）严禁作为输入
+
+## 已知边界
+
+- 04 的业务统计数据走 JSON 文件输入，不直连客户业务系统（数字城管 API/CDP 等属客户环境定制，不在通用版内）
+- xlsx 读取支持常规表格（共享字符串/日期/合并单元格），复杂图表/透视表忽略；不支持老版二进制 .xls
+- docx 替换只处理正文（页眉页脚/批注/文本框内文字不替换）；复杂模板建议先另存为标准 docx
+- xlsx/docx 解析内置 DTD/实体声明拒绝闸：含 `<!DOCTYPE>`/`<!ENTITY>` 的恶意构造文件（实体扩展攻击）直接拒解析
+- 输入/输出路径参数（--file/--out 等）按本地单用户 CLI 威胁模型信任操作者（同 cat/grep 类命令行工具），不做路径白名单
+- 04/05/07/08/09 的出站目标来自操作者维护的 config 文件，属工具本职，不接受不可信输入作为请求目标；URL 安全闸强制 http/https 并拒绝回环/云元数据地址
+- **auto-check 解决文档链接（已同步，2026-10）**：auto-check 解决文档已从 Redmine WIKI 迁移到钉钉文档，链接映射唯一来源 wiki_map.yml（本 skill 同步为 `references/autocheck_wiki_map.yml`，38 条旧 ID → 钉钉文档）。06 按 auto-check 协议解析指标键第 5 段：完整链接直用 / 旧 ID 查表跳钉钉 / 未命中回退旧 Redmine / 留空按指标名查 names 节。auto-check 侧更新映射表后重新拷贝覆盖本文件即可完成再同步
+- **处置引导终态（用户拍板）**：与 auto-check 一致走链接方式，且 06 **默认经 dws 拉取钉钉文档正文嵌入处置引导报告**（按链接去重、超 1500 字截断、拉取失败降级为仅链接并记 warning 不中断）；`06 doc --url <链接>` 可单篇拉取。无 dws 环境加 `--no-doc-body` 跳过。`--metrics`/`--playbooks` 外挂参数保留作扩展位，缺文件静默跳过
+- 剧本关键词为边界感知匹配（词左边界 + 驼峰词首，见 `patrol_lib.keyword_hit`）：replication 不会误命中 io 剧本，HighCpuLoad 能命中 cpu 剧本；新增剧本关键词时用全词或中文词
+
+---
+
+<!-- feedback-channel v1 -->
+## 反馈渠道
+
+本技能已纳入企业反馈监控。使用中如遇「连续多轮仍未解决同一类问题」、「工具执行报错」，或你想主动反馈：
+
+- 在装有 feedback-monitor 插件的 agent（opencode / Claude Code / 腾讯 WorkBuddy）中，会自动采集并（脱敏后）上报到企业反馈平台；
+- 也可随时在 **skills-manager 应用 →「反馈 / 建议」** 手动提交，会自动记录关联技能与提交人。

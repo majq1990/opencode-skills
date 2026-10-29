@@ -1,0 +1,29 @@
+# 说明：本文件为「合成测试样例」（fixtures），仅用于验证 02_mysql_io_triage 的解析与判定链路。
+# 数值量级模拟一个典型的 MySQL 只读副本 iowait 告警场景（-m 单位、多轮采样），
+# 所有实例名/主机名均为虚构脱敏占位，不含任何真实生产数据。
+
+Linux 5.10.0-xxx (MYS-RO-REDACTED) 	10/02/2026 	_x86_64_	(16 CPU)
+
+avg-cpu:  %user   %nice %system %iowait  %steal   %idle
+          10.20    0.00    2.85   18.20    0.00   68.75
+
+Device:         rrqm/s   wrqm/s     r/s     w/s    rMB/s    wMB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+vda               0.00     1.30 5000.00  180.00    76.20     6.40    31.90     9.80    1.40    0.55    5.80   0.11  88.40
+vdb               0.00     0.00    0.60    0.20     0.00     0.00     8.00     0.00    0.40    0.40    0.50   0.40   0.02
+dm-0              0.00     0.00 5000.00  181.10    76.20     6.40    31.86     9.80    1.40    0.55    5.80   0.11  88.40
+
+avg-cpu:  %user   %nice %system %iowait  %steal   %idle
+          11.05    0.00    2.95   21.60    0.00   64.40
+
+Device:         rrqm/s   wrqm/s     r/s     w/s    rMB/s    wMB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+vda               0.00     1.20 6500.00  195.00    99.10     6.90    32.20    11.40    1.50    0.60    6.05   0.12  93.10
+vdb               0.00     0.00    0.50    0.15     0.00     0.00     8.00     0.00    0.40    0.40    0.50   0.40   0.02
+dm-0              0.00     0.00 6500.00  196.05    99.10     6.90    32.15    11.40    1.50    0.60    6.05   0.12  93.10
+
+avg-cpu:  %user   %nice %system %iowait  %steal   %idle
+          12.10    0.00    3.05   24.87    0.00   59.98
+
+Device:         rrqm/s   wrqm/s     r/s     w/s    rMB/s    wMB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+vda               0.00     1.10 7905.00  205.00   120.50     7.20    32.50    12.90    1.58    0.64    6.30   0.12  97.20
+vdb               0.00     0.00    0.40    0.10     0.00     0.00     8.00     0.00    0.40    0.40    0.50   0.40   0.02
+dm-0              0.00     0.00 7905.00  206.10   120.50     7.20    32.46    12.90    1.58    0.64    6.30   0.12  97.20

@@ -1,0 +1,366 @@
+PC应用搭建步骤（含流程）
+1统一用户中心
+1.1创建租户
+统一用户中心：创建租户。
+注意：如果已经打开灵珑平台，需要刷新才显示新建的租户。
+图1：增加租户
+图2：设置机构，可以导入
+图3：新增岗位
+1.2创建用户
+新增用户
+图1：新增用户
+图2：设置用户属性并修改密码
+所属租户：选择前面创建的租户。
+用于访问后面灵珑平台创建的应用，灵珑平台创建的应用与一个租户绑定，并且不允许修改，即同一个租户下的用户使用同一套应用系统。
+1.3创建数据源
+灵珑-后台管理-数据源：创建数据源
+一个应用绑定一个数据源，数据存储在该数据源里，请慎重选择。
+1.4字典表配置
+如果需要字典表，在“统一用户中心-应用管理-设置-字典管理”里维护。
+1.5行政区划配置
+如果需要行政区划，在“统一用户中心-基础数据-行政区划”里维护。
+2灵珑平台
+2.1创建应用
+灵珑-应用管理：创建应用
+图1：创建应用
+图2：创建空白应用，选择“数据源”，“应用租户”。
+应用代码：应用发布后访问URL的一部分，请取好名字。可改。
+数据源：此应用里所有内容均保存在选中的数据源内，请选择合适的数据源，创建后无法再修改。
+应用租户：应用发布后需要访问该应用的用户所属的租户。即前面在统一用户中心里创建的用户
+2.2业务实体和数据视图准备
+工作台-数据管理-业务实体
+应用系统的表单部件、列表部件和系统用到的部分页面涉及到的物理表在“业务实体”里新建或者导入。
+导入的表需要在当前应用绑定的数据源里已经存在。
+关于id和documentNo的说明（区分大小写）：
+关于id字段
+“业务实体”里的表均需要有id字段。
+如果导入的表已经有id字段并且是主键则直接使用；
+如果导入的表没有id字段，可以将主键字段的“别名”填写为id。
+关于documentNo字段
+如果“业务实体”里的表将做为表单部件里的子表（即明细组件）则需要有documentNo字段，用于与主表关联。
+如果导入的外部表作为子表且没有documentNo字段，需要选择一个字段将“别名”填写为documentNo，要求是非空字段。
+注意：别名为documentNo的字段数据是根据灵珑的规则生成和存储。
+documentNo的数据类型说明
+如果主表有documentNo，则必须是字符串且长度大于等于50，否则无法保存
+如果主表没有documentNo，子表有documentNo，类型与主表的id字段的数据类型保持一致。可以是整型或字符型
+如果主表有documentNo，子表也有documentNo，则均必须是字符串且长度大于等于50
+图1：取别名id和documentNo
+图2：包含id和documentNo字段
+工作台-数据管理-数据视图
+应用系统的列表部件和系统用到的部分页面涉及到的数据需要在多个表里获取时可以通过编写数据视图来查询。
+图1：新增视图
+图2：编辑视图，先【执行】后【保存】
+字典表配置
+如果需要字典表，在“统一用户中心-应用管理-设置-字典管理”里维护。
+2.4表单部件：流程表单设计
+新增分组
+建议做好分组管理。
+图1：部件设计分组列表维护
+图2：示例
+建议一级组为系统名称，二级组根据布局命名
+新增流程表单
+根据需要选择策略：基于自动策略创建，基于业务实体创建，基于Excel创建。表单主要用于启动流程后进行填写的表单，编辑好后点击【保存】和【发布】。
+示例如下：
+注：如果熟练使用系统，已经创建了其他可填写的表单，这个表单也可以只创建，不设计。在“流程设计”的节点里选择需要的表单即可。
+2.5表单部件：流程设计
+在左侧拖拽节点到中间区域，必须包含开始和结束节点。
+在节点之间连线
+中间区域点中空白处点击【增加】选择“待办模板”，此时显示“待办列表”，右侧操作栏包含列表设计和视图设计。系统已经自动生成了列表部件和列表视图。
+2.6流程权限配置
+流程设计器里选中节点，配置可操作的表单、人员、权限分组
+点【设置】选择箱子里的批转等按钮权限、表单权限、多媒体权限、打印权限等。
+多实例同时分配的配置
+选中含多人同时办理的节点，右侧选择“多实例”+“同时分配”
+多实例同时分配
+在右下角的权限配置处点【设置】，选择含多人同时办理的节点，选择操作按钮【同意】和【拒绝】，记得点击【保存设置】。
+这样，案卷批转到当前节点时，所有被批转到的人员点击【同意】填写意见，最后一个点【同意】的人员选择批转人员，就可以批转到下一个节点了。
+全部节点配置完成后点击【保存】和【发布】
+注意：流程的权限分组发布前配置好，发布后可以修改，不需要再发布流程即可生效。
+2.7表单部件：列表设计
+视图设计
+默认的视图内容如下，主要用于查询列表里展现的字段，可以根据需要修改。
+select * from ( SELECT
+_main.ID_ taskId,
+_main.PROC_INST_ID_ processInstanceId,
+_main.PROC_DEF_ID_ defineId,
+_main.ASSIGNEE_ userId,
+_main.CREATE_TIME_ createTime,
+_main.NAME_ nodeName,
+_main.TASK_DEF_KEY_ nodeId,
+record.id recordId,
+record.name recordName,
+record.documentNo documentNo,
+record.teamId teamId,
+record.pageId pageId 
+FROM
+act_ru_task _main
+INNER JOIN lcwf_process_record record ON _main.PROC_INST_ID_ = record.processInstanceId 
+WHERE
+_main.ASSIGNEE_ IS NOT NULL 
+ORDER BY
+_main.CREATE_TIME_ DESC ) tableAlias where tableAlias.defineId like '5170c16a26%'
+自V1.6.0.0版本起，【待办】的开箱SQL变更为和【待认领】合并，即“待办”列表里既包含待办也包含待认领。
+select taskId, processInstanceId, defineId, participant, participantType, createTime, nodeName, nodeId, recordId, recordName, documentNo, teamId, pageId from (  SELECT
+    _main.ID_ taskId,
+    _main.PROC_INST_ID_ processInstanceId,
+    _main.PROC_DEF_ID_ defineId,
+    _main.ASSIGNEE_ participant,
+    0 AS participantType,
+    _main.CREATE_TIME_ createTime,
+    _main.NAME_ nodeName,
+    _main.TASK_DEF_KEY_ nodeId,
+    record.id recordId,
+    record.name recordName,
+    record.documentNo documentNo,
+    record.teamId teamId,
+    record.pageId pageId
+FROM
+    act_ru_task _main
+    INNER JOIN lcwf_process_record record ON _main.PROC_INST_ID_ = record.processInstanceId
+WHERE
+    _main.ASSIGNEE_ IS NOT NULL
+UNION
+SELECT
+    _main.ID_ taskId,
+    _main.PROC_INST_ID_ processInstanceId,
+    _main.PROC_DEF_ID_ defineId,
+    claim.participant participant,
+    claim.participantType,
+    _main.CREATE_TIME_ createTime,
+    _main.NAME_ nodeName,
+    _main.TASK_DEF_KEY_ nodeId,
+    record.id recordId,
+    record.name recordName,
+    record.documentNo documentNo,
+    record.teamId teamId,
+    record.pageId pageId
+FROM
+    act_ru_task _main
+    INNER JOIN lcwf_process_record record ON _main.PROC_INST_ID_ = record.processInstanceId
+    INNER JOIN lcwf_claim_history claim ON _main.ID_ = claim.taskId
+WHERE
+    _main.ASSIGNEE_ IS NULL  ) tableAlias where tableAlias.defineId like 'd98e7b65b9%' ORDER BY createTime DESC
+表说明：
+act_ru_task：流程实例表，相当于城管的tc_wf_act_def
+lcwf_process_record：案卷表，相当于城管的to_rec
+主要字段解释说明：
+_main.ID_ 活动标识,
+_main.PROC_INST_ID_ 案卷标识,
+_main.PROC_DEF_ID_ 流程标识,
+_main.ASSIGNEE_ 办理人,
+_main.CREATE_TIME_ 案卷建立时间,
+_main.NAME_ 当前阶段名称,
+_main.TASK_DEF_KEY_ 流程节点标识
+列表设计
+该列表部件用于展示应用系统里的案卷列表，效果如下图红框处
+在操作栏点击“列表设计”可以跳转到“部件设计”，可以看到“待办模板_***“，根据需要点【编辑】调整所属分组
+编辑列表部件
+列表里需要包含documentNo,taskId,recordId字段（区分大小写），用于列表联动操作时关联，如：详情、办理等。
+2.8页面设计
+2.8.1新建“流程表单”页面
+新建分组，新建页面
+示例：
+点击上方链接切换到组件库，在“表单”里拖动前面的“流程部件”到右侧
+选择“办理页面”。
+显示如下图：
+页面可以根据需要调整。
+例如：增加【返回】按钮。场景是收件后打开填表窗口，再返回到案卷列表。
+绑定动作：页面跳转，选择“前进后退”，输入“-1”
+2.8.2收件按钮
+启动流程有两种方式：
+通过API接口启动：交互效果是点击按钮直接收件，然后在案卷列表里点【办理】继续操作。
+表单关联规则引用公式启动：交互效果是点【收件】先弹出表单填写窗口，保存表单后启动流程，然后在案卷列表里点【办理】继续操作。此时先打开的表单不受流程里表单权限的控制，因为还没有启动流程。
+2.8.2.1方式一：API接口
+API管理：
+新建收件接口：http://ip:port/linglong-api/unity/establish/process-entry/start/task-info
+ip:port为灵珑地址
+修改query参数“pageId”为流程表单ID
+Headers：use-web-Authorization  true
+图1：API接口
+添加头
+修改类型为post，选择body参数为json
+图2：表单pageId的获取方式如下图，在“部件设计”列表里点击流程部件，URL里可以得到。
+2.8.2.2 方式二：表单关联规则引用
+流程表单--高级，增加业务关联规则。需要拖入文号字段进行隐藏，文号字段组件无需绑定字段，他会自动寻找表单对应实体的id或者documentNo。
+编辑规则，设置为【新增】执行后的公式。
+公式设置
+FLOW_START('40e98381-211d-45dc-a3dd-e6e9df386351',文号字段)
+pageId获取：流程表单设计窗口的URL里可以得到，如下图：
+图 FLOW_START公式
+也可以使用FLOW_START_CONDITION()公式，满足条件的情况下发起流程。
+2.8.3待办列表页面
+新建页面命名为“待办”，页面设计里引入“待办”列表
+图 待办箱
+顶部操作增加【收件】
+下面分别介绍两种收件按钮的配置。
+API接口收件
+待办列表增加顶部操作按钮，命名为【收件】，交互动作为“自定义动作”
+编辑脚本，参数修改3处：
+function main(defaultParams, event) {
+    console.log(defaultParams);
+    var self = this;
+    var queryParams = [{
+        "name": "pageId",
+        "valueContent": "1c65aa2e-e050-45e6-90fd-6e2632e0f696"
+    }];
+    self.$lc_Confirm({
+        content: "确定发起问题上报流程？",
+        type: "info",  // danger info warning
+        headerTitle: "提示", //确认框头部标题 提示、警告、告警
+        showOkBtn: true, // 是否展示确认按钮
+        showCancelBtn: true, // 是否展示取消按钮
+        cancelText: "取消", //取消按钮 展示文字
+        okText: "确定",  //确认按钮 展示文字  
+        onOk: () => {
+            api.DATA_SOURCE_EXECUTE("1f5235c5-f23e-4512-957e-bec5c10bd664", "api", queryParams, [], "{}").then((res) => {
+                console.log("响应", res);
+                if (!res.hasError) {
+                    // self.$message.success("收件成功！");
+                    // jumpToPage(self, res.result.content, defaultParams);
+                    jumpToPage(self, res.result.content || res.result, defaultParams);
+                    // window.open("http://www.egova.top:30091/linglong/app.html?id=bb8c0ac2-385b-4707-b1b9-3b30b1424451#/path0/path00?menuId=a3c135e1-8ca8-4d58-8767-47185aa1b650")
+                } else {
+                    self.$message.error(res.message);
+                }
+            }).catch(err => {
+                self.$message.error(err.message);
+            });
+        }
+    })
+}
+
+function jumpToPage(self, result, defaultParams) {
+    var element = self;
+    var rootPageElement = null;
+    result = JSON.parse(result);
+
+    while (element) {
+        if (element.getPageInfo && element.goHistory) {
+            rootPageElement = element;
+            break;
+        } else {
+            element = element.$parent;
+        }
+    }
+    if (rootPageElement) {
+        var data = result.result;
+        data.detail = 1;
+        data.boxType = 1;
+        //data['listId'] = defaultParams['e9bb8f19-df28-48e5-8177-778fb72ed988'];
+        //data['listName'] = defaultParams['515d7375-93f1-490f-adab-457648c08c46'];
+        //data['listAccount'] = defaultParams['37473ff6-b727-4aa0-904c-da6e0ed5016e'];
+        //data['listSponsorAccount'] = defaultParams['2eb012ee-59f7-4a50-9d2d-b60940d872be'];
+        //data['listIndicatorName'] = defaultParams['f707371b-c756-4717-afd9-9d4fce38e8e3'];
+        //data['reportFlag'] = "上报时赋值标记";
+        // 更新页面数据
+        rootPageElement.getPageInfo("d9c3e1b7-5e8f-414c-a80d-46d6dd0c1d72");
+        // 设置其他参数
+        rootPageElement.extraParams_ = data;
+    }
+    setTimeout(() => {
+        console.log(rootPageElement);
+    }, 2000)
+}
+流程表单ID：
+“部件管理”打开流程表单，URL里可以获取到
+"valueContent": "1c65aa2e-e050-45e6-90fd-6e2632e0f696"
+收件API接口ID
+api.DATA_SOURCE_EXECUTE("1f5235c5-f23e-4512-957e-bec5c10bd664"
+获取方法一：在任意动作绑定窗口按“ctrl+shift+c”，弹出窗口选择“api“，打开接口，点【确定】，可见回填的ID值。
+获取方法二：
+通过F12，打开“API管理”，找到API接口，获取id值，如下图：
+流程表单的页面ID
+rootPageElement.getPageInfo("d9c3e1b7-5e8f-414c-a80d-46d6dd0c1d72");
+在任意动作绑定窗口按“ctrl+shift+c”，弹出窗口选择“页面“，选择流程表单页面，点【确定】，可见回填的ID值。
+公式FLOW_START收件
+待办列表增加顶部操作按钮，命名为【收件】，绑定动作选择流程表单的部件，设置弹窗参数，点【确定】完成。收件不需要传参。
+后置动作：开启后置动作，点击【全屏】，选择脚本模板“表格列表顶部新增刷新”
+function main(defaultParams) {
+    // 在表单部件中的数据保存成功时刷新表格
+    if (defaultParams.moduleActionType === 'form-save') {
+        // 表单保存成功的回调
+        var self = this; // 重置作用域
+        var tableComp = self.$$element("table_87je8l"); // 表格列表组件id
+        tableComp.onRefresh(); // 调用表格的数据刷新动作
+    }
+}
+修改参数为待办列表部件的“唯一标识”：self.$$element("table_87je8l");
+获取方法：
+在待办页面，点击编辑列表的按钮，快速打开待办的列表部件
+切换到“高级”，查看“唯一标识”，复制到页面绑定动作的脚本里，再保存。
+【办理】
+待办列表里需要增加操作列【办理】
+编辑绑定动作：
+选择“内部页面”，页面选择流程表单，“显示页头”和“页头标题”根据需要配置。
+配置参数：boxType=1（待办），taskId和recordId按下图配置。注意大小写。
+办理详情参数要求说明：
+boxType-箱子类型（常量）
+recordId-案卷ID
+taskId-任务ID
+instanceId-实例ID
+不同的箱子必须的参数见下表：
+2.8.4待认领列表页面
+和“待办”基本一样，增加待认领页面，引入待认领列表部件，增加操作列【办理】用于执行审批操作【认领】、查看办理过程等。
+图  待认领列表页面
+配置参数：boxType=0（待认领），taskId和recordId按下图配置。注意大小写。
+图 待认领【办理】
+2.8.5已办列表页面
+和“待办”基本一样，增加已办页面，引入已办列表部件，增加操作列【详情】用于查看办理详情的表单、办理过程等。
+图  已办列表页面
+配置参数：boxType=2（已办），taskId和recordId按下图配置。注意大小写。
+图 已办【详情】
+2.8.6经办列表页面
+和“待办”基本一样，增加经办页面，引入经办列表部件，增加操作列【详情】用于查看办理详情的表单、办理过程等。
+图  经办列表页面
+配置参数：boxType=3（经办），recordId和instanceId按下图配置。注意大小写。
+图 经办【详情】
+2.8.7办结列表页面
+和“待办”基本一样，增加办结页面，引入办结列表部件，增加操作列【详情】用于查看办理详情的表单、办理过程等。
+图  办结列表页面
+配置参数：boxType=4（办结），recordId和instanceId按下图配置。注意大小写。
+图 办结【详情】
+2.8.8查阅列表页面
+和“待办”基本一样，增加查阅页面，引入查阅列表部件，增加操作列【详情】用于查看办理详情的表单、办理过程等。
+图  办结列表页面
+配置参数：boxType=5（查阅），recordId和instanceId按下图配置。注意大小写。
+图 查阅【详情】
+2.9导航设计
+根据需要设计导航
+上方选择导航布局，左侧设计导航列表，具体的导航上点【设置】，选择导航要显示的页面，点【确定】保存。
+流程办理涉及到的箱子都配置进来，例如：待办、已办、经办、待认领、办结和查阅。
+主题配置
+2.10登录页
+灵珑-应用管理-登录页
+可以引用内置模板，目前默认的是和灵珑登录页一致的页面，也可以自行设计。
+2.11导航权限配置
+统一用户中心-系统用户，搜索使用的系统，给列表里的用户配置【资源授权】
+根据需要点击开关开放系统权限。
+2.12访问应用
+到这里应用系统已经搭建完成，可以访问。
+访问系统的人员为统一用户中心里有该应用权限的人员。
+注意：不要与登录灵珑的人员混淆。
+有两种方式打开：
+第一种：登录灵珑平台，在“应用管理”点击“访问应用”。
+第二种：在URL里输入访问地址，key后面是应用系统的“应用代码”
+在浏览器输入http://{ip}:{port}/app/{应用代码}.html，这样就可以访问构建好的应用。
+http://faq.egova.com.cn:7777/projects/redmine/wiki/灵珑平台-简化应用访问地址
+图1：登录页面
+图2：登录后的系统
+c. 第三种：导航预览应用，登录页设置跳转页面
+3 FAQ
+3.1 如何确定案卷所属的流程版本？
+问：流程发布了很多版本，在不同的版本分别有若干案卷，如何知道当前案卷属于哪个流程版本？
+图 流程发布过的版本很多
+图 不知道案卷属于哪个版本
+方法一：看F12返回
+在案卷列表里点【办理】或【详情】，看task?taskId=的请求返回值，里面包含defineId，中间两个冒号之间的数字就是所属的版本；
+方法二：在业务库查表
+根据案卷的documentNo在表lcwf_process_record里查processDefineId的值，中间两个冒号之间的数字就是所属的版本；
+select * from lcwf_process_record where documentNo='8FC857E397A8835A725FE993E3AEF0E50EE24044'
+参数名 | boxType | recordId | taskId | instanceId
+认领详情 | "0" | "CLAIM" | ${recordId}必传 | ${taskId}必传 | -
+待办详情 | "1" | "TODO" | ${recordId}必传 | ${taskId}必传 | -
+已办详情 | "2" | "DONE" | ${recordId}必传 | ${taskId}必传 | -
+经办详情 | "3" | "HANDLE" | ${recordId}必传 | - | ${instanceId}必传
+办结详情 | "4" | "FINISH" | ${recordId}必传 | - | ${instanceId}必传
+查阅详情 | "5" | "LOOKUP" | ${recordId}必传 | - | -

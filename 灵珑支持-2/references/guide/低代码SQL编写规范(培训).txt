@@ -1,0 +1,755 @@
+低代码SQL编写规范(培训)
+灵珑视图编写正反例
+【强制】禁止使用select *
+反例：使用select * 会产生如下隐患
+数据传输过多增加额外开销
+回表产生索引失效风险
+占用过多数据库内存
+表结构变更敏感数据泄露
+【强制】禁止使用不兼容的函数（数据库兼容）
+目前公司产品统一使用自定义函数库抹平不同数据库的函数差异，在代码提交时存在检测并阻断
+低代码体系下，后续也会拦截含有不兼容函数的sql
+请至钉钉文档查看附件《数据库差异对比及事项安排》。
+反例
+正例
+161版本增加校验&自定义函数模板功能
+【强制】禁止使用在字段名上加双引号（数据库兼容）
+反例：mysql字段使用双引号会被视为常量，而pg系、达梦等数据库则无异常
+【强制】每一个子查询必须设置别名（数据库兼容）
+反例：mysql子查询缺少别名产生异常（达梦环境无异常，数据库迁移适配时会产生问题）
+161版本增加校验功能
+【强制】禁止使用数据库关键字、中文作为字段别名
+161版本增加中文字段校验功能
+【建议】变量使用引号
+使用会话变量公式做查询条件时，若字段类型为字符型，需要加引号；若字段类型为整型，可不加引号
+161版本增加变量设置的功能（#set）
+/* 使用set标签声明变量，变量名需要以'__sv_'开头，使用时通过 #{__sv_n} 引用。*/
+#set(__sv_n = getSessionVariable("bd_var_4ff9506d-9327-4ddd-a972-903de01c2870",true))
+#set(__sv_n2 = getSessionVariable("us-3",true))
+select #{__sv_n} as name ,  #{__sv_n2} as ee from dual
+【建议】列表禁止直接使用实体，统一使用视图，增强扩展性
+【建议】使用sql_mode_区分查询和计数
+计数模式：sql_mode_ == 'count'
+查询模式：sql_mode_ == "query"
+在使用灵珑进行栏目配置时，若启用了计数功能，则对应的栏目视图SQL会被复用，在原有SQL基础外层添加了计数语句，例如
+SELECT count(0) FROM (SELECT
+   a.id AS act_id, a.act_def_id, a.act_def_name, a.act_property_id, a.start_time,b.event_type_name,b.event_desc,b.event_src_id,b.event_src_name,b.coordinate_x,b.coordinate_y,b.rec_id,b.task_num,b.create_time,b.address,b.district_name,b.street_name,b.community_name,b.rec_type_name,b.main_type_name,b.sub_type_name,
+a.deadline_time,
+a.end_time,
+a.warning_time,
+a.part_id,
+a.role_id,
+a.human_id,
+a.remain_char,
+a.bundle_time_state_id,
+a.time_state_id
+FROM
+mis_rec b,
+wf_act_inst a
+WHERE
+    b.rec_id = a.biz_entry_id
+    AND a.part_id in (148651,95530,125446)
+AND a.rollback_ard_state_id IN ( 3, 4 ) 
+ORDER BY a.start_time desc
+) as 退回已审核
+上述SQL目标是获取计数的结果，因此在查询时，要考虑屏蔽查询字段以及排序
+去掉查询字段
+去掉排序
+在灵珑中可以通过增加 #if(sql_mode_ == "query") 进行控制
+SELECT
+#if(sql_mode_ == 'count' && sql_fields_.size() == 0) 
+                      1
+#else
+   a.id AS act_id, a.act_def_id, a.act_def_name, a.act_property_id, a.start_time,b.event_type_name,b.event_desc,b.event_src_id,b.event_src_name,b.coordinate_x,b.coordinate_y,b.rec_id,b.task_num,b.create_time,b.address,b.district_name,b.street_name,b.community_name,b.rec_type_name,b.main_type_name,b.sub_type_name,
+a.deadline_time,
+a.end_time,
+a.warning_time,
+a.part_id,
+a.role_id,
+a.human_id,
+a.remain_char,
+a.bundle_time_state_id,
+a.time_state_id
+FROM
+mis_rec b,
+wf_act_inst a
+WHERE
+    b.rec_id = a.biz_entry_id
+    AND a.part_id in (148651,95530,125446)
+AND a.rollback_ard_state_id IN ( 3, 4 ) 
+#if(sql_mode_ == "query")
+ORDER BY a.start_time desc
+#end
+增加后，最终生成的count语句如下
+SELECT count(0) FROM (SELECT
+   1
+FROM
+mis_rec b,
+wf_act_inst a
+WHERE
+    b.rec_id = a.biz_entry_id
+    AND a.part_id in (148651,95530,125446)
+AND a.rollback_ard_state_id IN ( 3, 4 ) 
+) as 退回已审核
+最终的执行计划上减少了对wf_act_inst的CSCN2全表扫描
+【建议】字段冗余，减少联表数量
+最多两个大表join
+A表 join B表，B表字段不搜索，灵珑列表中可使用导航属性可避免join B表，非灵珑列表可通过程序实现将sql拆分为两条执行后进行合并
+A表 join B表 ，B表字段需要搜索，常用搜索字段冗余到A表，可避免join B表
+《性能设计白皮书》
+【强制】减少or条件的使用
+反例：行政区划树，需要在前端明确是city_id还是street_id传给后台，不能组合为多个or条件
+【强制】or 转换为 in
+in查询会走二分查找，时间复杂度会降低至O(log n)，or查询的时间复杂度为O(n)
+在列表值较少时，or =和in的效率差不多，列表值超过10个时，in效率更高
+not in 与and也有类似效果，列表值多时，推荐not in而非 and <>
+反例：超过10个的or条件
+正例：优先使用in，在比较值10个以上时，时间节省大约1倍
+SET optimizer_trace = "enabled=on";
+SELECT * FROM information_schema.optimizer_trace;
+【建议】排序字段和条件字段建立联合索引
+参考：https://eco.dameng.com/document/dm/zh-cn/pm/sql-tuning.html
+不论mysql还是达梦，在分页查询排序场景下（where + order by + limit），索引优化器选择的均为order by字段作为索引
+基于where + order by建立联合索引在分页排序场景下会选择联合索引
+反例1：无联合索引时，区分度较高的rec_id条件无法发挥作用
+正例1：联合索引，发挥where条件部分过滤优势，实际执行速度从3s提升至0.003s
+反例2：
+正例2：联合索引减少了一次排序
+灵珑列表配置正反例
+【强制】列表必须开启分页（pc端、移动端）
+分页大小不超过100行
+移动端默认关闭计数
+【强制】列表必须增加默认条件，缩小查询范围
+默认增加时间范围、所属区域等命中索引的条件，并设置默认值
+时间范围可以使用公式配置开始和结束时间
+//开始时间
+  DATECALCULATE(DATE(YEAR(NOW()), MONTH(NOW()), DAY(NOW())),-15,false)
+//结束时间
+ DATE(YEAR(NOW()), MONTH(NOW()), DAY(NOW()), 23,59,59)
+【建议】避免使用过多列表条件过滤，改用会话变量
+反例：查询字段不明确，中文别名
+select * from (
+  -- 视图对应的sql
+  select id,user_id,user_name,region_id as 所属区划
+  from users a left join units b on a.unit_id = b.id
+) a where a.所属区划 = xxx
+优化后
+SELECT
+a.id,
+a.user_id,
+a.user_name,
+b.region_id 
+FROM
+users a
+LEFT JOIN units b ON a.unit_id = b.id
+and b.region_id = ${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("3",true)}
+参数 "3" 对应的会话变量管理中的公式 REGION_ID(): 当前登录人的区划id
+【建议】列表计算字段使用批量计算
+类似导航属性，将当前页面数据通过约定的变量#{parentList_}传递给api，然后就可以在api上读取相关数据完成二次查询逻辑
+前提：api支持批量执行
+灵珑视图高级用法
+变量的分类
+【推荐】视图中使用外置变量
+灵珑的视图生成的SQL默认按通用的规则自动化处理，生成的SQL的性能存在局限性。可以使用视图模板语法和视图变量来控制sql的输出，从而达到优化的效果。
+外置变量
+一般由会作为用户条件输入传入，在视图收到之后通过SQL模板技术对该变量进行特殊条件处理，以便对生成sql条件进行控制。
+如何定义变量
+${变量名}  ： 自动解析出变量名，默认等值操作符
+${变量名__操作符__value} ：带操作符的变量名
+操作符：主要用于列表自动生成的查询字段默认的操作符类型。
+比如
+创建的列表使用动态参数作为查询条件时，操作符就固定且不能更改
+麒舰平台使用示例
+#if(_queryTaskNum != null && _queryTaskNum != '')
+    and b.task_num = ${_queryTaskNum}
+#end
+#if(_defaultTaskNumSuffixOne != null && _defaultTaskNumSuffixOne != '' && _defaultTaskNumSuffixTwo != null && _defaultTaskNumSuffixTwo != '')
+
+    AND (FIND_IN_SET(SUBSTRING(task_num, -1), ${_defaultTaskNumSuffixOne}) OR FIND_IN_SET(SUBSTRING(task_num, -2), ${_defaultTaskNumSuffixTwo}))
+
+#elseif(_defaultTaskNumSuffixOne != null && _defaultTaskNumSuffixOne != '')
+
+    AND FIND_IN_SET(SUBSTRING(task_num, -1), ${_defaultTaskNumSuffixOne})
+
+#elseif(_defaultTaskNumSuffixTwo != null && _defaultTaskNumSuffixTwo != '')
+
+    AND FIND_IN_SET(SUBSTRING(task_num, -2), ${_defaultTaskNumSuffixTwo})
+#end
+【推荐】视图中使用会话变量
+会话变量会根据调用用户预先计算然后再参与sql查询，是一种预计算优化手段。
+会话变量是基于当前用户信息来扩展会话的场景，它会按用户来缓存相关数据。
+视图中可以使用工具类来调用会话变量，从而更灵活组织自己的SQL。
+可以使用会话变量可以解决数据越权问题
+如何使用
+AND a.part_id in (${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("e5385f38-04bf-4627-8d49-1c5e69790148-e00b-3700",false)})
+第一个参数为会话变量id，在灵珑会话变量管理页面维护。本质是配置公式
+可见是一个api请求: 获取人员参与者信息
+第二个参数是是否开启缓存，默认缓存生效时间1小时
+编写优化(161)
+灵珑新增会话变量模板引用&简化方法名
+【推荐】视图中使用内置变量
+灵珑 SQL视图之前只有外置变量，主要由外部传入值来控制sql生成，通过这种机制可达到优化性能的目的。但是存在一个场景存在两种不同模式，要求不同模式下生成sql规则不同，如列表记数。于是引入内置变量来解决此类问题
+内置变量
+这些变量是平台内部定义，不需要外部传入。在sql设计阶段可以限制这些变量值来控制sql的生成。
+使用说明
+sql_mode_/sql_fields_
+使用场景
+sql_mode_
+主要用于列表查询与计数场景区分，以便基于内置的sql_mode_来针对数据查询和计算进行差异化配置
+查询分页数据的接口，内部逻辑会设置 sql_mode_ = 'query'
+查询分页数据的接口，内部逻辑会设置 sql_mode_ = 'count'
+sql_fields_
+主要与sql_mode_配合对计数sql中不必要列进行输出控制，如：
+列表查询时没有传条件时，就不输出列
+判断依据：sql_fields_.size() == 0
+示例说明
+地址信息
+功能：麒舰核心平台-批转平台全部待办
+列表：麒舰-批转平台全部待办
+视图：麒舰-批转平台全部待办-视图
+配置SQL
+SELECT
+#if(sql_mode_ == 'count' && sql_fields_.size() == 0) 
+   1 
+#else
+    a.id AS act_id,
+    a.act_def_id,
+    a.act_def_name,
+    a.start_time,
+    a.part_id,
+    a.human_id,
+    a.deadline_time,
+    a.deadline_time as deadline_times,
+    a.time_state_id,
+    (CASE 
+        WHEN now() >= a.warning_time and now() < a.deadline_time THEN '即将超期'
+        WHEN now() < a.deadline_time THEN '未超期'
+        WHEN now() > a.deadline_time THEN '已超期'
+        ELSE '暂停计时' END) AS time_state,
+    b.event_type_name,
+    b.event_title,
+    b.event_src_id,
+    b.event_src_name,
+    b.coordinate_x,
+    b.coordinate_y,
+    b.address,
+    case when b.district_id is not null then b.district_id  when b.city_id is not null then b.city_id else '' end  as district_id,
+    case when b.district_name is not null then b.district_name  when b.city_name is not null then b.city_name else '' end  as district_name,
+    b.street_name,
+    b.community_name,
+    b.event_desc,
+    b.rec_id,
+    b.task_num,
+    b.create_time,
+    b.rec_type_name,
+    b.rec_type_id,
+    b.main_type_name,
+     b.main_type_id,
+    b.sub_type_name,
+    b.sub_type_id,
+    b.merge_type_name,
+    b.city_name,
+    b.event_grade_id,
+    b.event_grade_name,
+    b.event_property_id,
+    b.event_property_name,
+    b.validate_code,
+    a.unit_id,
+    b.state_id,
+    a.assign_time,
+    b.occur_time,
+    b.online_public_flag,
+    b.call_subject_id,
+    b.reporter_name,
+    b.contact,
+    b.accepter_name,
+    b.accepter_code,
+    b.archive_time,
+    b.state_name,
+    b.uid,
+    a.state_name as act_state_name
+#end
+   
+FROM
+    mis_rec b,
+    wf_act a
+  WHERE
+    a.biz_entry_id = b.rec_id
+    AND a.part_id in (${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("e5385f38-04bf-4627-8d49-1c5e69790148-e00b-3700",false)})
+    AND a.act_property_id in(1,5)
+    and a.assign_feedback_ard_state_id != 1 and a.rollback_ard_state_id != 1 and a.direct_reply_ard_state_id != 1 and a.cancel_ard_state_id != 1
+    AND b.rec_type_id not in(1,4)
+    AND b.merge_flag <> 2
+    and b.merge_state_id<>101
+#if(_queryTaskNum != null && _queryTaskNum != '')
+    and b.task_num = ${_queryTaskNum}
+#end
+#if(_defaultTaskNumSuffixOne != null && _defaultTaskNumSuffixOne != '' && _defaultTaskNumSuffixTwo != null && _defaultTaskNumSuffixTwo != '')
+
+    AND (FIND_IN_SET(SUBSTRING(task_num, -1), ${_defaultTaskNumSuffixOne}) OR FIND_IN_SET(SUBSTRING(task_num, -2), ${_defaultTaskNumSuffixTwo}))
+
+#elseif(_defaultTaskNumSuffixOne != null && _defaultTaskNumSuffixOne != '')
+
+    AND FIND_IN_SET(SUBSTRING(task_num, -1), ${_defaultTaskNumSuffixOne})
+
+#elseif(_defaultTaskNumSuffixTwo != null && _defaultTaskNumSuffixTwo != '')
+
+    AND FIND_IN_SET(SUBSTRING(task_num, -2), ${_defaultTaskNumSuffixTwo})
+
+#end
+#if(sql_mode_ == 'query') 
+   order by a.start_time desc
+#end
+SQL解释
+当前查询是计数的查询，且没有传查询条件时，实际对应的sql如下(当前sql视图，不是完整的sql)
+SELECT
+   1    
+FROM
+    mis_rec b,
+    wf_act a
+  WHERE
+    a.biz_entry_id = b.rec_id
+    AND a.part_id in (${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("e5385f38-04bf-4627-8d49-1c5e69790148-e00b-3700",false)})
+    AND a.act_property_id in(1,5)
+    and a.assign_feedback_ard_state_id != 1 and a.rollback_ard_state_id != 1 and a.direct_reply_ard_state_id != 1 and a.cancel_ard_state_id != 1
+    AND b.rec_type_id not in(1,4)
+    AND b.merge_flag <> 2
+    and b.merge_state_id<>101
+#if(_queryTaskNum != null && _queryTaskNum != '')
+    and b.task_num = ${_queryTaskNum}
+#end
+#if(_defaultTaskNumSuffixOne != null && _defaultTaskNumSuffixOne != '' && _defaultTaskNumSuffixTwo != null && _defaultTaskNumSuffixTwo != '')
+
+    AND (FIND_IN_SET(SUBSTRING(task_num, -1), ${_defaultTaskNumSuffixOne}) OR FIND_IN_SET(SUBSTRING(task_num, -2), ${_defaultTaskNumSuffixTwo}))
+
+#elseif(_defaultTaskNumSuffixOne != null && _defaultTaskNumSuffixOne != '')
+
+    AND FIND_IN_SET(SUBSTRING(task_num, -1), ${_defaultTaskNumSuffixOne})
+
+#elseif(_defaultTaskNumSuffixTwo != null && _defaultTaskNumSuffixTwo != '')
+
+    AND FIND_IN_SET(SUBSTRING(task_num, -2), ${_defaultTaskNumSuffixTwo})
+
+#end
+查询字段设置为 1，且没有排序， 对计数未说无影响，可有效提升查询效率
+当前查询是分页数据的查询时，实际对应的sql如下(当前sql视图，不是完整的sql)
+SELECT
+    a.id AS act_id,
+    a.act_def_id,
+    a.act_def_name,
+    a.start_time,
+    a.part_id,
+    a.human_id,
+    a.deadline_time,
+    a.deadline_time as deadline_times,
+    a.time_state_id,
+    (CASE 
+        WHEN now() >= a.warning_time and now() < a.deadline_time THEN '即将超期'
+        WHEN now() < a.deadline_time THEN '未超期'
+        WHEN now() > a.deadline_time THEN '已超期'
+        ELSE '暂停计时' END) AS time_state,
+    b.event_type_name,
+    b.event_title,
+    b.event_src_id,
+    b.event_src_name,
+    b.coordinate_x,
+    b.coordinate_y,
+    b.address,
+    case when b.district_id is not null then b.district_id  when b.city_id is not null then b.city_id else '' end  as district_id,
+    case when b.district_name is not null then b.district_name  when b.city_name is not null then b.city_name else '' end  as district_name,
+    b.street_name,
+    b.community_name,
+    b.event_desc,
+    b.rec_id,
+    b.task_num,
+    b.create_time,
+    b.rec_type_name,
+    b.rec_type_id,
+    b.main_type_name,
+     b.main_type_id,
+    b.sub_type_name,
+    b.sub_type_id,
+    b.merge_type_name,
+    b.city_name,
+    b.event_grade_id,
+    b.event_grade_name,
+    b.event_property_id,
+    b.event_property_name,
+    b.validate_code,
+    a.unit_id,
+    b.state_id,
+    a.assign_time,
+    b.occur_time,
+    b.online_public_flag,
+    b.call_subject_id,
+    b.reporter_name,
+    b.contact,
+    b.accepter_name,
+    b.accepter_code,
+    b.archive_time,
+    b.state_name,
+    b.uid,
+    a.state_name as act_state_name
+   
+FROM
+    mis_rec b,
+    wf_act a
+  WHERE
+    a.biz_entry_id = b.rec_id
+    AND a.part_id in (${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("e5385f38-04bf-4627-8d49-1c5e69790148-e00b-3700",false)})
+    AND a.act_property_id in(1,5)
+    and a.assign_feedback_ard_state_id != 1 and a.rollback_ard_state_id != 1 and a.direct_reply_ard_state_id != 1 and a.cancel_ard_state_id != 1
+    AND b.rec_type_id not in(1,4)
+    AND b.merge_flag <> 2
+    and b.merge_state_id<>101
+#if(_queryTaskNum != null && _queryTaskNum != '')
+    and b.task_num = ${_queryTaskNum}
+#end
+#if(_defaultTaskNumSuffixOne != null && _defaultTaskNumSuffixOne != '' && _defaultTaskNumSuffixTwo != null && _defaultTaskNumSuffixTwo != '')
+
+    AND (FIND_IN_SET(SUBSTRING(task_num, -1), ${_defaultTaskNumSuffixOne}) OR FIND_IN_SET(SUBSTRING(task_num, -2), ${_defaultTaskNumSuffixTwo}))
+
+#elseif(_defaultTaskNumSuffixOne != null && _defaultTaskNumSuffixOne != '')
+
+    AND FIND_IN_SET(SUBSTRING(task_num, -1), ${_defaultTaskNumSuffixOne})
+
+#elseif(_defaultTaskNumSuffixTwo != null && _defaultTaskNumSuffixTwo != '')
+
+    AND FIND_IN_SET(SUBSTRING(task_num, -2), ${_defaultTaskNumSuffixTwo})
+
+#end
+   order by a.start_time desc
+查询需要的字段，且有时间排序
+parentList_
+使用场景
+将主视图当前页的数据透传给子视图，以便子视图能够基于主视图的查询结果进行过滤以达到性能优化目的。
+导航属性
+计算字段批量计算
+【推荐】导航属性
+本质是做二次查询：将主视图中当前页的数据的某些关联属性作为过滤条件，对子视图做数据查询
+适用场景
+多媒体附件信息：常见列表部件中的附件展示
+减少表的关联查询，但导航属性字段不能用作列表的过滤条件
+地址信息
+列表：麒舰-批转平台全部待办
+视图：麒舰-批转平台全部待办-视图
+导航属性视图：麒舰-批转平台全部待办-附件导航属性视图
+视图配置
+子视图SQL
+select uid as fileId,
+media_usage as fileName,
+size as fileSize,
+(case SUBSTRING(r.file_name, LOCATE('.', r.file_name) + 1)
+        when 'png' then '101'
+        when 'jpg' then '102'
+        when 'jpeg' then '102'
+        when 'gif' then '103'
+        when 'mp4' then '401'
+        when 'mov' then '402'
+        when 'doc' then '501'
+        when 'docx' then '501'
+        when 'xls' then '502'
+        when 'xlsx' then '502'
+        when 'ppt' then '503'
+        when 'pptx' then '503'
+        when 'pdf' then '601'
+        when 'zip' then '611'
+        else '799'
+      end)
+as mediaType,
+relation_long_id,
+'V22FileService' as serviceType
+from sys_media_rec r
+where (delete_flag = 0 or delete_flag is null)
+#if (parentList_ != null && parentList_ != '')
+ and relation_long_id in (
+  #for (Map row : parentList_)
+    #if (for.index > 1)
+    ,
+    #end
+    '${row.rec_id}'
+  #end
+  )
+#end
+sql解释
+#if (parentList_ != null && parentList_ != '')
+ and relation_long_id in (
+  #for (Map row : parentList_)
+    #if (for.index > 1)
+    ,
+    #end
+    '${row.rec_id}'
+  #end
+  )
+#end
+当主视图的当前页有数据时，会设置查询条件 and relation_long_id in ( 主视图当前页的所有rec_id )
+对比包一层后再设置过滤条件，写在内层的过滤条件效率更好
+【推荐】列表计算字段批量计算
+杭州项目中有部分箱子是通过计算字段来获取部门处理意见，计算字段又是通过api从两张大表查询该数据。一个列表查询20条数据，就会触发20个内部请求，从而引发请求阻塞等问题
+解决方案
+计算增加是否批量执行配置，后端解析到该配置之后，参照导航属性的实现方案，将当前页面数据通过约定的变量#{parentList_}传递给api，然后就可以在api上读取相关数据完成二次查询逻辑。
+列表配置
+列表中存在使用 API_CALL 公式的计算字段，为避免每一行数据都调用一次 API_CALL 公式，需开启批量执行开关。
+API 配置
+API 请求参数约定
+API 返回值约定
+[{
+  ${rowNum}:obj
+}]
+rowNum 为parentList_数据的序号 , 值为对应计算的结果
+返回结构
+BatchBindingResult 对象，api统一返回该结构
+
+//返回结构定义
+
+public class BatchBindingResult {
+    private BatchBindingType type;
+    private List<Map<Integer,Object>> dataList;
+}
+前后置脚本配置
+实际业务可能是 api 后端程序实现，当前使用脚本来处理。在前置脚本中，把列表数据放入全局变量：
+在后置脚本中，可直接使用parentList_。实际业务场景中可以避免一次数据查询，因为当前列表的数据已经传递给 API：
+// 获取传入的主表数据
+var parentList_  = variables['body'];
+var parentListMap = com.egova.json.utils.JsonUtils.deserialize(parentList_, Map.class);
+
+// 提取传过来的数据
+var parentDataListStr = parentListMap["parentList_"]
+out.println("parentDataListStr：" + parentDataListStr);
+
+// 序列化为List
+var parentDataList = com.egova.json.utils.JsonUtils.deserializeList(parentDataListStr, Map.class);
+
+// 构建BatchBindingResult
+var batchResult = new HashMap();
+batchResult.put("type","BatchBindingResult");
+
+// 模拟计算每一行的值
+var dataList = new ArrayList<>();
+for(int index = 0; index < parentDataList.size(); index ++){
+    var row = parentDataList.get(index);
+    var map = new HashMap();
+    // 构建返回结果：{序号:计算值}
+    // 这里只是简单的返回name字段，实际业务场景可以是sql查询
+    map.put(index,"批量计算：" + row.NAME + "-" + row.CODE);
+    dataList.add(map);
+}
+batchResult.put("dataList",dataList);
+
+var dataMap = new HashMap();
+// 修改返回结果
+dataMap.put("result",batchResult);
+out.println("batchResult：" + batchResult);
+return  com.egova.json.utils.JsonUtils.serialize(dataMap);;
+计算字段批量计算返回结果：
+【推荐】COUNT性能优化
+COUNT_OPTIMIZE
+在灵珑平台中，当通过视图创建列表并执行数据查询时，系统会自动调用 count 接口对结果集进行总数统计。默认情况下，该统计 SQL 的生成方式如下：
+SELECT COUNT(0)
+FROM (
+    -- 视图原始SQL
+    SELECT ...
+    FROM table
+    WHERE ...
+) WHERE -- 列表筛选条件
+此方式将视图 SQL 作为子查询嵌套，外层再拼接列表的过滤条件进行计数。在数据量较大或视图复杂时，性能较差。
+为提升性能，平台支持 “计数优化” 功能。开启后，系统会尝试将视图 SQL 与列表筛选条件合并，直接在基础表上执行计数操作，生成如下形式的 SQL：
+SELECT COUNT(1)
+FROM table
+WHERE -- 视图中的 WHERE 条件
+  AND -- 列表中的筛选条件
+这种方式避免了子查询嵌套，可以显著提高计数效率。
+启用方式
+在视图 SQL 中未配置独立的计数 SQL；
+在视图 SQL 的开头或合适位置添加注释标记：
+/** COUNT_OPTIMIZE */
+注意：注释必须为 /** COUNT_OPTIMIZE */ 格式，大小写敏感，不可有空格错误。
+不支持的场景
+以下情况不支持启用计数优化，否则可能导致解析失败或结果异常：
+其他注意事项
+CASE WHEN 表达式必须完整
+所有 CASE WHEN ... THEN ... ELSE ... END 必须完整书写，禁止省略  END：
+-- 正确
+CASE WHEN a > 1 THEN 'A' ELSE 'B' END
+
+-- 错误（缺少 END）
+CASE WHEN a > 1 THEN 'A'
+首次查询较慢，后续走缓存
+启用优化后，第一次查询会触发 SQL 的结构化解析，并缓存解析结果；后续相同视图的查询将直接使用缓存，性能大幅提升。
+建议启用后验证接口返回
+优化后应手动测试列表接口是否正常返回数据和总数，确保无语法错误或逻辑偏差。
+优化示例
+示例环境
+平台：灵珑列表设计器（武汉环境）
+应用：麒舰核心应用
+功能模块：批转平台 - 不满意申诉通过列表
+原始视图 SQL
+SELECT
+    -- 需要去掉distinct才能使用
+distinct a.id AS act_id,
+    CASE 
+    WHEN a.part_name LIKE '%中心批转员' THEN 
+        REPLACE(a.part_name, '中心批转员', '12345中心')
+    ELSE 
+        a.part_name
+    END AS part_name,
+a.act_def_name,
+b.rec_id,
+b.task_num,
+b.create_time,
+    b.district_id,
+b.district_name,
+b.street_name,
+b.community_name,
+b.event_type_name,
+b.coordinate_x,
+b.coordinate_y,
+b.rec_type_name,
+b.event_src_name,
+b.main_type_name,
+b.sub_type_name,
+    b.event_property_name,
+    b.occur_time,
+a.part_id,
+a.role_id,
+a.human_id,
+b.address,
+b.event_title,
+    d.appeal_time as start_time ,ard.apply_time
+FROM
+    wf_act a  left join wf_ard_inst ard on ard.init_task_uid = a.act_id and ard.ard_index = 0 and ard.ard_state_id = 4 ,   
+    mis_rec b,
+    mis_rec_evaluation_detail d
+WHERE
+    b.rec_id = a.biz_entry_id
+    AND a.part_ids_dir_top_down like '${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("c37c482c-1dd5-4d67-bc6f-d76872ddc87a", true)}${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("11899b8c-1d4f-45c1-85ba-7daf71eec942", true)}/%'
+AND a.ard_state_id = 4
+AND a.ard_type_id = 1005
+    -- 此处使用act_id会被替换成d.a.act_id,需要修改
+    and a.id = d.act_id 
+    and d.rec_id = b.rec_id
+    AND d.bad_eval_flag = 1
+    AND a.part_id = d.part_uid
+    AND d.last_part_eval_flag = 1
+   #if(_queryTaskNum != null && _queryTaskNum != '')
+    and b.task_num = ${_queryTaskNum}
+#end
+#if(sql_mode_ == "query")
+group by b.rec_id
+ORDER BY
+    a.start_time desc
+#end
+⚠️ 当前视图中存在 DISTINCT ，不符合优化要求。需先修改。
+⚠️ 当前视图中a.id的别名act_id与b.act_id重复
+优化前：未启用计数优化
+SELECT COUNT(0)
+  FROM (
+    SELECT
+    distinct a.id AS act_id,
+        CASE 
+        WHEN a.part_name LIKE '%中心批转员' THEN 
+            REPLACE(a.part_name, '中心批转员', '12345中心')
+        ELSE 
+            a.part_name
+        END AS part_name,
+    a.act_def_name,
+    b.rec_id,
+    b.task_num,
+    b.create_time,
+        b.district_id,
+    b.district_name,
+    b.street_name,
+    b.community_name,
+    b.event_type_name,
+    b.coordinate_x,
+    b.coordinate_y,
+    b.rec_type_name,
+    b.event_src_name,
+    b.main_type_name,
+    b.sub_type_name,
+        b.event_property_name,
+        b.occur_time,
+    a.part_id,
+    a.role_id,
+    a.human_id,
+    b.address,
+    b.event_title,
+        d.appeal_time as start_time ,ard.apply_time
+    FROM
+        wf_act a  left join wf_ard_inst ard on ard.init_task_uid = a.act_id and ard.ard_index = 0 and ard.ard_state_id = 4 ,   
+        mis_rec b,
+        mis_rec_evaluation_detail d
+    WHERE
+        b.rec_id = a.biz_entry_id
+        AND a.part_ids_dir_top_down like 'XXX%'
+    AND a.ard_state_id = 4
+    AND a.ard_type_id = 1005
+        and a.id = d.act_id 
+        and d.rec_id = b.rec_id
+        AND d.bad_eval_flag = 1
+        AND a.part_id = d.part_uid
+        AND d.last_part_eval_flag = 1
+        and b.task_num=:_queryTaskNum)
+优化后：启用计数优化
+移除 DISTINCT
+修改act.id的别名
+添加 /** COUNT_OPTIMIZE */ 注释
+确保 CASE WHEN 完整，无遗漏 ELSE 或 END
+修改后视图与列表：
+SQL视图
+列表设计器
+优化后计数 SQL：
+SELECT COUNT(1) 
+FROM 
+  mis_rec AS b, 
+  mis_rec_evaluation_detail AS d, 
+  wf_act AS a left JOIN wf_ard_inst AS ard ON ard.init_task_uid=a.act_id 
+  and ard.ard_index=0 and ard.ard_state_id=4 
+WHERE 
+  b.rec_id=a.biz_entry_id 
+  AND a.part_ids_dir_top_down like 'xxx%' 
+  AND a.ard_state_id=4 
+  AND a.ard_type_id=1005 
+  and a.id=d.act_id
+  and d.rec_id=b.rec_id
+  AND d.bad_eval_flag=1 
+  AND a.part_id=d.part_uid 
+  AND d.last_part_eval_flag=1 
+  and b.task_num=:_queryTaskNum
+COUNT_CACHE
+在大量列表计数查询比较耗时的环境下，即使使用了各种优化手段。但是高并发场景下依然存在性能问题。比如福建12345早晚高峰期时段容易出现服务宕机问题。
+可以在视图上需要增加计数缓层配置
+格式：
+/** COUNT_CACHE(timeout，expr) */
+参数说明
+timeout: 缓存时间，单位毫秒。即缓存时间内同样的sql和参数，直接从缓存取计数值，不查询数据库
+expr: 条件表单时，可以是常量true，也可以使用内置变量表达式
+示例1：/** COUNT_CACHE(30000，true) */
+示例2：/** COUNT_CACHE(30000，${query_fields_.size()>0}) */
+使用说明
+/** COUNT_CACHE(timeout,expr) */  可以与  /** COUNT_OPTIMIZE */  配合使用
+此配置仅影响部件数据计数（视图计数不受影响）
+后续优化
+增加模板功能
+自定义函数
+会话变量
+静态变量
+基本用法
+sql校验功能
+中文字段的校验
+子查询是否设置别名的校验
+是否使用自定义函数的校验
+
+[表格0]
+场景 | 页面参数 | SQL参数 | 模板示例
+等值查询 | p | p__equal__value 或 p | v = ${p__equal__value} 或 v = ${p}
+范围查询 | p | p__between__start p__between__end | v between ${p__between__start} and ${p__between__end}
+IN查询 | p | p__in__value | v in (${p__in__value})
+
+[表格1]
+限制项 | 说明
+UNION/UNION ALL | 包含联合查询的视图无法解析结构，禁止使用
+DISTINCT关键字 | 使用DISTINCT将导致主键无法识别，影响优化逻辑
+SELECT * | 必须显式指定字段列表，禁止使用星号通配符
+存在注释 | 开启优化后，SQL 中不得包含其他注释（如--或/* */），可能干扰解析器
+别名设置规范 | 设置的别名避免与物理表中真实的表名相同，如 select a.id as act_id  from a, b where a.id = b.act_id 此时开启优化后b.act_id会被替换为b.a.id

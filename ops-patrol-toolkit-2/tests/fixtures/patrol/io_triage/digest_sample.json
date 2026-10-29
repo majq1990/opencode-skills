@@ -1,0 +1,57 @@
+[
+  {
+    "sql": "SELECT * FROM biz_event_log WHERE event_time > ? AND region_code = ? ORDER BY id DESC LIMIT ?",
+    "schema": "app_db",
+    "exec_count": 8642,
+    "avg_latency_ps": 2450000000000,
+    "rows_examined": 4820000000,
+    "rows_sent": 1210000,
+    "tmp_disk_tables": 0,
+    "no_index_used": 8642,
+    "sort_rows": 1210000
+  },
+  {
+    "sql": "SELECT id, event_time, operator_name, detail FROM biz_event_log WHERE detail LIKE ?",
+    "schema": "app_db",
+    "exec_count": 12680,
+    "avg_latency_ps": 1890000000000,
+    "rows_examined": 3160000000,
+    "rows_sent": 86400,
+    "tmp_disk_tables": 0,
+    "no_index_used": 12680,
+    "sort_rows": 0
+  },
+  {
+    "sql": "SELECT COUNT(*) AS cnt, region_code FROM biz_event_log WHERE event_time BETWEEN ? AND ? GROUP BY region_code ORDER BY cnt DESC",
+    "schema": "app_db",
+    "exec_count": 934,
+    "avg_latency_ps": 5620000000000,
+    "rows_examined": 892000000,
+    "rows_sent": 9340,
+    "tmp_disk_tables": 934,
+    "no_index_used": 934,
+    "sort_rows": 892000000
+  },
+  {
+    "sql": "SELECT t.*, u.account_name FROM biz_event_log t LEFT JOIN sys_account u ON t.account_id = u.id WHERE t.event_type = ?",
+    "schema": "app_db",
+    "exec_count": 5421,
+    "avg_latency_ps": 980000000000,
+    "rows_examined": 468000000,
+    "rows_sent": 542100,
+    "tmp_disk_tables": 0,
+    "no_index_used": 0,
+    "sort_rows": 468000000
+  },
+  {
+    "sql": "SELECT id FROM biz_event_log WHERE status = ? LIMIT ?",
+    "schema": "app_db",
+    "exec_count": 22450,
+    "avg_latency_ps": 12000000000,
+    "rows_examined": 22450,
+    "rows_sent": 22450,
+    "tmp_disk_tables": 0,
+    "no_index_used": 0,
+    "sort_rows": 0
+  }
+]

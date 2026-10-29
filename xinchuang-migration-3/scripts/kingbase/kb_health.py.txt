@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""金仓（KingbaseES V9）健康体检——只读，回答"库是不是没了"。
+
+七个问题，逐个给证据，不猜：
+  A. 容器在不在、跑没跑、54321 映射没映射
+  B. 54321 端口通不通
+  C. mig 连得上吗、是什么版本
+  D. 四个 schema 在不在、表数多少、有没有行（**光有表没有行等于数据也没了**）
+  E. 源库 MySQL(cg155:3306) 还通不通——不通知就无法重新迁移
+  F. eUrbanMIS 现在指向哪个库（切过去没有）
+  G. 驱动 jar 和 liquibase 桥接 jar 还在不在 WEB-INF/lib
+
+全程只读，不改任何东西（预检不修复）。退出码 0=健康，1=有问题。
+
+用法：
+    python3 kb_health.py                       # 默认端点 127.0.0.1:54321/test
+    python3 kb_health.py --json /root/_kbkit/health.json
+"""
+import glob
+import json
+import os
+import re
+import socket
+import subprocess
+import sys
+from pathlib import Path
+
+APP = "eUrbanMIS"
+PROPS = Path("/egova/web") / APP / "WEB-INF/classes/jdbc.properties"
+SCHEMAS = ("cgdb", "cgdbstat", "giscenter", "mms")
+KB_USER = "mig"
+DEAD = {"000", "404", "400", "500", "502", "503"}
+RESULT = {"ok": True, "items": []}
+
+
+def note(ok, label, detail=""):
+    RESULT["items"].append({"ok": bool(ok), "label": label, "detail": detail})
+    print("  [%s] %-34s %s" % ("OK  " if ok else "FAIL", label, detail))
+    if not ok:
+        RESULT["ok"] = False
+
+
+def sh(cmd, timeout=40):
+    try:
+        r = subprocess.run(cmd, shell=True, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace",
+                           timeout=timeout)
+        return r.returncode, (r.stdout or "") + (r.stderr or "")
+    except Exception as ex:
+        return 127, "ERR %s" % ex
+
+
+def head(t):
+    print("\n" + "=" * 74)
+    print(t)
+    print("=" * 74)
+
+
+def parse_props(text):
+    d = {}
+    for line in text.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#") or s.startswith("!") or "=" not in s:
+            continue
+        k, v = s.split("=", 1)
+        d[k.strip()] = v.strip()
+    return d
+
+
+def probe(host, port, timeout=6):
+    """协议级探活，不是裸 connect。
+
+    裸 connect 在有透明代理（sing-box TUN 之类）的机器上对**所有**地址都成功，
+    包括 RFC 5737 保留测试网段这种不可能有主机的地址——握手在本机栈就完成了，
+    送数据才 reset。只 connect 是零信息量，会把"库没了"报成"端口可达"。
+    MySQL 和 PostgreSQL/金仓都是服务端先说话，所以 connect 后 recv，
+    收到字节才是真服务；超时或 reset 就是没有。
+    """
+    s = socket.socket()
+    s.settimeout(timeout)
+    try:
+        s.connect((host, port))
+    except Exception as ex:
+        s.close()
+        return False, "connect 失败 %s" % type(ex).__name__
+    try:
+        s.settimeout(4)
+        data = s.recv(16)
+        if not data:
+            return False, "连上但对方不发数据（代理伪造握手，非真服务）"
+        return True, "服务端主动发 %d 字节" % len(data)
+    except socket.timeout:
+        return False, "连上但 4s 无响应（代理伪造握手，非真服务）"
+    except Exception as ex:
+        return False, "收发失败 %s" % type(ex).__name__
+    finally:
+        s.close()
+
+
+def main():
+    argv = sys.argv[1:]
+    kb_host, kb_port, kb_db = "127.0.0.1", 54321, "test"
+    kb_pw_file = "/root/.kb_mig_pw"
+    my_host, my_port = "172.21.133.155", 3306
+    json_out = None
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--kb-host":
+            kb_host = argv[i + 1]; i += 2
+        elif a == "--kb-port":
+            kb_port = int(argv[i + 1]); i += 2
+        elif a == "--kb-db":
+            kb_db = argv[i + 1]; i += 2
+        elif a == "--kb-pw-file":
+            kb_pw_file = argv[i + 1]; i += 2
+        elif a == "--mysql-host":
+            my_host = argv[i + 1]; i += 2
+        elif a == "--mysql-port":
+            my_port = int(argv[i + 1]); i += 2
+        elif a == "--json":
+            json_out = argv[i + 1]; i += 2
+        else:
+            print("未知参数 %s" % a); return 2
+
+    kb_pw = ""
+    if os.path.isfile(kb_pw_file):
+        with open(kb_pw_file, encoding="utf-8") as fh:
+            kb_pw = fh.read().strip()
+
+    # ---------- A. 容器 ----------
+    head("A. 金仓容器")
+    rc, out = sh("docker ps -a --no-trunc --format "
+                 "'{{.Names}}|{{.Status}}|{{.Ports}}' 2>/dev/null")
+    rows = [ln for ln in out.splitlines() if ln.strip()]
+    kbs = [ln for ln in rows
+           if re.search(r"(?i)king|kes|kb", ln) or "54321" in ln]
+    if not kbs:
+        note(False, "容器存在", "docker 里看不到金仓相关容器")
+        print("      （docker ps -a 全部输出 %d 行）" % len(rows))
+    else:
+        for ln in kbs:
+            parts = ln.split("|")
+            name = parts[0] if parts else "?"
+            status = parts[1] if len(parts) > 1 else "?"
+            ports = parts[2] if len(parts) > 2 else ""
+            running = status.lower().startswith("up")
+            note(running, "容器 %s" % name, "%s | %s" % (status, ports[:70]))
+            if "54321" not in ports:
+                note(False, "54321 端口映射", "端口串里没有 54321：%s" % ports[:70])
+
+    # ---------- B. TCP ----------
+    head("B. 54321 端口")
+    ok, detail = probe(kb_host, kb_port)
+    note(ok, "TCP %s:%d" % (kb_host, kb_port), detail)
+
+    # ---------- C+D. 连接、版本、schema、表、行 ----------
+    head("C/D. mig 连接 · schema · 表 · 行数")
+    conn = None
+    try:
+        import psycopg2
+        from psycopg2 import sql
+    except ImportError:
+        note(False, "psycopg2", "本机没装，无法核对库内容")
+        sql = None
+    if sql is not None:
+        try:
+            conn = psycopg2.connect(host=kb_host, port=kb_port, user=KB_USER,
+                                    dbname=kb_db, password=kb_pw,
+                                    connect_timeout=8)
+            conn.autocommit = True
+            cur = conn.cursor()
+            cur.execute("SELECT version()")
+            note(True, "mig 连接", cur.fetchone()[0][:70])
+            cur.execute("SELECT current_database()")
+            note(cur.fetchone()[0] == kb_db, "当前数据库",
+                 "期望 %s" % kb_db)
+
+            # 每个 schema：表数 + 抽表算行数。光有表没有行 = 数据也没了。
+            for sch in SCHEMAS:
+                cur.execute(
+                    "SELECT COUNT(*) FROM pg_namespace WHERE nspname = %s",
+                    (sch,))
+                if not cur.fetchone()[0]:
+                    note(False, "schema %s" % sch, "不存在")
+                    continue
+                cur.execute(
+                    "SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n "
+                    "ON n.oid = c.relnamespace WHERE n.nspname = %s "
+                    "AND c.relkind = 'r'", (sch,))
+                ntab = cur.fetchone()[0]
+                if ntab == 0:
+                    note(False, "schema %s 表数" % sch, "0 张表——数据也没了")
+                    continue
+                cur.execute(
+                    "SELECT tablename FROM pg_tables WHERE schemaname = %s "
+                    "ORDER BY tablename LIMIT 4", (sch,))
+                tbls = [r[0] for r in cur.fetchall()]
+                cnts = []
+                for t in tbls:
+                    try:
+                        cur.execute(sql.SQL("SELECT COUNT(*) FROM {}.{}")
+                                    .format(sql.Identifier(sch),
+                                            sql.Identifier(t)))
+                        cnts.append("%s=%d" % (t, cur.fetchone()[0]))
+                    except Exception as ex:
+                        cnts.append("%s=ERR" % t)
+                        conn.rollback()
+                note(True, "schema %s" % sch,
+                     "表 %d 张；抽样 %s" % (ntab, ", ".join(cnts)[:80]))
+        except Exception as ex:
+            note(False, "mig 连接/查询", str(ex).split("\n")[0][:100])
+
+    # ---------- E. 源库 MySQL ----------
+    head("E. 源库 MySQL（不通知就无法重新迁移）")
+    ok, detail = probe(my_host, my_port)
+    note(ok, "MySQL %s:%d" % (my_host, my_port), detail)
+
+    # ---------- F. eUrbanMIS 当前指向 ----------
+    head("F. eUrbanMIS 当前数据源")
+    if not PROPS.is_file():
+        note(False, "jdbc.properties", "找不到 %s" % PROPS)
+    else:
+        p = parse_props(PROPS.read_text(encoding="utf-8", errors="replace"))
+        for pre in ("biz", "stat"):
+            key = ("%s.jdbc.url" % pre) if pre else "jdbc.url"
+            u = p.get(key, "<缺失>")
+            u = re.sub(r"(?i)(password|pwd)=[^&\s]*", r"\1=***", u)
+            if "kingbase8" in u:
+                note(True, "%s 已指向金仓" % pre, u[:78])
+            elif "mysql" in u.lower():
+                note(False, "%s 仍指向 MySQL" % pre, u[:78])
+            elif "dm://" in u.lower() or "jdbc:dm" in u.lower():
+                note(False, "%s 仍指向达梦" % pre, u[:78])
+            else:
+                note(False, "%s 指向不明" % pre, u[:78])
+
+    # ---------- G. jar ----------
+    head("G. 驱动 jar 与 liquibase 桥接 jar")
+    lib = PROPS.parent.parent / "lib"
+    jars = sorted(x.name for x in lib.glob("kingbase8*.jar")) if lib.is_dir() else []
+    note(bool(jars), "kingbase8 驱动 jar",
+         ", ".join(jars) if jars else "WEB-INF/lib 里没有")
+    bridge = []
+    if lib.is_dir():
+        for jar in sorted(lib.glob("*.jar")):
+            try:
+                import zipfile
+                with zipfile.ZipFile(str(jar)) as zf:
+                    svc = "META-INF/services/liquibase.database.Database"
+                    if svc in zf.namelist() and \
+                            re.search(r"(?i)kingbase",
+                                      zf.read(svc).decode("utf-8", "replace")):
+                        bridge.append(jar.name)
+            except Exception:
+                continue
+    note(bool(bridge), "liquibase 金仓桥接 jar",
+         ", ".join(bridge) if bridge else "没有（fork liquibase 会兜底 "
+         "UnsupportedDatabase 发 Oracle 语法，应用必死）")
+
+    if conn:
+        conn.close()
+
+    head("结论")
+    if RESULT["ok"]:
+        print("金仓库健在，内容在，eUrbanMIS 相关物料齐。")
+    else:
+        print("有下列问题，按上面逐条处理：")
+        for it in RESULT["items"]:
+            if not it["ok"]:
+                print("  - %s：%s" % (it["label"], it["detail"]))
+    print("=" * 74)
+    if json_out:
+        with open(json_out, "w", encoding="utf-8") as fh:
+            json.dump(RESULT, fh, ensure_ascii=False, indent=2)
+        print("JSON -> %s" % json_out)
+    return 0 if RESULT["ok"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

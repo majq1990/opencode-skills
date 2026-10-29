@@ -1,0 +1,70 @@
+树部件Hook-api使用说明
+背景
+现场需求需要能够设置树部件使用api作为数据源，需要能够支持hook配置。
+案卷：http://faq.egova.com.cn:7777/issues/362392
+配置说明
+2.1 接口说明
+树部件涉及到的接口较多。每个查询数据的接口均需要适配到Hook-api。目前已适配的接口以及原接口映射关系如下。
+接口文档：https://apifox.com/apidoc/shared-d6236ccb-c473-4df4-8d73-1e4fc7562a90
+注意：考虑到路径参数对接口性能有很大影响，按公司规范要求，原接口中使用路径参数的，新接口中一律改为请求参数。
+2.2 hook配置示例
+function main(param, extraParams) {
+    return new Promise((resolve, reject) => {
+        const apiInfo = {
+            // 数据查询与数据导出
+            queryDataApi: {
+                apiId: "34e92598-3fb9-4f56-831f-6d1dd9edab0f",
+                // WIDZOM: 智云; BUNCHES: 灵珑
+                apiType: "BUNCHES", // 可选 默认值: BUNCHES
+                lostAbility: "00" // 可选 默认值: 00
+            },
+            // 获取树的节点数量
+            countingApi: {
+                apiId: "34e92598-3fb9-4f56-831f-6d1dd9edab0f"
+            },
+            // 获取树的上级节点
+            parentQueryApi: {
+                apiId: "34e92598-3fb9-4f56-831f-6d1dd9edab0f"
+            },
+            // 获取树节点路径信息
+            pathQueryApi: {
+                apiId: "34e92598-3fb9-4f56-831f-6d1dd9edab0f"
+            },
+            // 关键字查询
+            keywordQueryApi: {
+                apiId: "34e92598-3fb9-4f56-831f-6d1dd9edab0f"
+            }
+        };
+        api.DATA_EXECUTOR().executeApiModelForTree(apiInfo, param, extraParams)
+            .then(res => {
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+    })
+}
+hook树部件：http://10.250.1.39:30090/magic/linglong/design.html#/tree-design/6d956e83-f1ad-4c56-8b61-8ff1e70006fd
+api:  http://10.250.1.39:30090/magic/linglong/workspace.html#/baeb2a1f-1758-4a95-b856-be8e098d65d9/data-management/api-management
+2.2 参数配置
+和列表hook-api配置类似，需要约定api参数和树部件参数之间的映射关系。这里定义与列表hook-api一致，见 《基于api和ddcat代理查询列表/详情/树部件数据》2.1节。
+需要说明的是，因树部件查询涉及的条件较多，因此api需要能够支持对这些参数的查询。包括如下：
+2.2.1 关键词查询
+关键词包含的查询字段应在api的请求参数中予以体现，否则查询失败
+2.2.2 过滤条件
+所有过滤条件配置中涉及的字段需在api参数中予以体现。但建议这些条件参数在api中以固定参数方式设置，见2.2.4的说明。
+2.2.3 排序
+排序字段应在api请求参数中体现，参数名称参考列表hook中的定义。
+2.2.4 特别说明
+关键词查询、过滤条件中配置的条件，因转化到api查询条件时都变为请求参数，无法区分过滤条件执行的先后顺序。且同名参数条件转化到api参数时存在重名覆盖问题（例如根节点条件为parentId=0 or parentId is null，转化为参数时只有parentId=0）。建议这部分配置在api中以固定参数方式进行设置
+api如果使用的数据模型代理，则需注意数据模型存在强制分页，查询数据和导出数据与预期可能存在差别。比如导出数据可能只会导出一页并不能导出全部。
+
+[表格0]
+接口功能 | 原接口 | 对应的hook-api接口
+查询数据 | /unity/widget-page/{pageId}/tree/data/page | /unity/widget-page/tree/data/page/proxy-api?pageId=xxx&....
+计数查询 | /unity/widget-page/{pageId}/tree/data/count | /unity/widget-page/tree/data/count/proxy-api?pageId=xxx&....
+关键字查询 | /unity/widget-page/tree/data/keyword/v2 | /unity/widget-page/tree/data/keyword/v2/proxy-api
+父节点查询 | /unity/widget-page/tree/data/seniorNodes | /unity/widget-page/tree/data/seniorNodes/proxy-api
+节点遍历 | /unity/widget-page/{pageId}/tree/nodeTravels | /unity/widget-page/tree/nodeTravels/proxy-api?pageId=xxx&....
+
+[表格1]
+ | 

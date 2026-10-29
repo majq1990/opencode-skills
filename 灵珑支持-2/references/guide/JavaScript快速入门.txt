@@ -1,0 +1,1449 @@
+JavaScript快速入门
+1 前言
+1.1学习目标及能力要求
+大纲
+1.2学习网站
+https://www.w3school.com.cn/js/index.asp
+可在https://codepen.io/pen/?editors=1111  上结合此文档进行学习。此网站可输入代码并执行。
+Console中可查看控制台输出信息。
+1.3编辑器常用快捷键
+注释
+// 单行注释    快捷键： ctrl + /
+/**/ 多行注释   快捷键：  shift + alt + a
+var myVar = 123; // 这是一个单行注释
+
+/*
+这是一个多行注释
+它可以跨越多行代码
+可以用于注释掉一整段代码
+*/
+var myVar = 123;
+Ctrl + Shift + ↓向下复制一行代码;Ctrl + Shift + ↑向上复制一行代码
+Ctrl + F 查找
+Ctrl + H 查找与替换
+2 变量
+2.1 变量声明
+在JavaScript中，变量是用于存储数据的容器，可以使用var、let和const关键字来声明变量。其中，const声明的是常量，不可更改。
+// 使用 var 声明变量
+var myVar = "Hello World";
+console.log(myVar) // "Hello World"
+myVar = "yeah"
+console.log(myVar) // "yeah"
+
+// 使用 let 声明变量
+let myLet = 123;
+
+// 使用 const 声明常量，不可再更改此常量的值
+const myConst = true;
+【注】建议默认使用const，如果变量的值会被改变，则使用let。var和let的区别见2.3
+js变量的命名规则
+变量名由 字母，数字，_，$组成，不能用数字开头。
+变量名不能重复，后声明的会覆盖先声明的
+// 合法的变量名
+var myVar;
+var _myVar;
+var $myVar;
+var myVar123;
+
+// 不合法的变量名
+var 123myVar; // 变量名不能以数字开头
+var my-var;   // 变量名不能包含连字符
+2.2 变量作用域
+在JavaScript中，变量的作用域是指变量在代码中可见的范围。JavaScript中有两种作用域：全局作用域和局部作用域。
+全局作用域的变量在整个代码中都可见和访问，而局部作用域的变量只在定义它们的代码块中可见和访问。以下是一个变量作用域的示例：
+var globalVar = "I am a global variable";
+
+function myFunc() {
+  var localVar = "I am a local variable";
+  console.log(globalVar); // 可以访问全局变量 "I am a global variable"
+  console.log(localVar);  // 可以访问局部变量 "I am a local variable"
+}
+
+myFunc();
+console.log(globalVar); // 可以访问全局变量 "I am a global variable"
+console.log(localVar);  // 无法访问局部变量  not defined
+2.3 var、let的区别
+var是函数作用域，let是块作用域
+使用 var 声明变量：
+var x = 10;
+
+function foo() {
+  var y = 20;
+  console.log(x); // 输出 10
+  console.log(y); // 输出 20
+}
+
+foo();
+console.log(x); // 输出 10
+console.log(y); // 报错，y 未定义
+在这个示例中，我们使用 var 声明了变量 x 和 y。变量 x 被声明在全局作用域中，变量 y 被声明在函数作用域中。在函数 foo() 内部，我们可以访问变量 x 和 y。在函数外部，我们只能访问变量 x，因为变量 y 的作用域被限制在函数内部。
+使用 let 声明变量：
+let x = 10;
+
+if (true) {
+  let y = 20;
+  console.log(x); // 输出 10
+  console.log(y); // 输出 20
+}
+
+console.log(x); // 输出 10
+console.log(y); // 报错，y 未定义
+在这个示例中，我们使用 let 声明了变量 x 和 y。变量 x 被声明在全局作用域中，变量 y 被声明在 if 语句的块级作用域中。在 if 语句块内部，我们可以访问变量 x 和 y。在 if 语句块外部，我们只能访问变量 x，因为变量 y 的作用域被限制在 if 语句块内部。
+let不能在定义之前访问该变量，但是var可以。
+let必须先声明，再使用。而var先使用后声明也行，只不过直接使用但没有定义的时候，其值是undefined。var有一个变量提升的过程：在变量声明之前引用变量，也不会出现错误，因为变量已经被声明了，只是还没有被赋值，默认为初始化一个undefined。
+let不能被重新定义，但是var可以
+因此为了避免不必要的错误，优先使用let。
+3 数据类型
+教程地址：https://www.w3school.com.cn/js/js_datatypes.asp
+3.1 数据类型分类
+3.3.1 基础类型和引用类型
+在JavaScript中，数据类型可以分为以下几类。
+基本数据类型 6种
+数字（Number）：用于表示数字，例如123。
+字符串（String）：用于表示文本，必须用单引号'' 或双引号""括起来，例如"Hello World"。
+布尔值（Boolean）：用于表示真或假，只有两个取值：true和false。
+空值（null）：用于表示空值或不存在的值。
+未定义（undefined）：用于表示未定义的值。
+符号（symbol）：用于表示唯一的标识符。符号是ES6引入的新数据类型。
+【注】
+null、true、false，如果是用单引号'' 或双引号""括起来的就是字符串string类型。要注意区分。
+引用数据类型
+对象（Object）：用于表示复杂的数据结构，例如数组、函数或自定义对象。
+数组（Array）：用于表示一组有序的值，例如[1, 2, 3]。
+函数（Function）：用于表示可执行的代码块，可以接受输入参数并返回输出结果。
+3.3.2 对象（Object）
+教程链接：https://www.w3school.com.cn/js/js_objects.asp
+在JavaScript中，对象是一种复杂的数据类型，用于表示一组键值对 { key:value }。
+对象的创建方法
+let myObj = { 
+  name: 'John', 
+  age: 30, 
+  city: 'New York' 
+};
+对象的取值
+对象的属性可以通过以下两种方式进行访问：
+点号 .
+let myObj = { name: 'John', age: 30, city: 'New York' };
+let name = myObj.name;
+console.log(myObj.name) // 'John'
+console.log(myObj.key) // undefined   访问不存在的属性时为undefined
+【悟空中的实际应用】
+轨迹按钮交互轨迹图层时，需传递参数id，原始点击按钮传递的参数如下
+{
+  current: {
+    id:"111222",
+    value:"查看轨迹"
+  }
+}
+此时就可用点号.来取id，具体代码如下：
+function converter(data) {
+    data.id = data.current?.id; // 这里的问号? 表示 如果data.current 不为空（null/undefined） 则向下取id
+    console.log(data)
+    return data;
+}
+按钮传递的参数就变为了
+方括号 []
+可以通过使用方括号[]来访问对象的属性。方括号中包含属性名。例如：
+let myObj = { name: 'John', age: 30, city: 'New York' };
+let name = myObj['name'];
+console.log(name) // 'John'
+使用方括号的方式可以访问动态属性名。例如：
+let myObj = { name: 'John', age: 30, city: 'New York' };
+let propName = 'name';
+let name = myObj[propName];
+console.log(name) // 'John'
+【悟空中的实际应用】
+接口返回示例
+{
+    "hasError": false,
+    "result": [
+        {
+            "name": 0,
+            "count": 267
+        },
+        {
+          "name": 1,
+          "count": 142
+        },
+        {
+          "name": 2,
+          "count": 134
+        },
+        {
+          "name": 3,
+          "count": 94
+        },
+        {
+          "name": 4,
+          "count": 84
+        },
+        {
+          "name": 255,
+          "count": 75
+        }
+    ],
+    "message": null,
+    "tag": null,
+    "totalCount": 1
+}
+数据过滤
+function filter(data) {
+    let keys = {
+        0: "离网",
+        1: "空闲",
+        2: "占用（未充电）",
+        3: "占用（充电中）",
+        4: "占用（预约锁定）",
+        255: "故障"
+    }
+
+    return data.map(g => {
+        return {
+            name: g.status,
+            text: keys[g.name],
+            // 遍历原数据，根据数据中的name值从keys中取值
+            // 如 g.name 为 0 时，取值为 keys[0] = 离网
+            value: g.count
+        }
+    });
+}
+转换后的数据如下：
+[
+    {
+        "text": "离网",
+        "value": 267
+    },
+    {
+        "text": "空闲",
+        "value": 142
+    },
+    {
+        "text": "占用（未充电）",
+        "value": 134
+    },
+    {
+        "text": "占用（充电中）",
+        "value": 94
+    },
+    {
+        "text": "占用（预约锁定）",
+        "value": 84
+    },
+    {
+        "text": "故障",
+        "value": 75
+    }
+]
+3.3.3 数组（Array）
+教程链接：https://www.w3school.com.cn/js/js_arrays.asp
+数组的创建方法
+let arr = [];
+let myArr = [1, 2, 3, 4, 5];
+let arr2 = [
+  { name: "1", text: "类型1", value: 3 },
+  { name: "2", text: "类型2", value: 3 },
+];
+// 数组中的每一项数据可以是任意类型,但是建议同一数组只存放同一类型的数据
+数组的取值
+可以通过使用数组的索引来访问数组的元素。数组的索引从0开始，以递增的方式标识每个元素。例如
+let myArr = [1, 2, 3, 4, 5];
+let firstElement = myArr[0];
+console.log(firstElement) // 1
+
+
+let arr2 = [
+  { name: "1", text: "类型1", value: 3 },
+  { name: "2", text: "类型2", value: 3 },
+];
+console.log(arr2[0].name) // "1"
+【悟空中的实际应用1】
+接口返回
+{
+    "hasError": false,
+    "result": [
+        {
+            "report": 1,
+            "archive": 20
+        }
+    ],
+    "message": null,
+    "tag": null,
+    "totalCount": 1
+}
+数据过滤
+function filter(data) {
+    let res = data[0];  // 接口返回的是一个数组，我们所需要的对象是数组的第一项，用[0]取值。
+    return [
+        {
+            name: "1",
+            text: "上报数",
+            value: res?.report
+        },
+        {
+            name: "1",
+            text: "办结数",
+            value: res?.archive
+        }
+    ]
+}
+数据响应结果
+[
+    {
+        "name": "1",
+        "text": "上报数",
+        "value": 1
+    },
+    {
+        "name": "1",
+        "text": "办结数",
+        "value": 20
+    }
+]
+【悟空中的实际应用2】
+表格类组件交互其他组件时，需要取表格中的某一项作为参数。如下图点击Swiper11,需要的参数为区域对应的name值。
+则在交互的参数转换器里，可这样取值：
+function converter(data) {
+    data.regionId = data.data[0].name;
+    console.log(data, "Swiper11传递的参数")
+    return data;
+}
+3.2 数据类型的判断
+我们常需要判断变量的数据类型来执行不同的代码块，可使用以下方法来进行判断。
+3.2.1 typeof运算符
+typeof 123; // "number"
+typeof "hello"; // "string"
+typeof true; // "boolean"
+typeof undefined; // "undefined"
+typeof null; // "object"
+typeof {}; // "object"
+typeof []; // "object"
+typeof function() {}; // "function"
+【注】
+typeof null和 typeof 数组返回的都是"object"，如果要判断这两种数据类型，则不能用此方法。
+3.2.2 instanceof运算符
+let myArr = [1, 2, 3];
+myArr instanceof Array; // true
+myArr instanceof Object; // true
+
+let myObj = { name: "John" };
+myObj instanceof Object; // true
+myObj instanceof Array; // false
+【注】
+instanceof运算符只能用来判断对象是否属于某个类，不能用来判断基本数据类型的变量。
+3.3 数据类型的转换
+3.3.1 转换为数字
+Number()
+纯数字字符串可以转换为数字，只要字符串中含有无法转换的字符则得到的都是NaN
+空字符串  空对象  空数组  都转换为 0
+true转换为1  false转换为0
+undefined 得到NaN
+数组中只有一项且该项为数字字符串  可以转换为相应的数字，多个数据项时得到NaN
+let s1 = '123';
+     let s2 = '100px'   //====> 100
+     let s3 = 'a12';
+     let s4 = '';
+     let b = true;
+     let b1 = false;
+     let n = null;
+     let a;
+     let arr = [];
+     let arr1 = ['1'];
+     let arr2 = [1,2,3]
+     
+    
+     console.log(Number(s2)); //NaN
+     console.log(Number(s3)); //NaN
+     console.log(Number(s4)); //0    ''---> false  ---> 0
+     console.log(Number(b)); //1
+     console.log(Number(b1)); //0
+     console.log(Number(n)); //0   null ---> false  ---> 0
+     console.log(Number(a)); //NaN
+     
+     console.log(Number(arr)); //0  []--->false--->0
+     console.log(Number(arr1)); //1
+     console.log(Number(arr2)); //NaN
+【悟空中的实际应用】
+如下图，使用Select1组件交互其他组件，传递的参数name值为字符串String类型，但下游组件的接口所需要的参数类型为Int，即JavaScript中的数字Number类型。
+因此需要在参数转换器中将字符串类型转换为数字，代码示例如下：
+function converter(data) {
+    data.typeId = Number(data.name)
+    console.log(data, "Select1传递的参数")
+    return data
+}
+parseInt()转换为整数 parseFloat() 转换为浮点数
+console.log(parseInt('100px'));// 100
+console.log(parseInt('a12'));//NaN
+
+console.log(parseInt('3.6415'));//3  取整
+console.log(parseFloat('3.6415'));//3.6415
+isNaN检测
+isNaN 确定不是一个数字 如果判断的数据不是数字返回true 判断的数据是数字返回false
+console.log(isNaN(12));//false
+console.log(isNaN('123'));//false   凡是Number可以转换的就返回false  Number不能转换的就返回true
+console.log(isNaN('a'));//true
+console.log(isNaN(true));//false
+console.log(isNaN(undefined));//true
+3.3.2 转换为字符串
+String()
+let n1 = 10;
+   let b = true;
+   let b1 = false;
+   let n = null;
+   let a;
+   let arr = [];
+   let arr1 = ['1'];
+   let arr2 = [1,2,3]
+   let obj = {
+   name:'joth',
+   age:18
+   }
+   
+   function fn(){
+   alert('123')
+   }
+   
+   console.log(String(n1));//'10';
+   console.log(String(b));//'true'
+   console.log(String(b1));//'false'
+   console.log(String(n));//'null'
+   console.log(String(a));//'undefined'
+   console.log(String(arr));//''
+   console.log(String(arr1));//'1'
+   console.log(String(arr2));//'1,2,3'
+   console.log(String(obj));//[object Object]
+   console.log(String(fn));//'function fn(){alert('123')}'
+toString()
+let n1 = 1010 
+console.log(n1.toString(2));//'1010'
+toFixed()
+该方法将数字转换为字符串，并将其舍入为指定的小数位数（小数位数为0到20之间的整数）。示例如下。
+let num = 3.1415926;
+console.log(num.toFixed(2)); // 输出 "3.14"
+3.3.3 转换为布尔
+Boolean()
+let n1 = 10;
+   let n2 = 0;
+   let s1 = 'abc';
+   let s2 = '';
+   let n = null;
+   let a;
+   let arr = [];
+   let arr1 = ['1'];
+   let arr2 = [1,2,3]
+   let obj = {
+   name:'joth',
+   age:18
+   }
+   let obj1 = {}
+   
+   function fn(){
+   alert('123')
+   }
+   function fn1(){}
+   
+   console.log(Boolean(n1));//true  实数
+   console.log(Boolean(n2));//false
+   console.log(Boolean(s1));//true
+   console.log(Boolean(s2));//false
+   console.log(Boolean(n));//false
+   console.log(Boolean(a));//false
+   console.log(Boolean(arr));//true
+   console.log(Boolean(arr1));//true
+   console.log(Boolean(arr2));//true
+   
+   console.log(Boolean(obj));//true
+   console.log(Boolean(obj1));//true
+   
+   console.log(Boolean(fn));//true
+   console.log(Boolean(fn1));//true
+3.3.4 JSON与JavaScript对象的相互转换
+JSON： 一种轻量化的数据，具有对象格式的字符串。悟空组件的静态数据就是JSON格式。
+JSON.parse() 将JSON格式的数据转换为数组/对象。
+let jsonStr = '{"name":"Alice","age":20}';
+let obj = JSON.parse(jsonStr);
+console.log(obj); // 输出 {name: "Alice", age: 20}
+【悟空中的实际应用】
+如下图中，接口返回的就是JSON。
+数据过滤中使用JSON.parse方法一键转换即可：
+function filter(data) {
+  let res = JSON.parse(data);
+  return res;
+}
+JSON.stringify() 将数组/对象转换为JSON。
+let obj = {name: "Alice", age: 20};
+let jsonStr = JSON.stringify(obj);
+console.log(jsonStr); // 输出 '{"name":"Alice","age":20}'
+3.3.5 数据类型的隐式转换
+在JavaScript中，有些情况下会发生数据类型的隐式转换。这种转换是由JavaScript引擎自动执行的，而不需要显式调用转换方法。以下是一些常见的情况：
+字符串和数字的加法运算：如果一个字符串和一个数字进行加法运算，会将数字隐式转换为字符串，然后将两个字符串拼接在一起。例如：
+let str = "123";
+let num = 456;
+console.log(str + num); // 输出 "123456"
+比较运算符：如果两个值类型不同，JavaScript会尝试将它们转换为相同的类型，然后进行比较。通常情况下，字符串会被转换为数字进行比较。例如：
+console.log("2" > 1); // 输出 true
+console.log("01" == 1); // 输出 true
+逻辑运算符：逻辑运算符&&和||会返回一个值，这个值可以是任意类型。如果运算符的两个操作数类型不同，JavaScript会将它们转换为布尔值。例如：
+console.log("hello" && 0); // 输出 0
+console.log(null || "world"); // 输出 "world"
+4 运算符
+教程链接 https://www.w3school.com.cn/js/js_operators.asp
+4.1 算术运算符
+用来进行数学运算的运算符，包括加、减、乘、除、取余等。例如：
+let a = 10;
+let b = 3;
+console.log(a + b); // 输出 13
+console.log(a - b); // 输出 7
+console.log(a * b); // 输出 30
+console.log(a / b); // 输出 3.3333333333333335
+console.log(a % b); // 取余 输出 1
+【注意】
+如果加号两边都是数字，则就是普通的数学计算
+如果加号有一边是字符串，则另一边也转成字符串，变成字符串的拼接，需要调用 Number 方法，转成数字，再进行相加
+如果有一边是对象，则对象调用 toString 得到字符串表示，再进行计算
+console.log(1 + 2);// 3
+console.log('2' + 3);// '23'
+console.log(Number("2")+3); // 5
+console.log('a' + 123); //会将非字符串的内容转换为字符串再进行字符串的连接  'a123'
+console.log('a' + true);//'atrue'
+console.log(true + false);//1   1 + 0
+console.log(['1'] + true);// '1true'   ['1'].toString()  '1' + true   '1true'
+console.log(null + true);//1  0 + 1
+console.log(undefined + true);//NaN
+4.2 比较运算符
+用来进行数值、字符串、对象等数据类型的比较运算的运算符，包括等于、不等于、大于、小于、大于等于、小于等于等。例如：
+let a = 10;
+let b = 3;
+console.log(a === b); //  false
+console.log(a !== b); //  true
+console.log(a > b); // true
+console.log(a < b); // false
+console.log(a >= b); //  true
+console.log(a <= b); //  false
+4.3 赋值运算符
+用来进行赋值操作的运算符，包括等于、加等、减等、乘等、除等、取余等。例如：
+let a = 10;
+a += 5; // a = a + 5
+console.log(a); //  15
+
+let b = 10
+b -= 5 // b = b - 5
+console.log(b) // 5
+【悟空中的实际应用】
+静态数据
+[
+    {
+        "name": "1",
+        "text": "巡查上报",
+        "value": 120,
+        "unit": "个",
+        "total": 50
+    },
+    {
+        "name": "2",
+        "text": "智能上报",
+        "value": 190,
+        "unit": "个",
+        "total": 50
+    },
+    {
+        "name": "3",
+        "text": "市民投诉",
+        "value": 50,
+        "unit": "个",
+        "total": 50
+    },
+    {
+        "name": "4",
+        "text": "微信上报",
+        "value": 78,
+        "unit": "个",
+        "total": 50
+    },
+    {
+        "name": "5",
+        "text": "热线12345",
+        "value": 20,
+        "unit": "个",
+        "total": 50
+    }
+]
+期待效果：
+数据过滤：
+function filter(data) {
+    let num = 0
+    data.forEach(g => {
+        num += g.value; // 遍历data，num = num + g.value，即遍历求和，forEach方法见8.3.4
+    })
+    data.unshift({
+        name: "",
+        text: "总计",
+        value: num
+    }) // 计算好总数后，将总计这一项添加到原数组的第一项，unshift方法见8.2.3
+    return data;
+}
+数据响应结果：
+[
+    {
+        "name": "",
+        "text": "总计",
+        "value": 458
+    },
+    {
+        "name": "1",
+        "text": "巡查上报",
+        "value": 120,
+        "unit": "个",
+        "total": 50
+    },
+    {
+        "name": "2",
+        "text": "智能上报",
+        "value": 190,
+        "unit": "个",
+        "total": 50
+    },
+    {
+        "name": "3",
+        "text": "市民投诉",
+        "value": 50,
+        "unit": "个",
+        "total": 50
+    },
+    {
+        "name": "4",
+        "text": "微信上报",
+        "value": 78,
+        "unit": "个",
+        "total": 50
+    },
+    {
+        "name": "5",
+        "text": "热线12345",
+        "value": 20,
+        "unit": "个",
+        "total": 50
+    }
+]
+4.4 逻辑运算符
+let a = true;
+let b = false;
+console.log(a && b); // 输出 false
+console.log(a || b); // 输出 true
+console.log(!a); // 输出 false
+4.4.1  与运算  &&
+当与运算符&&两项都为true时，返回true；否则，返回false。
+如果与运算的第一项转换为布尔值为false 则返回第一项 ；如果第一项转换为布尔值为true 则返回第二项。
+var a = 0 && 10;
+console.log(a);//0
+console.log('aa' && '');//''
+常用于判断多个条件是否同时成立，如。
+let a = 10;
+let b = 5;
+if (a > 0 && b > 0) {
+  console.log("a和b都大于0");
+}
+4.4.2  或运算 ||
+当或运算的第一项转换为布尔值为false 则返回第二项  如果第一项转换为布尔值为true 则返回第一项。
+var a = 0 || 10
+console.log(a);//10
+console.log('aa' || '');//'aa'
+悟空中常用于设置默认值，例如。
+function printMessage(message) {
+  message = message || "Hello, world!"; // 如果传入的message为空则返回默认值 "Hello, world!"
+  console.log(message);
+}
+printMessage(); //  "Hello, world!"
+printMessage("Hello, JavaScript!"); //  "Hello, JavaScript!"
+function filter(data) {
+    return data.map(g => {
+        return {
+            "name": g.name,
+            "text": g.text || "-", // 如果g.text为空则返回默认值"-"
+            "value": g.report,
+            "unit": "个"
+        }
+    });
+}
+4.4.3 非运算  !
+非运算符!用于逻辑非操作。当操作数为false时，`!运算符返回true；否则，返回false。
+在实际应用中，非运算符常用于以下场景：
+条件取反
+let a = 10;
+if (!(a > 0)) {
+  console.log("a小于等于0");
+}
+类型转换
+非运算符可以用于将值转换为布尔类型。
+let a = 0;
+let b = "abc";
+console.log(!a); // 输出 true
+console.log(!b); // 输出 false
+检查变量是否为空：null、undefined、空字符串""、数字0 均会被判定为空。
+let a = null;
+let b = "abc";
+let c = "";
+let d = 0;
+console.log(!a); // 输出 true
+console.log(!b); // 输出 false
+console.log(!c); // 输出 true
+console.log(!d); // 输出 true
+4.5 三目运算符
+三目运算符也称为条件运算符或三元运算符。它由三个操作数组成，分别为一个判断条件、一个为真时返回的表达式和一个为假时返回的表达式。三目运算符的语法如下：
+condition ? expr1 : expr2
+如果判断条件为真，则返回表达式expr1的值；否则，返回表达式expr2的值。
+let a = 10;
+let b = (a > 0) ? a : 0;
+console.log(b); // 输出 10
+在上述代码中，如果a大于0，则将a的值赋给变量b；否则，将0赋给变量b。
+let isAdmin = true;
+let message = isAdmin ? "欢迎管理员" : "欢迎用户";
+console.log(message); // 输出 "欢迎管理员"
+在上述代码中，如果用户是管理员，则显示欢迎管理员的消息；否则，显示欢迎用户的消息。
+【悟空中的实际应用】
+配置人员图层时，需要根据接口中的状态值判断是在线/离线，并赋值为对应的状态文字
+此时数据过滤中可做如下处理：
+function filter(data) {
+    // 过滤x y 为空的数据；
+    let res = data.filter(item => item.patrolState?.x > 0);
+    return res.map(g => {
+        return {
+            "id": g.id,
+            "field1": g.patrolType?.displayName || "网格员",
+            "field2": g.patrolName,
+            "field3": g.human?.telMobile,
+            "field4": g.human?.unitName,
+            "imgurl": g.attachments?.[0]?.mediaPath || "",
+            "state": g.patrolState?.patrolStateId ? "在线" : "离线", // patrolState?.patrolStateId 为1时，判断为true，state赋值为在线，patrolState?.patrolStateId 为null/0时，判断为false，state赋值为离线
+            "x": g.patrolState?.x,
+            "y": g.patrolState?.y
+        }
+    });
+}
+5 条件语句和循环语句
+条件语句（如if语句）和循环语句（如for循环）是JavaScript中的控制语句。它们允许您根据条件执行不同的代码块，或者多次执行相同的代码块。
+5.1 条件语句
+根据判断条件结果进行不同的操作或运算。
+5.1.1 if-else
+if (condition) {
+  // 当条件为真时执行的代码块
+} else {
+  // 当条件为假时执行的代码块
+}
+如果条件为真，则执行if代码块；否则，执行else代码块。else代码块可以省略。例如：
+let rain = false;
+if(!rain) console.log('watch movie')
+let a = 10;
+if (a > 0) {
+  console.log("a大于0");
+} else {
+  console.log("a小于等于0");
+}
+【悟空中实际应用】
+根据评分值来设定不同的等级
+// 成绩  90 -100 优秀  80-89  良  60-79 及格  0-59 不及格
+let score = data.score;
+let access = "";
+if(score >= 90 && score <= 100){
+access = "优秀"
+}else if(score >= 80 && score < 90){
+access = "良"
+}else if(score >= 60 && score < 80){
+access = "及格"
+}
+}else if(score >= 0 && score < 60){
+access = "不及格"
+}
+5.1.2 switch-case
+switch语句用于根据不同的值执行不同的代码块。语法如下：
+switch (expression) {
+  case value1:
+    // 当expression等于value1时执行的代码块
+    break;
+  case value2:
+    // 当expression等于value2时执行的代码块
+    break;
+  default:
+    // 当expression不等于任何一个value时执行的代码块
+    break;
+}
+switch语句首先计算表达式expression的值，然后根据不同的值执行相应的代码块。如果没有匹配的值，则执行default代码块。break语句用于跳出switch语句。例如：
+let color = "red";
+switch (color) {
+  case "red":
+    console.log("红色");
+    break;
+  case "green":
+    console.log("绿色");
+    break;
+  case "blue":
+    console.log("蓝色");
+    break;
+  default:
+    console.log("未知颜色");
+    break;
+}
+// 输出红色
+【悟空中的实际应用】
+3.3.2中的这个例子，也可以用 switch-case来处理。
+接口返回示例
+{
+    "hasError": false,
+    "result": [
+        {
+            "name": 0,
+            "count": 267
+        },
+        {
+          "name": 1,
+          "count": 142
+        },
+        {
+          "name": 2,
+          "count": 134
+        },
+        {
+          "name": 3,
+          "count": 94
+        },
+        {
+          "name": 4,
+          "count": 84
+        },
+        {
+          "name": 255,
+          "count": 75
+        }
+    ],
+    "message": null,
+    "tag": null,
+    "totalCount": 1
+}
+数据过滤
+function filter(data) {
+    return data.map(g => {
+      // 遍历数据，判断name值，赋予不同的text值
+        switch (g.name) {
+            case 0: g.text = "离网"; break;
+            case 1: g.text = "空闲"; break;
+            case 2: g.text = "占用（未充电）"; break;
+            case 3: g.text = "占用（充电中）"; break;
+            case 4: g.text = "占用（预约锁定）"; break;
+            case 255: g.text = "故障"; break;
+            default: g.text = "";
+        }
+        return {
+            name: g.status,
+            text: g.text,
+            value: g.count
+        }
+    });
+}
+转换后的数据如下：
+[
+    {
+        "text": "离网",
+        "value": 267
+    },
+    {
+        "text": "空闲",
+        "value": 142
+    },
+    {
+        "text": "占用（未充电）",
+        "value": 134
+    },
+    {
+        "text": "占用（充电中）",
+        "value": 94
+    },
+    {
+        "text": "占用（预约锁定）",
+        "value": 84
+    },
+    {
+        "text": "故障",
+        "value": 75
+    }
+]
+5.2 循环语句
+循环语句用于重复执行某段代码，常见的循环语句包括while循环、do-while循环、for循环和for...in循环。
+5.2.1 for循环
+for循环用于重复执行某段代码，通常用于循环次数已知的情况。语法如下：
+for (initialization; condition; increment) {
+  // 循环体
+}
+initialization用于设置循环变量的初始值；condition用于设置循环变量的结束条件；increment用于设置循环变量的递增方式。例如：
+for (let i = 0; i < 4; i++) {
+  console.log(i);
+}
+// 0 1 2 3 4
+在上述代码中，循环从0开始，每次递增1，直到小于4为止。
+5.2.2 for...in 循环
+for...in循环用于遍历对象的属性。语法如下：
+for (key in object) {
+  // 循环体
+}
+key是一个变量名，用于存储对象的属性名；object是一个对象。例如：
+let person = {
+  name: "张三",
+  age: 20,
+  gender: "男"
+};
+for (let key in person) {
+  console.log(key + ": " + person[key]);
+}
+//"name: 张三"
+//"age: 20"
+//"gender: 男"
+【悟空中的实际应用】
+区域级联选择交互案件相关的组件。需要根据选择区域的regionType传递不同字段的参数。如regionType为COUNTRY时，需传districtId=区域id，但其他级别的字段值需要清空
+function converter(data) {
+    const { regionType, id } = data.current;
+    const dataKey = {
+        "CITY": "cityId", // 市级
+        "COUNTRY": "districtId", // 区级
+        "STREET": "streetId", //街道级
+        "COMMUNITY": "communityId", // 社区级
+        "CELL": "cellId", // 网格级
+    }
+    for (const key in dataKey) {
+        const queryKey = dataKey[key];
+        data[queryKey] = ""; // 清除所有字段的值
+        if (regionType === key) data[queryKey] = id; // 将对应区划层级的字段赋值为区划id，如点击区级，则 districtId = id
+    }
+    return data;
+}
+5.2.3 while 循环
+while循环用于在条件为真时重复执行某段代码。语法如下：
+while (condition) {
+  // 当条件为真时执行的代码块
+}
+在每次循环中，先计算条件的值，如果为真，则执行代码块；然后再次计算条件的值，直到条件为假为止。例如：
+let i = 0;
+while (i < 4) {
+  console.log(i);
+  i++;
+}
+// 0 1 2 3
+在上述代码中，循环从0开始，每次递增1，直到小于4为止。
+5.2.4 do-while循环
+do-while循环用于至少执行一次某段代码，并在条件为真时重复执行。语法如下：
+do {
+  // 至少执行一次的代码块
+} while (condition);
+先执行代码块，然后计算条件的值，如果为真，则继续循环；否则，退出循环。例如：
+let i = 0;
+do {
+  console.log(i);
+  i++;
+} while (i < 4);
+// 0 1 2 3
+6 函数
+JavaScript中的函数是一段可重复使用的代码块，可以接受输入参数并返回输出结果。函数可以用来封装一些重复的代码，以及实现某些功能。
+6.1 函数的创建和调用
+// 声明
+        function fn(){
+            console.log('i am function');
+        }
+        // 通过名称和括号来调用
+        fn();
+
+// 表达式声明函数
+        let fn1 = function(){
+            console.log('我是函数');
+        }
+        fn1();
+函数可以被视为一个值，可以像其他值一样进行传递和存储。例如：
+let func = function(x) {
+  return x * x;
+};
+let result = func(3);
+console.log(result); // 输出9
+在上述代码中，函数被赋值给变量func，并可以像其他值一样进行传递和存储。
+6.2 函数的传参
+函数定义时，在()中可以定义任意数量的参数，该参数就可以当做函数内部的变量来使用，它可以从函数外部接收数据，拿到函数内部进行运算使用。
+一般来说，在声明函数时，所写的参数叫做 形参（占位，等待接收数据，也可以当作变量）；在调用时 传递的真正的数据值，称为实参。
+将实参传递给形参，也可以当作给形参变量赋值。
+// 声明函数时  定义形参
+function sum(n1,n2){
+    console.log(n1,n2);
+    console.log(n1 + n2)
+}
+
+//调用函数，将实参传递给形参
+sum(10,30);
+let a = 12; 
+let b = 13;
+sum(a,b)
+6.3 函数的返回值
+函数可以返回一个值，这个值可以被存储在一个变量中，供函数外部使用这个值。
+函数使用关键字return来返回结果。
+函数中默认就有return返回值，如果没有写，默认返回undefined。
+返回的值可以是任意类型。
+return一次只能返回一个数据，当希望返回多个值时，使用数组或对象。
+例如：
+function square(x) {
+  return x * x;
+}
+let result = square(2);
+console.log(result); // 输出4
+在上述代码中，square函数接受一个参数x，并返回它的平方值。
+同理，悟空的数据过滤函数filter接收一个参数data，是此组件接口返回的数据。在这个函数中对数据进行一定处理并返回。
+function filter(data) { // data为组件的静态数据/动态数据接口返回的数据
+  // 在过滤函数中对数据进行处理
+   return data;
+}
+【注意】当函数执行遇到了return就返回了，return后写的所有代码都不再执行。
+function f1(a, b) {
+  console.log(a)
+   return a;
+  console.log(b)
+}
+
+f1(1,2); //  1
+6.4 箭头函数
+箭头函数可以更简洁地定义函数，适用于一些简单的函数。
+语法如下：
+(parameters) => { statement }
+其中，parameters是函数的参数列表，可以是0个或多个参数，多个参数之间用逗号分隔；statement是函数的执行语句，可以是一条语句或多条语句，如果是多条语句则需要用花括号括起来。
+例如，以下是一个使用箭头函数定义的加法函数：
+let sum = (num1, num2) => num1 + num2;
+// 等同于
+let sum = function(num1, num2) {
+  return num1 + num2;
+};
+sum(2, 3) // 5
+在上述代码中，使用箭头函数定义了一个加法函数sum，它接受两个参数num1和num2，并返回它们的和。因为箭头函数只有一条语句，所以可以省略花括号和return关键字。
+let f1 = () => 5;//不需要参数或需要多个参数，就使用一个圆括号代表参数部分。
+// 等同于
+let f1 = function () { return 5 };
+【注】如果返回的内容为对象，需加上()避免歧义。
+//由于大括号被解释为代码块，所以如果箭头函数直接返回一个对象，必须在对象外面加上括号，否则会报错。
+// 报错
+let getTempItem = id => { id: id, name: "Temp" };
+
+// 不报错
+let getTempItem = id => ({ id: id, name: "Temp" });
+7 字符串String
+字符串可以进行连接、截取、查找、替换等操作，可以使用字符串方法来实现。以下是一些常用的字符串方法。
+7.1 length 长度
+length属性用于获取字符串的长度，即字符串中字符的数量。
+let str = "Hello, world!";
+console.log(str.length); // 输出13
+7.2 charAt(下标) 通过下标获取字符
+charAt()方法用于获取字符串中指定位置的字符。位置从0开始计数。例如：
+let str = "Hello, world!";
+console.log(str.charAt(0)); // 输出"H"
+在上述代码中，字符串"Hello, world!"的第一个字符是"H"。
+7.3 indexOf('字符',查找的起始下标（可选）)
+判断该字符是否在字符串中存在 如果存在 就返回该字符在字符串中的下标 ，如果不存在 就返回-1。
+位置从0开始计数。
+let str = 'abcdefghijkcba';
+console.log(str.indexOf('e'));//4
+console.log(str.indexOf('z'));//-1
+console.log(str.indexOf('efg'));//4  多个字符匹配时 返回匹配到的第一字符下标
+console.log(str.indexOf('eef'))//-1
+console.log(str.indexOf('d',4));//-1   第二个参数表示开始查找的起始下标
+console.log(str.indexOf('a',-1));// 0  第二个参数为负数时 全部当做0来起始查找
+7.4 substring(开始下标，结束下标（可选 ）)
+substring()方法用于获取字符串中指定位置的字符串。第一个参数是起始下标，第二个参数是结束下标。
+包含起始下标 不包含结束下标。
+不写结束下标，则从当前的起始下标一直截取到字符串结束。
+起始和结束下标 一定是小值在前大值在后， 如果相反会自动调整回来。
+如果参数为负数，则自动视为0。
+let str = 'abcdefghijkcba';
+console.log(str.substring(2,5));//"llo"
+console.log(str.substring(2));//"llo, world!"
+console.log(str.substring(8,2));//"llo, w"  自动调整大小 小的为起始值  大的为结束值
+console.log(str.substring(-3,4));//"Hell" 负数自动做为0来使用
+7.5 slice(开始 下标 ，结束下标)
+包含起始下标 , 不包含结束下标。
+不写结束下标 ，则 从当前的起始下标一直截取到字符串结束。
+slice不会自动调整大小值的位置。
+如果参数是负数，则从字符串的末尾开始计算。
+let str = "Hello, world!";
+console.log(str.slice(0, 5)); // 输出"Hello"
+console.log(str.slice(7)); // 输出"world!"
+console.log(str.slice(-6)); // 输出"world!"
+console.log(str.slice(2, -1)); // 输出"llo, world"
+7.6 substr(起始下标，截取长度)
+第一个参数是起始下标（包含起始下标），第二个参数是要提取的字符数量
+如果省略第二个参数，则提取从坐标到字符串的末尾的所有字符。
+如果下标为负数， 则用字符串长度来减掉该值 做为起始下标
+长度不能为负数
+let str = "Hello, world!";
+console.log(str.substr(0, 5)); // 输出"Hello"
+console.log(str.substr(7)); // 输出"world!"
+console.log(str.substr(-6)); // 输出"world!"
+console.log(str.substr(2, 3)); // 输出"llo"
+7.7 replace(需替换的字符串，新字符串)
+用第二参数（新字符串）来替换第一个参数（旧的字符串）
+let str = "Hello, world!";
+let newStr = str.replace("world", "JavaScript")
+console.log(newStr)); // 输出"Hello, JavaScript!"
+7.8 split('分隔符')
+用于将一个字符串分割成一个字符串数组，并返回这个数组。
+可以接受一个参数，用于指定分割字符串的位置。如果省略这个参数，则默认使用逗号作为分隔符。
+let str = "apple, banana, orange";
+console.log(str.split()); // 输出["apple, banana, orange"]
+console.log(str.split(", ")); // 输出["apple", "banana", "orange"]
+
+let t = '2020-06-09';
+let arr = t.split('-');
+console.log(arr);//["2020", "06", "09"]
+7.9 trim()
+用于去除字符串两端空格
+let str = '             abc                  ';
+console.log(str);// '             abc                  '
+console.log(str.trim());//'abc'
+7.10 模板字符串 `${}`
+模板字符串是一种在字符串中嵌入表达式的方式，它使用反引号`` 包裹字符串，并使用${}语法来嵌入表达式。常用来做字符串的拼接。
+const name = 'Alice';
+const age = 25;
+
+const message = `Hello, my name is ${name} and I am ${age} years old.`;
+
+console.log(message); // 输出 Hello, my name is Alice and I am 25 years old.
+8 数组对象 Array
+8.1 length 属性
+返回数组中元素的数量
+let arr = ["apple", "banana", "orange"];
+console.log(arr.length); // 输出 3
+8.2 添加或删除数组中的数据项
+【注】本节中的方法均会修改原始数组。
+8.2.1 push(一个或多个数据项) 末尾添加1项
+用于将一个或多个元素添加到数组的末尾，并返回新数组的长度。
+可以接受一个或多个参数，每个参数都是要添加到数组中的元素。
+let arr = ["apple", "banana", "orange"];
+console.log(arr.push("pear")); // 输出 4
+console.log(arr); // 输出["apple", "banana", "orange", "pear"]
+8.2.2 pop() 尾部删除1项
+用于从数组的末尾移除一个元素，并返回该元素的值。
+pop()方法不接受任何参数。
+let arr = ["apple", "banana", "orange"];
+console.log(arr.pop()); // 输出 "orange"
+console.log(arr); // 输出 ["apple", "banana"]
+8.2.3 unshift(一个或多个数据项) 头部添加1项
+用于将一个或多个元素添加到数组的开头，并返回新数组的长度。
+可以接受一个或多个参数，每个参数都是要添加到数组开头的元素。
+let arr = ["apple", "banana", "orange"];
+console.log(arr.unshift("pear")); // 输出 4
+console.log(arr); // 输出["pear", "apple", "banana", "orange"]
+8.2.4 shift() 头部删除一项
+用于从数组的开头移除一个元素，并返回该元素的值
+不接受任何参数。
+let arr = ["apple", "banana", "orange"];
+console.log(arr.shift()); // 输出 "apple"
+console.log(arr); // 输出 ["banana", "orange"]
+8.2.5 splice(起始下标, 截取长度?, 插入的元素?)
+用于向数组中插入或删除元素。
+接受三个参数：要插入或删除元素的起始位置、要删除的元素数量（可选）、要插入到数组中的新元素（可选）。
+以数组的形式返回截取的数据项，会改变原数组。
+定位删除
+let arr = [1,2,3,4,5,6,7];
+let nArr = arr.splice(3,2);
+console.log(arr); //  被改变的原数组 [1,2,3,6,7]
+console.log(nArr); // 截取出来的数组[4,5]
+定位添加
+let arr = [1,2,3,4,5,6,7];
+let nArr1 = arr.splice(3,0,100,200);
+console.log(arr); // [1,2,3,100,200,4,5,6,7]
+console.log(nArr1) //[]
+定位替换
+let arr = [1,2,3,4,5,6,7];
+let nArr2 = arr.splice(3,2,100,200);
+console.log(arr) // [1,2,3,100,200,6,7]
+console.log(nArr2)// [4,5]
+8.3 数组的循环遍历
+数组通常用于存储一组有序的数据，例如字符串、数字、对象等。在实际开发中，我们经常需要对数组进行遍历，以执行一些操作，例如：访问数组中的每个元素，并对每个元素执行一个操作；查找或过滤数组中符合条件的元素；将数组中的每个元素映射为另一个值，并构建一个新的数组等。
+以下是数组遍历的常见方法。
+8.3.1 every()
+用于检查数组中的所有元素是否满足指定的条件，并返回一个布尔值。
+接受一个参数，即一个回调函数，该回调函数用于检查每个元素是否满足条件。如果所有元素都满足条件，则返回true，否则返回false。
+在遇到第一个不满足条件的元素时就会停止检查，并返回false。
+如果数组为空，则every()方法将返回true
+let arr = [2, 4, 6, 8];
+let isEven = arr.every(function(element) {
+  return element % 2 === 0;
+});
+console.log(isEven); // 输出 true
+在上述代码中，every()方法被用来检查数组arr中的所有元素是否都是偶数。在执行every()方法之后，回调函数会对数组中的每个元素进行检查，如果所有元素都是偶数，则返回true。
+8.3.2 some()
+用于检查数组中是否存在符合指定条件的元素，并返回一个布尔值。
+接受一个参数，即一个回调函数，该回调函数用于检查每个元素是否符合条件。如果至少一个元素符合条件，则返回true，否则返回false。
+在遇到第一个符合条件的元素时就会停止检查，并返回true。
+如果数组为空，则some()方法将返回false。
+let arr = [1, 3, 5, 7];
+let hasEven = arr.some(function(element) {
+  return element % 2 === 0;
+});
+console.log(hasEven); // 输出 false
+在上述代码中，some() 方法被用来检查数组arr中是否存在偶数。在执行some()方法之后，回调函数会对数组中的每个元素进行检查，如果至少一个元素是偶数，则返回true。
+8.3.3 map()
+用于遍历数组中的每个元素，并对每个元素执行一个函数，然后将返回的结果存储在一个新数组中。
+不会修改原始数组，而是返回一个新的数组。
+let arr = [1, 2, 3];
+let doubleArr = arr.map(function(element) {
+  return element * 2;
+});
+console.log(doubleArr); // 输出 [2, 4, 6]
+在上述代码中，map()方法被用来将数组arr中的每个元素乘以2，并将结果存储在一个新数组doubleArr中。
+可以使用箭头函数简化map()方法的使用，例如。
+let arr = [1, 2, 3];
+let doubleArr = arr.map(element => element * 2);
+console.log(doubleArr); // 输出 [2, 4, 6]
+在数据过滤中的使用示例如下。
+let arr1 = [
+  {name:"1",text:"类型1",num:1},
+  {name:"2",text:"类型2",num:2},
+  {name:"3",text:"类型3",num:3},
+]
+
+let res = arr1.map(g=>{
+  return {
+    value: g.num,
+    name: g.name,
+    text: g.text
+  }
+})
+console.log(res) // 返回一个新数组
+8.3.4 forEach()
+用于遍历数组中的每个元素，并对每个元素执行一个函数。
+let arr = ["apple", "banana", "orange"];
+arr.forEach(function(element) {
+  console.log(element);
+});
+// 输出 "apple", "banana", "orange"
+在上述代码中，forEach()方法被用来遍历数组arr中的每个元素，并对每个元素执行一个函数，将元素打印到控制台上。
+在数据中的使用示例如下。
+let arr1 = [
+  {name:"1",text:"类型1",num:1},
+  {name:"2",text:"类型2",num:2},
+  {name:"3",text:"类型3",num:3}
+]
+
+arr1.forEach(g=>{
+  g.value = g.num;
+  console.log(g.text)
+})
+【注】map()方法与forEach()方法的区别。
+forEach()方法不会返回一个新的数组，而是对每个元素执行一次回调函数。而map()方法会返回一个新的数组，其中包含对每个元素执行回调函数后的结果。
+forEach()方法会对数组中的每个元素执行回调函数，但不会使用回调函数的返回值。而map()方法会对数组中的每个元素执行回调函数，并使用回调函数的返回值来构建一个新的数组。
+8.3.5 filter()
+用于遍历数组中的每个元素，并对每个元素执行一个函数，返回一个新数组，其中包含满足条件的元素。
+let arr = [-1, 2, 3, 4, 5];
+let newArr = arr.filter(function(element) {
+  return element > 0;
+});
+console.log(newArr); // 输出 [2, 3, 4, 5]
+在上述代码中，filter()方法被用来筛选数组arr中大于0的数，并将结果存储在一个新数组newArr中。
+可以使用箭头函数简化filter()方法的使用，例如。
+let arr = [-1, 2, 3, 4, 5];
+let newArr = arr.filter(() => element > 0);
+console.log(newArr); // 输出 [2, 3, 4, 5]
+8.3.6 reduce()
+用于将数组中的所有元素合并为一个单独的值。
+接受一个参数，即一个回调函数，该回调函数用于对数组中的每个元素执行操作，并返回一个累加值。
+回调函数接受两个参数，即累加器和当前值，其中累加器是上一次调用回调函数时返回的值，而当前值是当前元素的值。
+let arr = [1, 2, 3, 4, 5];
+let sum = arr.reduce(function(accumulator, currentValue) {
+  return accumulator + currentValue;
+}, 0);
+console.log(sum); // 输出 15
+在上述代码中，reduce()方法被用来将数组arr中的所有元素相加，并将结果存储在变量sum中。
+可用箭头函数简化使用。
+let arr = [1, 2, 3, 4, 5];
+let sum = arr.reduce((accumulator, currentValue) => accumulator + currentValue, 0);
+console.log(sum); // 输出 15
+
+let max = arr.reduce((accumulator, currentValue) => Math.max(accumulator, currentValue));
+console.log(max); // 输出 5
+
+let average = arr.reduce((accumulator, currentValue, index, array) => {
+  accumulator += currentValue;
+  if (index === array.length - 1) {
+    return accumulator / array.length;
+  } else {
+    return accumulator;
+  }
+}, 0);
+console.log(average); // 输出 3
+在上述代码中，箭头函数和展开运算符被用来简化reduce()方法的使用。第一个例子用来计算数组arr中所有元素的和；第二个例子用来查找数组arr中的最大值；第三个例子用来计算数组arr中所有元素的平均值。
+8.4 数组的其他方法
+8.4.1 concat(数组)  数组合并
+用于将两个或多个数组合并成一个新数组，并返回新数组。
+接受一个或多个参数，每个参数都是要合并的数组。
+不会修改原始数组，而是返回一个新的数组。
+注意使用concat()方法时数组的内容和顺序，以确保合并后的数组符合预期。
+let arr1 = ["apple", "banana"];
+let arr2 = ["orange", "pear"];
+let arr3 = ["peach"];
+let newArr = arr1.concat(arr2, arr3);
+console.log(arr1); // ["apple","banana"]  原数组不会被修改
+console.log(newArr); // 输出["apple", "banana", "orange", "pear", "peach"]
+8.4.2  join("连接符")
+用于将数组中的所有元素转换为一个字符串，并使用指定的分隔符将它们连接起来。
+接受一个可选参数，即一个分隔符字符串，默认为逗号。
+不会修改原始数组，而是返回一个新的字符串。
+let arr = ["apple", "banana", "orange"];
+let str = arr.join(", ");
+console.log(str); // 输出 "apple, banana, orange"
+8.4.3 slice(起始下标,结束下标)
+用于返回一个新数组，其中包含原始数组的一部分。
+接受两个可选参数，即起始位置和结束位置。如果省略结束位置，则会返回从起始位置到数组末尾的所有元素。
+let arr = ["apple", "banana", "orange", "grape", "kiwi"];
+let slicedArr = arr.slice(1, 4);
+let sliceArr1 = arr.slice(1);
+console.log(slicedArr); // 输出 ["banana", "orange", "grape"]
+console.log(slicedArr1); // 输出 ["banana", "orange", "grape", "kiwi"]
+8.4.4 indexOf()
+用于返回数组中指定元素的第一个匹配项的索引。
+接受一个参数，即要查找的元素。如果找到了该元素，则返回它在数组中的索引，否则返回-1。
+let arr = ["apple", "banana", "orange", "grape", "kiwi"];
+let index = arr.indexOf("orange");
+let index1 = arr.indexOf("1");
+console.log(index); // 输出 2
+console.log(index1); // 输出 -1
+8.4.5 sort() 排序
+用来对数组中的元素进行排序。
+可以接受一个可选的比较函数作为参数，该函数用于定义排序规则。
+比较函数应该具有两个参数 a 和 b，其语法如下。
+sort(function(a,b){ // a数组中的前一个值  b 数组中后一个值
+    return a - b;  //当前一项 - 后一项结果为正数  就将a b互换位置，从小到大排序
+})
+js
+sort(function(a,b){ 
+    return b - a;  //当后一项 - 前一项结果为正数  就将a b互换位置，从大到小排序
+})
+示例如下。
+let arr = [5, 3, 1, 4, 2];
+arr.sort((a, b) => a - b); // 输出 [1, 2, 3, 4, 5]
+8.4.6 reverse()
+用于将数组中的元素顺序反转。
+reverse()方法会修改原始数组。
+let arr = ["apple", "banana", "orange", "grape", "kiwi"];
+arr.reverse();
+console.log(arr); // 输出 ["kiwi", "grape", "orange", "banana", "apple"]
+9 Math 数学对象
+Math对象是一个内置的全局对象，它提供了数学相关的常量和方法。
+Math.ceil(浮点数)向上取整
+Math.floor(浮点数)  向下取整
+Math.round(浮点数)四舍五入
+Math.abs(负数)     求绝对值
+Math.max(一组数字)一组数字中最大的值返回
+Math.min(一组数字)一组数字中最小的值返回
+max和min不能使用数组和其他数据类型
+Math.random()随机0--1之间的小数 包含0，不包含1
+Math.random() 随机数，取0-1
+Math.random()*m 取0-m之间
+Math.random()*(max-min+1) + min 取m-n之间的数
+console.log(Math.abs(-5)); // 输出 5
+console.log(Math.ceil(4.2)); // 输出 5
+console.log(Math.floor(4.9)); // 输出 4
+console.log(Math.max(3, 1, 4, 2)); // 输出 4
+console.log(Math.min(3, 1, 4, 2)); // 输出 1
+console.log(Math.random()); // 输出介于0和1之间的一个随机数
+10 Date 时间对象与dayjs的使用
+10.1 Date
+JavaScript中的日期和时间可以使用内置的Date对象来表示，可以使用内置的方法来访问和操作它们。
+以下是Date对象的一些常用方法：
+new Date()：创建一个当前日期和时间的Date对象。
+new Date(milliseconds)：创建一个表示从1970年1月1日00:00:00 UTC开始经过指定毫秒数的Date对象。
+new Date(dateString)：创建一个表示指定日期和时间的Date对象。参数可以是包含日期和时间的字符串。
+getDate()：返回Date对象的日期部分，即1到31之间的一个整数。
+getMonth()：返回Date对象的月份部分，即0到11之间的一个整数。
+getFullYear()：返回Date对象的年份部分，即完整的四位数年份。
+getHours()：返回Date对象的小时部分，即0到23之间的一个整数。
+getMinutes()：返回Date对象的分钟部分，即0到59之间的一个整数。
+getSeconds()：返回Date对象的秒部分，即0到59之间的一个整数。
+getTime()：返回Date对象自1970年1月1日00:00:00 UTC以来的毫秒数。
+setDate(date)：设置Date对象的日期部分为指定的日期（1到31之间的一个整数）。
+setMonth(month)：设置Date对象的月份部分为指定的月份（0到11之间的一个整数）。
+setFullYear(year)：设置Date对象的年份部分为指定的年份（完整的四位数年份）。
+setHours(hours)：设置Date对象的小时部分为指定的小时（0到23之间的一个整数）。
+setMinutes(minutes)：设置Date对象的分钟部分为指定的分钟（0到59之间的一个整数）。
+setSeconds(seconds)：设置Date对象的秒部分为指定的秒（0到59之间的一个整数）。
+setTime(milliseconds)：设置Date对象自1970年1月1日00:00:00 UTC以来的毫秒数。
+var oDate = new Date();
+console.log(oDate);
+var y = oDate.getFullYear();//获取年
+var m = oDate.getMonth() + 1;//月  0-11 所以加1
+var d = oDate.getDate();//日
+var w = oDate.getDay();//week 星期  0-6  0星期天  6星期6 
+var h = oDate.getHours();//时
+var miu = oDate.getMinutes();//分
+var s = oDate.getSeconds();//秒
+
+console.log(y,m,d,w,h,miu,s);
+var week = ['星期天','星期一','星期二','星期三','星期四','星期五','星期六'];
+
+var sss = y + '年' + toDouble(m) + '月' + toDouble(d) + '日' + week[w] + toDouble(h) + '时' + toDouble(miu) + '分' + toDouble(s) + '秒';
+console.log(sss);
+
+function toDouble(num){
+    return num < 10 ? '0' + num : '' + num;
+}
+
+console.log(oDate.getTime());//从1970-1-1 0 0 0  到现在时间的 毫秒数
+//格式化日期时间
+console.log(oDate.toDateString());
+console.log(oDate.toLocaleDateString());
+console.log(oDate.toTimeString());
+10.2 dayjs
+dayjs是一个轻量级的JavaScript日期库，用于解析、验证、操作和格式化日期。在悟空脚本配置中常使用它的API来处理与时间有关的参数。
+10.2.1 dayjs() 解析日期
+使用dayjs()函数来解析日期，它可以接受一个日期字符串和格式化字符串作为参数，或者接受一个JavaScript Date对象作为参数。例如：
+const date1 = dayjs('2022-05-19');
+const date2 = dayjs('2022-05-19', 'YYYY-MM-DD');
+const date3 = dayjs(new Date());
+10.2.2 format() 格式化日期
+使用format()方法来将日期格式化为指定的字符串。它接受一个格式化字符串作为参数，例如：
+const date1 = dayjs('2022-05-19');
+const formattedDate = date1.format('YYYY年MM月DD日');
+console.log(formattedDate); // 输出 2022年05月19日
+10.2.3 startOf()  endOf() 开始时间 结束时间
+用于返回一个新的dayjs对象，该对象表示从当前日期或时间开始或结束的时间段。
+接受一个字符串作为参数，该字符串指定了要返回的时间段。这些时间段包括“year”（年份）、“month”（月份）、“week”（周）、“day”（日）、“hour”（小时）、“minute”（分钟）和“second”（秒）。
+dayjs().startOf('day').format('YYYY-MM-DD HH:mm:ss') // 今天00:00:00
+dayjs().endOf('day').format('YYYY-MM-DD HH:mm:ss') // 今天23:59:59
+dayjs().startOf('month').format('YYYY-MM-DD HH:mm:ss') // 本月第一天
+dayjs().endOf('month').format('YYYY-MM-DD HH:mm:ss') // 本月最后一天
+dayjs().startOf('year').format('YYYY-MM-DD HH:mm:ss') // 今年第一天
+dayjs().endOf('year').format('YYYY-MM-DD HH:mm:ss') // 今年最后一天
+10.2.4 subtract() 减去指定的时间量
+用于从一个日期中减去指定的时间量。它接受一个数字和一个时间单位作为参数，并返回一个新的dayjs对象，表示减去指定时间量后的日期。
+const date1 = dayjs('2022-05-19');
+const date2 = date1.subtract(1, 'day'); // 从date1减去1天
+const date3 = date1.subtract(1, 'month'); // 从date1减去1月
+const date4 = date1.subtract(1, 'year'); // 从date1减去1年
+
+console.log(date1.format('YYYY-MM-DD')); // 输出 2022-05-19
+console.log(date2.format('YYYY-MM-DD')); // 输出 2022-05-18
+console.log(date3.format('YYYY-MM-DD')); // 输出 2022-04-19
+console.log(date4.format('YYYY-MM-DD')); // 输出 2021-05-19
+在上述代码中，使用1dayjs()1 函数创建一个表示指定日期的dayjs对象date1。然后，使用subtract()方法从date1对象中减去1天、1个月和1年，并分别创建3个新的dayjs对象date2、date3和date4。最后，使用format()方法将这些dayjs对象格式化为指定的日期字符串，并输出它们的值。
+悟空中常见的场景为获取近7天、近1月、近1年的时间参数。
+dayjs().format('YYYY-MM-DD HH:mm:ss')
+// 时间加减(加传负数) 年:year 月:month 日:day 时:hour 分:minute 秒:second   
+dayjs().subtract(1, 'year').format('YYYY-MM-DD HH:mm:ss') // 当前时间减一年
+dayjs().subtract(30, 'day').format('YYYY-MM-DD HH:mm:ss') // 当前时间减30天
+dayjs().subtract(7, 'day').format('YYYY-MM-DD HH:mm:ss') // 当前时间减7天
+10.2.5 add() 加上指定的时间
+用于给当前日期加上指定的时间量。它接受一个数字和一个时间单位作为参数，并返回一个新的dayjs对象，表示加上指定时间量后的日期。
+const date1 = dayjs('2022-05-19');
+const date2 = date1.add(1, 'day');
+const date3 = date1.add(1, 'month');
+const date4 = date1.add(1, 'year');
+
+console.log(date1.format('YYYY-MM-DD')); // 输出 2022-05-19
+console.log(date2.format('YYYY-MM-DD')); // 输出 2022-05-20
+console.log(date3.format('YYYY-MM-DD')); // 输出 2022-06-19
+console.log(date4.format('YYYY-MM-DD')); // 输出 2023-05-19
+10.2.6 isBefore() isSame()  isAfter() 日期的比较
+使用isBefore()、isSame()和isAfter()方法来比较两个日期的先后顺序。它们接受一个日期对象作为参数，例如：
+const date1 = dayjs('2022-05-19');
+const date2 = dayjs('2022-05-20');
+
+console.log(date1.isBefore(date2)); // 输出 true
+console.log(date1.isSame(date2)); // 输出 false
+console.log(date1.isAfter(date2)); // 输出 false

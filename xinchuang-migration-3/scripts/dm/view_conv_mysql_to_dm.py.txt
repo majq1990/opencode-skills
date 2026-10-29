@@ -1,0 +1,399 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""MySQL 视图 → DM8 迁移器（.py.txt 约定：标识符动态 DDL 无法参数化）。
+
+定义取 MySQL information_schema.views（规范化文本），按 DM 方言改写后
+连接各库属主用户逐个 CREATE OR REPLACE VIEW；失败进重试队列跑 3 轮
+（视图依赖视图的场景靠多轮收敛）。口令走 /root 下 600 权限文件。
+"""
+import re
+import sys
+
+import dmPython
+import pymysql
+
+MYSQL_HOST, MYSQL_PORT = "127.0.0.1", 3306
+DM_HOST, DM_PORT = "127.0.0.1", 5236
+ROUNDS = 3
+
+_KNOWN_SCHEMAS = {"cgdb": "CGDB", "cgdbstat": "CGDBSTAT",
+                  "giscenter": "GISCENTER", "mms": "MMS"}
+
+
+def rd(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+
+def _qi(name):
+    if any(ch in name for ch in '"\\;\x00') or len(name) > 127:
+        raise ValueError("illegal identifier: %r" % name)
+    return '"%s"' % name
+
+
+def _args_of(s, i):
+    """s[i] 必须是 '('；返回 (args列表, 右括号下标)。顶层逗号切分。"""
+    assert s[i] == "("
+    depth = 0
+    args, cur = [], []
+    j = i
+    while j < len(s):
+        c = s[j]
+        if c == "(":
+            depth += 1
+            if depth > 1:
+                cur.append(c)
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                if cur or args:
+                    args.append("".join(cur))
+                return args, j
+            cur.append(c)
+        elif c == "," and depth == 1:
+            args.append("".join(cur))
+            cur = []
+        else:
+            cur.append(c)
+        j += 1
+    raise ValueError("unbalanced parens")
+
+
+def fix_if(s):
+    """if(a,b,c) -> (CASE WHEN a THEN b ELSE c END)，支持嵌套。"""
+    out = s
+    while True:
+        m = None
+        for m in re.finditer(r"(?<![A-Za-z0-9_$.])if\s*\(", out):
+            i = m.end() - 1
+            try:
+                args, j = _args_of(out, i)
+            except ValueError:
+                continue
+            if len(args) != 3:
+                continue
+            inner = "(CASE WHEN %s THEN %s ELSE %s END)" % tuple(args)
+            out = out[:m.start()] + inner + out[j + 1:]
+            break
+        else:
+            return out
+
+
+def fix_ifnull(s):
+    """ifnull(a,b) -> coalesce(a,b)。"""
+    return re.sub(r"(?<![A-Za-z0-9_$.])ifnull\s*\(", "coalesce(", s)
+
+
+def fix_quotes(s):
+    """反引号 -> 双引号。"""
+    return s.replace("`", '"')
+
+
+def fix_schema_qualifier(s):
+    """库名限定：`cgdbstat`.`t` / cgdbstat.t / "cgdb"."t" -> "CGDBSTAT"."t"
+    （只替换已知库名，DM 侧 schema 全大写；同库内裸表名不动）。
+    注意在 fix_quotes 之后调用，所以三种形态都要覆盖。"""
+    for low, up in _KNOWN_SCHEMAS.items():
+        s = re.sub(r'"%s"\s*\.' % low, '"%s".' % up, s, flags=re.I)
+        s = re.sub(r'`%s`\s*\.' % low, '"%s".' % up, s, flags=re.I)
+        s = re.sub(r'(?<![A-Za-z0-9_".])\b%s\s*\.(?=["A-Za-z_])' % low,
+                   lambda m, up=up: '"%s".' % up, s, flags=re.I)
+    return s
+
+
+def fix_interval(s):
+    """INTERVAL n unit -> INTERVAL 'n' unit；date_add/date_sub 二参改 +/-。
+    只处理数字字面量与带符号数字字面量，函数式参数不动。"""
+    s = re.sub(r"(?<![A-Za-z0-9_'])INTERVAL\s+(-?)\(?\s*(\d+)\s*\)?\s+",
+               lambda m: "INTERVAL '%s%s' " % (m.group(1), m.group(2)),
+               s, flags=re.I)
+    out = s
+    for fn, op in (("date_add", "+"), ("date_sub", "-")):
+        while True:
+            m = re.search(r"(?<![A-Za-z0-9_$.])%s\s*\(" % fn, out, flags=re.I)
+            if not m:
+                break
+            i = m.end() - 1
+            try:
+                args, j = _args_of(out, i)
+            except ValueError:
+                break
+            if len(args) != 2:
+                break
+            inner = "(%s %s %s)" % (args[0], op, args[1])
+            out = out[:m.start()] + inner + out[j + 1:]
+    return out
+
+
+def _match_paren(s, i):
+    """从 s[i]='(' 找配对右括号；跳过单引号字符串字面量（'' 转义）。"""
+    depth = 0
+    j = i
+    n = len(s)
+    while j < n:
+        c = s[j]
+        if c == "'":
+            j += 1
+            while j < n:
+                if s[j] == "'":
+                    if j + 1 < n and s[j + 1] == "'":
+                        j += 2
+                        continue
+                    break
+                j += 1
+        elif c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                return j
+        j += 1
+    raise ValueError("unbalanced")
+
+
+def strip_struct_parens(s):
+    """剥掉 FROM 子句里的纯结构括号（DM 不支持括号分组的 join 列表）。
+    只在 from 之后、顶层关键字之前作业；括号体内含 select 的（子查询）不剥。
+    替换时两侧补空格，避免 on(...) 剥成 on(...) 后紧贴标识符。
+    扫描带字符串字面量感知，字面量里的括号不参与配对。"""
+    m = re.search(r"\bfrom\b", s, flags=re.I)
+    if not m:
+        return s
+    changed = True
+    while changed:
+        changed = False
+        out = []
+        i = m.end()
+        n = len(s)
+        while i < n:
+            if s[i] == "'":
+                j = i + 1
+                while j < n:
+                    if s[j] == "'":
+                        if j + 1 < n and s[j + 1] == "'":
+                            j += 2
+                            continue
+                        break
+                    j += 1
+                out.append(s[i:j + 1])
+                i = j + 1
+                continue
+            if s[i] == "(":
+                j = _match_paren(s, i)
+                body = s[i + 1:j]
+                low = body.lstrip().lower()
+                # 子查询 (select ... / 表达式保护 (case ... 不剥；
+                # 含 select 但不以 select 开头的是"包着子查询的结构括号"，
+                # 内层 select 括号已单独保留，外层照剥（否则 DM 拒 join 分组括号）
+                if low.startswith("select") or low.startswith("case"):
+                    out.append(s[i:j + 1])
+                else:
+                    out.append(" " + body + " ")
+                    changed = True
+                i = j + 1
+            elif re.match(r"\b(where|group\s+by|order\s+by|having|limit)\b",
+                          s[i:], flags=re.I):
+                out.append(s[i:])
+                break
+            else:
+                out.append(s[i])
+                i += 1
+        s = s[:m.end()] + "".join(out)
+    return s
+
+
+_REF = (r"(?:\"[^\"]+\"|[A-Za-z_][\w$]*)"
+        r"(?:\s*\.\s*(?:\"[^\"]+\"|[A-Za-z_][\w$]*))?")
+
+_BARE_JOIN = re.compile(
+    r"\bjoin\s+(%s)(\s+(?:as\s+)?(?:\"[^\"]+\"|[A-Za-z_][\w$]*))?" % _REF,
+    re.I)
+
+
+def fix_bare_join(s):
+    """MySQL 语义里无 ON 的 INNER JOIN 等价笛卡尔积；DM 无 CROSS JOIN（Oracle 系
+    方言），JOIN 又必须带 ON——转成逗号连接。判定法：join <两段式表引用 别名>
+    之后的第一个关键字不是 ON。须在剥括号之后调用。"""
+    out, pos = [], 0
+    for m in _BARE_JOIN.finditer(s):
+        tail = s[m.end():m.end() + 24]
+        if re.match(r"\s*on\b", tail, flags=re.I):
+            continue
+        # join X alias -> , X alias
+        body = m.group(0)[len("join"):]
+        out.append(s[pos:m.start()])
+        out.append("," + body)
+        pos = m.end()
+    out.append(s[pos:])
+    return "".join(out)
+
+
+def fix_count_bool(s):
+    """count(布尔表达式) 是 MySQL 语法，DM 不认——转 count(case when 布尔 then 1 end)。
+    布尔判定：body 含比较运算符（= != <> < > like in）且不含另一个聚合。"""
+    out, pos = [], 0
+    for m in re.finditer(r"(?<![A-Za-z0-9_$.])count\s*\(", s, flags=re.I):
+        i = m.end() - 1
+        try:
+            args, j = _args_of(s, i)
+        except ValueError:
+            continue
+        if len(args) != 1:
+            continue
+        body = args[0].strip()
+        if re.search(r"(<>|!=|=|<|>|\blike\b|\bin\b)", body, flags=re.I) and \
+                not re.search(r"\b(count|sum|avg|min|max)\s*\(", body, flags=re.I):
+            out.append(s[pos:m.start()])
+            out.append("count(case when %s then 1 end)" % body)
+            pos = j + 1
+    out.append(s[pos:])
+    return "".join(out)
+
+
+def _top_from_pos(s):
+    """找顶层（括号深度 0、且不在字符串里）的 from 关键字位置。"""
+    depth = 0
+    i, n = 0, len(s)
+    while i < n:
+        c = s[i]
+        if c == "'":
+            i += 1
+            while i < n:
+                if s[i] == "'":
+                    if i + 1 < n and s[i + 1] == "'":
+                        i += 2
+                        continue
+                    break
+                i += 1
+        elif c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        elif depth == 0 and re.match(r"\bfrom\b", s[i:], flags=re.I) and \
+                (i == 0 or not re.match(r"[\w$.]", s[i - 1])):
+            return i
+        i += 1
+    return -1
+
+
+def fix_group_by(s):
+    """MySQL 允许 select 非聚合列靠功能依赖省略 GROUP BY 列，DM 严格——
+    把 select 里的简单列引用补进 GROUP BY（只处理 "t"."col" 形态，其余不动）。"""
+    m = re.search(r"\bgroup\s+by\s+(.+?)\s*$", s, flags=re.I | re.S)
+    if not m:
+        return s
+    gb_cols = [c.strip() for c in split_top(m.group(1))]
+    fp = _top_from_pos(s)
+    if fp < 0:
+        return s
+    sm = re.search(r"\bselect\b", s[:fp], flags=re.I)
+    sel = s[sm.end():fp]
+    extra = []
+    for item in split_top(sel):
+        it = item.strip()
+        it = re.sub(r"\s+AS\s+\"[^\"]+\"\s*$", "", it, flags=re.I).strip()
+        mm = re.fullmatch(r'\(?\s*(\"\w+\"\s*\.\s*\"\w+\")\s*\)?', it)
+        if not mm:
+            continue
+        col = re.sub(r"\s+", "", mm.group(1))
+        if col not in {re.sub(r"\s+", "", c) for c in gb_cols}:
+            extra.append(mm.group(1))
+    if not extra:
+        return s
+    new_gb = m.group(1) + ("," if gb_cols else "") + ",".join(extra)
+    return s[:m.start()] + "group by " + new_gb
+
+
+def split_top(s):
+    """按顶层逗号切分（括号深度 0 处的逗号）。"""
+    parts, cur, depth = [], [], 0
+    for ch in s:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        if ch == "," and depth == 0:
+            parts.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        parts.append("".join(cur))
+    return parts
+
+
+def convert(defn):
+    s = fix_quotes(defn)
+    s = fix_schema_qualifier(s)
+    s = fix_if(s)
+    s = fix_ifnull(s)
+    s = fix_interval(s)
+    s = fix_count_bool(s)
+    s = strip_struct_parens(s)
+    s = fix_bare_join(s)
+    s = fix_group_by(s)
+    return s
+
+
+def main():
+    my = pymysql.connect(host=MYSQL_HOST, port=MYSQL_PORT, user="root",
+                         password=rd("/root/.mysql_root_pw"), charset="utf8mb4")
+    cur = my.cursor()
+    cur.execute(
+        "SELECT table_schema, table_name FROM information_schema.views "
+        "WHERE table_schema IN ('cgdb','cgdbstat') ORDER BY table_schema, table_name")
+    rows = cur.fetchall()
+    views = []
+    for schema, name in rows:
+        cur.execute("SHOW CREATE VIEW `%s`.`%s`" % (schema, name))
+        create_sql = cur.fetchone()[1]
+        # "VIEW `name` AS <body>" —— 取 AS 之后的正文（原始 SQL，无规范化括号）
+        body = create_sql.split(" AS ", 1)[1] if " AS " in create_sql else create_sql
+        views.append((schema, name, body))
+    print("MySQL 侧视图 %d 个（SHOW CREATE VIEW 原始定义）" % len(views), flush=True)
+
+    conns = {}
+    for schema_user in ("CGDB", "CGDBSTAT"):
+        conns[schema_user] = dmPython.connect(
+            user=schema_user, password=rd("/root/.dm_user_pw_" + schema_user),
+            host=DM_HOST, port=DM_PORT, local_code=1)
+
+    queue = [(s.upper(), n, convert(d)) for s, n, d in views]
+    done, last_err = [], {}
+    for rnd in range(1, ROUNDS + 1):
+        retry = []
+        for schema, name, defn in queue:
+            try:
+                conn = conns[schema]
+                sql = 'CREATE OR REPLACE VIEW %s AS %s' % (_qi(name), defn)
+                dcur = conn.cursor()
+                dcur.execute(sql)
+                dcur.close()
+                conn.commit()
+                done.append((schema, name))
+            except Exception as ex:
+                retry.append((schema, name, defn))
+                last_err[(schema, name)] = str(ex).replace("\n", " ")[:150]
+        print("第 %d 轮：%d 成功累计，%d 进重试" % (rnd, len(done), len(retry)), flush=True)
+        if not retry:
+            break
+        queue = retry
+
+    fails = queue
+    print("\n结果：%d/%d 成功" % (len(done), len(views)))
+    if fails:
+        print("改不动清单（%d）：" % len(fails))
+        for schema, name, defn in fails:
+            print("  %s.%s: %s" % (schema, name, last_err[(schema, name)]))
+        with open("/root/dm_view_fail_samples.txt", "w", encoding="utf-8") as f:
+            for schema, name, defn in fails[:4]:
+                f.write("===== %s.%s =====\n%s\n\n" % (schema, name, defn))
+        print("失败样本已落 /root/dm_view_fail_samples.txt")
+    for c in conns.values():
+        c.close()
+    my.close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

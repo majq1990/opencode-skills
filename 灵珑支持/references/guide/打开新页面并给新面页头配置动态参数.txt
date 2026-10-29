@@ -1,0 +1,57 @@
+打开新页面并给新面页头配置动态参数
+1 使用场景
+在打开页面时，给另外一页面的页头根据列表列中某一字段的值进行显示返回按钮的文本显示，方便用户可以查看当前所查询的当前人员信息。
+2 效果
+用户点击数据时，能够在另外一个页面的页头查看到当前用户的姓名等信息。
+3 配置
+在列表的操作栏中配置详情或其他按钮，该按钮为跳转到其他页面的按钮；
+在需要被打开的页面中配置需要接收的参数；
+在详情按钮中使用脚本的方式打开需要被打开的页面，并将需要显示的参数作为title进行传递；
+具体脚本实现：
+function main(defaultParams) {
+    debugger
+    var element = this;
+    var rootPageElement = null;
+
+    while (element) {
+        if (element.getPageInfo && element.goHistory) {
+            rootPageElement = element;
+            break;
+        } else {
+            element = element.$parent;
+        }
+    }
+    //第一个参数为要打开的页面的pageid，可通过ctrl+shift+c打开资源选择弹窗进行选择
+    //isPageHeader为是否开启页头，pageHeaderTitle设置页头的名称,extraParams_设置给页面传参
+    rootPageElement.$$open('1824272096089444352', "PAGE", {
+        title: defaultParams.human_name.value,
+        cached: false,
+        backStep: 1,
+        showHeader: true,
+        extraParams: {
+            documentNo: defaultParams.id.value
+        }
+    });
+}
+说明：pageid，title，extraParams 需要根据业务实际需求进行修改
+// 页面信息
+pageId: string,
+// 显示类型
+renderType: "PAGE" | "WIDGET" = "PAGE",
+// 跳转配置
+options ?: {
+    // 标题标题
+    title?: string;
+    // 开启缓存
+    cached?: boolean;
+    // 后退步长
+    backStep?: number;
+    // 显示头
+    showHeader?: boolean;
+    // 回调函数
+    callback?: () => void;
+    // 扩展参数
+    extraParams?: any;
+列表字段链接配置
+在列表中为对应的列字段添加链接选择链接方式为不跳转，并开启响应函数；
+需要传递的参数需要放在列表的显示字段中，如若不显示则对该字段使用设置来控制当前列的不显示。

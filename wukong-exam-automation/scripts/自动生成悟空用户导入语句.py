@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
-"""从钉钉文档导出的 Excel/CSV 读取姓名和工号，生成悟空 com_user 批量导入 SQL"""
+"""从钉钉文档导出的 Excel/CSV 读取姓名和工号，生成悟空 com_user 批量导入 SQL
+
+2026-10-28 修订：原版 VALUES 比列名少一个 NULL（passwordExpireTime 位缺位），
+导致 encryptionType/encryptionType 之后全部左移一位，INSERT 直接报
+"Incorrect datetime value: 'Sm3WithSalt' for column 'passwordExpireTime'"。
+现改为列表构造 + 数量断言，列名清单变动时会立刻失败而不是静默错位。
+列名清单（37 列，2026-10-28 实测）：
+id, password, username, departmentId, name, sex, email, phone, photo,
+creator, modifier, createTime, modifyTime, remark, phonetic, userType,
+regionId, terminalType, disabled, tenantId, personId, sign, documentNo,
+accountExpireTime, sourceId, passwordExpireTime, encryptionType,
+passwordChanged, identityNumber, status, telephone, gridName, identity,
+description, linkDepartmentName, code, encryptSalt
+"""
 import csv
 import os
 import sys
@@ -98,11 +111,39 @@ def main():
     for name, uid in pairs:
         cur += 1
         username = ''.join(lazy_pinyin(name)) + uid
-        sql = (f"('{cur}', '{PASSWORD_HASH}', '{username}', NULL, '{name}', -1, NULL, NULL, NULL, "
-               f"'admin', 'admin', NOW(), NOW(), NULL, '{name} {uid}', '0', 420000, "
-               f"'Web', 0, 'ca38aab2-23cd-4eca-93ed-1be55da90fb3', NULL, NULL, NULL, "
-               f"DATE_ADD(NOW(), INTERVAL 1 YEAR), NULL, "
-               f"'Sm3WithSalt', 1, NULL, 1, NULL, NULL, NULL, NULL, NULL, NULL, '{uid}', '{ENCRYPT_SALT}')")
+        # 按列名清单逐列给值（37 列），数量断言防错位
+        values = [
+            f"'{cur}'",                      # id
+            f"'{PASSWORD_HASH}'",            # password
+            f"'{username}'",                 # username
+            "NULL",                          # departmentId
+            f"'{name}'",                     # name
+            "-1",                            # sex
+            "NULL", "NULL", "NULL",          # email, phone, photo
+            "'admin'", "'admin'",            # creator, modifier
+            "NOW()", "NOW()",                # createTime, modifyTime
+            "NULL",                          # remark
+            f"'{name} {uid}'",               # phonetic
+            "'0'",                           # userType
+            "420000",                        # regionId
+            "'Web'",                         # terminalType
+            "0",                             # disabled
+            f"'{TENANT_ID}'",                # tenantId
+            "NULL", "NULL", "NULL",          # personId, sign, documentNo
+            "DATE_ADD(NOW(), INTERVAL 1 YEAR)",  # accountExpireTime
+            "NULL",                          # sourceId
+            "NULL",                          # passwordExpireTime（永不过期，见下方 UPDATE）
+            "'Sm3WithSalt'",                 # encryptionType
+            "1",                             # passwordChanged
+            "NULL",                          # identityNumber
+            "1",                             # status
+            "NULL", "NULL", "NULL",          # telephone, gridName, identity
+            "NULL", "NULL",                  # description, linkDepartmentName
+            f"'{uid}'",                      # code
+            f"'{ENCRYPT_SALT}'",             # encryptSalt
+        ]
+        assert len(values) == 37, f"com_user 列数断言失败: {len(values)}（应为37）"
+        sql = "(" + ", ".join(values) + ")"
         lines.append(sql + (";" if cur == int_last_id else ","))
     lines.append("")
     lines.append("-- 2026-09-02 实测必补：缺这三项会导致 unity/page-group/list 403，新建大屏失败")

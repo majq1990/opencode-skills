@@ -1,0 +1,44 @@
+{
+  "generated": "2026-10-02T20:00:00",
+  "source": "02_mysql_io_triage",
+  "io": {
+    "device": "vdb",
+    "util_pct": 99.2,
+    "await_ms": 45.1,
+    "r_s": 1200,
+    "w_s": 300,
+    "read_mb_s": 210.5
+  },
+  "candidates": [
+    {
+      "name": "慢查询回表放大导致读 I/O 放大",
+      "confidence": 0.82,
+      "reason": "设备 util 与慢查询扫描行数同时飙升",
+      "evidence": [
+        "vdb util=99.2%, await=45.1ms",
+        "TOP 慢查询 10 分钟扫描 1280000 行，回表放大 8.4 倍"
+      ]
+    },
+    {
+      "name": "备份任务抢占存储带宽",
+      "confidence": 0.15,
+      "evidence": [
+        "xtrabackup 时间窗与 I/O 尖峰重合，但 util 峰值早于备份开始"
+      ]
+    }
+  ],
+  "sql_evidence": [
+    {
+      "digest": "SELECT o.order_id, d.detail_blob FROM t_order o JOIN t_order_detail d ON d.order_id = o.order_id WHERE o.status = ? ORDER BY o.created_at DESC",
+      "calls": 120,
+      "rows_examined": 1280000
+    }
+  ],
+  "top_sql": [
+    {
+      "sql": "SELECT o.order_id, o.user_id, d.detail_blob FROM t_order o JOIN t_order_detail d ON d.order_id = o.order_id WHERE o.status = 1 AND o.created_at > '2026-09-01' ORDER BY o.created_at DESC LIMIT 1000",
+      "calls": 120,
+      "avg_ms": 3200
+    }
+  ]
+}

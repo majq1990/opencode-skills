@@ -1,0 +1,10 @@
+{
+  "name": "轻量PDF编辑器",
+  "installedAt": 1777530357548,
+  "source": "marketplace",
+  "iconSource": "nano-pdf",
+  "version": "1.0.0",
+  "skillId": "skill_2053082432767135744",
+  "skillName": "nano-pdf",
+  "installedContentHash": "sha256:8e4962c9075f23ffe121d3d300f7a5680c9b5faf68807041baa5812d86d3de75"
+}

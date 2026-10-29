@@ -1,0 +1,118 @@
+{
+  "version": "1.0.0",
+  "updated": "2026-10-02",
+  "note": "02_mysql_io_triage 分诊阈值全量外置表。数值移植自内部评审入选样例的默认经验值（近保真）。调整任何数值前必须对照 references/decision-tree.md 复核判定语义，并同步更新 version 与 updated。本文件只允许放阈值/口径，禁止写入真实实例名、IP 或凭据。",
+  "triggers": {
+    "random_read": {
+      "note": "[A] 随机小块读：平均单次读小于 avg_read_kb_lt 且读 IOPS 达到 read_iops_gte",
+      "avg_read_kb_lt": 32,
+      "read_iops_gte": 500
+    },
+    "large_seq_scan": {
+      "note": "[B] 大块顺序读：平均单次读不小于 avg_read_kb_gte 且读吞吐达到 read_mbs_gte",
+      "avg_read_kb_gte": 64,
+      "read_mbs_gte": 20
+    },
+    "write_pressure": {
+      "note": "[C] 写入压力：写 IOPS 或写吞吐任一达标，或读吞吐占比低于 read_mb_share_lt",
+      "write_iops_gte": 200,
+      "write_mbs_gte": 10,
+      "read_mb_share_lt": 60
+    },
+    "device_saturation": {
+      "note": "[D] 设备饱和：%util 达标或读等待达标（满足其一即触发）",
+      "util_gte": 85,
+      "r_await_gte": 10
+    },
+    "mismatch_low_io": {
+      "note": "[E] 量级不匹配：iowait 高但 IOPS 与吞吐都不大（最易误判分支）",
+      "iowait_gte": 15,
+      "iops_lt": 500,
+      "mbs_lt": 20
+    }
+  },
+  "scoring": {
+    "note": "基础分：min(量级/除数, 上限) + 读大小加成；与 digest/ddl 佐证加权相加后取两位小数",
+    "random_read": {
+      "iops_divisor": 2000.0,
+      "cap": 4.0,
+      "small_read_kb_lt": 16,
+      "small_read_bonus": 2.0
+    },
+    "large_seq_scan": {
+      "mbs_divisor": 50.0,
+      "cap": 4.0,
+      "huge_read_kb_gte": 128,
+      "huge_read_bonus": 2.0
+    },
+    "write_pressure": {
+      "mbs_divisor": 20.0,
+      "mbs_cap": 4.0,
+      "iops_divisor": 500.0,
+      "iops_cap": 2.0
+    },
+    "device_saturation": {
+      "util_divisor": 25.0,
+      "cap": 4.0
+    },
+    "mismatch_low_io": {
+      "iowait_divisor": 8.0,
+      "cap": 3.0
+    }
+  },
+  "digest_bump": {
+    "note": "SQL digest 佐证对已触发候选根因的加权分与触发阈值",
+    "tmp_disk_write": 2.0,
+    "no_index_seq": 2.0,
+    "no_index_random": 1.0,
+    "scan_ratio_gt": 100,
+    "scan_ratio_random": 1.5,
+    "scan_ratio_seq": 1.5
+  },
+  "ddl_bump": {
+    "note": "表结构佐证对已触发候选根因的加权分与触发阈值",
+    "lob_random": 1.2,
+    "no_pk_random": 0.8,
+    "index_few_max": 1,
+    "index_few_seq": 1.0
+  },
+  "digest_rank_weights": {
+    "note": "digest TOP 排序权重：score = rows_examined + tmp_disk_tables*w + no_index_used*w + sort_rows*w",
+    "tmp_disk_tables": 5000.0,
+    "no_index_used": 1000.0,
+    "sort_rows": 0.5
+  },
+  "digest_norm": {
+    "note": "延迟字段单位启发式：大于 picosecond_gt 视为皮秒(除以1e12)，大于 millisecond_gt 视为毫秒(除以1e3)，否则视为秒",
+    "picosecond_gt": 1000000000,
+    "millisecond_gt": 1000
+  },
+  "confidence": {
+    "note": "置信度口径：主因证据条数 + 主因与次因的分差",
+    "high_evidence": 3,
+    "high_gap": 1.0,
+    "mid_evidence": 2,
+    "mid_gap": 0.5
+  },
+  "judges": {
+    "note": "报告画像表的分级口径（IOPS/单次读大小/await/队列深度/iowait）",
+    "iops_very_high_gte": 8000,
+    "iops_high_gte": 3000,
+    "iops_mid_gte": 1000,
+    "iosize_small_kb_lt": 16,
+    "iosize_large_kb_gte": 64,
+    "await_severe_gte": 20,
+    "await_obvious_gte": 10,
+    "await_slight_gte": 5,
+    "queue_severe_gte": 8,
+    "queue_obvious_gte": 4,
+    "queue_some_gte": 1,
+    "iowait_severe_gte": 30,
+    "iowait_high_gte": 15,
+    "iowait_watch_gte": 5
+  },
+  "aggregate": {
+    "note": "设备聚合口径：排除这些前缀的虚拟/光驱设备，避免 dm-* 与底层盘重复相加导致 IOPS 翻倍",
+    "exclude_device_prefixes": ["dm-", "loop", "sr"]
+  }
+}

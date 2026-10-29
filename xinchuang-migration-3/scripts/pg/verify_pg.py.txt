@@ -1,0 +1,399 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""MySQL → PG 系 四轨过程验证（在演练机上跑）。
+
+  python3.9 _verify_pg.py --schema mms --port 54321 --user mig --password X \
+      --db test --label kingbase [--max-rows 20000]
+
+一轨  双侧 COUNT(*) 全表对账；不一致时做主键多重集 diff，并区分
+      "源表实时写入导致的行数增长" 与 "真丢行"
+二轨  逐字段多重集比对（Python 侧 Counter，精确、与排序规则无关）
+三轨  中文逐字回读（随二轨一并做，中文字段单独计数）
+四轨  超大表（超过 --max-rows）按主键排序后整体 md5 流式比对
+另    对象对账（表/主键/索引/外键数量，索引按 (表, 列, 唯一性) 语义对齐）
+
+三类必须绕开的回读精度陷阱（都已在本脚本内处理，注释见 canon/selexprs）：
+  1. 金仓 float4 的 ::text 只输出 8 位有效数字，extra_float_digits 调不动
+  2. MySQL float(M,D) 直读按 D 位小数四舍五入（1028744.5625 → 1028744.562）
+  3. MySQL bit(n) 按整字节存，直读是 8 的整数倍位；PG bit(n) 回读就是 n 位
+"""
+import argparse
+import hashlib
+import os
+import sys
+import time
+from collections import Counter
+from datetime import datetime
+from decimal import Decimal
+
+import pymysql
+import psycopg2
+
+
+def log(m):
+    sys.stdout.write(m + "\n")
+    sys.stdout.flush()
+
+
+def canon(v, dtype, prec=0):
+    """把两侧取值归一成同一字符串，使多重集比对与排序规则无关。"""
+    if v is None:
+        return "N"
+    if dtype == "bit":
+        if isinstance(v, (bytes, bytearray, memoryview)):
+            bits = "".join(format(x, "08b") for x in bytes(v))
+        else:
+            bits = str(v)
+        # MySQL bit(n) 按整字节存，直读出 8 的整数倍个位；PG bit(n) 回读就是
+        # n 位。两侧都裁到声明宽度，否则 bit(1) 的 '00000000' 与 '0' 会假性不一致。
+        return bits[-prec:] if prec and len(bits) > prec else bits
+    if isinstance(v, bool):
+        return "1" if v else "0"
+    if isinstance(v, (bytes, bytearray, memoryview)):
+        return "x" + bytes(v).hex()
+    if isinstance(v, Decimal):
+        return "d" + format(v, "f")
+    if isinstance(v, int):
+        return "i" + str(v)
+    if isinstance(v, float):
+        return "f" + repr(v)
+    if isinstance(v, str):
+        return "s" + v
+    s = str(v)
+    if dtype == "time":
+        # MySQL TIME 是 timedelta，PG time 是 datetime.time，归一到同一前缀。
+        if hasattr(v, "days") and hasattr(v, "seconds"):
+            tot = v.days * 86400 + v.seconds
+            neg = tot < 0
+            tot = abs(tot)
+            us = v.microseconds
+            base = "%02d:%02d:%02d" % (tot // 3600, (tot % 3600) // 60, tot % 60)
+            if us:
+                base += ".%06d" % us
+            return ("t-" if neg else "t") + base
+        return "t" + s
+    # 金仓 DATE 带时间分量（Oracle 语义），读出来是 datetime 且时刻恒为 0。
+    # 两侧同时把零时刻归一到纯日期，否则 MySQL date 与金仓 date 会假性不一致。
+    if isinstance(v, datetime) and not (v.hour or v.minute or v.second or v.microsecond):
+        return "o" + v.date().isoformat()
+    return "o" + s
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--schema", required=True)
+    ap.add_argument("--label", default="")
+    ap.add_argument("--mysql-host", default="127.0.0.1")
+    ap.add_argument("--mysql-port", type=int, default=3306)
+    ap.add_argument("--mysql-user", default="root")
+    ap.add_argument("--pg-host", default="127.0.0.1")
+    ap.add_argument("--pg-port", type=int, required=True)
+    ap.add_argument("--pg-user", default="postgres")
+    ap.add_argument("--db", required=True)
+    ap.add_argument("--max-rows", type=int, default=20000)
+    a = ap.parse_args()
+
+    t0 = time.time()
+    src = pymysql.connect(host=a.mysql_host, port=a.mysql_port,
+                          user=a.mysql_user,
+                          password=os.environ["MIG_MYSQL_PWD"],
+                          charset="utf8mb4")
+    dst = psycopg2.connect(host=a.pg_host, port=a.pg_port, user=a.pg_user,
+                           password=os.environ["MIG_PG_PWD"], dbname=a.db,
+                           client_encoding="UTF8")
+    # 目标侧只读，必须 autocommit：一轨要对 5000+ 张表逐张 SELECT COUNT(*)，
+    # 每条 COUNT 都会拿该表及其索引的 AccessShareLock。若整个循环共用一个事务，
+    # 锁会一路累积，超过共享锁表容量就报
+    # "out of shared memory / You might need to increase
+    #  max_locks_per_transaction"（2026-10-12 重构复跑 cgdb 5243 表实测崩在这）。
+    # 逐条自提交让锁随语句释放，且校验本身是只读的，不需要跨语句事务一致性。
+    dst.autocommit = True
+    scur, dcur = src.cursor(), dst.cursor()
+
+    scur.execute("SELECT TABLE_NAME FROM information_schema.TABLES WHERE"
+                 " TABLE_SCHEMA=%s AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME",
+                 (a.schema,))
+    tables = [r[0] for r in scur.fetchall()]
+    log("[%s] %s：源表 %d 张" % (a.label, a.schema, len(tables)))
+
+    dcur.execute("SELECT table_name FROM information_schema.tables"
+                 " WHERE table_schema=%s AND table_type='BASE TABLE'", (a.schema,))
+    dst_tables = set(r[0] for r in dcur.fetchall())
+    missing = [t for t in tables if t not in dst_tables]
+    log("[%s] 目标缺失表 %d 张" % (a.label, len(missing)))
+    for t in missing[:15]:
+        log("   MISSING %s" % t)
+
+    def qi(n):
+        return '"' + str(n).replace('"', '""') + '"'
+
+    def qn(t):
+        return qi(a.schema) + "." + qi(t)
+
+    # ---------------- 元数据：列类型 / 声明宽度 / 主键
+    scur.execute("SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, NUMERIC_PRECISION FROM"
+                 " information_schema.COLUMNS WHERE TABLE_SCHEMA=%s"
+                 " ORDER BY TABLE_NAME, ORDINAL_POSITION", (a.schema,))
+    coltype, colprec = {}, {}
+    for tn, cn, dt, np_ in scur.fetchall():
+        coltype.setdefault(tn, []).append((cn, dt.lower()))
+        colprec.setdefault(tn, []).append(int(np_ or 0))
+    scur.execute("SELECT TABLE_NAME, COLUMN_NAME FROM information_schema."
+                 "KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=%s AND CONSTRAINT_NAME='PRIMARY'"
+                 " ORDER BY TABLE_NAME, ORDINAL_POSITION", (a.schema,))
+    pkmap = {}
+    for tn, cn in scur.fetchall():
+        pkmap.setdefault(tn, []).append(cn)
+
+    FLOATS = ("float", "double", "real")
+
+    # ---------------- 一轨：行数对账
+    log("\n===== 一轨 行数对账 =====")
+    cnt_fail, cnt_ok, total_rows = [], 0, 0
+    for t in tables:
+        if t not in dst_tables:
+            continue
+        scur.execute("SELECT COUNT(*) FROM `%s`.`%s`" % (a.schema, t))
+        ns = scur.fetchone()[0]
+        dcur.execute("SELECT COUNT(*) FROM %s" % qn(t))
+        nd = dcur.fetchone()[0]
+        total_rows += ns
+        if ns == nd:
+            cnt_ok += 1
+        else:
+            cnt_fail.append((t, ns, nd))
+    log("一致 %d 张，不一致 %d 张（源合计 %d 行）"
+        % (cnt_ok, len(cnt_fail), total_rows))
+    live_tables, lost_tables = [], []
+    for t, ns, nd in cnt_fail:
+        log("   DIFF %s 源=%s 目标=%s 差=%+d" % (t, ns, nd, nd - ns))
+        pk = pkmap.get(t) or []
+        if not pk:
+            continue
+        scur.execute("SELECT %s FROM `%s`.`%s`"
+                     % (", ".join("`%s`" % c for c in pk), a.schema, t))
+        cs = Counter(tuple(str(x) for x in r) for r in scur.fetchall())
+        dcur.execute("SELECT %s FROM %s"
+                     % (", ".join(qi(c) for c in pk), qn(t)))
+        cd = Counter(tuple(str(x) for x in r) for r in dcur.fetchall())
+        only_s, only_d = cs - cd, cd - cs
+        log("     主键多重集：仅源 %d 行，仅目标 %d 行"
+            % (sum(only_s.values()), sum(only_d.values())))
+        if only_d:
+            lost_tables.append(t)
+            for k, v in list(only_d.items())[:5]:
+                log("       仅目标 %s x%d" % (k, v))
+            continue
+        if not only_s:
+            continue
+        # 源独有：区分"源表实时写入"与"真丢行"——取该表第一个日期/时间列，
+        # 若源独有行的取值全部晚于目标侧该列最大值，就是迁移后新写入的行。
+        dcol = None
+        for cn, dt in coltype.get(t, []):
+            if dt in ("datetime", "timestamp", "date", "time"):
+                dcol = cn
+                break
+        if not dcol:
+            lost_tables.append(t)
+            for k, v in list(only_s.items())[:5]:
+                log("       仅源 %s x%d" % (k, v))
+            continue
+        w = " AND ".join("`%s`='%s'" % (c, v) for c, v in zip(pk, list(only_s)[0]))
+        scur.execute("SELECT `%s` FROM `%s`.`%s` WHERE %s"
+                     % (dcol, a.schema, t, w))
+        probe = scur.fetchone()[0]
+        dcur.execute("SELECT MAX(%s) FROM %s" % (qi(dcol), qn(t)))
+        tmax = dcur.fetchone()[0]
+        if probe is not None and tmax is not None and str(probe) > str(tmax):
+            live_tables.append(t)
+            log("     判定：源表实时写入——源独有行的 %s=%s 晚于目标侧该列最大值 %s，"
+                "属迁移后新增，非丢行" % (dcol, probe, tmax))
+        else:
+            lost_tables.append(t)
+            log("     判定：疑似丢行——源独有行的 %s=%s 不晚于目标侧最大值 %s"
+                % (dcol, probe, tmax))
+            for k, v in list(only_s.items())[:5]:
+                log("       仅源 %s x%d" % (k, v))
+    if live_tables:
+        log("  实时写入表 %d 张：%s" % (len(live_tables), ", ".join(live_tables)))
+    if lost_tables:
+        log("  !! 疑似丢行表 %d 张：%s" % (len(lost_tables), ", ".join(lost_tables)))
+
+    # ---------------- 二轨/三轨/四轨
+    log("\n===== 二/三/四轨 内容比对 =====")
+    full_ok = full_bad = big_ok = big_bad = 0
+    bad_detail = []
+    cn_hits = 0
+    for t in tables:
+        if t not in dst_tables:
+            continue
+        cols = coltype.get(t, [])
+        if not cols:
+            continue
+        scur.execute("SELECT COUNT(*) FROM `%s`.`%s`" % (a.schema, t))
+        n = scur.fetchone()[0]
+        if n == 0:
+            continue
+        names = [c for c, _ in cols]
+        types = [d for _, d in cols]
+        precs = colprec.get(t, [0] * len(names))
+
+        # 浮点必须两侧同时绕开各自的文本回读精度，否则会满屏假性不一致：
+        #   源 MySQL float(M,D) 直读按 D 位小数四舍五入
+        #   目标金仓 float4 ::text 只给 8 位有效数字
+        # 源侧 CAST AS DOUBLE 取二进制真值，目标侧 ::float8 加宽，口径才一致。
+        def sel_src():
+            return ", ".join(
+                "CAST(`%s` AS DOUBLE)" % c if d in FLOATS else "`%s`" % c
+                for c, d in zip(names, types))
+
+        def sel_dst():
+            return ", ".join(
+                "%s::float8" % qi(c) if d in FLOATS else qi(c)
+                for c, d in zip(names, types))
+
+        if n > a.max_rows and pkmap.get(t):
+            # 四轨：超大表按主键排序流式整体 md5。主键唯一，两侧按同一组主键列
+            # 排序即保证行序一致——复合主键必须整组都进 ORDER BY：只排第一列时
+            # MySQL 与 PG 各自按物理序补足剩余列，md5 必然假性不一致。
+            # （2026-10-12 重构复跑 cgdb，databasechangelog / tc_part_region_static
+            #  / to_schedule_human 三张复合主键大表原先因这条被整表跳过。）
+            pk = pkmap[t]
+            hs, hd = hashlib.md5(), hashlib.md5()
+            scur.execute("SELECT %s FROM `%s`.`%s` ORDER BY %s"
+                         % (sel_src(), a.schema, t,
+                            ", ".join("`%s`" % c for c in pk)))
+            while True:
+                chunk = scur.fetchmany(2000)
+                if not chunk:
+                    break
+                for r in chunk:
+                    hs.update(("\x01".join(canon(v, types[j], precs[j])
+                                           for j, v in enumerate(r))
+                               + "\x02").encode())
+            dcur.execute("SELECT %s FROM %s ORDER BY %s"
+                         % (sel_dst(), qn(t),
+                            ", ".join(qi(c) for c in pk)))
+            while True:
+                chunk = dcur.fetchmany(2000)
+                if not chunk:
+                    break
+                for r in chunk:
+                    hd.update(("\x01".join(canon(v, types[j], precs[j])
+                                           for j, v in enumerate(r))
+                               + "\x02").encode())
+            if hs.hexdigest() == hd.hexdigest():
+                big_ok += 1
+            else:
+                big_bad += 1
+                bad_detail.append((t, "超大表整体 md5 不一致（%d 行）" % n))
+            continue
+
+        # 二/三轨：逐字段多重集
+        scur.execute("SELECT %s FROM `%s`.`%s`" % (sel_src(), a.schema, t))
+        srows = scur.fetchall()
+        dcur.execute("SELECT %s FROM %s" % (sel_dst(), qn(t)))
+        drows = dcur.fetchall()
+        if len(srows) != len(drows):
+            full_bad += 1
+            bad_detail.append((t, "行数 %d vs %d" % (len(srows), len(drows))))
+            continue
+        bad = []
+        for j, cn in enumerate(names):
+            cs = Counter(canon(r[j], types[j], precs[j]) for r in srows)
+            cd = Counter(canon(r[j], types[j], precs[j]) for r in drows)
+            if cs != cd:
+                only_s = cs - cd
+                only_d = cd - cs
+                bad.append("%s: 仅源%d种/仅目标%d种"
+                           % (cn, len(only_s), len(only_d)))
+                for v, k in list(only_s.items())[:2]:
+                    bad.append("   源独有 %r x%d" % (v[:60], k))
+                for v, k in list(only_d.items())[:2]:
+                    bad.append("   目标独有 %r x%d" % (v[:60], k))
+            if any("\u4e00" <= ch <= "\u9fff" for v in cs for ch in str(v)[:200]):
+                cn_hits += 1
+        if bad:
+            full_bad += 1
+            bad_detail.append((t, "; ".join(bad)))
+        else:
+            full_ok += 1
+
+    log("逐字段多重集：一致 %d 张，不一致 %d 张" % (full_ok, full_bad))
+    log("超大表整体 md5：一致 %d 张，不一致 %d 张" % (big_ok, big_bad))
+    log("含中文字段 %d 个（已随多重集一并逐字比对）" % cn_hits)
+    for t, e in bad_detail[:30]:
+        log("   BAD %s -> %s" % (t, e[:400]))
+    if len(bad_detail) > 30:
+        log("   ...另 %d 张不一致" % (len(bad_detail) - 30))
+
+    # ---------------- 对象对账
+    log("\n===== 对象对账 =====")
+    dcur.execute("SELECT COUNT(*) FROM information_schema.tables"
+                 " WHERE table_schema=%s AND table_type='BASE TABLE'", (a.schema,))
+    log("目标表 %s / 源表 %d" % (dcur.fetchone()[0], len(tables)))
+    for label, q_src, q_dst in (
+        ("主键", "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS"
+                 " WHERE CONSTRAINT_SCHEMA=%s AND CONSTRAINT_TYPE='PRIMARY KEY'",
+         "SELECT COUNT(*) FROM information_schema.table_constraints"
+         " WHERE constraint_schema=%s AND constraint_type='PRIMARY KEY'"),
+        ("唯一约束", "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS"
+                     " WHERE CONSTRAINT_SCHEMA=%s AND CONSTRAINT_TYPE='UNIQUE'",
+         "SELECT COUNT(*) FROM information_schema.table_constraints"
+         " WHERE constraint_schema=%s AND constraint_type='UNIQUE'"),
+        ("外键", "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS"
+                 " WHERE CONSTRAINT_SCHEMA=%s AND CONSTRAINT_TYPE='FOREIGN KEY'",
+         "SELECT COUNT(*) FROM information_schema.table_constraints"
+         " WHERE constraint_schema=%s AND constraint_type='FOREIGN KEY'"),
+    ):
+        scur.execute(q_src, (a.schema,))
+        ns = scur.fetchone()[0]
+        dcur.execute(q_dst, (a.schema,))
+        nd = dcur.fetchone()[0]
+        log("%s：源 %d / 目标 %d %s" % (label, ns, nd, "" if ns == nd else "  <-- 不一致"))
+
+    # 索引按语义对齐：不看名字（迁移会把索引名加表前缀、唯一索引变成唯一约束，
+    # 名字必然不同），比 (表, 是否唯一, 有序列清单) 的多重集。
+    scur.execute("SELECT TABLE_NAME, NON_UNIQUE, GROUP_CONCAT(COLUMN_NAME"
+                 " ORDER BY SEQ_IN_INDEX) FROM information_schema.STATISTICS"
+                 " WHERE TABLE_SCHEMA=%s AND INDEX_NAME<>'PRIMARY'"
+                 " AND SUB_PART IS NULL AND INDEX_TYPE NOT IN ('FULLTEXT','SPATIAL')"
+                 " GROUP BY TABLE_NAME, INDEX_NAME, NON_UNIQUE", (a.schema,))
+    sidx = Counter((t, nu == 0, (cols or "").lower())
+                   for t, nu, cols in scur.fetchall())
+    dcur.execute("""SELECT t.relname, x.indisunique,
+                           (SELECT string_agg(a.attname, ',' ORDER BY k.ord)
+                              FROM unnest(x.indkey) WITH ORDINALITY AS k(attnum, ord)
+                              JOIN pg_attribute a ON a.attrelid = t.oid
+                                               AND a.attnum = k.attnum
+                             WHERE k.ord <= x.indnkeyatts) AS cols
+                    FROM pg_index x
+                    JOIN pg_class t ON t.oid = x.indrelid
+                    JOIN pg_namespace n ON n.oid = t.relnamespace
+                    WHERE n.nspname=%s AND NOT x.indisprimary""", (a.schema,))
+    # MySQL 列名大小写不敏感、PG 保留创建时的大小写，列清单必须归一后再比，
+    # 否则同一列索引会因 POINTID / pointid 假性不一致。
+    didx = Counter((t, u, (cols or "").lower())
+                   for t, u, cols in dcur.fetchall())
+    log("索引（语义口径，剔主键/前缀/FULLTEXT/SPATIAL）：源 %d / 目标 %d %s"
+        % (sum(sidx.values()), sum(didx.values()),
+           "" if sidx == didx else "  <-- 不一致"))
+    if sidx != didx:
+        for k, v in list((sidx - didx).items())[:15]:
+            log("   仅源 %s 唯一=%s 列=%s x%d" % (k[0], k[1], k[2], v))
+        for k, v in list((didx - sidx).items())[:15]:
+            log("   仅目标 %s 唯一=%s 列=%s x%d" % (k[0], k[1], k[2], v))
+    scur.execute("SELECT COUNT(*) FROM information_schema.STATISTICS"
+                 " WHERE TABLE_SCHEMA=%s AND INDEX_NAME<>'PRIMARY'"
+                 " AND (SUB_PART IS NOT NULL OR INDEX_TYPE IN ('FULLTEXT','SPATIAL'))",
+                 (a.schema,))
+    log("迁移跳过的索引（前缀/FULLTEXT/SPATIAL）：%d 个" % scur.fetchone()[0])
+
+    log("\n[%s] %s 验证完成，耗时 %.0fs" % (a.label, a.schema, time.time() - t0))
+    src.close()
+    dst.close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

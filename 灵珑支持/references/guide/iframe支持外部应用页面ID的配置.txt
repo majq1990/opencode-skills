@@ -1,0 +1,49 @@
+iframe支持外部应用页面ID的配置
+关联案件：http://faq.egova.com.cn:7777/issues/422293
+背景
+福建项目在灵珑页面中使用iframe组件来显示另外一个应用的灵珑页面，这样存在以下几个问题：
+1、通过iframe在嵌套页面的方式会影响性能
+2、因为是通过iframe的方式配置url，其中url上带token，当cookie里面的token换成新的，url可能还是旧的。这时候就会出现问题
+处理方案
+增加一种新的url 配置约定：uri://page-id/xxxxx?a=${a}&b=${b} ，在iframe组件中如果检查到这种地址配置，就不使用 iframe 渲染，直接取页面IDxxxx，然后用页面ID来内部渲染。
+另外需要使用urlTemplate来对上述url后面的进行转译，并传递给页面渲染组件的真实参数。
+配置方式
+示例页面：
+http://10.250.1.250:8042/linglong/workspace.html#/1810590121759051776/page-build/page/1898258272787075072
+配置页面地址：
+uri://page-id/1898257064542310400?testA=${testA}&testB=${testB}
+历史数据调整
+导航中配置了其他应用页面地址，可以调整为新页面+iframe+新配置
+历史配置如下：
+可以调整为：
+新增页面，添加 iframe 组件，设置地址为uri://page-id/xxx
+调整导航配置为内部页面，选择上面新增的页面
+通过 SQL 查询配置了三方地址的导航
+SELECT
+applicationId,
+name,
+url 
+FROM
+com_resource_menu 
+WHERE
+( pageType = '1' OR pageType = 'OUTER' ) 
+AND url LIKE '%/linglong/third.html#/page-preview%' 
+ORDER BY
+applicationId
+iframe 组件中配置其他应用页面地址
+通过 SQL 查询配置了其他应用页面地址的 iframe 组件
+查询页面所属应用及设计地址
+提取配置中的页面 id，替换下方条件中的【填写页面id】
+select id                                                                           as '页面id',
+       name                                                                         as '页面名称',
+       applicationId                                                                as '应用id',
+       concat('/linglong/workspace.html#/', applicationId, '/page-build/page/', id) as '页面设计地址'
+from lcpage_page_info
+where id = '填写页面id'
+执行结果：
+页面设计地址需要自行补充灵珑前端页面访问 IP 和端口
+例如：
+查询结果：
+/linglong/workspace.html#/24518900-8a4c-4999-b490-4c53aa04eb95-9bb9/page-build/page/030e39f9-b11e-45e5-8b2d-bd561ac0f636-9bb9
+实际访问：
+http://10.250.1.250:8042/linglong/workspace.html#/1810590121759051776/page-build/page/1810590340915630080

@@ -1,0 +1,122 @@
+公式使用场景示例
+在使用公式前，请明确以下内容：
+1、尽量在灵珑平台公式列表搜索公式，按照公式的格式编写，保证正确性；
+2、可以从灵珑的其他页面复制和粘贴公式，进行复用；
+3、如果从其他网页复制了公式或者脚本，向灵珑平台的公式编辑窗口粘贴，请一定检查好格式，不要带各种html格式，造成因格式问题导致公式不起作用。
+建议复制到文本编辑器里，再复制和粘贴到灵珑平台的公式编辑窗口。
+1、API公式
+表单设计
+效果
+2、同步用户公式
+通过公式同步用户中心组织架构 《如何通过公式同步用户中心组织架构》
+表单设计
+效果：
+配置格式：SYNC_USER('tableId','condition','#{applicationId}','departmentId','roleIds')
+如：SYNC_USER('520a58bf-97c0-4c4c-9256-4f6e6756784f',QUERY_EQ('name',姓名),'#{applicationId}','a5d63849-bb30-4d75-a56c-9c3f1e3f4acf',['00103'])
+3、通过js调用向实体表插入数据
+#274434
+api.EXEC_FORMULA 来调用公式来完成相关操作
+示例：
+http://192.168.101.38:8081/linglong/design.html#/list-design/119f7335-fdad-45de-8106-4284b1f749f9
+http://192.168.101.38:8081/linglong/design.html#/list-design/53001244-9ce9-4a7c-a711-dee2667f9c8e
+INSERT (目标表id, [目标列1,目标值1,目标列2,目标值2....])，目标表为实体表对应的id，字段取id或名称都可以
+function main(defaultParams) {
+
+    var self = this; // 重置作用域
+    var tableComp = self.findElement("table_4keoyy"); // 获取表格元素
+    tableComp.loading = true; // 使表格置于loading状态
+
+    api.EXEC_FORMULA("INSERT('t_e7811c95737a4019a3d7c5315dd14b39',['id',UUID(),'name','" + defaultParams["f_cf3b1598edb64c6b9ef513a745f63bbd"] + "','address','" + defaultParams["f_e79ee6a7cfc74372a1f0c8c416c0c438"] + "'])").then((res) => {
+        // then() 为调用成功的回调
+        if (!res.hasError) {
+
+            tableComp.$$refreshData().then(() => {
+                tableComp.loading = false; // 将表格置为非loading状态
+                self.$message.success("已收藏！");
+            }); // 调用表格的数据刷新动作
+
+        } else {
+            self.$message.error(res); // 显示错误提示信息
+            tableComp.loading = false; // 将表格置为非loading状态
+        }
+        
+    }).catch(err => {
+        self.$message.error(err.message); // 显示错误提示信息
+        
+    });
+
+
+}
+4、根据数据文号修复物理表批次数据
+#276943
+针对表单批次数据缺失，可通过 REPAIR_BATCH('d91f4ad6-07ef-47b5-9b0d-367767cef100-d523', '#{documentNo}','#{version}')  公式修复
+示例
+批次表中lcpage_form_batch 数据不存在，通过REPAIR_BATCH公式修复，当绑定公式后，点击查看详情会新增记录，可正常预览数据
+5、公式REGION_CHILD_LIST
+实现效果
+列表部件的“条件过滤”引用REGION_CHILD_LIST公式返回区域表里多级结果记录。
+配置说明
+1、公式本身验证：
+普通表单：“单行文本”默认值为“公式编辑”。
+注意：如果只有2级下级，而level设置为大于最在级数时可以返回当前最大级数的全部内容。
+全部主要的组合公式配置和结果：
+2、列表内容通过公式过滤的配置
+（1）统一用户中心-基础数据-行政区划：按级别配置行政区划，数据保存在表com_region表。如下图：
+（2）人员配置行政区划
+统一用户中心-用户管理-用户列表，编辑用户选择“所属区域”
+（3）应用设计-基础配置-会话变量配置：新增会议变量，
+会话命名：请取有意义的名称
+配置公式：
+REGION_CHILD_LIST:获取区划com_region某父节点下的所有子节点的某字段列表(有缓存)，
+    REGION_CHILD_LIST('regionId', level, includeSelf, 'filed')。
+        regionId填字符串或填null时取当前登录人的区划；
+        level填数字，表示取父节点包含几级的子节点；第二个参数得大于0或者为null
+        includeSelf 填true或false，表示返回值是否包含该父节点；
+        filed填字符串，表示返回某个字段的列表，如'id'、'name'、'code'、'grade'，填null时返回全部字段信息
+（4）列表部件：“条件过滤”里配置过滤条件，选择“会话变量配置”里配置的公式
+注意：在“会话变量配置”里通过【编辑】修改公式内容后，列表部件的“条件过滤”需要重新选择下图的公式，否则不生效。
+如果修改后过滤结果仍不对，建议删除过滤条件，再重新配置。
+列表数据已经按照公式过滤
+6、返回登录人员的区划信息
+实现效果
+参考案件 #281724。
+表单部件中文本组件的“公式编辑”引用REGION_BY_GRADE公式，返回登录人员的区划信息。
+配置说明
+1、统一用户中心配置所属区划
+当前登录人所属区划取的是用户中心的数据，所以确保外部集成系统如mis的用户区划信息同步至用户中心；如果用户体系在灵珑用户中心维护，则需要维护区划信息及用户与区划的关联关系。
+在用户中心->用户列表下编辑用户，设置所属区域。
+2、表单中的组件配置公式
+公式格式：REGION_BY_GRADE('regionId', level, 'mode', 'returnFiled')
+示例：
+通过com_region的grade字段级别值查询。
+区划表com_region中grade值定义为：1省级、2市级、3区县级、4街道级别、5社区级、6网格、7其他。
+查询省级区划：REGION_BY_GRADE(REGION_ID(), 1, 'grade', 'name')
+在数据管理->新增数据时，可见默认填充的区划信息。
+7、业务规则同步任务调度ADD_SCHEDULER
+#278939
+新建表单，新增业务规则同步任务调度：
+在任务管理模块，查看调度任务显示正常：
+--按秒
+--按时
+--按天
+--按月
+--按年
+8、插入或者更新数据——公式UPSERT
+实现效果
+参考案件#276367。
+当列表数据中不存在符合查询条件的数据时，则新增一条数据；当列表数据中存在符合查询条件的数据时，则会更新该条数据。
+配置说明
+表单设置->高级->业务关联规则
+公式示例如下
+9 DAYS
+公式使用说明：
+在部件里使用：
+（1）在表单部件中使用DAYS函数引用表单字段的日期组件不需要格式化，系统已经处理过；
+（2）在详情部件中使用DAYS函数引用表单字段时，需要使用FORMAT_DATE函数对日期字段进行格式化。
+10、公式字段提取
+说明：
+创建一个计算字段A
+创建一个计算字段B和C，B和C的值是来自计算字段A
+示例：使用api公式获取一个对象，在从对象中提取值，使用JSON_PROPERTY_GET 公式。
+效果：
+《灵珑平台公式清单》

@@ -1,0 +1,87 @@
+两个列表实现数据联动且动态刷新
+1 使用场景
+在一些场景情况下存在一个列表向另外一个列表动态添加值的情况，在值添加后需要将当前表单的值移除然后将值存入另外一个列表中，此时就需要将两个列表进行刷新使得数据显示变化。
+2 效果
+添加数据后，右侧列表的一条记录被清除，左侧列表的值进行了数据的添加
+3 配置
+在添加部门的这个列表中需要在列表部件中添加操作按钮，在操作按钮中执行数据的添加操作
+当前列表的视图为：
+SELECT
+  a.id,
+  a.unit_id,
+  a.unit_uuid,
+  a.unit_name,
+  a.unit_property_code,
+  a.region_num_code,
+CASE
+    WHEN a.unit_property_code = '1' THEN
+    '普通部门' 
+    WHEN a.unit_property_code = '2' THEN
+    '执法主体' 
+    WHEN a.unit_property_code = '3' THEN
+    '实施机构' ELSE '' 
+  END AS unit_property_name,
+  a.unit_name_abbr,
+  region.TYPE,
+  CASE
+    WHEN  region.TYPE = 0 THEN
+    '省级' 
+    WHEN  region.TYPE = 1 THEN
+    '市级' 
+    WHEN  region.TYPE = 2 THEN
+    '区县级' ELSE '' 
+  END AS unitPatn,
+  region.`NAME`,
+  a.social_credit_code,
+  a.legal_person,
+  a.establis_time,
+  a.postal_code,
+  a.mail,
+  a.fox,
+  a.phone,
+  a.senior_id,
+  senior_unit.unit_name AS seniorName,
+  a.unit_industry_type_code,
+  a.establishment_number,
+  dic.display_name,
+  a.setting_basis,
+  a.address,
+  a.region_id,
+  a.delete_flag
+FROM
+  `law_unit_extend_info` a
+  LEFT JOIN sys_region region ON a.region_id = region.ID
+  LEFT JOIN law_unit_extend_info senior_unit ON a.senior_id = senior_unit.id
+  LEFT JOIN law_dic_item dic ON (dic.value = a.unit_industry_type_code AND dic.dic_info_id = 19)
+WHERE a.delete_flag = 0 AND a.id NOT IN (SELECT unit_id FROM law_unit_group_relate)
+ORDER BY a.id DESC
+说明：使用a.id NOT IN (SELECT unit_id FROM law_unit_group_relate) 将当前列表中已被添加的数据进行过滤处理。
+列表新增部门的添加部门配置
+使用弹窗的方式打开需要选择的部门列表
+选择列表的添加按钮脚本
+function main(params) {
+    let self = this;
+    let unitId = params.id.value;
+    let groupId = self.$$getRenderElement().params.treeSelectId;
+    let isnetGroupRelate = `INSERT('t_9134b6fadb2643b08ea3f6025ddb6efa',['group_id',${groupId},'unit_id',${unitId}])`;
+    console.log(isnetGroupRelate);
+    api.EXEC_FORMULA(isnetGroupRelate).then(res => {
+        console.log(res);
+        let tableEle = self.$$("table_8fjgih");
+        setTimeout(res => {
+            tableEle.$$refreshData();
+            document.querySelector("#page_widget_list_2f1fa6_csshandler_generate").__vue__.$$getRenderElement().$$getListElement().$$refreshData();
+        }, 500);
+
+        self.$message.success("添加成功");
+
+    });
+
+}
+代码说明：
+let isnetGroupRelate = `INSERT('t_9134b6fadb2643b08ea3f6025ddb6efa',['group_id',${groupId},'unit_id',${unitId}])`;
+将当前列表所选中当前行的信息进行数据的添加，添加到所需的关联表中
+document.querySelector("#page_widget_list_2f1fa6_csshandler_generate").__vue__.$$getRenderElement().$$getListElement().$$refreshData();
+找到所需添加列表的所在页面将列表的标识进行替换page_widget_list_2f1fa6
+4 常见问题
+无。

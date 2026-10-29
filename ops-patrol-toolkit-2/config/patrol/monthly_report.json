@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "updated": "2026-10-02",
+  "note": "月报回填默认配置（全部为占位样例）。fill 子命令给 --config 时：--template/--out 缺省回退到本文件的 template 与 out_dir+out_name；defaults.replacements 作为替换值兜底层，stats.json 的显式值优先。业务统计数据一律由人工或其他工具产出为 JSON 文件（--stats 输入），本工具不直连任何业务系统。",
+  "template": "assets/monthly-report-template.docx",
+  "out_dir": "work/monthly",
+  "out_name": "月报.docx",
+  "defaults": {
+    "replacements": {
+      "{{author}}": "运维组",
+      "{{issues}}": "无重大问题。"
+    }
+  }
+}

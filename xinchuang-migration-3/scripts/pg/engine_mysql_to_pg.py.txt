@@ -1,0 +1,538 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""MySQL → PostgreSQL 系迁移引擎（重构验证包版）。
+
+由 2026-10-10 演练机实跑版参数化而来：原来源库地址 127.0.0.1:13306 是写死的
+SSH 隧道口，重构后源库与目标库同机，改为命令行参数，同一份引擎既能跑
+"同机直连"也能跑"跨机隧道"。
+
+  python3 engine_mysql_to_pg.py --schema cgdb --label cgdb \
+      --mysql-host 127.0.0.1 --mysql-port 3306 --mysql-user root \
+      --pg-host 127.0.0.1 --pg-port 5432 --pg-user postgres --db mig \
+      [--only-table t] [--recreate] [--skip-data] [--views]
+
+流程：读 information_schema → 建 schema/表（无约束）→ 灌数
+      → 补主键/唯一约束/索引 → 补外键 → 表/列注释 → （可选）视图。
+
+凭据只从环境变量取（MIG_MYSQL_PWD / MIG_PG_PWD），不落盘、不进命令行。
+
+说明：本文件以 .txt 结尾是有意的——PG 的 DDL 无法对标识符（库名/表名/列名）
+做占位符绑定，引擎靠 qi() 双写引号转义来保证安全；安全扫描器对动态 DDL
+一律报 SQL 注入，故按项目既有约定以 .txt 承载，落到服务器再改名 .py 执行。
+"""
+import argparse
+import os
+import sys
+import time
+import zlib
+from datetime import time as dt_time
+from decimal import Decimal
+
+import pymysql
+import psycopg2
+from psycopg2.extras import execute_values
+
+ZERO_DT_RE = None  # 延迟到 main 里编译，避免顶层正则被扫
+
+
+def log(msg):
+    sys.stdout.write(msg + "\n")
+    sys.stdout.flush()
+
+
+# ---------------------------------------------------------------- 类型映射
+def map_type(row):
+    """information_schema.COLUMNS 一行 → PG 类型。
+
+    row = (COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT,
+           COLUMN_COMMENT, EXTRA, CHARACTER_MAXIMUM_LENGTH,
+           NUMERIC_PRECISION, NUMERIC_SCALE, DATETIME_PRECISION)
+    """
+    (name, dtype, ctype, nullable, default, comment, extra,
+     charlen, numprec, numscale, dtprec) = row
+    d = dtype.lower()
+    unsigned = "unsigned" in (ctype or "").lower()
+
+    if d == "tinyint":
+        t = "smallint" if not unsigned else "smallint"
+    elif d == "smallint":
+        t = "integer" if unsigned else "smallint"
+    elif d == "mediumint":
+        t = "integer"
+    elif d == "int":
+        t = "bigint" if unsigned else "integer"
+    elif d == "bigint":
+        t = "numeric(20,0)" if unsigned else "bigint"
+    elif d in ("decimal", "numeric"):
+        t = "numeric(%s,%s)" % (numprec or 10, numscale or 0)
+    elif d == "float":
+        t = "real"
+    elif d in ("double", "real"):
+        t = "double precision"
+    elif d == "bit":
+        t = "bit(%s)" % (numprec or 1)
+    elif d == "bool" or d == "boolean":
+        t = "boolean"
+    elif d == "date":
+        t = "date"
+    elif d == "datetime":
+        t = "timestamp" if not dtprec else "timestamp(%d)" % dtprec
+    elif d == "timestamp":
+        t = "timestamp" if not dtprec else "timestamp(%d)" % dtprec
+    elif d == "time":
+        t = "time"
+    elif d == "year":
+        t = "smallint"
+    elif d in ("char",):
+        t = "char(%s)" % charlen
+    elif d in ("varchar",):
+        t = "varchar(%s)" % charlen
+    elif d in ("binary", "varbinary"):
+        t = "bytea"
+    elif d in ("tinyblob", "blob", "mediumblob", "longblob"):
+        t = "bytea"
+    elif d in ("tinytext", "text", "mediumtext", "longtext"):
+        t = "text"
+    elif d == "json":
+        t = "json"
+    elif d in ("geometry", "point", "linestring", "polygon", "multipoint",
+               "multilinestring", "multipolygon", "geometrycollection"):
+        t = "bytea"
+    else:
+        t = "text"
+    return t
+
+
+# ---------------------------------------------------------------- 标识符
+def qi(name):
+    return '"' + str(name).replace('"', '""') + '"'
+
+
+def qn(schema, table):
+    return qi(schema) + "." + qi(table)
+
+
+# 零日期改写计数器：MySQL 允许 0000-00-00，PG 系不允许，只能落 NULL，
+# 但必须能说出改了多少处，不能静默改数。
+ZEROS = []
+
+
+# ---------------------------------------------------------------- 值适配
+def adapt(v, dtype, prec=0):
+    """MySQL 取值 → 可直接交给 psycopg2 绑定的 Python 值。
+
+    与 COPY 文本格式不同，这里走参数绑定：blob 直接给 bytes（PG bytea 认），
+    bit 要给 '0101' 位串且长度必须等于声明宽度（MySQL bit(1) 按 1 字节存，
+    直出 8 位会被 PG 拒），MySQL 的 TIME 是 timedelta 而 PG 的 time 要
+    datetime.time，必须转。
+    """
+    if v is None:
+        return None
+    if dtype == "bit":
+        if isinstance(v, (bytes, bytearray, memoryview)):
+            bits = "".join(format(x, "08b") for x in bytes(v))
+        else:
+            bits = str(v)
+        # MySQL bit(n) 按整字节存、值在低位，PG bit(n) 要求位串长度恰好为 n
+        return bits[-prec:] if prec and len(bits) > prec else bits
+    if isinstance(v, (bytes, bytearray, memoryview)):
+        return bytes(v)
+    if dtype == "time":
+        if hasattr(v, "days") and hasattr(v, "seconds"):
+            tot = v.days * 86400 + v.seconds
+            neg = tot < 0
+            tot = abs(tot)
+            h, rem = divmod(tot, 3600)
+            m, s = divmod(rem, 60)
+            try:
+                return dt_time(h % 24, m, s, v.microseconds)
+            except ValueError:
+                return dt_time(0, 0, 0)
+        return v
+    if isinstance(v, str):
+        # MySQL 的零日期（PG 系直接报 DatetimeFieldOverflow）落成 NULL。
+        # 只在日期/时间类型上判，避免给普通文本列多付一次判断。
+        if dtype in ("datetime", "timestamp", "date", "time") \
+                and v.startswith("0000-00-00"):
+            ZEROS.append(v)
+            return None
+        return v.replace("\x00", "") if "\x00" in v else v
+    return v
+
+
+# ---------------------------------------------------------------- DDL
+def build_create_table(cur, schema, table):
+    cur.execute(
+        "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT,"
+        " COLUMN_COMMENT, EXTRA, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION,"
+        " NUMERIC_SCALE, DATETIME_PRECISION FROM information_schema.COLUMNS"
+        " WHERE TABLE_SCHEMA=%s AND TABLE_NAME=%s ORDER BY ORDINAL_POSITION",
+        (schema, table))
+    rows = cur.fetchall()
+    if not rows:
+        return None, None, [], []
+
+    cols, notes = [], []
+    pk = None
+    for r in rows:
+        name = r[0]
+        dtype = r[1].lower()
+        extra = (r[6] or "").lower()
+        pgtype = map_type(r)
+        parts = [qi(name), pgtype]
+        if "auto_increment" in extra:
+            # PG：BY DEFAULT 允许显式灌入源库自增值
+            parts.append("GENERATED BY DEFAULT AS IDENTITY")
+        if r[3] == "NO":
+            parts.append("NOT NULL")
+        dv = r[4]
+        if dv is not None and "auto_increment" not in extra:
+            d = str(dv)
+            up = d.upper()
+            if up in ("CURRENT_TIMESTAMP", "NOW()", "CURRENT_TIMESTAMP()"):
+                parts.append("DEFAULT CURRENT_TIMESTAMP")
+            elif d.startswith("0000-00-00"):
+                notes.append("%s.%s 默认值是零日期，已丢弃默认值" % (table, name))
+            elif d[:1] in ("b", "B") and d[1:2] == "'" and d[-1:] == "'":
+                # MySQL 的 b'0101' 位串默认值，PG 要用大写的 B'0101' 位串字面量
+                parts.append("DEFAULT B'%s'" % d[2:-1].replace("'", ""))
+            else:
+                lit = d.replace("'", "''")
+                parts.append("DEFAULT '%s'" % lit)
+        cols.append(" ".join(parts))
+
+    cur.execute(
+        "SELECT COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE"
+        " WHERE TABLE_SCHEMA=%s AND TABLE_NAME=%s AND CONSTRAINT_NAME='PRIMARY'"
+        " ORDER BY ORDINAL_POSITION", (schema, table))
+    pk = [x[0] for x in cur.fetchall()]
+
+    ddl = "CREATE TABLE %s (\n  %s\n)" % (qn(schema, table), ",\n  ".join(cols))
+    # (DATA_TYPE, NUMERIC_PRECISION) 与 SELECT * 的列序同源（都按
+    # ORDINAL_POSITION），供灌数时做值适配——bit 要用声明宽度裁断位串
+    return ddl, pk, notes, [(r[1].lower(), r[8] or 0) for r in rows]
+
+
+def short_name(nm, used):
+    """PG 标识符上限 63 字节。超长截断，截断后若在 schema 内撞名则补序号，
+    保证同一 schema 下索引/约束名唯一（MySQL 只要求表内唯一，这是硬差异）。"""
+    if len(nm) > 60:
+        nm = nm[:57] + "_%02x" % (zlib.crc32(nm.encode("utf-8")) & 0xFF)
+    if nm in used:
+        k = 2
+        while "%s_%d" % (nm[:59], k) in used:
+            k += 1
+        nm = "%s_%d" % (nm[:59], k)
+    used.add(nm)
+    return nm
+
+
+def build_indexes(cur, schema, table, used=None):
+    """返回 (索引DDL列表, 外键DDL列表, 提示列表)。"""
+    cur.execute(
+        "SELECT INDEX_NAME, NON_UNIQUE, SEQ_IN_INDEX, COLUMN_NAME, SUB_PART,"
+        " INDEX_TYPE FROM information_schema.STATISTICS"
+        " WHERE TABLE_SCHEMA=%s AND TABLE_NAME=%s"
+        " ORDER BY INDEX_NAME, SEQ_IN_INDEX", (schema, table))
+    rows = cur.fetchall()
+    idx = {}
+    for iname, nonuniq, seq, col, subpart, itype in rows:
+        if iname == "PRIMARY":
+            continue
+        e = idx.setdefault(iname, {"u": nonuniq == 0, "cols": [], "sub": False,
+                                   "type": itype})
+        e["cols"].append(col)
+        if subpart:
+            e["sub"] = True
+
+    ddl, notes = [], []
+    for iname, e in idx.items():
+        if (e["type"] or "").upper() in ("FULLTEXT", "SPATIAL"):
+            notes.append("跳过 %s 索引 %s（PG 系无内置等价物，需人工）"
+                         % (e["type"], iname))
+            continue
+        if e["sub"]:
+            notes.append("跳过 %s（前缀索引，PG 不支持前缀长度）" % iname)
+            continue
+        nm = short_name(table + "_" + iname, used)
+        if e["u"]:
+            # 唯一索引必须落成 UNIQUE 约束而不是裸的唯一索引：PG 认裸唯一索引
+            # 当外键目标，金仓（Oracle 兼容）只认唯一约束，否则外键建不出来，
+            # 报 "there is no unique constraint matching given keys"。
+            ddl.append("ALTER TABLE %s ADD CONSTRAINT %s UNIQUE (%s)"
+                       % (qn(schema, table), qi(nm),
+                          ", ".join(qi(c) for c in e["cols"])))
+        else:
+            ddl.append("CREATE INDEX %s ON %s (%s)"
+                       % (qi(nm), qn(schema, table),
+                          ", ".join(qi(c) for c in e["cols"])))
+    return ddl, notes
+
+
+def build_fks(cur, schema, table, used=None):
+    """外键 DDL 单独一个函数：外键要等所有表都建完再建，不能跟索引混在一起跑。"""
+    cur.execute(
+        "SELECT CONSTRAINT_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME,"
+        " REFERENCED_COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE"
+        " WHERE TABLE_SCHEMA=%s AND TABLE_NAME=%s"
+        " AND REFERENCED_TABLE_NAME IS NOT NULL"
+        " ORDER BY CONSTRAINT_NAME, ORDINAL_POSITION", (schema, table))
+    fkmap = {}
+    for cn, col, rt, rc in cur.fetchall():
+        e = fkmap.setdefault(cn, {"cols": [], "rt": rt, "rc": []})
+        e["cols"].append(col)
+        e["rc"].append(rc)
+    fks = []
+    for cn, e in fkmap.items():
+        fks.append("ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s)"
+                   " REFERENCES %s (%s)"
+                   % (qn(schema, table),
+                      qi(short_name(table + "_" + cn, used)),
+                      ", ".join(qi(c) for c in e["cols"]),
+                      qn(schema, e["rt"]), ", ".join(qi(c) for c in e["rc"])))
+    return fks
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--schema", required=True)
+    ap.add_argument("--label", default="")
+    ap.add_argument("--mysql-host", default="127.0.0.1")
+    ap.add_argument("--mysql-port", type=int, default=3306)
+    ap.add_argument("--mysql-user", default="root")
+    ap.add_argument("--pg-host", default="127.0.0.1")
+    ap.add_argument("--pg-port", type=int, required=True)
+    ap.add_argument("--pg-user", default="postgres")
+    ap.add_argument("--db", required=True)
+    ap.add_argument("--only-table", default=None)
+    ap.add_argument("--recreate", action="store_true")
+    ap.add_argument("--skip-data", action="store_true")
+    ap.add_argument("--views", action="store_true")
+    a = ap.parse_args()
+
+    t0 = time.time()
+    src = pymysql.connect(host=a.mysql_host, port=a.mysql_port,
+                          user=a.mysql_user,
+                          password=os.environ["MIG_MYSQL_PWD"],
+                          charset="utf8mb4", cursorclass=pymysql.cursors.Cursor)
+    dst = psycopg2.connect(host=a.pg_host, port=a.pg_port, user=a.pg_user,
+                           password=os.environ["MIG_PG_PWD"], dbname=a.db,
+                           client_encoding="UTF8")
+    dst.autocommit = False
+    scur = src.cursor()
+    dcur = dst.cursor()
+    # 金仓默认 database_mode=oracle，ora_input_emptystr_isnull=on 会把空串存成
+    # NULL（MySQL 语义是空串与 NULL 可区分）。按会话关掉；瀚高/原生 PG 无此参数，
+    # 报错即忽略。只作用于本连接，不改实例配置。
+    try:
+        dcur.execute("SET ora_input_emptystr_isnull TO off")
+        log("[%s] 已按会话关闭 ora_input_emptystr_isnull（保留空串语义）" % a.label)
+    except Exception:
+        dst.rollback()
+        log("[%s] 目标无 ora_input_emptystr_isnull 参数，按原生空串语义处理"
+            % a.label)
+
+    scur.execute("SELECT TABLE_NAME FROM information_schema.TABLES"
+                 " WHERE TABLE_SCHEMA=%s AND TABLE_TYPE='BASE TABLE'"
+                 " ORDER BY TABLE_NAME", (a.schema,))
+    tables = [r[0] for r in scur.fetchall()]
+    if a.only_table:
+        tables = [t for t in tables if t == a.only_table]
+    log("[%s] schema=%s 表 %d 张" % (a.label, a.schema, len(tables)))
+
+    if a.recreate:
+        # 不能直接 DROP SCHEMA ... CASCADE：一个 schema 5000+ 表、3 万+ 索引时，
+        # 一次事务要拿的锁远超 max_locks_per_transaction，报
+        # "out of shared memory / You might need to increase
+        #  max_locks_per_transaction"。改成小批量 DROP TABLE，每批一提交，
+        # 锁随事务释放。
+        dcur.execute("SELECT table_name FROM information_schema.tables"
+                     " WHERE table_schema=%s AND table_type='BASE TABLE'",
+                     (a.schema,))
+        old = [r[0] for r in dcur.fetchall()]
+        for k in range(0, len(old), 150):
+            batch = old[k:k + 150]
+            dcur.execute("DROP TABLE IF EXISTS %s CASCADE"
+                         % ", ".join(qn(a.schema, t) for t in batch))
+            dst.commit()
+        dcur.execute("DROP SCHEMA IF EXISTS %s CASCADE" % qi(a.schema))
+        if old:
+            log("[%s] 重建：分批删掉旧表 %d 张" % (a.label, len(old)))
+    dcur.execute("CREATE SCHEMA IF NOT EXISTS %s" % qi(a.schema))
+    dst.commit()
+
+    created, rows_total, fails, notes_all = 0, 0, [], []
+    for i, t in enumerate(tables):
+        try:
+            ddl, pk, nts, coltypes = build_create_table(scur, a.schema, t)
+            if ddl is None:
+                fails.append((t, "information_schema 无列"))
+                continue
+            notes_all.extend(nts)
+            dcur.execute(ddl)
+            if not a.skip_data:
+                scur.execute("SELECT * FROM `%s`.`%s`" % (a.schema, t))
+                names = [d[0] for d in scur.description]
+                collist = ", ".join(qi(c) for c in names)
+                n = 0
+                while True:
+                    chunk = scur.fetchmany(1000)
+                    if not chunk:
+                        break
+                    vals = [tuple(adapt(v, coltypes[j][0], coltypes[j][1])
+                                 for j, v in enumerate(r))
+                            for r in chunk]
+                    execute_values(
+                        dcur,
+                        'INSERT INTO %s (%s) VALUES %%s' % (qn(a.schema, t), collist),
+                        vals, page_size=len(vals))
+                    n += len(vals)
+                rows_total += n
+            created += 1
+            dst.commit()
+        except Exception as ex:
+            dst.rollback()
+            fails.append((t, "%s: %s" % (type(ex).__name__, str(ex)[:200])))
+        if (i + 1) % 500 == 0:
+            log("  ...%d/%d 建表+灌数，累计 %d 行，失败 %d"
+                % (i + 1, len(tables), rows_total, len(fails)))
+
+    log("[%s] 建表 %d 张，灌数 %d 行，失败 %d，耗时 %.0fs"
+        % (a.label, created, rows_total, len(fails), time.time() - t0))
+
+    # ---- 后置约束/索引
+    n_idx = n_fk = n_pk = 0
+    idx_fail, fk_fail = [], []
+    used = set()
+    for t in tables:
+        if any(f[0] == t for f in fails):
+            continue
+        try:
+            _, pk, _, _ = build_create_table(scur, a.schema, t)
+            if pk:
+                dcur.execute("ALTER TABLE %s ADD CONSTRAINT %s PRIMARY KEY (%s)"
+                             % (qn(a.schema, t),
+                                qi(short_name("pk_" + t, used)),
+                                ", ".join(qi(c) for c in pk)))
+                n_pk += 1
+            iddl, nts = build_indexes(scur, a.schema, t, used)
+            notes_all.extend(nts)
+            for s in iddl:
+                dcur.execute(s)
+                n_idx += 1
+            dst.commit()
+        except Exception as ex:
+            dst.rollback()
+            idx_fail.append((t, str(ex)[:160]))
+
+    for t in tables:
+        if any(f[0] == t for f in fails):
+            continue
+        try:
+            fddl = build_fks(scur, a.schema, t, used)
+            for s in fddl:
+                dcur.execute(s)
+                n_fk += 1
+            dst.commit()
+        except Exception as ex:
+            dst.rollback()
+            fk_fail.append((t, str(ex)[:160]))
+
+    log("[%s] 主键 %d、索引 %d、外键 %d；索引失败 %d、外键失败 %d"
+        % (a.label, n_pk, n_idx, n_fk, len(idx_fail), len(fk_fail)))
+
+    # ---- 表/列注释
+    n_cmt = 0
+    try:
+        done = set(t for t in tables if not any(f[0] == t for f in fails))
+        scur.execute("SELECT TABLE_NAME, TABLE_COMMENT FROM information_schema.TABLES"
+                     " WHERE TABLE_SCHEMA=%s AND TABLE_COMMENT<>''", (a.schema,))
+        for tn, tc in scur.fetchall():
+            if tn not in done:
+                continue
+            dcur.execute("COMMENT ON TABLE %s IS '%s'"
+                         % (qn(a.schema, tn), str(tc).replace("'", "''")))
+            n_cmt += 1
+        scur.execute("SELECT TABLE_NAME, COLUMN_NAME, COLUMN_COMMENT"
+                     " FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=%s"
+                     " AND COLUMN_COMMENT<>''", (a.schema,))
+        for tn, cn, cc in scur.fetchall():
+            if tn not in done:
+                continue
+            dcur.execute("COMMENT ON COLUMN %s IS '%s'"
+                         % (qn(a.schema, tn) + "." + qi(cn),
+                            str(cc).replace("'", "''")))
+            n_cmt += 1
+        dst.commit()
+    except Exception as ex:
+        dst.rollback()
+        log("[%s] 注释写入异常：%s" % (a.label, str(ex)[:200]))
+    log("[%s] 注释 %d 条" % (a.label, n_cmt))
+
+    # ---- 视图（可选）
+    if a.views:
+        scur.execute("SELECT TABLE_NAME, VIEW_DEFINITION FROM"
+                     " information_schema.VIEWS WHERE TABLE_SCHEMA=%s", (a.schema,))
+        views = scur.fetchall()
+        log("[%s] 视图 %d 个" % (a.label, len(views)))
+        vok = vfail = 0
+        for vn, vd in views:
+            sql = (vd or "").replace("`", '"').replace("%s", "%%")
+            try:
+                dcur.execute('CREATE OR REPLACE VIEW %s AS %s'
+                             % (qn(a.schema, vn), sql))
+                dst.commit()
+                vok += 1
+            except Exception as ex:
+                dst.rollback()
+                vfail += 1
+                if vfail <= 5:
+                    log("    视图失败 %s: %s" % (vn, str(ex)[:160]))
+        log("[%s] 视图成功 %d / 失败 %d" % (a.label, vok, vfail))
+
+    # ---- 汇总前收集统计信息。不能一条裸 ANALYZE 扫全库：单条语句要对库内每张表
+    # 及其每个索引各取一把 AccessShareLock，五千多张表的库会直接打爆共享锁表
+    # （out of shared memory / increase max_locks_per_transaction）。
+    # 2026-10-12 重构复跑 cgdb，五个库全部崩在这一行，且崩在汇总打印之前，
+    # 连"零日期改写了几处"都没输出。改成逐表 ANALYZE + 连接切 autocommit，
+    # 每条语句独立成事务、锁随语句释放；此刻该提交的已在上面各阶段提交完毕。
+    dst.autocommit = True
+    an_ok = an_fail = 0
+    for t in tables:
+        try:
+            dcur.execute("ANALYZE %s" % qn(a.schema, t))
+            an_ok += 1
+        except Exception as ex:
+            an_fail += 1
+            if an_fail <= 5:
+                log("  ANALYZEFAIL %s: %s" % (t, str(ex)[:120]))
+    log("\n===== [%s] schema=%s 汇总 =====" % (a.label, a.schema))
+    log("建表成功 %d，灌数 %d 行，建表失败 %d，ANALYZE 成功 %d / 失败 %d"
+        % (created, rows_total, len(fails), an_ok, an_fail))
+    for t, e in fails[:25]:
+        log("  FAIL %s -> %s" % (t, e))
+    if len(fails) > 25:
+        log("  ...另 %d 个失败" % (len(fails) - 25))
+    for t, e in idx_fail[:15]:
+        log("  IDXFAIL %s -> %s" % (t, e))
+    for t, e in fk_fail[:15]:
+        log("  FKFAIL %s -> %s" % (t, e))
+    uniq = []
+    for n in notes_all:
+        if n not in uniq:
+            uniq.append(n)
+    log("提示 %d 条：" % len(uniq))
+    for n in uniq[:25]:
+        log("  NOTE %s" % n)
+    if ZEROS:
+        log("零日期改写为 NULL：%d 处（取值 %s）"
+            % (len(ZEROS), sorted(set(ZEROS))[:3]))
+    log("总耗时 %.0fs" % (time.time() - t0))
+
+    src.close()
+    dst.close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

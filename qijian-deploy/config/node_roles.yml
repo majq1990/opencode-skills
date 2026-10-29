@@ -1,0 +1,81 @@
+# 节点分布预设库
+#
+# 使用方式：
+#   1. 阶段 5 渲染 hosts.yml / eurbanpro_multi_server.yml 前，根据本次采购结果选 preset
+#   2. 节点数 / 规格与预设不匹配时，由 Claude 基于 overrides 原则即席规划，并与用户确认
+#   3. 新增预设时，追加到 presets 下并给出明确触发条件（节点数 / 规格 / 业务诉求）
+#
+# 固定原则（所有 preset 都必须遵守）：
+#   - TDengine v2 与 TDengine3 不共置（6030 端口冲突）
+#   - MySQL 主库所在节点不部署 nacos / kafka / eurbanpro 等高负载微服务
+#   - 出口 nginx 与 nacos 建议同节点（业务入口）
+#   - UMA tomcat 包不在麒舰栈中，ip_web_uma.need_flag 恒为 0
+
+default_preset: "3-node-standard"
+
+presets:
+
+  # 3 节点标配：业务 / DB / GIS 三分
+  # 触发：3 台 8U32G 抢占式，常规麒舰考核场景（2026-04-16 实测分布）
+  3-node-standard:
+    node_count: 3
+    spec: "ecs.e-c1m4.2xlarge (8U32G)"
+    nodes:
+      node1:
+        role: "业务微服务 + 中间件 + 出口 nginx"
+        components: [nacos, eurbanpro, workflow, usercenter, linglong, xuanzang,
+                     evaluation, dataflow, dataflow_zookeeper, dex, IM,
+                     eurbanpro_media, sms, patrol_gather, trajectory, export,
+                     httpfileservice, minio, zookeeper, kafka, nginx_main]
+        expected_ports: [22, 2181, 7777, 7848, 8080, 8848, 9093, 9848, 9849, 30001, 34761]
+      node2:
+        role: "OLTP DB + 缓存 + TDengine v2"
+        components: [mysql_biz, mysql_stat, cetus_biz, cetus_stat,
+                     redis_biz, redis_usercenter, TDengine]
+        expected_ports: [22, 3306, 6030, 6035, 6040, 6041, 6380, 33060]
+      node3:
+        role: "GIS 应用 + PG + TDengine3"
+        components: [eUrbanGIS, giscenter, gisserver, postgresql, TDengine3]
+        expected_ports: [22, 5432, 6030]
+
+  # 2 节点精简：DB + 全业务
+  # 触发：临时环境 / 成本受限；需关闭 GIS 相关组件（need_flag=0）
+  2-node-minimal:
+    node_count: 2
+    spec: "ecs.e-c1m4.2xlarge (8U32G)"
+    nodes:
+      node1:
+        role: "业务微服务 + 中间件 + GIS（退化共置）"
+        components: [nacos, eurbanpro, workflow, usercenter, linglong,
+                     httpfileservice, minio, zookeeper, kafka, nginx_main,
+                     eUrbanGIS, giscenter, gisserver, postgresql]
+      node2:
+        role: "DB + 缓存 + TDengine"
+        components: [mysql_biz, mysql_stat, cetus_biz, cetus_stat,
+                     redis_biz, redis_usercenter, TDengine]
+
+  # 5 节点扩展：业务 / 中间件 / MySQL / GIS / TDengine 全分离
+  # 触发：性能评估或演练生产拓扑；5 台 8U32G
+  5-node-expanded:
+    node_count: 5
+    spec: "ecs.e-c1m4.2xlarge (8U32G)"
+    nodes:
+      node1: { role: "业务微服务 A",     components: [nacos, eurbanpro, workflow, usercenter, export, nginx_main] }
+      node2: { role: "业务微服务 B + 中间件", components: [linglong, xuanzang, evaluation, dex, IM, patrol_gather, trajectory, eurbanpro_media, sms, httpfileservice, minio, zookeeper, kafka, dataflow, dataflow_zookeeper] }
+      node3: { role: "OLTP DB + 缓存", components: [mysql_biz, mysql_stat, cetus_biz, cetus_stat, redis_biz, redis_usercenter] }
+      node4: { role: "GIS + PG",       components: [eUrbanGIS, giscenter, gisserver, postgresql] }
+      node5: { role: "TDengine v2+v3", components: [TDengine, TDengine3] }
+      # 注意：TDengine v2 与 v3 共置 node5 会 6030 冲突，此预设需改 TDengine3 端口或拆开
+
+# 全局 overrides（任何 preset 都应叠加）
+overrides:
+  ip_web_uma:
+    need_flag: 0  # 麒舰栈不含 UMA tomcat 应用包
+
+# 动态规划指引（preset 不匹配时 Claude 即席使用）
+dynamic_planning_rules:
+  - "节点数 ≤ 2：所有 DB 与业务共置 node1，GIS need_flag=0"
+  - "节点数 == 3：按 3-node-standard 分布"
+  - "节点数 == 4：在 3-node-standard 基础上把 GIS 从 node3 单独拆到 node4"
+  - "节点数 ≥ 5：使用 5-node-expanded 并把 TDengine v2/v3 分到不同节点"
+  - "无论几节点：mysql 主库所在节点不跑 nacos / eurbanpro；TDengine v2 与 v3 永不共置"

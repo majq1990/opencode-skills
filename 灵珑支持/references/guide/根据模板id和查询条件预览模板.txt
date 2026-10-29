@@ -1,0 +1,31 @@
+根据模板id和查询条件预览模板
+渲染模板生成文件
+作用： 调用接口传递查询参数，渲染模板，生成下载地址
+地址：/linglong-api/unity/printingTemplate/binding-data/document-url
+方法： POST
+Query 参数：
+printingTemplateId：模板 id
+fileName：生成的文件名称
+Body 参数：json 格式的 sql 过滤条件，用于过滤模板绑定的视图，影响最后的下载地址格式
+{
+    "id":"1828675689310978048"
+}
+返回值：返回渲染后的文件下载地址
+如果 sql 过滤结果只有一条，返回格式：
+http://IP:PORT/unity/establish/file/{渲染后的文件 id}/download?{token 参数}
+如果 sql 过滤结果有多条，返回格式：
+http://IP:PORT/unity/establish/file/download-zip?id={渲染后的文件 id}{token 参数}
+示例：
+http://10.250.1.250:8042/linglong-api/unity/printingTemplate/binding-data/document-url?printingTemplateId=e94eeaa7-0052-4b70-a9df-de38684c3eb3&fileName=xxxxxxx
+office 文件预览
+模板需要选择 word 或者 excel
+地址格式：http://IP:PORT/linglong/static/vue2/pc/third.html#/template/preview/{渲染后的文件 id}
+{渲染后的文件 id} 就是上面的调用接口返回结果中的 id
+示例：
+http://10.250.1.250:8042/linglong/static/vue2/pc/third.html#/template/preview/27039846713d49589eede6efb6388570
+pdf 文件预览
+模板需要选择富文本
+地址格式：http://IP:PORT/linglong/static/pdfjs/web/viewer.html?file={url 编码后的渲染文件下载地址}
+{url 编码后的渲染文件下载地址} 直接就是上面接口返回结果，注意需要 url 编码
+示例：
+http://10.250.1.250:8042/linglong/static/pdfjs/web/viewer.html?file=http%3A%2F%2F10.250.1.250%3A8042%2Flinglong-api%2Funity%2Festablish%2Ffile%2F042ea42fce4746bfb1302dda7ab29024%2Fdownload%3Faccess_token%3Dhttp://10.250.1.250:8042/linglong/static/pdfjs/web/viewer.html?file=http%3A%2F%2F10.250.1.250%3A8042%2Flinglong-api%2Funity%2Festablish%2Ffile%2F042ea42fce4746bfb1302dda7ab29024%2Fdownload%3Faccess_token%3D666Hx1EMWvVpQc3HgsyQmGrTEDk

@@ -1,0 +1,276 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""金仓（KingbaseES V9）切换前的只读预检。**不修改任何文件，不重启任何服务。**
+
+存在的理由：上一轮切换踩过的坑全是"没先看清现场"造成的——
+  * 4 个 tomcat 单元里塞了 6 个应用，按 tomcat 数会漏应用；
+  * jdbc.properties 的键名风格每个应用都不一样（cryptogram/password、
+    validationQuery/validation.query、带不带 mms. 前缀），照一个模板改会漏键；
+  * giscenter 根本不用 jdbc.properties，它读 giscenter.env 里的
+    --DATASOURCE_URL=，只改 properties 等于没切；
+  * kingbase8 驱动产品不随包分发，WEB-INF/lib 里没有，缺了启动即 ClassNotFound；
+  * fork liquibase 不认 KingbaseES，缺桥接 jar 时应用必死。
+
+用法（在 cg156 上以 root 跑）：
+    python3 preflight_kb.py [--kb-host H] [--kb-port P] [--kb-db DB]
+
+输出：人工可读报告 + 同目录 preflight_kb.json（供 switch_kb.py 消费）。
+退出码：0=预检通过可切；1=有阻断项，先处理再切。
+"""
+import glob
+import json
+import os
+import re
+import socket
+import subprocess
+import sys
+from pathlib import Path
+
+WEB_ROOT = Path("/egova/web")
+REPORT = Path("/egova/web/_kb_preflight.json")
+
+# 键名风格探测表：同一语义在不同应用里的两种拼法都见过
+PWD_KEYS = ("jdbc.cryptogram", "jdbc.password")
+VAL_KEYS = ("jdbc.validation.query", "jdbc.validationQuery")
+
+MASK = "***"
+
+
+def jk(pre, name):
+    """拼数据源键名。空前缀时必须是 jdbc.url 而不是 .jdbc.url——
+    eUrbanGIS 就是空前缀，写成 .jdbc.url 会漏报成"键缺失"。"""
+    return name if not pre else "%s.%s" % (pre, name)
+
+
+def sh(cmd, timeout=25):
+    """跑一条只读 shell 命令，返回 (rc, stdout)。超时/异常不当致命错。"""
+    try:
+        r = subprocess.run(cmd, shell=True, capture_output=True,
+                           text=True, timeout=timeout)
+        return r.returncode, (r.stdout or "") + (r.stderr or "")
+    except Exception as ex:
+        return 127, "ERR %s" % ex
+
+
+def find_props_files():
+    """所有 webapp 的 jdbc.properties。按文件找，不按 tomcat 找——按 tomcat
+    数会漏应用（4 个单元塞了 6 个应用）。"""
+    out = []
+    for p in sorted(WEB_ROOT.glob("*/WEB-INF/classes/jdbc.properties")):
+        out.append(p)
+    return out
+
+
+def parse_props(text):
+    """返回 {key: value}。只认行首 key=value，注释行跳过。"""
+    d = {}
+    for line in text.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#") or s.startswith("!"):
+            continue
+        if "=" not in s:
+            continue
+        k, v = s.split("=", 1)
+        d[k.strip()] = v.strip()
+    return d
+
+
+def prefixes_of(props):
+    """从 'X.jdbc.url' 反推所有数据源前缀 X。"""
+    pre = set()
+    for k in props:
+        m = re.match(r"^(.*)\.jdbc\.url$", k)
+        if m:
+            pre.add(m.group(1))
+        elif k == "jdbc.url":
+            pre.add("")
+    return sorted(pre)
+
+
+def mask_url(u):
+    """URL 里可能带口令 query 参数，回显前统一打码。"""
+    return re.sub(r"(?i)(password|pwd|pass)=[^&\s]*", r"\1=" + MASK, u)
+
+
+def main():
+    argv = sys.argv[1:]
+    kb_host, kb_port, kb_db = "127.0.0.1", 54321, "test"
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--kb-host":
+            kb_host = argv[i + 1]; i += 2
+        elif argv[i] == "--kb-port":
+            kb_port = int(argv[i + 1]); i += 2
+        elif argv[i] == "--kb-db":
+            kb_db = argv[i + 1]; i += 2
+        else:
+            print("未知参数 %s" % argv[i]); return 2
+
+    blockers = []
+    notes = []
+    report = {"webapps": [], "tomcat_units": [], "kingbase": {},
+              "mysql_residual": [], "drivers": {}, "blockers": blockers,
+              "notes": notes}
+
+    print("=" * 74)
+    print("一、webapp 与数据源配置枚举")
+    print("=" * 74)
+    files = find_props_files()
+    if not files:
+        blockers.append("/egova/web 下没找到任何 jdbc.properties，路径假设可能不对")
+    for f in files:
+        app = f.parts[f.parts.index("web") + 1]
+        text = f.read_text(encoding="utf-8", errors="replace")
+        props = parse_props(text)
+        entry = {"app": app, "path": str(f), "sources": [], "raw_keys": len(props)}
+        print("\n[%s]  %s" % (app, f))
+        for pre in prefixes_of(props):
+            url = props.get(jk(pre, "jdbc.url"), "")
+            drv = props.get(jk(pre, "jdbc.driverClassName"), "")
+            usr = props.get(jk(pre, "jdbc.username"), "")
+            pkey = next((k for k in PWD_KEYS if jk(pre, k) in props), None)
+            vkey = next((k for k in VAL_KEYS if jk(pre, k) in props), None)
+            print("    前缀=%-8s url=%s" % (pre or "(空)", mask_url(url) or "<缺失>"))
+            print("               driver=%s user=%s" % (drv or "<缺失>", usr or "<缺失>"))
+            print("               口令键=%s 校验键=%s" % (pkey or "<缺失>", vkey or "<缺失>"))
+            entry["sources"].append({
+                "prefix": pre, "url": mask_url(url), "driver": drv, "user": usr,
+                "pwd_key": pkey, "val_key": vkey})
+            if not url:
+                blockers.append("%s 前缀 %r 缺 jdbc.url" % (app, pre))
+        if "jdbc.version" in props:
+            print("               jdbc.version=%s" % props["jdbc.version"])
+        entry["jdbc_version"] = props.get("jdbc.version")
+        report["webapps"].append(entry)
+
+    # 非标准数据源：giscenter 这类读 .env 的
+    print("\n" + "=" * 74)
+    print("二、非 jdbc.properties 数据源（giscenter.env 之类）")
+    print("=" * 74)
+    envs = []
+    for pat in ("/egova/web/*/giscenter/*.env", "/egova/web/*/conf/*.env",
+                "/egova/web/*/*.env"):
+        envs.extend(sorted(glob.glob(pat)))
+    for e in envs:
+        txt = Path(e).read_text(encoding="utf-8", errors="replace")
+        hits = [ln for ln in txt.splitlines()
+                if ln.startswith("--DATASOURCE_") or ln.startswith("--HIBERNATE_")]
+        print("  %s" % e)
+        for h in hits:
+            print("      %s" % re.sub(r"(?i)(PASSWORD)=.*", r"\1=" + MASK, h))
+        notes.append("发现 .env 数据源 %s，需单独切" % e)
+        report.setdefault("env_sources", []).append({"path": e, "lines": hits})
+
+    print("\n" + "=" * 74)
+    print("三、tomcat 单元与端口")
+    print("=" * 74)
+    rc, out = sh("systemctl list-unit-files --type=service --no-pager "
+                 "| grep -iE 'tomcat|java' ")
+    for ln in out.splitlines():
+        if ln.strip():
+            print("  " + ln.strip())
+            report["tomcat_units"].append(ln.strip())
+    rc, out = sh("ss -ltnp 2>/dev/null | grep -E ':(8080|8081|8082|8085|18081|7777|7888)' ")
+    print("  监听端口：")
+    for ln in out.splitlines():
+        if ln.strip():
+            print("    " + ln.strip())
+
+    print("\n" + "=" * 74)
+    print("四、金仓端点探测（%s:%s db=%s）" % (kb_host, kb_port, kb_db))
+    print("=" * 74)
+    tcp_ok = False
+    try:
+        with socket.create_connection((kb_host, kb_port), timeout=6):
+            tcp_ok = True
+        print("  TCP 可达")
+    except Exception as ex:
+        print("  TCP 不可达：%s" % ex)
+        blockers.append("金仓 %s:%s TCP 不可达" % (kb_host, kb_port))
+    ver = None
+    if tcp_ok:
+        try:
+            import psycopg2
+            conn = psycopg2.connect(host=kb_host, port=kb_port, user="mig",
+                                    dbname=kb_db, connect_timeout=8)
+            conn.autocommit = True
+            cur = conn.cursor()
+            cur.execute("SELECT version()")
+            ver = cur.fetchone()[0]
+            print("  版本：%s" % ver[:120])
+            cur.execute("SELECT nspname FROM pg_namespace "
+                        "WHERE nspname NOT LIKE 'pg_%%' "
+                        "AND nspname <> 'information_schema' ORDER BY 1")
+            schemas = [r[0] for r in cur.fetchall()]
+            print("  业务 schema：%s" % ", ".join(schemas))
+            report["kingbase"] = {"host": kb_host, "port": kb_port, "db": kb_db,
+                                  "version": ver, "schemas": schemas}
+            conn.close()
+        except ImportError:
+            notes.append("无 psycopg2，跳过版本/schema 查询（不影响切换，"
+                         "但少一层确认）")
+        except Exception as ex:
+            print("  连接/查询失败：%s" % str(ex).split("\n")[0][:160])
+            blockers.append("金仓可 TCP 连通但 mig 用户连不上：%s"
+                            % str(ex).split("\n")[0][:120])
+    report["kingbase"]["tcp_ok"] = tcp_ok
+
+    print("\n" + "=" * 74)
+    print("五、kingbase8 驱动与 liquibase 桥接 jar")
+    print("=" * 74)
+    for f in files:
+        app = f.parts[f.parts.index("web") + 1]
+        lib = f.parent.parent / "lib"
+        jars = sorted(p.name for p in lib.glob("kingbase8*.jar")) if lib.is_dir() else []
+        # 桥接 jar 的判定：liquibase ServiceLoader 描述符里认领 kingbase
+        bridge = []
+        for svc in (lib.glob("META-INF/services/liquibase.database.Database")
+                    if lib.is_dir() else []):
+            try:
+                body = svc.read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                continue
+            if re.search(r"(?i)kingbase", body):
+                bridge.append(svc.name)
+        print("  [%s] kingbase8 驱动=%s  桥接服务文件=%s"
+              % (app, jars or "**缺失**", bridge or "**缺失**"))
+        report["drivers"][app] = {"kingbase8": jars, "bridge": bridge}
+        if not jars:
+            blockers.append("%s 的 WEB-INF/lib 缺 kingbase8 驱动 jar" % app)
+        if not bridge:
+            blockers.append(
+                "%s 缺 liquibase 金仓桥接（META-INF/services/"
+                "liquibase.database.Database 未认领 kingbase）——"
+                "不补的话 fork liquibase 兜底 UnsupportedDatabase，"
+                "发 Oracle 风格 call current_schema，金仓语法报错，应用必死" % app)
+
+    print("\n" + "=" * 74)
+    print("六、MySQL 3306 残留连接（切换后必须归零）")
+    print("=" * 74)
+    rc, out = sh("ss -tnp 2>/dev/null | grep ':3306' ")
+    lines = [ln.strip() for ln in out.splitlines() if ln.strip()]
+    if lines:
+        for ln in lines:
+            print("  " + ln)
+        report["mysql_residual"] = lines
+    else:
+        print("  当前无 3306 连接")
+
+    REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2),
+                      encoding="utf-8")
+    print("\n报告已写 %s" % REPORT)
+
+    print("\n" + "=" * 74)
+    if blockers:
+        print("预检结论：**有 %d 个阻断项，先处理再切**" % len(blockers))
+        for b in blockers:
+            print("  [阻断] %s" % b)
+        return 1
+    print("预检结论：通过，可执行 switch_kb.py")
+    for n in notes:
+        print("  [提示] %s" % n)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

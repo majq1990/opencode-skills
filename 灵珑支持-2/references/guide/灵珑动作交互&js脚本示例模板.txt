@@ -1,0 +1,2103 @@
+灵珑动作交互&js脚本示例模板
+一 灵珑动作交互
+灵珑的动作面板提供了内置动作、自定义动作、页面JS，同时提供了前置动和后置动作配置，对于动作面板的基本功能使用此处不做介绍。
+具体见《动作面板》
+1 元素查找
+this 为当前动作上下文；
+this.$$("xxxx");     // 从触发当前脚本的组件所在页面的根向下查找id为xxxx的组件元素。
+this.$$m("xxxx");  // 从触发当前脚本的组件所在页面的根向下查找id为xxxx的组件模型。
+this.$$root();     //查询组件所在部件或页面的最近根元素
+this.$$roots();     //查询组件所在部件或页面的所有根元素
+this.$$element("xxxx");  //从触发当前脚本的组件层级向上（包括当前）查找id为xxxx的组件元素。
+this.$$model("xxxx");  //从触发当前脚本的组件层级向上（包括当前）查找id为xxxx的组件模型。
+this.$$element("xxxx", true);  // 从触发当前脚本的组件层级向下（包括当前）查找id为xxxx的组件元素。
+this.$$model("xxxx", true);  // 从触发当前脚本的组件层级向下（包括当前）查找id为xxxx的组件模型。
+在灵珑脚本中element关键字表示的是灵珑组件元素，一般与页面的可见元素对应，且拥有丰富的内置方法；在灵珑脚本中model关键字表示的是灵珑组件模型，它是组件的数据结构描述，只有属性没有方法。如果组件在属性面板设置隐藏状态之后，页面渲染时并不会渲染该组件，因此无法通过this.$$("组件ID")、this.$$element("组件ID")来找到它，如果需要取组件的属性值，需要用this.$$model("组件ID")。
+2 脚本中资源标识（ID）的获取和交互传参说明
+灵珑的js脚本中，经常需要引用一些资源的id，例如：部件、页面、数据集、api，把这些id作为参数进行传递。那么，参数如何获取，不同的部件和页面如何传递，请参见文档：《页面交互传参说明【已过时】》
+3 脚本调试
+可以在脚本函数中添加debugger命令，打开浏览器控制台进入调试模式；
+可以将需要查看的变量aaa用console.log("参数aaa的值：",aaa)在控制台中打印出来，便于调试；
+可以在页面或者部件的didMounted 中配置加载 Eruda 或者 vconsole在移动端看控制台信息
+var LoadScript = (function () {
+    var instances = {}
+    return function (src, callback) {
+        if (!instances[src]) {
+            instances[src] = new Promise((resolve, reject) => {
+                const script = document.createElement('script')
+                
+                var onload = () => {
+                   if (callback) {
+                       callback()
+                   }
+                   resolve()
+                }
+                
+                script.src = src
+                script.onload = onload
+                script.onerror = reject
+                document.head.appendChild(script)
+            })
+            // 提供一个删除instace的接口
+            instances[src].deleteInstance = function () {
+                delete instances[src]
+            }
+        }
+        return instances[src]
+    }
+})()
+
+LoadScript("https://cdn.bootcdn.net/ajax/libs/eruda/2.3.3/eruda.js", () => {
+    eruda.init()
+})
+var LoadScript = (function () {
+    var instances = {}
+    return function (src, callback) {
+        if (!instances[src]) {
+            instances[src] = new Promise((resolve, reject) => {
+                const script = document.createElement('script')
+                
+                var onload = () => {
+                   if (callback) {
+                       callback()
+                   }
+                   resolve()
+                }
+                
+                script.src = src
+                script.onload = onload
+                script.onerror = reject
+                document.head.appendChild(script)
+            })
+            // 提供一个删除instace的接口
+            instances[src].deleteInstance = function () {
+                delete instances[src]
+            }
+        }
+        return instances[src]
+    }
+})()
+
+LoadScript("https://unpkg.com/vconsole@latest/dist/vconsole.min.js", () => {
+    // VConsole 默认会挂载到 `window.VConsole` 上
+   var vConsole = new window.VConsole();
+})
+4 常用的方法
+在文档《前端SDK说明【过时】》中，罗列了目前灵珑前端支持的一些全局的api方法和组件的方法
+页面中表单部件的数据提交
+this.$$("form_part_bv3373").onSubmit();    //form_part_bv3373为页面中表单部件的id
+this.$$("form_part_bv3373"). $$getRenderElement().$$saveData(isSilent: boolean = false) ; //保存数据，自动给出执行结果提示信息
+页面中表单部件的数据连续提交
+this.$$element("form_part_bv3373").onContinuousSubmit();
+页面中表单部件的数据重置
+this.$$element("form_part_bv3373").onReset();
+表格组件刷新
+this.$$("表格组件ID").$$refreshData();
+调用页面或部件设计器中配置的数据源
+this.$$executeApiDataSource("数据源的id或者名称");
+脚本中打开外部页面
+window.open("http://www.baidu.com/", "_blank");
+脚本中获取当前页面的URL地址
+window.location.href
+复制输入组件中的值到剪切板
+this.$$clipboard(this.$$model("组件ID").props.defaultValue.value);
+获取树形部件的选中结果
+this.$$("树面板组件ID").$$getSelection();
+获取表格的选中结果
+this.$$element("table_992gxn").$$getSelection();
+获取表单中明细表格组件填写的数据
+this.$$("组件ID").$$getDataList();
+脚本中实现弹窗确认
+this.$$confirm()
+this.$$confirm({
+        title: "确定执行该动作吗？",
+        onOk: () => {
+            alert("确定操作");
+        },
+        onCancel: () => {
+            alert("取消操作");
+        }
+    });
+补充说明：不要使用modal.confirm来替换该方法，否则会出现还原度以及移动端兼容性问题
+给表单中输入组件赋值
+this.$$("组件ID").$$setValue("组件值");
+this.$$model("组件ID").props.defaultValue.value = "组件值";
+给本页面的表单部件赋默认值
+this.$$element("form_part_3xb962").$children[0].$$setExtraParams( { 组件id: "参数值" } )
+参数名为表单组件的id
+给列表部件设置查询条件
+this.$$element("page_widget_list_6fzqcs").$children[0].$$setExtraParams( { 参数名: 参数值 } )
+参数名可以是列表的列名，也可以是查询组件的id，如果是查询组件id的话，该方法只会在列表初始化时执行一次
+设置表单组件隐藏
+this.$$("组件ID").$$setBehavior("HIDDEN");     //正常显示则设置为NORMAL
+this.$$model("组件ID").props.behavior.value="HIDDEN";
+通过脚本打开灵珑中的一个导航
+api.ROUTE_PUSH
+api.ROUTE_REPLACE
+对表单数据进行删除
+api.FORM_DATA_DELETE()  //表单内置的数据删除方法，指定表单id和数据文号，对于表单提交的数据既有主表数据又有关联的子表数据，表单的删除方法可以将子表数据连同主表数据一起删除。
+api.ENTITY_DELETE()  //指定业务实体id进行数据删除
+获取当前登录者用户信息
+var userInfo = JSON.parse(window.localStorage.getItem("linglong:user"));  //针对构建的应用，“linglong”需替换为构建应用的id
+获取当前用户的会话变量
+var userSessionInfo =  api.USER_INFO();
+二 js脚本示例模板
+通用场景
+从当前组件向上查找组件示例
+function main() {
+    // 从触发当前脚本的组件层级向上（包括当前）查找id为xxxx的组件元素
+    var ele = this.$$element("xxxx");
+    console.log(ele);
+}
+从当前组件所在页面的根向下查找组件示例
+function main() {
+    // 从触发当前脚本的组件所在页面的根向下查找id为xxxx的组件元素
+    var ele = this.$$("xxxx");
+    console.log(ele);
+}
+脚本中调用接口（ddcat/api）示例
+function main() {
+  // DATA_SOURCE_EXECUTE 参数为
+  // 数据源id、数据源类型(ddcat/api)、queryParams、formParams、jsonParams
+  // queryParams，formParams参数结构如下
+  // {
+  //     name: ""  参数名称
+  //     type: "FormData"  参数类型
+  //     valueContent: ""  参数值
+// }
+  // json 参数
+  //  let jsonParams = {"label": "测试json", "value": "test"};
+  // 传参方式 api.DATA_SOURCE_EXECUTE("", "api", [], [], JSON.stringify(jsonParams))
+
+    api.DATA_SOURCE_EXECUTE("9ca5a4e5-f89f-4cd0-bab7-23447e4a3f19", "api", [], [], "").then(res => {
+        console.log(res);
+    }).catch(err => {
+        console.error(err);
+    });
+}
+脚本中调用公式示例
+function main(defaultParams) {
+  //参数为完整公式表达式的字符串，如需要传入变量则需要做字符串拼接
+  //本示例为在列表的操作列按钮上调用公式向某个实体表中插入一条记录,其中topic_id字段的值来自列表中的列
+  //可能根据需求调用自己需要的公式
+  api.EXEC_FORMULA("INSERT('t_ef558151b4154a6c8df6dc32552ce677',['id',UUID(),'topic_id','" + defaultParams['topic_id'] + "','creator',USER_USERNAME()])").then((res) => {
+        // then() 为调用成功的回调
+        console.log("res",res);
+    
+    }).catch(err => {
+        self.$message.error(err.message); // 显示错误提示信息
+    });
+}
+通过脚本打开部件弹窗并传参
+function main() {
+    // this 为当前动作上下文
+    // 部件类型 NORMAL_FORM普通表单 FLOW_FORM流程表单 LIST列表 DETAIL详情等四种类型
+    api.WIDGET_DIALOG(this, "NORMAL_FORM", "abdd75ea-be2d-41e4-809b-9d680ede563a", {
+        linkAction: {
+            // 弹窗标题
+            moduleModalTitle: "自定义部件标题",
+            // 弹窗位置 left right middle top bottom
+            moduleModalPosition: "middle",
+            // 弹窗尺寸 fullscreen 全屏 custom 自定义（可设置宽高）
+            moduleModalSize: "custom",
+            // 弹窗宽度
+            moduleModalWidth: 800,
+            // 弹窗高度
+            moduleModalHeight: 600,
+            // 是否启用遮罩
+            moduleOpenMask: true,
+            // 模式 对表单部件有效（true 详情；false 编辑）
+            isDetail: false
+        },
+        // 部件弹窗的回调（对表单部件有效）
+        callback: (actionType, params) => {
+            // actionType 的值包含 form-close（表单部件关闭后）、form-save（表单部件保存完成后），params为保存后的结果
+            console.log(actionType, params);
+        },
+        // 其他参数，键值对形式
+        // 对于表单部件来说，参数为表单中的组件id与要设置的组件值，特殊的有 documentNo 代表表单的文号
+        // 对于列表部件来说，参数为列表的查询条件（键值对类型的简单条件）
+        // 对于详情部件来说，参数为详情显示数据的条件（键值对类型的简单条件）
+        params: {
+            "text_aptjz0": ""
+        }
+    });
+}
+通过脚本打开部件或页面弹窗并传参（1.5.1-20240514版本起 #363022）
+function main() {
+    // this 为当前动作上下文
+    // 部件类型 NORMAL_FORM普通表单 FLOW_FORM流程表单 LIST列表 DETAIL详情 PAGE页面五种类型
+    api.MODULE_DIALOG(this, "PAGE", "1784825139626110976", {
+        linkAction: {
+            // 弹窗标题
+            moduleModalTitle: "自定义页面标题",
+            // 弹窗位置 left right middle top bottom
+            moduleModalPosition: "middle",
+            // 弹窗尺寸 fullscreen 全屏 custom 自定义（可设置宽高）
+            moduleModalSize: "custom",
+            // 弹窗宽度
+            moduleModalWidth: 800,
+            // 弹窗高度
+            moduleModalHeight: 600,
+            // 是否启用遮罩
+            moduleOpenMask: true,
+            // 模式 对表单部件有效（true 详情；false 编辑）
+            isDetail: false
+        },
+        // 部件弹窗的回调（对表单部件有效）
+        callback: (actionType, params) => {
+            // actionType 的值包含 form-close（表单部件关闭后）、form-save（表单部件保存完成后），params为保存后的结果
+            console.log(actionType, params);
+        },
+        // 其他参数，键值对形式
+        // 对于表单部件来说，参数为表单中的组件id与要设置的组件值，特殊的有 documentNo 代表表单的文号
+        // 对于列表部件来说，参数为列表的查询条件（键值对类型的简单条件）
+        // 对于详情部件来说，参数为详情显示数据的条件（键值对类型的简单条件）
+        params: {
+            "text_aptjz0": ""
+        }
+    });
+}
+自定义脚本打开页面并开启页头（PC）
+function main() {
+  var element = this;
+  var rootPageElement = null;
+
+  while (element) {
+      if (element.getPageInfo && element.goHistory) {
+          rootPageElement = element;
+          break;
+      } else {
+          element = element.$parent;
+      }
+  }
+  //第一个参数为要打开的页面的pageid，可通过ctrl+shift+c打开资源选择弹窗进行选择
+  //isPageHeader为是否开启页头，pageHeaderTitle设置页头的名称,extraParams_设置给页面传参
+  rootPageElement.getPageInfo('pageid',"PAGE",{  
+    isPageHeader:true,
+    pageHeaderTitle:"test",
+    extraParams_:{
+      params1: "",
+      params2: ""
+    }
+  });
+}
+通过脚本获取URL参数
+该脚本提供了两种方法
+function main() {
+    // 方式1
+  // 获取路由参数
+    let query = this.$route.query;
+    console.log(query);
+
+  // 方式2
+    let location = window.location;
+    // 拿到问号后的字符串
+    query = location.href.match(/(?<=\?.*).+/g) || [];
+    // 根据 & 拆分
+    if (query.length > 0) {
+        let params = {};
+        let paramArr = query[0].split("&");
+        paramArr.forEach((p) => {
+            // 等号拆分
+            let kv = p.split("=");
+            params[kv[0]] = decodeURI(kv[1] || "");
+        });
+        console.log(params);
+    }
+}
+基于内置动作打开部件或页面时配自定义参数
+在类似下图页面场景中，新增按钮需要打开一个表单填报页面，同时将左侧树选中的节点作为参数传给表单页面，通过配置内置动作指定要打开的页面，参数设置这里需要用到自定义参数，此案例重点说明的是返回值的格式，return {
+'参数名1': 参数值1,
+'参数名2': 参数值2
+};
+function main() {
+    // 获取页面中的树面板组件，取到当前选中节点，返回该节点的key数据
+    var treeSelect = this.$$("tree_panel_em08qo").$$getSelection().selectedKeys[0];
+    if (treeSelect) {
+        //返回key-value格式的参数，参数名为表单中需要赋值的组件id
+        return {
+            'single_select_3ujfcu': treeSelect
+        };
+    } else {
+        return {};
+    }
+
+}
+表单场景
+常用场景
+表单中动态控制组件显隐
+场景描述：在表单设计器中，用户在操作单选或者下拉单选组件时，当值发送变化，相应的需要控制其他组件的显示和隐藏，如何在自定义动作中编写脚本。
+具体脚本如下：
+function main() {
+    // 找到单选组件元素
+    let radioEle = this.$$("radio_39tr41");
+  // 获取单选组件内容
+    const text = radioEle.getText();
+    // 取到被控组件的model
+    let textareaModel = this.$$model("textarea_7dimpe");
+    if (text === "是") {
+      // 设置多行文本组件显示
+        // behavior有4种状态分别是 正常：NORMAL,禁用：DISABLED,只读:READONLY,隐藏:HIDDEN
+        textareaModel.props.behavior.value = "NORMAL"
+    } else if (text === "否") {
+      // 设置多行文本隐藏
+        textareaModel.props.behavior.value = "HIDDEN"
+    }
+}
+表单中基于位置组件定位自动填充区划组件
+此功能需要基于mis已有的接口服务进行调用
+export function onLocationChange(params) {
+  console.log(params)
+  const { gridCode, lat, lng, address } = params;
+  const streetEle = this.$$("text_input_bwguc0");
+  const cellEle = this.$$("text_input_4rx1vd");
+  const communityEle = this.$$("text_input_9xuyo");
+
+  // 调用mis的api接口
+  api.DATA_SOURCE_EXECUTE("ffec9843-0d2b-4c95-9c6d-0c6fd1fdf11d", "api", [
+    { name: "cellCode", valueContent: gridCode }
+  ], [], "").then(res => {
+    if (!res.hasError) {
+      const data = JSON.parse(res.result);
+      console.log(data);
+      if (data.success && data.data) {
+        const { street, cell, community } = data.data;
+        // street 街道信息
+        // cell 网格信息
+        // community 社区信息
+        streetEle.$$setValue(street.regionName);
+        cellEle.$$setValue(cell.regionName);
+        communityEle.$$setValue(community.regionName);
+        // streetEle.data.props.defaultValue.value = street.regionName;
+        // cellEle.data.props.defaultValue.value = cell.regionName;
+        // communityEle.data.props.defaultValue.value = community.regionName;
+      }
+    }
+  }).catch(err => {
+    console.error(err);
+  });
+}
+更多场景
+表单中组件自定义校验规则
+灵珑表单中的组件校验规则提供一部分常见的内置规则，如必填、身份证号、唯一约束等，内置的校验规则不满足时，可以配置自定义校验规则，通过js脚本，下面示例为车牌号规则校验
+function validate(value) {
+    /* return支持返回boolean类型或者{ success: boolean, message?: string }对象，
+       返回对象格式时success为必填，message为选填，当message有值时错误提示信息将
+       改为message设置的提示信息 */
+    
+    // 新能源车牌
+    const xreg = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}(([0-9]{5}[DF]$)|([DF][A-HJ-NP-Z0-9][0-9]{4}$))/;
+    // 旧车牌
+    const creg = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}[A-HJ-NP-Z0-9]{4}[A-HJ-NP-Z0-9挂学警港澳]{1}$/;
+    if (value.length === 7) {
+        if(value.search(creg)==-1)
+        {
+          return  { success: false, message: "车牌号格式不正确" } 
+        }
+        else{
+          return  { success: true } 
+        }
+        
+    } else if (value.length === 8) {
+        if(value.search(xreg)==-1)
+        {
+          return  { success: false, message: "车牌号格式不正确" } 
+        }
+        else{
+          return  { success: true } 
+        }
+    } else {
+        return { success: false, message: "车牌号格式不正确" };
+    }
+}
+表单中动态控制组件校验是否打开
+灵珑表单组件上添加校验规则之后，有一个开关项来控制校验是否开启，如下图
+可通过设置如下属性来动态控制组件校验是否开启
+this.$$m("upload_a6jvms").props.validationEnabled = true;
+表单中日期组件可选时间自定义
+在下图场景中，明细表格中的日期选择组件，需要基于上面的年份组件选择的年来控制，只能选该年的日期，此时需要在日期选择组件的可选时间区间上配置自定义规则
+function disabledDate(date) {
+    // 该函数返回的是不可选的日期
+    // "date_picker_4jh5v"为年份组件的id
+    return !moment(this.$$("date_picker_4jh5v").$$getValue()).isSame(date, 'year');
+}
+表单中多选组件动态控制哪些选项可以选择
+如下图场景中，需要基于单选组件的值，来动态设置多选组件中哪些选项可以选，哪些不能选；在单选组件高级面板绑定onchange事件，配置如下自定义动作脚本
+function main() {
+    // 找到单选组件元素
+    let radioEle = this.$$("radio_e1ykm7");
+    // 获取单选组件内容
+    const text = radioEle.getText();
+    // 取到被控组件的model
+    let textareaModel = this.$$model("checkbox_asxkfv");
+    let options = [];
+    if (text === "东校区") {
+        options = [
+            { label: '一年级', value: '1', disabled: true },
+            { label: '二年级', value: '2', disabled: true },
+            { label: '三年级', value: '3', disabled: true },
+            { label: '四年级', value: '4', disabled: false },
+            { label: '五年级', value: '5', disabled: false },
+            { label: '六年级', value: '6', disabled: false }
+        ];
+    } else if (text === "本校区") {
+        options = [
+            { label: '一年级', value: '1', disabled: false },
+            { label: '二年级', value: '2', disabled: false },
+            { label: '三年级', value: '3', disabled: false },
+            { label: '四年级', value: '4', disabled: true},
+            { label: '五年级', value: '5', disabled: true },
+            { label: '六年级', value: '6', disabled: true }
+        ];     
+    }
+    if (options && options.length != 0){
+        textareaModel.props.dataSource.options = options;
+    }
+}
+给表单中的明细表格组件生成行并赋值
+function main(){
+    // 先找到明细表格组件
+    let dt = this.$$("detail_table_dks8xm");
+    // 添加行之前先清除原有行（按需使用）
+    dt.$$clearData();
+
+    // 生成明细表格中的行及每行各组件对应的值，此示例每行两个组件，生成了三行，冒号前为组件id、后为组件值
+    let list = [{
+        text_input_ayie80: "string1",
+        number_input_cvknso: 1
+    }, {
+        text_input_ayie80: "string2",
+        number_input_cvknso: 2
+    }, {
+        text_input_ayie80: "string3",
+        number_input_cvknso: 3
+    }];
+    // 循环添加行
+    list.forEach((row, idx) => {
+        dt.$$addRow();
+    });
+    setTimeout(function () {
+        // 循环跟组件赋值
+        list.forEach((row, idx) => {
+            dt.$$setRow(idx, row);
+        });
+    });
+}
+明细表格中当前行某一组件的值变化时将赋值给当前行另一组件
+function main(params){
+    // 首先需要取到当前行的索引(params.id)
+    // 由于组件的onchange事件params为空，所以从当前组件的id中抠出索引
+    // 明细表格中每行组件id的定义:第一行number_input_cvknso、第二行number_input_cvknso_index1、第三行number_input_cvknso_index2，以此类推
+    let arr = this.data.id.split("_index");
+    let rowIdex = arr.length===2?parseInt( arr[1]):0;
+    // 找到明细表格元素
+    let dt = this.$$("detail_table_dks8xm");
+    // 使用明细表格元素上的$$getCellValue方法取到某个索引对应行的某个组件的值
+    const v = dt.$$getCellValue(rowIdex,"number_input_cvknso");
+    // 使用明细表格元素上的$$setCellValue方法设置某个索引对应行的某个组件的值
+    dt.$$setCellValue(rowIdex,"number_input_93585j",v);
+}
+取明细表格所有行某列的组件值求和并赋给主表的组件
+function main(){
+    // 找到明细表格元素
+    let dt = this.$$("detail_table_dks8xm");
+    let totalScore = 0;
+    // 使用明细表格元素上的$$getColumnData方法获取某个组件的值（数组）
+    let colDatas = dt.$$getColumnData("number_input_cvknso")
+    // 求和
+    colDatas.forEach(ele => {
+        if(ele !== null){
+            totalScore += parseInt(ele);
+        }       
+    });
+    // 将求和的结果赋给另一个组件
+    this.$$m("number_input_asixrs").props.defaultValue.value = totalScore;
+}
+明细列表根据表单内容自动填充，修改新增一条时的默认值
+function onchangefix() {
+    //获取已有表单的字段值
+    let equipType = this.$$("single_select_4r21h4");
+    const equipTypeStr = equipType.getText();
+    let fixType = this.$$("single_select_eonh25");
+    const fixTypeStr = fixType.getText();
+    const fixProject = equipTypeStr +' '+ fixTypeStr
+    // 获取明细列表
+    const formDetailListPart = this.$$("detail_list_fmefht");
+    // 修改明细列表每个子字段的值
+    const formDetailList = formDetailListPart.data.props.list;
+    for (let i = 0; i < formDetailList.length; i++) {
+        const formDetail = formDetailList[i];
+        const children = formDetail.children;
+        for(let j = 0; j < children.length; j++) {
+            const child = children[j];
+            if (child.id.indexOf("text_input_imaa3") > -1) {
+                child.props.defaultValue.value = fixProject;
+            }
+        }
+    }
+
+    // 修改新建明细列表的默认值
+    const defaultFormDetailChildren = formDetailListPart.data.children;
+    for (let k = 0; k < defaultFormDetailChildren.length; k++) {
+        const child = defaultFormDetailChildren[k];
+        if (child.id.indexOf("text_input_imaa3") > -1) {
+            child.props.defaultValue.value = fixProject;
+        }
+    }
+}
+两个下拉组件联动时配置上游组件值变化后清除下游组件值
+在上游组件的onchange事件上写脚本来清空，但是由于详情和编辑模式打开表单数据回填时也会触发onchange事件，但这时候值不应该清空，故封装了一个方法onClearRelateComponent()，在上游组件onchange中调用此方法即可
+function main() {
+    //调用清除关联组件值的方法
+  this.onClearRelateComponent();
+}
+多 Tab 表单提交校验时实现切换 Tab，滚动到指定校验元素的位置
+实现思路：提交按钮使用自定义脚本，调用$$validateData 方法手动校验，通过 state获取第一个未校验通过的元素， 从而获取该元素所属的 Tab Pane、Tab Pane Index，调用 Tab Bar 元素的 click 来切换 tab，调用 scrollIntoView 来滚动到指定元素。
+注意要点：修改脚本中 form_part的 id 确保找到正确的表单部件
+参考链接：页面管理
+相关案件：开发 #372476: 【灵珑】页面必填校验完善 - 基础平台-灵珑平台 - 政通项目管理平台 (egova.com.cn)
+function main() {
+    var self = this;
+    var formPartEle = this.$$element("form_part_anzido");
+    
+    if (formPartEle) {
+        let pageRenderElement = this.$$getRouteView();
+        var formEle = formPartEle.$$getRenderElement();
+
+        formEle.$$validateData().then((res) => {
+            if (!res.success) {
+                var target = formEle.state.validate.target;
+                var targetEle = self.$$(target.id);
+                var targetTabEle = targetEle;
+                while (targetTabEle.$parent) {
+                    if (targetTabEle.$el && targetTabEle.$el.classList && targetTabEle.$el.classList.contains("ant-tabs-tabpane")) {
+                        break;
+                    }
+                    targetTabEle = targetTabEle.$parent;
+                }
+                var tabIndex = targetTabEle.$parent.$children.indexOf(targetTabEle)
+                // switch tab
+                document.querySelectorAll("#form_part_anzido_csshandler_generate #tabs_d87ea9_csshandler_generate .ant-tabs-nav [role='tab'].ant-tabs-tab")[tabIndex].click()
+                // scroll into visible
+                targetEle.$el.scrollIntoView()
+                return;
+            }
+            
+            formEle.onSave().then((res) => {
+                if (res && res.result) {
+                    console.log("获取存储数据的结果", res);
+                    if (pageRenderElement) {
+                        pageRenderElement.goHistory(-1);
+                    }
+                }
+
+            });
+        })
+    }
+}
+2.2.11 表单添加提交前的校验图形验证码校验
+实现效果：
+实现原理：
+定义需要添加校验功能的表单为原表单，存放图形验证码的为校验框
+添加一个专门的用于校验的表单部件作为校验框
+原表单的提交按钮使用自定义脚本在提交前打开校验框，校验框关闭后继续调用原表单的校验。
+实现步骤：
+添加一个专门用于校验的表单，使用验证码组件实现图形校验功能
+参考链接：http://10.250.1.39:30095/magic/linglong/design.html#/design/1beca84a-65e0-474b-9c63-54ec6cf65251
+原表单提交按钮添加自定义脚本
+http://10.250.1.39:30095/magic/linglong/workspace.html#/baeb2a1f-1758-4a95-b856-be8e098d65d9/page-build/page/7b09aa29-1171-48f2-b3ae-919ef51b5aa4?isMobileMode=0
+如下代码中  1beca84a-65e0-474b-9c63-54ec6cf65251 是校验框这个表单的id，在校验框的浏览器URL里最后一部分。form_part_fqyrdk 是原表单的id
+function main() {
+       const self = this;
+          // this 为当前动作上下文
+    // 部件类型 NORMAL_FORM普通表单 FLOW_FORM流程表单 LIST列表 DETAIL详情等四种类型
+    api.WIDGET_DIALOG(self, "NORMAL_FORM", "1beca84a-65e0-474b-9c63-54ec6cf65251", {
+        linkAction: {
+            // 弹窗标题
+            moduleModalTitle: "校验",
+            // 弹窗位置 left right middle top bottom
+            moduleModalPosition: "middle",
+            // 弹窗尺寸 fullscreen 全屏 custom 自定义（可设置宽高）
+            moduleModalSize: "custom",
+            // 弹窗宽度
+            moduleModalWidth: 400,
+            // 弹窗高度
+            moduleModalHeight: 230,
+            // 是否启用遮罩
+            moduleOpenMask: true,
+            // 模式 对表单部件有效（true 详情；false 编辑）
+            isDetail: false
+        },
+        // 部件弹窗的回调（对表单部件有效）
+        callback: (actionType, params) => {
+         
+            // actionType 的值包含 form-close（表单部件关闭后）、form-save（表单部件保存完成后），params为保存后的结果
+            console.log(actionType, params);
+            if (actionType === 'form-save') {
+                var formPartEle = self.findElement("form_part_fqyrdk");
+                debugger
+                formPartEle.onSubmit();
+            } 
+        },
+        // 其他参数，键值对形式
+        // 对于表单部件来说，参数为表单中的组件id与要设置的组件值，特殊的有 documentNo 代表表单的文号
+        // 对于列表部件来说，参数为列表的查询条件（键值对类型的简单条件）
+        // 对于详情部件来说，参数为详情显示数据的条件（键值对类型的简单条件）
+        params: {
+           
+        }
+    });
+        
+}
+2.2.12 分布表单中点击下一步时校验当前步骤表单
+实现原理：
+添加自定义按钮实现自定义下一步的功能，在自定义按钮中配置回调动作获取表单部件、获取分步控件。
+实现步骤：
+添加一个自定义按钮, 在自定义按钮中配置回调动作获取表单部件、获取分步控件
+function main() {
+
+    const self = this;
+    const formPart = this.$$("form_part_8dd7no");
+    const form = formPart.$$getRenderElement();
+    const stepsControl = this.$$("steps_8ypm7i");
+
+    // function shortcut
+    const onSubmit = form.onSubmit;
+    const goNext = () => {
+        stepsControl.updateStep(1)
+    };
+    const gotPrevious = () => {
+        stempControl.updateStep(-1)
+    }
+    // validate 
+    const currentStepComps = stepsControl.currentStepData.children;
+    const isOK = true;
+    let validateCounter = currentStepComps.length;
+    const checkGoNext = () => {
+        console.log("couter ", validateCounter)
+        if (validateCounter === 0) {
+            if (isOK) {
+                goNext();
+            }
+        }
+    }
+    currentStepComps.forEach((comp) => {
+        const compId = comp.id;
+        if (comp.props.behavior.value === "NORMAL" && comp.props.validationEnabled) {
+            const comp = self.$$(compId)
+            if (comp && comp.validate) {
+
+                comp.validate().then(result => {
+                    if (!result) {
+                        isOK = false;
+                        const res = comp.checkValidate();
+                        console.error("comp ", compId, res.message)
+                    }
+                    validateCounter--;
+                    checkGoNext();
+                })
+
+            }
+        } else {
+            validateCounter--
+            checkGoNext()
+        }
+    })
+}
+参考页面链接：http://10.250.1.50:8080/linglongZT/workspace.html#/1867035491569885184/page-build/page/1867046614209781760?isMobileMode=0
+2.2.13  表单提交实现修改密码功能
+实现原理：
+使用密码输入组件密码修改页面，保存按钮调用用户中心的修改密码功能实现修改密码
+实现步骤：
+添加修改密码的表单
+http://10.250.1.39:30095/magic/linglong/design.html#/design/a38219a7-b271-4591-b15c-c37df769fd32
+配置密码校验规则
+配置表单页面
+http://10.250.1.39:30095/magic/linglong/workspace.html#/1823227805292273664/page-build/page/1881579231037739008?isMobileMode=1
+配置表单按钮功能
+保存
+function main() {
+
+    const form = this.$$("form_part_gziiis").$$getRenderElement();
+
+    const oldPwdField = this.$$("password_input_28facy");
+    const newPwdField = this.$$("password_input_bg3wc9");
+    const confirmPwdField = this.$$("password_input_4wa1he");
+    const toast = this.$ztToast;
+
+    const userCenterAPI = '/usercenterbeta-api';
+    const oldPwd = oldPwdField.data.props.defaultValue.text;
+    const newPwd = newPwdField.data.props.defaultValue.text;
+    const confirmPwd = confirmPwdField.data.props.defaultValue.text;
+
+    if (newPwd !== confirmPwd) {
+        toast("确认密码和新密码不一致")
+        return;
+    }
+
+    form.$$validateData().then((res) => {
+        if (!res.success) {
+            return;
+        }
+        window.api.PLUGIN_LOAD_AUTHING_COM_PROXY({
+            baseUrl: userCenterAPI,
+        }).then((proxy) => {
+
+            proxy.changeUserCryptogram(oldPwd, newPwd).then((res) => {
+                if (res && !res.data.hasError) {
+                    toast("修改密码成功")
+                } else if (res.data.hasError) {
+                    toast(res.data.message)
+                }
+                console.log(res);
+            }).catch((error) => {
+                if (error.message) {
+                    toast(error.message)
+                } else {
+                    toast("修改密码失败")
+                }
+                console.error(error);
+
+            });
+
+        });
+    })
+}
+取消
+配置入口按钮
+2.2.14 表单提交前先校验，校验通过后回退
+function main() {
+        let that = this;
+        let formPartEle = this.$$element("form_part_2u08z9");
+        if (formPartEle) {
+            var formEle = formPartEle.$$getRenderElement();
+            debugger
+            formEle.$$validateData().then((res) => {
+                if (!res.success) {
+                    that.$message.error(res.message);
+                }else{
+                    formEle.onSave();
+                    //that.$message.success("提交成功！");
+                    let pageRenderElement = that.$$getRouteView();
+                    pageRenderElement.goHistory(-1);
+                }
+        })
+
+    }
+}
+列表场景
+常用场景
+列表操作列删除动作-数据视图
+function main(defaultParams, event) {
+    var self = this; // 重置作用域
+    var tableComp = self.$$element("table_3qosq0"); // 获取表格元素
+    self.$$confirm({
+        content: "确定删除？",
+        type: "danger",  // danger info warning
+        headerTitle: "告警", //确认框头部标题 提示、警告、告警
+        showOkBtn: true, // 是否展示确认按钮
+        showCancelBtn: true, // 是否展示取消按钮
+        cancelText: "取消", //取消按钮 展示文字
+        okText: "确定",  //确认按钮 展示文字      
+        onOk: () => {
+            tableComp.loading = true; // 使表格置于loading状态
+            // 调用api的删除方法，第一个参数为待删除的实体id，第二个参数为删除条件、指定实体中的列名和列的值
+            api.ENTITY_DELETE("t_20654ee972cf47639311623425d26ff1",
+                { documentNo: defaultParams["f_ae951973c47c43fd8bc1f350225fc825"] }).then((res) => {
+                    // then() 为调用成功的回调
+                    self.$message.success("删除成功！");
+                    tableComp.loading = false; // 将表格置为非loading状态
+                    tableComp.$$refreshData(); // 调用表格的数据刷新动作
+                }).catch(err => {
+                    self.$message.error(err.message); // 显示错误提示信息
+                    tableComp.loading = false; // 将表格置为非loading状态
+                });
+        },
+        onCancel: () => {
+            return
+        }
+    });
+}
+列表中操作列按条件控制显隐
+有些场景中，操作列中的按钮需要按一定的条件来判断是否显示，比如该条数据的状态字段为“未办理”时，办理按钮显示，“已办理”状态则不显示；此时需要在按钮上将设置条件前面的开关打开，然后点击设置条件，配置对应的脚本，返回值有三种状态：NORMAL 普通状态  HIDDEN 隐藏状态 DISABLED 禁用状态。
+function main(context) {
+    // NORMAL 普通状态
+    // HIDDEN 隐藏状态
+    // DISABLED 禁用状态
+    let currentDatas = context.currentDatas || [];
+    // 拿到当前行数据
+    let row = currentDatas[0];
+    // 找到当前行中字段名为state的数据
+    let idData = row.find(r => r.name === 'state');
+    //判断state字段为0则显示按钮，否则不显示按钮
+    if (idData.value == 0) {
+        return 'NORMAL';
+    } else {
+
+        return "HIDDEN";
+    }
+}
+表单数据提交后置动作刷新列表
+同类脚本参见<页面列表刷新>（在本文档中搜索关键字即可找到）。
+注意：该脚本是需要列表部件放在页面中执行的，并且配置的是打开表单部件弹窗的后置动作，如果是在列表设计器直接预览的话不适用。
+function main(defaultParams) {
+    // 在表单部件中的数据保存成功时刷新表格
+    if (defaultParams.moduleActionType === 'form-save') {
+        // 获取页面列表组件
+        var pageListEle = this.$$("page_widget_list_dhkdhs");
+        // 获取列表渲染页实例
+        var listRenderView = pageListEle.$$getRenderElement();
+        // 获取当前显示的组件，表格或者卡片
+        var currentListEle = listRenderView.$$getListElement();
+        // 调用刷新方法
+        currentListEle.$$refreshData();
+    }
+}
+在列表设计器中使用如下脚本
+function main(defaultParams) {
+    // 在表单部件中的数据保存成功时刷新表格
+    if (defaultParams.moduleActionType === 'form-save') {
+        // 获取列表表格组件id（列表设计器中选中表格组件，在高级面板中）
+        var listEle = this.$$("table_5vdh0w");
+
+        // 调用刷新方法
+        listEle.$$refreshData();
+    }
+}
+列表数据刷新并保持在当前分页
+更改时间：2025.08.11
+function main() {
+// 获取页面列表组件 page_widget_list_1ris5q 页面列表组件id
+var pageListEle = this.$$("page_widget_list_1ris5q");
+// 获取列表渲染页实例
+var listRenderView = pageListEle.$$getRenderElement();
+// 获取当前显示的组件，表格或者卡片
+var currentListEle = listRenderView.$$getListElement();
+// 调用刷新方法
+currentListEle.$$doQuery();
+}
+function main() {
+    // 获取页面列表组件 page_widget_list_1ris5q 页面列表组件id
+    var pageListEle = this.$$("page_widget_list_1ris5q");
+    // 获取列表渲染页实例
+    var listRenderView = pageListEle.$$getRenderElement();
+    // 获取当前显示的组件，表格或者卡片
+    var currentListEle = listRenderView.$$getListElement();
+    // 调用刷新方法
+    currentListEle.doQuery();
+}
+更多场景
+列表操作列删除动作-业务实体
+function main(params) {
+    var self = this; // 作用域
+    var tableComp = this.$$element("table_992gxn"); // 获取表格元素，id可以在表格组件高级面板中获取
+    // 过滤空值的条件
+    for (let key in params) {
+        if (params[key] === null || params[key] === undefined) {
+            delete params[key];
+        }
+    }
+    // 调用api的删除方法，第一个参数为待删除的实体id，params为在表格列中为点击操作按钮所在的行数据
+    // 获取到表格绑定的数据集
+    var dataset = tableComp.$$getDataset();
+    tableComp.loading = true; // 使表格置于loading状态
+    api.ENTITY_DELETE(dataset.table.id, params).then(() => {
+        // then() 为调用成功的回调
+        self.$message.success("删除成功！");
+        tableComp.loading = false; // 将表格置为非loading状态
+        tableComp.$$refreshData(); // 调用表格的数据刷新动作
+    }).catch(err => {
+        self.$message.error(err.message); // 显示错误提示信息
+        tableComp.loading = false; // 将表格置为非loading状态
+    });
+}
+基于表单的删除方法删除数据
+当表单提交的数据中有多媒体或者明细表数据的时候，希望删除主表数据的同时对应的媒体数据和子表数据一并删除，则需要用该方法
+function main(defaultParams, event) {
+    var self = this; // 重置作用域
+    var tableComp = self.findElement("table_41aa0j"); // 获取表格元素
+    self.$$confirm({
+        content: "确定删除？",
+        type: "danger",  // danger info warning
+        headerTitle: "告警", //确认框头部标题 提示、警告、告警
+        showOkBtn: true, // 是否展示确认按钮
+        showCancelBtn: true, // 是否展示取消按钮
+        cancelText: "取消", //取消按钮 展示文字
+        okText: "确定",  //确认按钮 展示文字      
+        onOk: () => {
+            tableComp.loading = true; // 使表格置于loading状态
+            tableComp.isCacheReq = false; // 使表格请求不缓存
+            // 构建jason格式的参数，参数名为documentNo，参数值取自列表中的列
+            paramsDoc = "[{\"documentNo\": \"" + defaultParams["7896aa3d-1787-427f-84b6-9193bed8439e"] + "\"}]";
+            // 调用表单的删除方法，第一个参数为表单id，可以基于ctrl+shift+c快捷键选取，第2个参数为上面构建的文号参数
+            api.FORM_DATA_DELETE("96593f39-3c06-44e3-abfe-34030d351d7f",
+                JSON.parse(paramsDoc)).then((res) => {
+                    // then() 为调用成功的回调，刷新列表
+                    tableComp.$$refreshData().then(() => {
+                        tableComp.loading = false; // 将表格置为非loading状态
+                        tableComp.isCacheReq = true;
+                        self.$message.success("删除成功！");
+                    }); 
+                }).catch(err => {
+                    self.$message.error(err.message); // 显示错误提示信息
+                    tableComp.loading = false; // 将表格置为非loading状态
+                    tableComp.isCacheReq = true; // 使表格请求缓存
+                });
+        },
+        onCancel: () => {
+            return
+        }
+    });
+}
+列表顶部操作批量删除动作-业务实体
+function main() {
+    var self = this; // 作用域
+    var tableComp = this.$$element("table_992gxn"); // 获取表格元素
+    // 获取当前表格选中的行
+    var { selectedRows } = tableComp.$$getSelection();
+    // 获取表格绑定的数据集
+    var dataset = tableComp.$$getDataset();
+    // 组装参数，使用id数组作为删除条件，可按自己的需求指定列名
+    var params = {
+        "id": []
+    };
+    if (selectedRows.length === 0) {
+        this.$message.warning("请选择要删除的数据！");
+        return;
+    }
+    this.$$confirm({
+        width: "4rem",
+        height: "2rem",
+        type: "warning", // danger info warning
+        cancelText: "取消",
+        okText: "确定",
+        content: `确定要删除${selectedRows.length}条数据吗?`,
+        showOkBtn: true,
+        showCancelBtn: true,
+        headerTitle: "",
+        onOk: () => {
+            selectedRows.forEach((row) => {
+                params["id"].push(row["id"].value);
+            
+            });
+            // 使表格置于loading状态
+            tableComp.loading = true;
+            // 调用api的删除方法，第一个参数为待删除的实体id，params为删除条件
+            api.ENTITY_DELETE(dataset.table.id, params).then((res) => {
+                // then() 为调用成功的回调
+                self.$message.success("删除成功！");
+                tableComp.loading = false; // 将表格置为非loading状态
+                tableComp.$$refreshData(); // 调用表格的数据刷新动作
+            }).catch(err => {
+                self.$message.error(err.message); // 显示错误提示信息
+                tableComp.loading = false; // 将表格置为非loading状态
+            });
+        },
+        onCancel: null
+    });
+}
+列表中批量修改某个字段的值
+在列表中修改某个字段的值需要调用灵珑提供的修改实体数据的接口
+首先需要在本应用的api管理中添加该接口，接口地址为：http://IP:PORT/linglong-api/unity/table-data/update
+query参数包括tableId（业务实体id）、ids（主键）、documentNos（文号），主键和文号参数二者取其一即可
+Headers需配置参数名use-web-Authorization等于true
+然后在按钮上绑定动作配置自定义动作脚本如下：
+function main() {
+    var self = this; // 重置作用域
+    var tableComp = self.findElement("table_7f9n1z"); // 获取表格元素
+    // 获取当前表格选中的行
+    let rows = tableComp.rowSelection.selectedRows || [];
+    // 判断是否选中行
+    if (rows.length > 0) {
+        let ids = "";
+        // 组装参数，使用ids作为删除条件，多个id用逗号分隔
+        rows.forEach((row) => {
+            ids += row["id"].value + ",";
+        });
+        ids = ids.substring(0, ids.length - 1);
+        
+        // 标记已读后，状态为1
+        let readStatusType = 1;
+
+        // params中为api接口的query参数
+        let params = [{
+            name: "ids",
+            valueContent: ids
+        },
+        {
+            name: "tableId",
+            valueContent: "t_f5f4ea0ee2de4430b29cbf867c257025"
+        }
+        ];
+        // columnDataList 的columnId为要修改的字段id，value为要修改成的值
+        let columnData = {
+            "columnDataList": [
+                {
+                    "columnId": "f_2e4309c0999f4d79a0704a0578b53a06",
+                    "value": "1"
+                }
+            ]
+        }
+
+        self.$$confirm({
+            content: "确定将已选消息标为已读？",
+            type: "warning",  // danger info warning
+            headerTitle: "警告", //确认框头部标题 提示、警告、告警
+            showOkBtn: true, // 是否展示确认按钮
+            showCancelBtn: true, // 是否展示取消按钮
+            cancelText: "取消", //取消按钮 展示文字
+            okText: "确定",  //确认按钮 展示文字  
+            onOk: () => {
+                tableComp.loading = true; // 使表格置于loading状态
+                api.DATA_SOURCE_EXECUTE("38f50199-1493-460e-807b-f54b57d3a3bb", "api", params, [], JSON.stringify(columnData)).then((res) => {
+                    // then() 为调用成功的回调
+                    if (IsJsonString(res.result) && !JSON.parse(res.result).hasError) {
+                        self.$message.success("标记成功！");
+                        tableComp.loading = false; // 将表格置为非loading状态
+                        tableComp.$$refreshData(); // 调用表格的数据刷新动作
+                    } else {
+                        self.$message.error(res.result); // 显示错误提示信息
+                        tableComp.loading = false; // 将表格置为非loading状态
+                    }
+                }).catch(err => {
+                    self.$message.error(err.message); // 显示错误提示信息
+                    tableComp.loading = false; // 将表格置为非loading状态
+                });
+            },
+            onCancel: () => {
+                
+            }
+        });
+    } else {
+        self.$$confirm({
+            content: "请至少选择一条数据！",
+            type: "info",  // danger info warning
+            headerTitle: "提示", //确认框头部标题
+            showOkBtn: true, // 是否展示确认按钮
+            showCancelBtn: false, // 是否展示取消按钮
+            cancelText: "取消", //取消按钮 展示文字
+            okText: "确定",  //确认按钮 展示文字
+            onOk: () => {
+            },
+            onCancel: () => {
+            }
+        })
+    }
+}
+// 通过返回值来判断：如果true 则是JSON格式，否则，不是JSON格式
+function IsJsonString(str) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true
+}
+列表操作列配置下载文件动作
+function main (){
+    //本示例直接指定了一个文件id，实际情况在构建列表时将fileid放到表格列中，或者通过调用公式基于文号查出该条数据对应的fileid
+    var fileId = 'c887f8d64cb44366ae1f57398c66c2cb';
+    //拼接文件下载的地址
+    var url = 'http://192.168.102.50:8080/linglong-api/unity/establish/file/' + fileId + '/download' + '?access_token=' + getToken();
+    downloadFile(url);
+}
+function getToken() {
+    if(api.APP_TOKEN){
+        return api.APP_TOKEN();
+    }
+    const token = decodeURIComponent(document.cookie).match(/linglong:access_token=(.+?);/)[1] || '';
+    return token;
+}
+function downloadFile(fileUrl) {
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+列表中操作列按钮名称动态赋值
+有些场景中，列表操作列的按钮名称需要基于某个字段的值动态展示，此时也可以通过按钮上的条件设置脚本实现；在按钮上将设置条件前面的开关打开，然后点击设置条件，配置对应的脚本如下：
+function main() {
+    if (this.mode == "generate" && this._props.data) {
+        // 取出字段fieldName的值
+        let title = this.params["fieldName"].value || "编辑";
+        // 把取出的值作为按钮的文本内容
+        this.$set(this.button, "title", title);
+    }
+    // NORMAL 普通状态
+    // HIDDEN 隐藏状态
+    // DISABLED 禁用状态
+    return "NORMAL";
+}
+列表中点击操作列按钮给本行数据加背景色选中效果
+function main(params) {
+    // 找到表格组件元素
+    var ele = this.$$element("table_c8r2w8");
+    if (ele && ele.$el) {
+        // 首先清除旧标记
+        var oldls = ele.$el.querySelectorAll("tr[old-click='old-click']");
+        if (oldls.length) {
+            for (let i = 0; i < oldls.length; i++) {
+                let n = oldls[i];
+                if (n) {
+                    // 仅做标记
+                    n.removeAttribute("old-click", "old-click");
+                    n.style.backgroundColor = "unset";
+                }
+            }
+        }
+
+        // params.id为列表中的主键列，根据实际情况调整
+        var selector = "tr[data-row-key='" + params.id.value + "']";
+        var ls = ele.$el.querySelectorAll(selector);
+        if (ls.length) {
+            for (let i = 0; i < ls.length; i++) {
+                let node = ls[i];
+                if (node) {
+                    // 仅做标记
+                    node.setAttribute("old-click", "old-click");
+                    node.style.backgroundColor = "#F0F9FF";
+                }
+            }
+        }
+    }
+}
+列表数据加载后自动选中第一条数据
+首先需要在列表中开启单选或复选，并设置主键列，然后在表格组件的高级面板绑定动作onTableChange
+function main(list) {
+    if (!list || !list.length) {
+        return;
+    }
+
+    // 参数 list 为当前页所有记录
+    console.log(list, "数据");
+
+    // 获取需要勾选的记录
+    var selectData = list[0];
+    // 获取该行记录对应的 rowkey
+    var rowkey = this.setRowkey(selectData);
+    // 设置选中
+    this.setRowSelection({
+        selectedRowKeys: [rowkey],
+        selectedRows: [selectData]
+    });
+}
+卡片列表数据加载后自动选中第一条数据
+首先添加 didMount(进入卡片列表后) 动作设置变量标志是否首次进入
+function main() {
+    window.customSettingChecked = false
+}
+然后添加 onListChange(卡片列表数据变化) 动作
+function main() {
+    const ele = this.$$element("card_container_4gz27u");
+
+    // 注意事项
+    // 1. ListChange 动作在每次数据更新都会调用，这里使用 window.customSettingChecked 来判断是否仅设置一次
+    // 2. 每次更新数据都会清空上一页选中的内容
+    // 3. 在表格 didMount 阶段设置 window.customSettingChecked = false
+    if (window.customSettingChecked) {
+        return;
+    }
+
+    if (ele && ele.dataList && ele.dataList.length && ele.onCheckedChange) {
+        var item = ele.dataList[0];
+        ele.onCheckedChange("radio", item, true);
+        window.customSettingChecked = true;
+    }
+}
+列表字段自定义渲染标签样式
+列表字段自定义渲染多个字段标签样式文本：
+配置显示方式为自定义
+自定义渲染脚本
+function render(h, value, rows) {
+    // 签收状态
+    const sign = rows.sign_human_id.value || false;
+    // 标题文本
+    const eventTitle = rows.event_title.value || '-';
+
+    // 自定义渲染
+    return h('span', [
+        sign ? h('span', { style: { color: '#11c79b' } }, '[已签收] ') : h('span', { style: { color: '#ff4433' } }, '[未签收] '),
+        h('span', eventTitle)
+    ]);
+}
+渲染效果
+通过脚本设置列表关键字检索组件的值
+function main(){
+  //查找关键字检索组件元素  
+  var a = this.$$("search_option_1009ho"); 
+  // 取获取并判断当前环境是vue2还是vue3
+    var version = window.__MAGIC__["vue@version"];
+    console.log("vue版本：", version);
+    if (version === "vue3") {
+        const input = document.querySelector("#search_option_1009ho_csshandler_generate .ant-input");
+        if (input) {
+            input.value = "123";
+            // 设置值
+
+            // 创建并触发 change 事件
+            const event = new Event('change', { bubbles: true });
+            input.dispatchEvent(event);
+        }
+    } else {
+        a.keyword = "123";
+    }    
+}
+上传附件组件预览pdf,word,音频文件
+【上传附件】组件上传pdf，word或音频文件后预览列表时点击需要下载。在列表部件增加“动作面板”的didMount脚本，在绑定动作“进入卡片列表后”。注：excel和mp4视频文件点击有单独的下载功能，不需要这样配置。
+// 当页面渲染完毕后马上调用下面的函数，这个函数是在当前页面 - 设置 - 生命周期 - 页面加载完成时中被关联的。
+export function didMount_appListPreview() {
+  // 定义支持的文件类型 501:word,503:ppt,502:excel,601:pdf
+  var downloadTypes = ["501", "doc", "503", "ppt", "601", "pdf"];
+  api.FILE_HANDLE("preview", function (fileRecord, option) {
+    var isDirectDownload = fileRecord.url && fileRecord.mediaType && downloadTypes.includes(fileRecord.mediaType);
+    if (!isDirectDownload) {
+      isDirectDownload = fileRecord.url && fileRecord.type && downloadTypes.includes(fileRecord.type)
+    }
+    if (isDirectDownload) {
+      const url = location.origin + fileRecord.url;
+      if (url.indexOf("preview-video") > 0) {
+        url = url.replace("/preview-video", "/download");
+      }
+      window.open(url, "_blank");
+      return true;
+    }
+    return false;
+  });
+}
+3.2.13 移动卡片列表刷新
+$$refreshData();不传参数默认强制刷新，{ remote: false } ,true强制刷新，false不强制刷新(每隔3秒刷新)。同理，树部件也支持；
+function main() {
+    const card = this.$$('card_container_fkq8pq');
+    // 不强刷新，每隔3秒刷新 true强制刷新，false不强制刷新
+    card.$$refreshData({ remote: true });
+}
+页面场景
+常用场景
+页面列表刷新并重置分页
+function main() {
+    // 获取页面列表组件 page_widget_list_1ris5q 页面列表组件id
+    var pageListEle = this.$$("page_widget_list_1ris5q");
+    // 获取列表渲染页实例
+    var listRenderView = pageListEle.$$getRenderElement();
+    // 获取当前显示的组件，表格或者卡片
+    var currentListEle = listRenderView.$$getListElement();
+    // 调用刷新方法
+    currentListEle.$$refreshData();
+}
+页面中表单提交后自动回退上一个页面
+function main() {
+  const self = this;
+  var formPartEle = this.$$("form_part_bv3373");
+  if (formPartEle) {
+    formPartEle.$$getRenderElement().onSave().then((res) => {
+      if (res && res.result) {
+        self.$message.success("提交成功");
+        let pageRenderElement = self.$$getRouteView();
+        if (pageRenderElement){
+          pageRenderElement.goHistory(-1);
+        }
+      }
+    });
+  }
+}
+页面中树点击与列表部件联动
+在页面中树组件的高级面板中绑定动作onclick()点击树节点事件，并配置如下自定义动作脚本，脚本中提供了两种方式，一种是以列表的列名作为参数进行过滤，另一种是给列表的查询组件赋值进行过滤
+function main(params) {
+
+    // 节点参数
+    console.log(params);
+    
+    const pageRootList = this.$$roots();
+    let rootPageElement = pageRootList[0];
+    // 找到页面中的列表组件元素
+    let pageTableList = rootPageElement.$$element("page_widget_list_6fzqcs");
+    if (pageTableList) {
+        if (pageTableList.dataEngine && pageTableList.dataEngine.state) {
+            // 给列表组件设置参数，参数名meter_id为要过滤列表中的列名，后面为参数值，取自树节点参数
+            pageTableList.$children[0].$$setExtraParams({
+                meter_id: params.id
+            })
+            // 如果需要点击根节点时清除列表的过滤条件，通过如下方式
+            // if (pageTableList.$children[0].params["meter_id"])
+            //     delete pageTableList.$children[0].params["meter_id"]
+            
+            // 找到列表部件中的表格组件元素
+            let tableComp = pageTableList.dataEngine.state.getElement("table_9yz13r");
+            if (tableComp) {
+                //执行列表刷新
+                tableComp.$$refreshData();
+            }
+            // 如果要给列表的查询组件传参赋值，需要找到组件的model进行赋值，见如下示例
+            // let queryElement = pageTableList.dataEngine.state.getElement("query_field_wrapper_c2ucbt");
+            // if (queryElement && queryElement.data && queryElement.data.members) {
+            //     const queryProjectIdModel = queryElement.data.members[0];
+            //     queryProjectIdModel.props.defaultValue.value = params.data.regionID;
+            //     queryProjectIdModel.props.defaultValue.value = "5,12";
+            // }
+            // let tableCondition = pageTableList.dataEngine.state.getElement("condition_d2cmhw");
+            // if (tableCondition) {
+            //   setTimeout(function() {
+            //     tableCondition.onQuery();
+            // })
+            // }
+        }
+            
+        }
+    }
+}
+页面中的树加载时自动选中第一个节点
+在页面中的组件的高级面板绑定动作，on-data-change（数据发生变化）事件，配置如下自定义动作脚本
+function main() {
+    // 获取页面树实例
+    var pageTreeEle = this.$$("page_tree_eo93oh");
+    // 获取树渲染实例
+    var treeRenderEle = pageTreeEle.$$getRenderElement();
+    // 获取当前树实例
+    var treePanelEle = treeRenderEle.$$getTreeElement();
+    // 获取第一个节点
+    var firstNode = treePanelEle.$$getFirstNode();
+    treePanelEle.$$clickNode(firstNode);
+}
+更多场景
+页面中表单数据提交动作
+function main() {
+    // form_part_bv3373 表示页面上表单组件的id，可以在选中表单组件后，点击右侧高级面板查看获取
+    var formPartEle = this.$$("form_part_bv3373");
+    if (formPartEle) {
+        // 主动触发表单组件的提交方法
+        formPartEle.onSubmit();
+    }
+}
+有些时候需要基于表单提交的回调事件，取返回值做相关处理，可采用如下脚本（res中可以取到执行的结果及本次提交的数据信息），两者的区别：onSubmit是在onSave的基础上又封装了一层，不需要取Render元素，但是没有返回值；
+function main() {
+  var formPartEle = this.$$("form_part_bv3373");
+  if (formPartEle) {
+    formPartEle.$$getRenderElement().onSave().then((res) => {
+      if (res && res.result) {
+        this.$message.success("提交成功");
+      }
+    });
+  }
+}
+另外onSave方法是在.$$saveData()方法的基础上做了封装，加了校验，所以如果要跳过表单的校验，可以直接调用
+formPartEle.$$getRenderElement().$$saveData()方法来提交数据。
+为防止短时间内多次点击提交按钮导致重复提交数据，可在提交按钮的自定义动作中调用表单数据提交方法之前先调用按钮的加载中方法，表单数据提交之后的回调里取消按钮加载中状态，如下示例
+function main() {
+  let formPartEle = this.$$("form_part_e17vft");
+  const that = this;
+  if (formPartEle) {
+    //先调用按钮的加载中方法
+    that.$$startDataLoading(); 
+    formPartEle.$$getRenderElement().onSave().then((res) => {
+       //取消按钮的加载中方法
+      that.$$stopDataLoading();
+      if (res && res.result) {
+        this.$message.success("提交成功");
+      }
+    });
+  }
+}
+页面中表单数据连续提交动作
+function main() {
+    // form_part_bv3373 为页面上表单组件的id，可以在选中表单组件后，点击右侧高级面板查看获取
+    var formPartEle = this.$$("form_part_bv3373");
+    if (formPartEle) {
+        // 主动调用表单的连续提交方法
+        formPartEle.onContinuousSubmit();
+    }
+}
+页面中表单重置动作
+function main() {
+    // form_part_bv3373 为页面中表单组件的id，可以通过选中组件后，点击右侧高级面板查看获取
+    var formPartEle = this.$$("form_part_bv3373");
+    if (formPartEle) {
+        // 主动调用表单组件的重置方法
+        formPartEle.onReset();
+    }
+}
+页面交互效果：常与列表后置动作列表数据刷新动作联合使用。
+页面中修改表单模式为只读或编辑
+function main() {
+  // 找到页面中的表单组件元素
+  var targetForm = this.$$("form_part_duyhcc");
+
+  // 如果是只读模式，则将表单设置为编辑模式
+  if (targetForm.data.props.mode == 'view') {
+    targetForm.data.props.mode = 'edit';
+  }
+}
+页面中树点击与表单部件联动
+场景：当点击树节点时，取选中节点字段的值，给表单中的组件赋值；如果点树节点需要反查表单的数据，需要传参数documentNo；
+function main(params) {
+    // 节点参数
+    console.log(params);
+    // 找到页面中的表单渲染组件
+    var pageFormWidget = this.$$("form_part_f286fq");
+
+    if (pageFormWidget && pageFormWidget.$children) {
+        // 真正的表单部件
+        var formRender = pageFormWidget.$children[0];
+        // 给表单传参
+        // 参数名single_select_7u0r6t为表单组件的id，参数值为树节点的字段值
+        // 如果点树节点需要反查表单的数据，需要传参数documentNo
+        formRender.$$setFormValue({
+            "single_select_7u0r6t": params.data.id
+        });
+    }
+
+}
+页面中树点击与详情部件联动
+function main(params) {
+    // 节点参数
+    console.log("节点参数", params);
+  
+    const pageRootList = this.$$roots();
+    let rootPageElement = pageRootList[0];
+
+    // 找到页面中的详情部件元素
+    var pageDetail = rootPageElement.$$element("page_detail_dgyay4");
+    var detailRootElement = pageDetail.$children[0];
+
+    if (detailRootElement) {
+        var dataEngine = detailRootElement.dataEngine
+        // 将树节点参数赋给详情，有一个参数名匹配即可查出数据
+        dataEngine.defaultParams = params;
+        dataEngine.queryData();
+    }
+}
+页面中树点击与另一个树部件联动
+function main(params) {
+    // 节点参数（点击树节点）
+    console.log(params);
+
+    const pageRoot = this.$$roots();
+    let rootPageElement = pageRoot[0];
+    // 找到页面中的被联动树部件元素
+    let pageTree = rootPageElement.$$element("page_tree_dhmkrk");
+    if (pageTree) {
+        if (pageTree.dataEngine && pageTree.dataEngine.state) {
+            // 给树部件设置参数，参数名meter_id为要过滤树中的列名，后面为参数值，取自树节点参数
+            pageTree.$children[0].$$setExtraParams({
+                meter_id: params.data.id
+            })
+            // 找到树部件中的树面板元素（打开树形部件设计器，选中树面板在右侧高级面板中）
+            let treeComp = pageTree.dataEngine.state.getElement("tree_panel_h499yn");
+            if (treeComp) {
+                //执行树数据刷新
+                treeComp.$$refreshData();
+            }
+        }
+    }
+}
+页面中树点击与动态部件渲染组件联动
+在页面中树组件的高级面板中绑定动作onclick()点击树节点事件，并配置如下自定义动作脚本
+function main(params) {
+    // 节点参数
+    console.log("节点参数", params);
+   
+    // 找到页面中的动态部件渲染组件
+    var dynamicWidgetForm = this.$$element("dynamic_widget_render_fq70hr");
+    // 给动态部件渲染组件赋值
+    // 参数id需要赋值为要打开的部件id（取自树节点参数）
+    // 参数type为部件类型，普通表单为NORMAL_FORM、列表为LIST
+    if (dynamicWidgetForm) {
+        dynamicWidgetForm.data.props.widgetPageProps = {
+            id: params.data.columns['widget_form_id'],
+            type: "NORMAL_FORM"
+        }
+    }
+}
+页面中树形部件新增数据的后置刷新树同时选中新增的节点
+本示例是针对打开表单部件弹窗新增节点的后置脚本
+function main(defaultParams) {
+    // 在表单部件中的数据保存成功时刷新树
+    if (defaultParams.moduleActionType === 'form-save') {
+        // 表单保存成功的回调
+        var self = this; // 重置作用域
+        var treePanel = self.findElement("tree_panel_1g58v4"); // 获取树面板元素
+
+        // 保持树当前滚动到的位置
+        treePanel.keepTreePositon();
+        // 执行数据刷新
+        treePanel.$$refreshData().then(()=>{
+            // 选中新增的数据节点
+            if (defaultParams.id && treePanel.$$clickNode) {
+              //如果是异步树，需要增加下面注释的这一行展开节点的方法调用，指定节点的所有上级节点均会展开
+              //treePanel.$$setExpandKeys([defaultParams.id]);
+                treePanel.$$clickNode({key:defaultParams.id});
+            }
+        });
+    }
+}
+页面中列表新增按钮取树的当前节点值作为参数
+function main() {
+    var treeSelect = this.$$("tree_panel_em08qo").$$getSelection().selectedKeys[0];
+    if (treeSelect){
+        var self = this;
+        jumpToPage(self, treeSelect);
+    }
+
+}
+
+function jumpToPage(self, treeSelect) {
+    var element = self;
+    var rootPageElement = null;
+
+    while (element) {
+        if (element.getPageInfo && element.goHistory) {
+            rootPageElement = element;
+            break;
+        } else {
+            element = element.$parent;
+        }
+    }
+    console.log("rootPageElement", rootPageElement)
+    if (rootPageElement) {
+        // 更新页面数据
+        rootPageElement.getPageInfo('8380ffd7-3638-4389-a9ed-abd804efdce6');
+        // 设置其他参数
+        rootPageElement.extra['single_select_3ujfcu'] = treeSelect;
+    }
+}
+页面中列表按钮点击获取列表的查询组件输入的值作为参数打开另一页面
+在按钮的动作面板中配置自定义参数，脚本如下，本示例是获取列表上时间范围选择组件输入的值作为参数
+function main(defaultParams) {
+    // 找到列表中查询组件的元素
+    let qe = this.findElement("query_field_wrapper_e68jar");
+    // 由于getCurrentValue方法是异步执行的，因此 用Promise实现异步转同步
+    return new Promise((resolve, reject) => {
+        // 取到组件输入的值
+        let curValue = qe.getCurrentValue();
+        
+        curValue.then((curDate) => {
+            let params = {};
+            if (curDate && curDate.length == 2) {
+                params = {
+                    'submit_date': curDate[0] + "," + curDate[1],
+                    'submitter_pm': defaultParams["5e6c49b2-d06a-468d-a7a5-545c5ce4159a"]
+                };
+            } else {
+                params = {
+                    'submitter_pm': defaultParams["5e6c49b2-d06a-468d-a7a5-545c5ce4159a"]
+                };
+            }
+            resolve(params);
+        }).catch(err => {
+            reject(err);
+        });
+    });
+}
+列表页面新增按钮打开新增页面的回退事件基于条件判断是否刷新列表
+场景说明：在页面中的列表顶部操作->新增按钮上配置自定义动作打开新增页面，新增页面提交数据并返回时需要刷新列表，新增页面没有提交数据而且取消或返回时不刷新列表。
+配置方案：在新增按钮的动作中打开页面时传一个对象类型的路由参数，在新增的表单页面的提交按钮上将路由参数取到并赋一个值，在取消按钮上给路由参数赋另一个值；在打开新增页面的回调中取返回的参数值，基于参数值来判断是否刷新列表；
+列表页面的新增按钮动作配置如下：
+function main() {
+
+    var self = this; // 重置作用域
+    var tableComp = self.findElement("table_41aa0j"); // 获取表格元素
+    // 调用跳转页面的方法，将当前上下文和表格元素做为参数
+    jumpToPage(self, tableComp);
+}
+
+function jumpToPage(self, tableComp) {
+    var element = self;
+    var rootPageElement = null;
+    // 循环向上找页面根元素，就是有页面回退方法的元素
+    while (element) {
+        if (element.getPageInfo && element.goHistory) {
+            rootPageElement = element;
+            break;
+        } else {
+            element = element.$parent;
+        }
+    }
+    if (rootPageElement) {
+        // 定义页面路由参数
+        const params = {
+            extraParams_: { actionType: { action: "send"} }
+        };
+        // 执行页面跳转，将定义的路由参数传进去
+        rootPageElement.getPageInfo("c31d346e-8edd-4b97-89b1-8f8ef76e0b96", "PAGE", params, () => {
+            console.log("下级页面回退后动作回调", params);
+            // 基于下级页面回退后返回的参数值进行判断，当时提交类型的操作时，执行列表刷新，否则不执行
+            if (params && params.extraParams_.actionType.action === "commit"){
+                if (tableComp) {
+                    tableComp.$$refreshData();
+                }
+            }          
+        });
+        // 设置需要传递给下级页面的参数
+        rootPageElement.extra['text_input_2s2pde'] = "参数值";
+    }
+}
+在新增页面的表单提交按钮上配置如下脚本
+function main() {
+  const self = this;
+    // 找到页面中的表单部件元素
+    var formPartEle = this.findElement("form_part_7yifq0");
+    if (formPartEle) {
+        const formInput = formPartEle.$$getRenderElement();
+        // 执行表单提交数据的方法
+        formInput.onSave().then((res) => {
+            if (res.result) {
+                this.$message.success("提交成功");
+                // 数据提交成功后找到页面render
+                let pageRenderElement = self.$$getRouteView();
+                // 在页面reder中找到新增按钮上传过来的路由参数
+                let extraParams = pageRenderElement.currentParams.extraParams;
+                // 将参数的值赋值为对应的操作类型
+                if (extraParams) {
+                    extraParams.actionType.action = "commit";
+                }
+                // 执行页面回退动作，执行之后新增按钮上调整页面的回调即回响应并能取到赋值的参数操作类型
+                pageRenderElement.goHistory(-1);
+            }
+        });
+    }
+}
+在新增页面的表单取消按钮上配置如下脚本
+function main() {
+    // 找到页面render元素
+    let pageRenderElement = this.$$getRouteView();
+    console.log("pageRenderElement",pageRenderElement);
+    // 在页面reder中找到新增按钮上传过来的路由参数
+    let extraParams = pageRenderElement.currentParams.extraParams;
+    // 将参数的值赋值为对应的操作类型
+    if (extraParams) {
+        extraParams.actionType.action = "cancel";
+    }
+    // 执行页面回退动作，执行之后新增按钮上调整页面的回调即回响应并能取到赋值的参数操作类型
+    pageRenderElement.goHistory(-1);
+}
+移动表单页面获取当前表单渲染部件组件的值跳转到其他页面
+场景说明：移动表单页面表单提交或者编辑成功后跳转其他页面
+配置方案：在按钮中是使用自定义js获取当前部件组件的值，跳转到下一页面
+表单页面的按钮动作配置如下：
+function  main() {
+    var element = this;
+
+    // 获取当前部件元素的值
+    var formEle = element.findElement("form_part_9ch0oj");
+    var form = formEle.$$getRenderElement(); 
+ 
+     if (formEle) {
+       // 读取当前值
+       form.$$copyData().then(currentdata => {
+           ///console.log("currentData ", currentdata);
+           const formData = currentData?.result?.data;
+           const documentNo = formData.documentNo;
+           const formTableRecord = formData["t_4b1cc70807ee423fa315c5bf09990743-xxxx"]
+           const fieldXxx = formTableRecord.builtin_field_xxxx;
+
+          const applicationId = form.state.applicationId;
+          const tokenKey = `${applicationId}:access_token`;
+          const casKey = `${applicationId}:cas_access_token`;
+          const token = localStorage.getItem(casKey) || localStorage.getItem(tokenKey) || "";
+
+           // 使用vue router 跳转
+          this.$router.push({
+              name: "page-preview",
+              query: {
+              title: "hello",
+              pageId: 'a99c6c5a-2bae-4acb-b125-f2fce7f43bda',
+              documentNo: documentNo,
+              fieldXxx: fieldXxx,  
+              token,  // 版本1.4.2 以后 token可不传
+              showHeader: this.$route.query.showHeader,
+              isFromAction: "1",
+              _t: new Date().getTime() + ""
+             }
+          });
+
+       });
+     }
+}
+移动端跳转时name参数说明如下：
+页面加载时打开指定的tab页签
+在页面动作面板的页面didMount方法中加如下脚本，然后在页面加载完成时事件上绑定动作->页面JS，选该didMount方法。
+export function didMount() {
+  // 查找标签页组件元素
+  let tabEle = this.$$element("tabs_8qhbvl");
+  console.log("tabEle", tabEle);
+  // 将标签页面设置为指定的序号，序号从1开始
+  tabEle.params.currentTab=2;
+}
+页面中多标签页列表点击标签页刷新对应列表
+function onTabClick(tab) {
+    console.log("选中tab序号",tab)
+    var self = this; // 重置作用域
+    if (tab === 1) { // 点击第一个tab页签
+        // 获取页面列表组件 page_widget_list_1ris5q 页面列表组件id
+        var pageListEle = self.$$("page_widget_list_5s9fr7");
+        // 获取列表渲染页实例
+        var listRenderView = pageListEle.$$getRenderElement();
+        // 获取当前显示的组件，表格或者卡片
+        var currentListEle = listRenderView.$$getListElement();
+        // 调用刷新方法
+        currentListEle.$$refreshData();
+    }
+    if (tab === 2) { // 点击第二个tab页签
+        // 获取页面列表组件 page_widget_list_1ris5q 页面列表组件id
+        var pageListEle1 = self.$$("page_widget_list_faaydv");
+        // 获取列表渲染页实例
+        var listRenderView1 = pageListEle1.$$getRenderElement();
+        // 获取当前显示的组件，表格或者卡片
+        var currentListEle1 = listRenderView1.$$getListElement();
+        // 调用刷新方法
+        currentListEle1.$$refreshData();
+    }
+    if (tab === 3) { // 点击第三个tab页签
+        // 获取页面列表组件 page_widget_list_1ris5q 页面列表组件id
+        var pageListEle2 = self.$$("page_widget_list_cyin9b");
+        // 获取列表渲染页实例
+        var listRenderView2 = pageListEle2.$$getRenderElement();
+        // 获取当前显示的组件，表格或者卡片
+        var currentListEle2 = listRenderView2.$$getListElement();
+        // 调用刷新方法
+        currentListEle2.$$refreshData();
+    }
+
+}
+页面中控制指定标签页的显隐
+function main() {
+  // 查找标签页组件元素
+  var tabEle = this.$$("tabs_cvqf5r");
+  
+  if(tabEle)
+  {
+    //设置指定索引的标签页是否可见，序号从1开始
+    tabEle.data.children[1].props.visible = false;
+    //设置指定索引的标签页选中
+    tabEle.params.currentTab=2;
+  }
+}
+页面加载时给表单赋默认值
+此处需要区分给组件赋值和表单赋默认值的区别：组件赋值之后，点重置按钮数据会被清除，赋默认值则重置不会清除；
+在有些场景中，表单中会用到不需要用户填写但是需要存储的隐藏组件，该组件的值通过打开表单时由外部传入，如果表单上配置了重置按钮的情况下，需要用到给表单赋默认值，避免点重置时数据被清掉。
+在页面动作面板的页面didMount方法中加如下脚本，然后在页面加载完成时事件上绑定动作->页面JS，选该didMount方法。
+export function didMount() {
+  // 首先找到表单部件的render，其中form_part_3xb962为页面中的表单部件id
+  let renderEle = this.$$element("form_part_3xb962").$children[0];
+  // 方法1 在render中调用$$setExtraParams方法给表单赋默认值
+  // text_input_3u7qc3为表单中的组件id
+  renderEle.$$setExtraParams({ 
+    text_input_3u7qc3: "参数值1",
+    text_input_3u7qc8: "参数值2"
+  });
+}
+页面中的列表与地图交互动作配置
+在列表表格组件高级面板，绑定动作onTableChange（表格数据变化），使用如下脚本：
+function handleData(dataList) {
+    console.log("表格数据变化回调", dataList)
+    //将列表当前页数据赋予list
+    list = dataList.map(row => {
+        return {
+            id: row.id.value,
+            y: row.coordX.value,
+            x: row.coordY.value,
+            address: row.address.value
+        }
+    });
+    // 获取列表组件
+    let widgetListCom = this.$$element("page_table_list_bskslc");
+    // 获取地图组件的model
+    let mapData = this.$$model("map_base_dyccct");
+    // 设置图层数据
+    mapData.members[0].props.defaultValue.value= list;
+    // 设置中心点
+    if (list.length) {
+        mapData.props.mapConfig.coordX = list[0].x;
+        mapData.props.mapConfig.coordY = list[0].y;
+    }
+}
+实现效果：
+页面中打开对话框或抽屉并传参
+页面中多弹窗配置示例
+页面（弹窗方式打开）中的自定义按钮关闭弹窗
+function main() {
+    console.log(this);
+    if (window.parent) {
+        window.parent.postMessage(JSON.stringify({
+            event: "close-dialog",
+            param: { "XXX": "test" }
+        }), "*");
+    }
+}
+一键清除页面中表单组件填写的内容
+直接调用表单的onReset()方法，即重置方法，是将表单恢复至初始状态，如果表单打开的时候组件上有默认值，onReset会重置为默认值，并不会清除内容；有些场景中希望能将默认值也清掉，就使用如下脚本；（vue2 和 vue3 均适用）
+function main() {
+    //找到页面中的表单部件
+    var formPartEle = this.$$element("form_part_6obtmc");
+    //找到部件的Render
+    const formInputView = formPartEle.$$getRenderElement();
+    console.log(formInputView);
+    // 清空（默认值不清除）
+    // formInputView.onReset();
+  
+    // 重置时会重置到 defaultValues
+    // 注意，设置默认值时，按照表单结构设置
+    formInputView.$$setDefaultValues({ "root_dqcmzn": { "text_input_3wydm7": "456" } });
+    // 设置默认值时会锁定表，如果后续有其他操作，先解锁
+    formInputView.state.unlockWriteData()
+    // 重置
+    formInputView.onReset();
+}
+清除页面中的表单组件上的校验状态
+页面中的表单有提交按钮又有暂存按钮的情况下，提交按钮要走必填校验，暂存按钮需跳过必填校验，需在暂存按钮上用$$saveData()方法跳过校验；如果先点了提交按钮，组件上校验了必填不通过，此时再点暂存按钮仍无法保存，原因是组件上已经有了校验不通过的状态，此时就需要在暂存按钮上先清除校验状态，用如下脚本进行清除，然后再执行saveData()；
+formPartEle.$children[0].state.elements.forEach((com) => {
+    if (com.resetValidate) {
+      com.resetValidate(false)
+    }
+});
+打开表单页面通过传参给表单中明细表格组件某一列的多条数据赋值
+从列表页面打开表单页面时，希望通过把列表某个字段的值传给表单的明细表格；列表页面传参配置给之前一样，表单页面上的接收参数的映射名是表单中明细表格里对应组件的id，如下图；
+实现思路是在表单的didmount中增加如下脚本，获取到接收的参数值，并给明细表格中的组件赋值
+function main() {
+    // 明细表格编辑模式，开启固定行模式
+    // debugger
+    const detailTableEle = this.$$("detail_table_468zno");
+    console.log("明细表格：", detailTableEle);
+    const formPartEle = this.$$("form_part_7yx4ml")
+    const value = formPartEle.extraParams["text_input_b7vxha"];
+    if (value) {
+        for (let i = 0; i < detailTableEle.data.props.list.length; i++) {
+            detailTableEle.$$setCellValue(i, "text_input_b7vxha", value);
+        }
+    }
+}
+导入数据时基于外部传参填充某一列的值
+场景说明：如下图场景，点击左侧部门树节点之后过滤了右侧的列表，然后点列表的导入按钮时，所属部门字段不需要用户在excel中填写，希望自动填充到数据库对应字段中；
+配置方案：在导入按钮上绑定表单之后，配置填充字段，选择所属部门，值类型选常量可随意配一个默认值；然后在列表数据变化事件上用js脚本取到传递过来的部门参数并设置该填充字段的值；
+页面中导入按钮在画板中无法直接选中目前没有对应的高级面板来查看组件id（这里后续会做优化），目前可以通过在导入按钮上右键点击“检查”，在Elements中可以找到
+示例脚本如下：
+function main() {
+    //找到导入按钮组件的model，页面中的导入按钮的id获取
+    const importDataModel = this.$$m("import_data_hksg9s");
+    //取到点击树时传递过来的参数值
+    const deptId = this.$$("page_widget_list_85q59n").$children[0].params.department_id;
+    console.log("deptId",deptId)
+    if (importDataModel) {
+        const operateParams = importDataModel.props.operateParams;
+        //判断填充字段数量大于0时，给对应索引的填充字段赋值，fieldsMap[0]代表第一个填充字段以此类推
+        if (operateParams.fieldsMap && operateParams.fieldsMap.length > 0) {
+            importDataModel.props.operateParams.fieldsMap[0].columnValue = deptId;
+        }
+    } else {
+        this.$message.info("导入组件没有找到");
+    }
+}
+表单中存在多个标签页的情况下提交数据时自动定位到校验不通过的标签页和对应组件的位置
+场景说明：如下图场景，多个页签中均有组件校验，且有可能校验不通过的组件不在当前标签页或当前显示区域；
+示例脚本
+function main() {
+    var self = this;
+    var formPartEle = this.$$element("form_part_anzido");
+    
+    if (formPartEle) {
+        let pageRenderElement = this.$$getRouteView();
+        var formEle = formPartEle.$$getRenderElement();
+
+        formEle.$$validateData().then((res) => {
+            if (!res.success) {
+                var target = formEle.state.validate.target;
+                console.warn("validate failed ", target)
+                var targetEle = self.$$(target.id);
+                console.warn("validate failed ele ", targetEle)
+                var targetTabEle = targetEle;
+                while (targetTabEle.$parent) {
+                    if (targetTabEle.$el && targetTabEle.$el.classList && targetTabEle.$el.classList.contains("ant-tabs-tabpane")) {
+                        break;
+                    }
+                    targetTabEle = targetTabEle.$parent;
+                }
+                console.warn("validate failed target tab ele ", targetTabEle)
+
+                var tabIndex = targetTabEle.$parent.$children.indexOf(targetTabEle)
+                // switch tab
+                document.querySelectorAll("#form_part_anzido_csshandler_generate #tabs_d87ea9_csshandler_generate .ant-tabs-nav [role='tab'].ant-tabs-tab")[tabIndex].click()
+                // scroll into visible
+                targetEle.$el.scrollIntoView()
+                return;
+            }
+            
+            formEle.onSave().then((res) => {
+                if (res && res.result) {
+                    console.log("获取存储数据的结果", res);
+                    if (pageRenderElement) {
+                        pageRenderElement.goHistory(-1);
+                    }
+                }
+            });
+        })
+    }
+}
+列表页面【删除】后强制刷新详情
+场景说明：待@黄天补充 498242 灵珑版本：V
+示例脚本：
+其他场景
+通过脚本设置自定义按钮组件的文本
+针对列表中的操作列、顶部操作或页面中拖的自定义按钮组件，首先找到按钮组件元素，然后通过属性进行设置
+function main(){
+    var btnEle = this.$$("custom_button_ay0wre"); //custom_button_ay0wre为按钮组件的id
+    let title = "123"; //要设置的按钮文本值
+    if(btnEle)
+    {
+      btnEle.data.props.operateItem.title = title;
+    }
+}
+详情部件中的自定义按钮获取详情字段的值
+当前执行环境上下文，state.record 里面存储了当前所有字段值，以一个对象的格式存储，需通过record[fieldName].value 获取
+function main() {
+    const self = this; // 获取上下文
+    const rcd = self.state.record; // 取到当前记录的所有字段
+    console.log(rcd.fieldName.value);  //取指定字段的值，fieldName为字段名
+}
+详情部件中展示签名的图片
+签名展示配置步骤：
+1. 隐藏字段里要拖入原始的签名字段
+2. 使用 SIGN  公式
+3. 字段显示方式配置成自定义
+function render(h, value, rows) {
+    let url = value;
+    const accessToken = api.APP_TOKEN()
+    if (accessToken) {
+        url += "?access_token=" + accessToken;
+    }
+    if (url) {
+        return h("img", {
+            src: url,
+            style: { marginBottom: "0.16rem", width: "0.64rem", height: "0.64rem" },
+            attrs: { src: url }
+        })
+    } else {
+        return h("span", null, value);
+    }
+}
+实现效果：
+参考链接：
+详情部件设计器
+多层级部件间参数传递
+场景描述：涉及部件，两个表格部件、一个表单部件，由表格A通过部件弹窗打开表格B，并且设置条件参数，在打开的表格B中继续通过部件弹窗打开表单C，并且将表格A设置的参数作为表单C某些组件的初始化值。
+配置方案：
+配置表格A的部件弹窗，打开表格B，参数设置为  title: 测试标题多级传递
+配置表格B的表单部件加载脚本，通过脚本实现部件弹窗
+function main() {
+    // table_c7tlwy 可通过查看表格的高级属性的唯一标识获取
+    let parentEle = this.$$element("table_c7tlwy");
+  // 使用内置的部件弹窗api
+  // this 默认赋值；"NORMAL_FOROM" 部件类型为表单；
+  // "5210a895-5064-4c6e-9cc2-8afbfdcaa873" 为对应要打开的表单部件的id（可通过访问对应表单的url获取）；
+  // params 传递的参数 key-value 对应表单中的组件标识
+  // linkAction isDetail: false 设置表单部件打开后为编辑模式（更多参数见动作交互使用说明书）
+  // callback 表单部件回调
+    api.WIDGET_DIALOG(this, "NORMAL_FORM", "5210a895-5064-4c6e-9cc2-8afbfdcaa873", {
+        params: {
+            "text_input_gr1yzk": parentEle.params['title']
+        },
+        linkAction: {
+            isDetail: false
+        },
+        callback: (actionType, params) => {
+            console.log(actionType, params);
+        }
+    });
+}
+获取表格标识
+获取表单标识
+实现效果：
+调用手机端原生API
+场景描述：
+手机端页面获取当前定位，确认案件位置与当前的相对距离
+前置条件：
+配置移动端插件，从插件预览中获取移动端链接
+如果使用钉钉、微信，需要配置好相关的appId、appSecret
+如果使用纯web环境，请使用配置https
+配置方案：
+function main() {
+    const jsi = api.MB_JSI();
+    //console.log("获取 jsi ", jsi)
+    const that = this;
+
+    jsi.location.getLocation({}).then((res) => {
+        //console.warn("获取定位信息 ", res);
+        
+        const textArea = that.$$model("text_91hgvr");
+        textArea.props.defaultValue.value = JSON.stringify(res)
+
+    }).catch(err => {
+        console.error(err)
+    });
+}
+实现效果：
+附表：支持的原生API
+树部件开启复选后数据加载时选中指定的节点
+在树部件上开启复选之后，希望树加载时选中指定的一批节点，可以在树面板组件的数据变化事件（on-data-change）上增加如下脚本
+function main(){
+    //获取树数据list
+    const list = this.smoothTree(this.renderTreeData);
+    const checkedKeys = [];
+    const selectedData = [];
+    //获取主键列名
+    const idColumName = this.getIdColumnName();
+    //循环判断哪些节点选中
+    list.forEach(x => {
+        //先判断节点可被选中
+        if (x.checkable) {
+            //获取节点的key值
+            const nodeKy = x[idColumName] || x.data[idColumName];
+            //判断key值是否为指定的要选中的key
+            if(nodeKy == '21' || nodeKy == '22')
+            {
+                checkedKeys.push(nodeKy);
+                selectedData.push(x);
+            }         
+        }
+    });
+    this.checkedKeys = checkedKeys;
+    this.selectedData = selectedData;
+}
+使用 addEventListener
+如果在脚本中直接使用 addEventListener，由于没有对应的 removeEventListener，会存在内存泄漏风险
+在任务 450566中，提供 $$addEventListener方法，其 API 与 window.addEventListener 保持一致，调用后在组件销毁时会执行 removeEventListener，避免内存泄漏问题
+该方法已经挂载到 BaseElement 上，即任意组件均可使用
+示例代码
+function main() {
+    this.$$addEventListener(
+        "message",
+        (event) => {
+            console.log("receive data", event);
+        }
+    )
+}
+6 JS集成应用
+6.1 JS脚本打开iframe页面
+493243 @黄帆更新
+7 FAQ
+《动作交互FAQ》
+
+[表格0]
+目标页面类型 | name | 备注
+页面 | page-preview | 
+表单部件 | form-preview | 
+详情部件 | detail-preview | 
+列表部件 | card-list-preview | 
+移动登录页 | login-preview | 
+移动首页 | app-home-preview | 
+
+[表格1]
+分类 | 名称 | 描述 | 使用样例
+设备 | device.scan | 扫一扫功能。 | https://rax.js.org/docs/api/scan: https://rax.js.org/docs/api/scan
+设备 | device.systemInfo | 获取系统信息。 | 
+设备 | device.makePhoneCall | 拨打电话。 | 
+导航栏 | navigation.setNavigationBarTitle | 动态设置当前页面的标题。 | 
+页面导航 | navigate.close | 关闭当前原生页面WebView | 
+多媒体 | media.chooseImage | 从本地相册选择图片或使用相机拍照。 | 
+多媒体 | media.chooseVideo | 拍摄视频或从手机相册中选视频。 | 
+文件 | file.download | 下载文件。参数{url}，返回结果中tempFilePath 字段为文件保存的路径 | 源码： http://gitlab.egova.com.cn:8000/mobile-middle-platform/universal-web-container/-/blob/develop/packages/universal-js-sdk/src/egova/file/index.ts: http://gitlab.egova.com.cn:8000/mobile-middle-platform/universal-web-container/-/blob/develop/packages/universal-js-sdk/src/egova/file/index.ts
+文件 | file.openDocument | 打开文件。参数{localFilePath}指定文件的本地路径，麒舰或智信 app 会打开手机上支持的 app 来打开文件 | 源码： http://gitlab.egova.com.cn:8000/mobile-middle-platform/universal-web-container/-/blob/develop/packages/universal-js-sdk/src/egova/file/index.ts: http://gitlab.egova.com.cn:8000/mobile-middle-platform/universal-web-container/-/blob/develop/packages/universal-js-sdk/src/egova/file/index.ts
+文件 | file.openDownload | {url，name}， 小程序 WebView 中可以使用 | 
+位置 | location.getLocation | 获取当前的地理位置，该接口返回的均为WGS84（World Geodetic System）坐标，即GPS坐标。 | https://rax.js.org/docs/api/getLocation: https://rax.js.org/docs/api/getLocation
+ | location.navigateTo | 导航到指定位置，该接口坐标参数为WGS84（World Geodetic System）坐标，即GPS坐标。 | 

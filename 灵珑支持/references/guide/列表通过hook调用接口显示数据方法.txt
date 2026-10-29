@@ -1,0 +1,26 @@
+列表通过hook调用接口显示数据方法
+1 使用场景
+在进行配置列表时，会存在使用后端接口或自定义接口的情况作为数据源，因此需要配置hook调用接口作为列表的数据源。
+灵珑详细配置文档：《列表查询基于Hook查询》，以下为一个示例。
+2 效果
+配置hook后在列表中显示接口所请求的数据。
+3 配置
+导入api方法，如果没有现有的api，自己新建可以参考文档《灵珑API接口配置举例说明》
+在数据管理里面打开API管理，找到需要的API接口
+按键盘F12 打开浏览器控制台，打开网络选项后，然后点击接口，找到上图所示接口id复制
+打开表格列表高级
+找到HOOK配置设置方法代码如下，将复制的id替换进去
+function main(pageId, param) {
+    return new Promise((resolve, reject) => {
+        console.log(param)
+        api.API_DATA_EXECUTE("e3f6bdd0-32a1-4903-973d-e9fdc2b05aed", "WIDZOM", param, { lostAbility: "01" })
+            .then(res => {
+                console.log(res);
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+    })
+}
+4 常见问题
+在预览数据时会出席数据的总条数为1条，需要刷新后数据才能全部加载

@@ -1,0 +1,12 @@
+{
+  "_note": "合成测试样例（fixtures），仅用于验证链路。实例名按脱敏风格命名，不代表任何真实实例。",
+  "instance": "MYS-RO-REDACTED",
+  "role": "只读副本 (read-only replica)",
+  "alert": "iowait 告警 24.87%，持续超过阈值",
+  "window": "2026-10-02 10:00 ~ 10:10（需人工核对与告警窗口对齐）",
+  "cpu_cores": 16,
+  "memory_gb": 64,
+  "mysql_version": "8.0.x",
+  "engine": "InnoDB",
+  "buffer_pool_gb": 32
+}

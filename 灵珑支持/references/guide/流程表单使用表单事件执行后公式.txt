@@ -1,0 +1,183 @@
+流程表单使用表单事件执行后公式
+1 使用场景
+在实际的应用中，业务表中不存在documentNo字段，但是流程表单是需要通过documentNo这个字段与业务表进行关联，默认收件方式无法和流程表单关联。于是使用API进行收件时将业务表中的唯一id（主键）作为关联条件，则在收件时需要将业务表中的id值赋值给流程表单的documentNo用来对两个表的关联。
+示例：业务表（law_card_info）
+流程表单的配置可参考：《PC应用搭建步骤（含流程）》
+2 效果
+在表单进行新增后会触发收件操作，触发后会有当前业务表的信息与当前触发的流程相关的信息进行绑定，以便于可以查看当前业务数据的所在流程。
+3 配置
+在触发收件的表单中点表单的高级，进入到表单事件进行增加业务关联规则；
+在业务关联规则中选择执行后公式；
+公式的编写和说明
+FLOW_START('a77f469a-3151-47c9-bb50-2785c17b50e5',ENTITY_SELECT_ONE('t_4beacafcf80b4dee89519ea39f573b31','id',QUERY_EQ('identity_no',身份证号)))
+说明：
+a77f469a-3151-47c9-bb50-2785c17b50e5 为流程表单的页面id
+t_4beacafcf80b4dee89519ea39f573b31 为实体表对应的标识id
+id 为实体表（law_card_info）中的逻辑主键id，用来与流程表单相关联
+QUERY_EQ('identity_no',身份证号) 相当与数据库中的 WHERE identity_no = “身份证号”
+视图的编写，以待办为例
+select 
+  taskId,
+  processInstanceId,
+  defineId,
+  userId,
+  createTime,
+  nodeName,
+  nodeId,
+  recordId,
+  recordName,
+  documentNo,
+  teamId,
+  pageId,
+  id,
+  patrol_flag,
+  law_cert_code,
+  create_time,
+  update_time,
+  card_type_code,
+  card_type_name,
+  work_unit_id,
+  work_unit_name,
+  human_name,
+  gender_id,
+  gender_name,
+  nation_code,
+  nation_name,
+  birthday,
+  politics_type_code,
+  politics_type_name,
+  education_degree_code,
+  education_degree_name,
+  identity_no,
+  duty,
+  work_type_code,
+  work_type_name,
+  start_work_time,
+  certificate_validity_time_start,
+  certificate_validity_time_end,
+  professional_law_scores,
+  exam_time,
+  law_qualification_flag,
+  qualification_certificate_flag,
+  public_lawyer_flag,
+  law_major_flag,
+  remark,
+  qualification_code,
+  qualification_name,
+  card_status_code,
+  card_status_name,
+  law_area_code,
+  law_area_name,
+  law_region_code,
+  law_region_name,
+  enforcement_category_code,
+  enforcement_category_name,
+  enforcement_type_code,
+  enforcement_type_name,
+  law_enforcement_post,
+  law_enforcement_duties,
+  valid_flag,
+  delete_flag,
+  effective_date,
+  litigant_type_id,
+  litigant_type_name,
+  card_code,
+  phone,
+  major,
+  tableAlias.rank AS rankName,
+  work_status_code,
+  work_status_name,
+  illegal_history,
+  business_institution,
+  qualification_update_time
+ from (  SELECT
+      _main.ID_ taskId,
+      _main.PROC_INST_ID_ processInstanceId,
+      _main.PROC_DEF_ID_ defineId,
+      _main.ASSIGNEE_ userId,
+      _main.CREATE_TIME_ createTime,
+      _main.NAME_ nodeName,
+      _main.TASK_DEF_KEY_ nodeId,
+      record.id recordId,
+      record.name recordName,
+      record.documentNo documentNo,
+      record.teamId teamId,
+      record.pageId pageId,
+      card.id,
+      card.patrol_flag,
+      card.law_cert_code,
+      card.create_time,
+      card.update_time,
+      card.card_type_code,
+      card.card_type_name,
+      card.work_unit_id,
+      card.work_unit_name AS card_work_unit_name,
+      card.human_name AS card_human_name,
+      card.gender_id,
+      card.gender_name AS card_gender_name,
+      card.nation_code,
+      card.nation_name,
+      card.birthday,
+      card.politics_type_code,
+      card.politics_type_name,
+      card.education_degree_code,
+      card.education_degree_name,
+      card.identity_no,
+      card.duty AS card_duty,
+      card.work_type_code,
+      card.work_type_name,
+      card.start_work_time,
+      card.certificate_validity_time_start,
+      card.certificate_validity_time_end,
+      card.professional_law_scores,
+      card.exam_time,
+      card.law_qualification_flag,
+      card.qualification_certificate_flag,
+      card.public_lawyer_flag,
+      card.law_major_flag,
+      card.remark,
+      card.qualification_code,
+      card.qualification_name,
+      card.card_status_code,
+      card.card_status_name,
+      card.law_area_code,
+      card.law_area_name,
+      card.law_region_code,
+      card.law_region_name,
+      card.enforcement_category_code,
+      card.enforcement_category_name,
+      card.enforcement_type_code,
+      card.enforcement_type_name,
+      card.law_enforcement_post,
+      card.law_enforcement_duties,
+      card.valid_flag,
+      card.delete_flag,
+      card.effective_date,
+      card.litigant_type_id,
+      card.litigant_type_name,
+      card.card_code,
+      card.phone,
+      card.major,
+      card.rank,
+      card.work_status_code,
+      card.work_status_name,
+      card.illegal_history,
+      card.business_institution,
+      card.qualification_update_time,
+      human.human_name,
+      human.work_unit_name,
+      human.gender_name,
+      human.duty
+
+FROM
+act_ru_task _main
+INNER JOIN lcwf_process_record record ON _main.PROC_INST_ID_ = record.processInstanceId 
+    INNER JOIN law_card_info card ON record.documentNo = card.id
+    INNER JOIN law_human_extend_info human ON card.identity_no = human.identity_no
+WHERE
+_main.ASSIGNEE_ IS NOT NULL 
+ORDER BY
+_main.CREATE_TIME_ DESC  ) tableAlias where tableAlias.defineId like '1fb6de9a87%'
+law_card_info为业务表
+//将业务表与流程表单id进行关联
+INNER JOIN law_card_info card ON record.documentNo = card.id

@@ -1,0 +1,67 @@
+数据源对接api的方法
+1 使用场景
+当一个组件的数据需要来自api的时候，我们首先在api管理配置api，然后再部件页面的数据源中选择添加刚刚配置好的api接口，最后在组件数据选项中选择网关数据，绑定刚刚创建好的数据源。
+2 效果
+3 配置
+不同组件的数据展示不同，所以js获取接口数据后的封装也不同，如下：
+a.下拉框组件获取数据脚本：
+function fit(result) {
+  // fit用于成功解析数据源响应后回调
+  // result为数据源返回结果
+  // 一般为JSON字符串，建议先进行JSON.parse(result)操作)
+  // 若要配置到select的option上则需要保证返回结构包含label及value属性
+  function restructureArray(arr) {
+    return arr.reduce((accumulator, currentItem) => {
+      accumulator.push({
+        label: currentItem.name,
+        value: currentItem.id,
+      });
+      return accumulator;
+    }, []);
+  }
+  let newList = restructureArray(JSON.parse(result).result)
+  // console.log("newList===>", newList)
+  return newList;
+}
+b.级联组件获取数据脚本：
+function fit(result) {
+  // fit用于成功解析数据源响应后回调
+  // result为数据源返回结果
+  // console.log(result,"result")
+  // 如果是api接口 则需要进行数据格式的转换
+  // const newRes = JSON.parse(result).result;
+  /* 获取区划 */
+  let filterData = (data, needAll, parent) => {
+    let list = (data || []).map(item => {
+      return {
+        value: item.id,
+        label: item.name,
+        id: item.id,
+        text: item.name,
+        regionType: item.type,
+        regionId: item.id,
+        children: item.chirldren && item.chirldren.length ? filterData(item.chirldren, true, item) : ""
+      }
+    });
+
+    if (needAll) {
+      list.unshift({
+        value: parent.id,
+        label: "全部",
+        id: parent.id,
+        text: "全部",
+        regionType: parent.type,
+        regionId: parent.id
+      })
+    }
+
+    return list;
+  }
+  // 一般为JSON字符串，建议先进行JSON.parse(result)操作)
+  // 若要配置到select的option上则需要保证返回结构包含label及value属性
+  const newList = filterData(result)
+  // console.log("newList====>", newList)
+  return newList;
+}
+4 常见问题
+无。

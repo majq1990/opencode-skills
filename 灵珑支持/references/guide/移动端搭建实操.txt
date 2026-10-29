@@ -1,0 +1,49 @@
+移动端搭建实操
+搭建要求
+按照截图搭建一个移动端列表，包含以下功能：
+悬浮新增按钮，点击打开表单
+表单提交后，列表刷新
+列表点击打开详情页面
+列表样式和详情样式还原
+实操材料
+1.实体
+案件表：请至钉钉文档查看附件《mis_rec_sql.txt》。
+多媒体表：为灵珑自身的表，导入即可
+2.视图
+select
+rec_id as documentNo,
+rec_id,
+create_time,
+rec_type_name,
+event_src_name,
+main_type_name as '大类名称',
+        sub_type_name as '小类名称',
+sub_type_name,
+event_type_name,
+event_desc,
+event_level_name,
+address,
+district_name,
+street_name,
+community_name,
+cell_name ,
+task_num,
+coordinate_x,
+coordinate_y,
+road_name,
+new_inst_cond_name,
+archive_cond_name,
+        patrol_name
+from
+mis_rec a
+
+ORDER BY 
+create_time desc
+SELECT patrol_id,rec_id, create_time, rec_type_name,event_src_name, event_src_id, main_type_name, sub_type_name, event_type_name, event_desc,event_level_name,address, district_name, 
+    street_name, community_name, cell_name , task_num, coordinate_x, coordinate_y,road_name,new_inst_cond_name,archive_cond_name,occur_time as '事发时间',archive_time as '案件办结时间','未立案' as rec_status
+    FROM 
+        mis_rec a 
+    order by 
+        create_time desc
+搭建参考
+http://10.255.18.61:8080/linglong/workspace.html#/1830133884030894080-2999-93be/page-build/page/1830568530480807936-2999-93be?isMobileMode=1，可联系胡雪芸获取账户，地址为内网地址

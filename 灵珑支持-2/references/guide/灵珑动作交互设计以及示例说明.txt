@@ -1,0 +1,196 @@
+灵珑动作交互设计以及示例说明
+页面层级
+页面结构
+组件查找
+动作发起
+动作配置
+配置入口
+动作前后置
+动作分类
+脚本组成
+前端SDK
+后端公式
+高频公式：
+数据库函数：数据库CURD操作
+流程公式：流程能力调用
+API函数：三方服务调用
+逻辑公式：公式组合
+条件公式：
+面向对象条件公式
+公式：EQ、NOT、GE、GT、IN、LT、NE、ANT、OR、XOR
+面向SQL条件公式
+公式：SQL_QUERY_GT、SQL_QUERY_GTE、SQL_QUERY_EQ、SQL_QUERY_OR、SQL_QUERY_LT、SQL_QUERY_LTE、SQL_QUERY_AND
+分支嵌套：
+IF公式
+IF(A,B,C),A必须是逻辑值，如果满足条件 A，则返回 B，否则返回 C
+用法：IF(GT(2,1), 1, 0)，返回1
+IF_FORMULA公式
+用于按条件执行公式。逻辑公式IF，会计算每个表达式，无法选择某个分支执行；因此提供该公式达到按条件执行分支公式的目的。IF_FORMULA(A,B,C),A必须是逻辑值，如果满足条件 A，执行B；否则执行C
+用法：注意：如果分支表达式为公式，必须用""双引号包裹起来，否则执行报错。用法示例：IF_FORMULA(GT(2,1), "UPPER(单行文本)", "LOWER(文号字段)")，条件GT(2,1)计算结果为false，因此只会执行第二个分支，不会触发UPPER公式的执行（分支不仅支持公式，也支持常量，比如：IF_FORMULA((GT(2,4), "UPPER(单行文本)",'1')）。
+脚本模板
+公式调用
+function main(defaultParams) {
+  var self = this;
+  //参数为完整公式表达式的字符串，如需要传入变量则需要做字符串拼接
+  //本示例为在列表的操作列按钮上调用公式向某个实体表中插入一条记录,其中topic_id字段的值来自列表中的列
+  //可能根据需求调用自己需要的公式
+  api.EXEC_FORMULA("INSERT('t_ef558151b4154a6c8df6dc32552ce677',['id',UUID(),'topic_id','" + defaultParams['topic_id'] + "','creator',USER_USERNAME()])").then((res) => {
+        // then() 为调用成功的回调
+        console.log("res",res);
+    
+    }).catch(err => {
+        self.$message.error(err.message); // 显示错误提示信息
+    });
+}
+数据源调用
+方法签名
+/**
+     * 执行数据源
+     * @deprecated 请使用 DATA_EXECUTOR().DATA_EXECUTOR 方法
+     * @param id api或ddcat资源的id
+     * @param sourceType 资源类型
+     * @param queryParams 查询参数
+     * @param formParams 表单参数
+     * @param jsonParams json参数
+     * @param formDataParam FormData文件参数
+     * @returns
+     */
+    DATA_SOURCE_EXECUTE: (
+        id: string,
+        sourceType: "api" | "ddcat",
+        queryParams: ApiParam[],
+        formParams: ApiParam[],
+        jsonParams: any,
+        formDataParam?: FormData
+    ): Promise<ServiceResult> =>
+参数说明
+示例脚本
+export function onLocationChange(params) {
+  if (!params) {
+    return;
+  }
+  const { gridCode } = params;
+  let self = this;
+  const districtEle = self.$("single_select_2q1j8q");
+  const streetEle = self.$("single_select_1m8trm");
+
+
+  api.DATA_SOURCE_EXECUTE("f63243b0-b33d-4971-a97f-ebae629db54f-cfe4", "api", [
+    { name: "cellCode", valueContent: gridCode }
+  ], [], "").then(res => {
+    debugger
+    if (!res.hasError) {
+      const data = JSON.parse(res.result);
+      console.log(data);
+      if (data.success && data.data) {
+        const { street, district } = data.data;
+        // street 街道信息
+        // cell 网格信息
+        // community 社区信息
+        districtEle.$$setValue(district.regionID);
+        streetEle.$$setValue(street.regionID);
+        districtEle.onChangeValue();
+      }
+    }
+  }).catch(err => {
+    console.error(err);
+  });
+
+}
+脚本调试
+debugger调试
+在脚本中添加debugger关键字，打开预览页面F12时，触发动作会定位到debugger位置。
+可以切换到控制台标签，编写脚本来查看当前作用域变量数据状态。如：输入this可以当前元素信息。
+输入arguments可以查看当前方法参数信息
+vue2调试模式
+F12在控制到执行如下代码
+// 1.在先获取根节点Vue 实例
+let el = document.querySelector('#app')||document.querySelector('#__nuxt')
+let app = el.__vue__||el.children[0].__vue__;
+
+// 2.获取该实例的构造函数 
+let Vue = app.constructor ;
+// 3.获取Vue的基类 
+while (Vue.super) { 
+    Vue = Vue.super ;
+} 
+// 4.强制开启 
+Vue.config.devtools = true ;
+window.__VUE_DEVTOOLS_GLOBAL_HOOK__.Vue = Vue;
+关闭F12现重新打开，会在最右侧出现Vue标签。
+点击定位按钮然后选择页面元素可以查看元素的属性。
+示例讲解
+字典管理示例
+背景说明
+灵珑构建应用涉及下拉字典数据管理，之前是基于用户中心1.0字典管理模块来完成的。但灵珑升级为用户中心2.0之后，用户中心2.0没有该功能。需要通过灵珑构建一个模块来管理应用的字典
+字典分组表：script_com_dictionary_group
+字典类型表：script_com_dictionary_type，其中groupId为script_com_dictionary_group的id
+字典项表：script_com_dictionary_item，其中type为script_com_dictionary_type的id，groupId为script_com_dictionary_group的id，parentId为script_com_dictionary_item的id
+页面设计
+页面布局
+交互说明
+字典分组
+分组新增：点击新增->弹窗->输入分组信息->保存->刷新分组树，默认选中新增节点
+节点单击：点击分组节点数据->右侧字典类型列表刷新显示对应数据
+数据加载：打开页面，默认选中第一个分组节点
+分组编辑：点击编辑回显，修改->保存->刷新，默认选中为编辑节点
+分组删除：点击删除，删除字典分组及以下的字典类型和字典项，物理删除
+字典类型
+新增类型：新增类型，分组默认为左侧选中的分组节点
+字典项设置：获取字典类型->打开字典项管理，展示字典类型下的字典项
+字典删除：提示确认->删除字典类型->删除字典项->刷新列表，物理删除
+字典项管理
+顶部新增字典项：打开字典项表单->保存->刷新字典项管理树（需要赋值字典分组、字典类型、无需赋值上级id）
+添加子项：打开字典项表单->保存->刷新字典项管理树（需要赋值字典分组、字典类型、需要赋值上级id）
+编辑字典项：点击编辑回显，修改->保存->刷新，默认选中为编辑节点
+删除字典项：字典项无下级时，展示删除按钮，删除字典项->刷新列表，物理删除；字典项有下级时，不展示删除按钮，
+作业说明
+按照以上内容完成交互和传参，配置时无需关注应用id
+使用以下地址配置：http://10.250.1.50:8080/linglong/index.html
+切换到灵珑配置员团队，在交互动作练习分组下导入应用，以自己姓名命名
+导入应用，必须开启重新生成数据，数据源选择练习库
+请至钉钉文档查看附件《application-zidianshujuguanli-20240709172701538.zip》。
+培训视频
+请至钉钉文档查看附件《2-灵珑进阶-灵珑JS培训.mp4》。
+
+[表格0]
+页面路由 为页面的顶层，主要处理页面跳转逻辑，包括参数传递 | 部件/部件渲染 会根据页面或部件ID获取页面信息，并传根组件来一层一层生成组件对应组件 | 页面渲染组件 把配置绑定的页面或部件传递给渲染部件生成部件信息 | 基础元素组件 是页面基础组件是般和一个具体元素组件
+
+[表格1]
+方法名 | 元素查找 | 模型找到
+向上查找 | $$element('xxx') | $$model("xxxx")
+向下查找 | $$element('xxx',true) | $$model("xxxx",true)
+最近根 | $$root() | 
+所有根 | $$roots() | 
+由顶向下找 | $$("xxxx") | $$m("xxxxx")
+查找页面路由 | $$getRouteView() | 
+查找页面/部件渲染组件 | $$getRenderElement() | 
+
+[表格2]
+人工触发 人工操作时触发，如： 按钮单击click事件 标签页切换 输入框值改变 | 自动触发 运行时自动触发，如： 页面加载didMount 按钮状态事件 列表hook
+
+[表格3]
+组件绑定事件 组件配置高级面板来绑定事件，并进行动作配置。配置动作为该组件独有 | 页面/部件动作配置 在页面或部件动作面板编写方法，编写脚本由页面或部件内组件共有。
+
+[表格4]
+前置动作 配置交互动作执行之前执行，常用场景 页面跳转之前根据参数不同决定是否打开页面 | 后置动作 配置交互动作执行之后执行 表单保存完之后，在后置动作来刷新列表
+
+[表格5]
+内置动作  页面跳转：url、内部页面、打开部件、前进后退 其他动作：打开弹窗、关闭弹窗、显示组件、隐藏组件 | 自定义动作 编写javascript脚本来完成动作交互
+
+[表格6]
+页面JS  引用页面或部件编写javascript | 公式动作 运行配置公式脚本
+
+[表格7]
+前端SDK 通过javascript脚本能力来处理前端交互 | 后端公式 通过公式来完成后端业务逻辑处理
+
+[表格8]
+全局方法 功能说明：全局可用的前端api信息，如实体数据删除、路由跳转 使用范围：任意脚本配置处都可使用 | 元素方法 功能说明：包括通用方法与元素特有方法， 使用范围：元素内部 | 部件方法 功能说明：主要包括部件数据查询、设置默认值或条件等 使用范围：部件渲染组件内部
+
+[表格9]
+先简后繁 明确要使用的公式之后，可以基于公式最基础参数组合开始，确保流程畅通 | 先常量后变量 公式中参数有可能来及变量，在调试过程中可以先由常量来代替，测通之后再换为变量
+
+[表格10]
+let params = [   {     name: "coordY",     valueContent: res.latitude   },   {     name: "coordX",     valueContent: res.longitude   } ]
+
+[表格11]

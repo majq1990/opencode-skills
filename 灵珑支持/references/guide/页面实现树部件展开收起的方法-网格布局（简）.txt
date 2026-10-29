@@ -1,0 +1,108 @@
+页面实现树部件展开收起的方法-网格布局（简）
+1 使用场景
+在正常的树+列表页面中，实现树部件通过按钮将树部件，展开收起的操作。
+2 效果
+3 配置
+1、这里以福建12345的坐席员配置模块作为参考，首先在需要收起展开的，网格子项左边或者右边增加一个auto尺寸的子项用来放置按钮，这边是左右结构所以放在中间，参考配置需要现场为准（PS：只需要放置按钮的保证是auto尺寸就行，现场配置不一定强按照下面格式 ）；
+2、配置向左向右的按钮，将两个按钮拖到，第1点新建的网格子项中，配置样式，可以参考我提供的样式代码进行配置，也可以自定义配置；
+//向左
+#custom_button_cu4rsb_csshandler  .ant-btn {
+    position: fixed;
+    z-index: 66;
+    margin-top: 2rem;
+    margin-left: -0.08rem;
+    margin-right: 0px;
+    background-color: rgba(51, 136, 255, 0.2);
+    border: 1px solid rgba(51, 136, 255, 0.5019607843137255);
+    border-radius: 0.08rem;
+    padding-top: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+    display: flex;
+    width: 0.16rem;
+    height: 0.6rem;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+//向右
+#custom_button_egfnsz_csshandler  .ant-btn {
+    position: fixed;
+    z-index: 66;
+    margin-top: 2rem;
+    margin-left: -0.05rem;
+    margin-right: 0px;
+    width: 0.16rem;
+    height: 0.6rem;
+    background-color: rgba(51, 136, 255, 0.2);
+    border: 1px solid rgba(51, 136, 255, 0.5019607843137255);
+    border-radius: 0.08rem;
+    padding-top: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+}
+3、通过预览页面找到需要缩进的div块对应的代码；
+通过f12 左上角点击找到对应的元素；
+提取当前这个div块的id，演示的id为 layout_grid_lite_item_cqgxhi 。
+4、找到了第3步的div块id后可以编写相应的脚本，脚本的逻辑是，再点击收缩按钮后，将这个div的宽度设置为0，点击展开时候将其参数设置为默认填入的参数。
+缩进按钮点击触发事件；
+function main() {
+    const roots = this.$$roots()
+    if (roots.length) {
+        // debugger
+        gridEle = roots[0].$$element("layout_grid_lite_item_cqgxhi");
+        // console.log("gridEle", gridEle._props.data.props.LayoutgridItemConfig.gridTemplate.value)
+            //tableSize的参数为当前网格布局简设置的值，需要与页面对应上
+      let tableSize = 3;
+        if (gridEle) {
+            if (gridEle && gridEle._props.data.props.LayoutgridItemConfig.gridTemplate.value == tableSize) {
+                gridEle._props.data.props.LayoutgridItemConfig.gridTemplate.value = 0;
+            } else {
+                gridEle._props.data.props.LayoutgridItemConfig.gridTemplate.value = tableSize;
+            }
+        }
+        const rigthEle = this.$$m("custom_button_egfnsz");//展开按钮
+        if (rigthEle) {
+            rigthEle.props.behavior.value = "NORMAL";
+        }
+        const leftEle = this.$$m("custom_button_cu4rsb");//缩进按钮
+        if (leftEle) {
+            leftEle.props.behavior.value = "HIDDEN";
+        }
+    }
+}
+展开按钮；
+function main() {
+    //debugger
+    const roots = this.$$roots()
+    if (roots.length) {
+        gridEle = roots[0].$$element("layout_grid_lite_item_cqgxhi");
+        // console.log("gridEle", gridEle._props.data.props.LayoutgridItemConfig.gridTemplate.value)
+            let tableSize = 3;
+      //tableSize的参数为当前网格布局简设置的值，需要与页面对应上
+        if (gridEle) {
+            if (gridEle && gridEle._props.data.props.LayoutgridItemConfig.gridTemplate.value == tableSize) {
+                gridEle._props.data.props.LayoutgridItemConfig.gridTemplate.value = 0;
+            } else {
+                gridEle._props.data.props.LayoutgridItemConfig.gridTemplate.value = tableSize;
+            }
+        }
+        const rigthEle = this.$$m("custom_button_egfnsz");//展开按钮
+        if (rigthEle) {
+            rigthEle.props.behavior.value = "HIDDEN";
+        }
+        const leftEle = this.$$m("custom_button_cu4rsb");//缩进按钮
+        if (leftEle) {
+            leftEle.props.behavior.value = "NORMAL";
+        }
+    }
+}
+tableSize值对应的位置。
+4 常见问题
+无

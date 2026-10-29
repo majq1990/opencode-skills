@@ -1,0 +1,90 @@
+在页面中根据数据状态动态控制页面顶部按钮显隐状态
+1 使用场景
+列表页面中，列表数据存在多种状态，在进入查看页面时，需要根据列表数据的状态进入到同一页面中对于一些特殊的操作需要控制按钮的显示与隐藏。
+2 效果
+用户在当前状态为待缴款时点击查看进入到查看页面中需要在页面中展示标记已缴款按钮，在其他状态点击查看时不可查看该按钮。
+3 配置
+在列表页面中点击查看时需要传递当前列表所选行的id（documentNo）以及当前行对于的状态
+function main(defaultParams) {
+    debugger
+    var self = this; // 重置作用域
+    var tableComp = self.findElement("table_pyzjs"); // 获取表格元素
+    let documentNo = defaultParams['documentNo'].value;
+    let license_plate_number = defaultParams['license_plate_number'].value;
+    let vehicle_type_code = defaultParams['vehicle_type_code'].value;//当前状态
+    let dataList = { documentNo, license_plate_number, vehicle_type_code }
+    // 调用跳转页面的方法，将当前上下文和表格元素做为参数
+    jumpToPage(self, tableComp, dataList);
+}
+
+function jumpToPage(self, tableComp, dataList) {
+    var element = self;
+    var rootPageElement = null;
+    // 循环向上找页面根元素，就是有页面回退方法的元素
+    while (element) {
+        if (element.getPageInfo && element.goHistory) {
+            rootPageElement = element;
+            break;
+        } else {
+            element = element.$parent;
+        }
+    }
+    if (rootPageElement) {
+
+        rootPageElement.$$open("1830426553554649088", "PAGE", {
+            title: "返回",
+            cached: false,
+            backStep: 1,
+            showHeader: true,
+            extraParams: {
+                documentNo: dataList.documentNo,
+                text_input_2p3mro: dataList.license_plate_number,
+                text_input_ft1b1f: dataList.vehicle_type_code,
+                // text_input_ft1b1f:
+                actionType: { action: "update" }
+            }, // 部件弹窗的回调（对表单部件有效）
+            callback: (actionType) => {
+                debugger
+                console.log(actionType);
+                let pageRenderElement = self.$$getRouteView();
+                // 在页面reder中找到新增按钮上传过来的路由参数
+                let extraParams = pageRenderElement.$$getRenderElement().extraParams;
+                if (extraParams && extraParams.actionType.action === "commit") {
+                    if (tableComp) {
+                        tableComp.$$refreshData();
+                    }
+                }
+            }
+        });
+    }
+}
+在查看页面中需要接收该documentNo和当前状态值，将documentNo传到详情页面中后会获取详情信息。
+在详情查看页面中添加操作项按钮，并默认该按钮隐藏。
+在页面加载didMount时候获取页面中传递的参数并根据状态值动态控制按钮的显隐以及更改其他页面状态
+function main(){
+    let _self = this;
+    const DETAILPAGE = "page_detail_c5mwmp";//获取详情页面
+    var cardInfo = getDetailValue(_self, DETAILPAGE)
+    console.log(cardInfo);
+    // 获取详情页中的punish_status_code的值
+    let punishStatusCode = cardInfo.punish_status_code.value;
+
+    //判断当前状态值，为4 或 6 时对状态修改为可见
+    if (punishStatusCode === "4" || punishStatusCode === "6"){
+        // NORMAL 可见
+        _self.$$m('custom_button_44khgx').props.behavior.value = 'NORMAL';
+        _self.$$m('text_input_6h067j').props.behavior.value = 'NORMAL';
+        _self.$$m("text_input_6h067j").props.validationEnabled = true;
+        // _self.$$m('text_input_6h067j').resetValidate = 'NORMAL';
+        _self.$$m('text_input_eyvpom').props.behavior.value = 'NORMAL';
+        _self.$$m('text_input_4f0rkh').props.behavior.value = 'NORMAL';
+        _self.$$m('text_input_f5r2wj').props.behavior.value = 'NORMAL';
+    }
+}
+
+
+function getDetailValue(_self, detailId) {
+    var pageDetail = _self.$$(detailId);
+    var data = pageDetail.$$getRenderElement().state.record;
+    return data;
+}

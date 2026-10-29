@@ -1,0 +1,75 @@
+页面中地图与列表行数据进行点位交互
+1 使用场景
+列表和地图存在于同一页面，需要实现点击列表数据行，对应展示地图位置和地址信息于地图中的场景。
+2 效果
+点击行数据，将对应坐标点位显示在地图中。
+3 配置
+选择页面中列表，打开高级设置，选择onRowClick行点击事件
+在自定义动作里修改脚本
+替换x和y、地址的字段标识
+选择页面中地图组件，点击图层，添加点图层，进行点位样式配置。
+脚本示例：
+function main(param) {
+    let self = this;
+    debugger
+    let mapData = self.$$model('map_base_5v82hz');
+
+    //打点
+    var list = [
+        {
+            x: param["f_684c07e2a0af4a61913d2e168498170f-6d8c"],
+            y: param["f_3b275014d2324a4294b3f0684f3c0b58-6d8c"],
+            "地址": param["f_bfc39313f8ad4bd1a2d3fbf50bc0add9-6d8c"]
+        }
+    ]
+
+    // 设置图层数据
+    mapData.members[0].props.defaultValue.value = list;
+
+}
+4 常见问题
+若上述操作完成后仍无效，可尝试在列表部件中添加同样的didMount事件和JS脚本。
+若页面中包含tab页，动作面板脚本可参考如下实例：
+export function didMount(param) {
+  let self = this;
+  let tabele =self.$$('tabs_663rvt');
+  debugger;
+  
+  // var mapKey = 'map_base_3qth22';
+  
+  if(tabele.params.currentTab == 1){
+    mapKey = 'map_base_3qth22';
+  } else if (tabele.params.currentTab == 2){
+    mapKey = 'map_base_e3d32s';
+  } else if (tabele.params.currentTab == 3) {
+    mapKey = 'map_base_8kw9wi';
+  } else if (tabele.params.currentTab == 4) {
+    mapKey = 'map_base_3i4d50';
+  } else if (tabele.params.currentTab == 5) {
+    mapKey = 'map_base_72kycq';
+  } else if (tabele.params.currentTab == 6) {
+    mapKey = 'map_base_e4el51';
+  }
+  console.log(tabele.params.currentTab);
+  let mapData = self.$$model(mapKey);
+  //打点
+  var list = [
+    {
+      x: param.f_37aa17bf811e4c16b32e5fa65828eb65,
+      y: param.f_84d771d8ee8e4f699e65ea176146d2e9,
+      "地址": param.f_c5744dd7cae74b0081efc847bdfc04ea
+    }
+  ]
+
+  // 设置图层数据
+  mapData.members[0].props.defaultValue.value = list;
+
+  mapData.members[1].props.defaultValue.value = list;
+  // 设置中心点
+  if (list.length) {
+    mapData.props.mapConfig.coordX = list[0].x;
+    mapData.props.mapConfig.coordY = list[0].y;
+  }
+
+}
+注意这里点击交互动作不要写在页面的didmount方法里，配置在这里，再调用发现不生效无法触发行点击。

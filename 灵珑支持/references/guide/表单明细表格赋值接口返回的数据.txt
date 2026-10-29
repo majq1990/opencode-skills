@@ -1,0 +1,51 @@
+表单明细表格赋值接口返回的数据
+1 使用场景
+明细表格中部分列加载的数据，是通过接口返回动态加载。比如市级下发任务到区级，区级可转发子任务到下面的各个街道，街道反馈子任务后，区级再反馈时根据子任务的统计和，自动匹配赋值相应明细表格列；
+2 效果
+数量一列为该任务下的子任务反馈情况，进行的统计，自动赋值。
+3 配置
+增加表单加载完成后动作，先调用数据模型，统计子任务中下级单位的反馈总数，然后遍历明细表格的每一行，查找匹配的item_id并写入对应的数量；
+export function didMount() {
+  console.log("「页面 JS」：当前页面地址 " + location.href);
+  //获取列表到页面的传参
+  let params = this.$$getRouteView().extraParams_;
+  var docNo = params.doc_no;
+  //明细表格组件
+  let dt = this.$$("detail_table_9esxly"); 
+  //该表单多个列表调用，如果未传入该值，则不进行统计自动赋值
+  if (docNo != null) {
+    //调用数据模型，统计子任务中下级单位的反馈总数
+    api.DATA_SOURCE_EXECUTE('8834c124-c943-41d4-a41f-c972e3d8f811', 'ddcat', [
+      {
+        name: 'docNo',
+        text: '子任务文号',
+        type: 'QueryString',
+        valueContent: docNo,
+        valueType: null
+      }
+    ], [], '').then(res => {
+      if (res && !res.hasError && res.result) {
+        let resultArray = res.result;
+        // 遍历明细表格的每一行
+        dt.$$getDataList().forEach((row, rowIndex) => {
+          // 获取当前行的item_id值
+          let itemId = row['number_input_cjznju']; 
+
+          // 查找匹配的item_id并写入total_item_value
+          let matchedItem = resultArray.find(item => {
+            // 确保数据类型一致，都转换未数字类型
+            return parseInt(item.item_id) === parseInt(itemId);
+          });
+          if (matchedItem) {
+            // 如果找到匹配的item_id，则将total_item_value写入对应的组件
+            dt.$$setCellValue(rowIndex, "number_input_8k7ca4", matchedItem.total_item_value);
+          } else {
+            console.log(`未找到匹配的item_id: ${itemId}`);
+          }
+        });
+      }
+    }).catch(err => { });
+  } 
+}
+4 常见问题
+暂无

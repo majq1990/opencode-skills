@@ -1,0 +1,99 @@
+列表实现查询框传入值，通过数据模型查询进行卡片列表反选
+1 使用场景
+业务需求需要做到从麒舰栏目传过来的值，然后根据这个值查询表，然后通过表中返回的数据对当前这个卡片列表进行一个反选的操作，使用卡片列表实现类似表单多选框的效果。
+文本主要是讲解，针对数据标签反选这个交互如何实现，文本示例脚本仅在vue3下可用，vue2下可能会有问题，配置思路可参考。
+2 效果
+客户在选中行列后，点击事件标记右侧弹出嵌入麒舰的灵珑表单，并且实现，上方已经打过标签的，选中效果的回填。
+示例中，标签选择是个卡片列表，通过调用数据模型及脚本，实现将列表对应数据标签反选至卡片列表上。
+3 配置
+配置基于数据模型的api，首先建立数据模型
+配置api接口，并且获取对应的apiId
+配置页面接收的参数和列表隐藏字段，注意要跟列表种的查询框对应上
+在列表编写对应的脚本，脚本如下，具体看注释。
+function mian() {
+    // console.log('mian 函数被调用');
+    setTimeout(() => {
+        var self = this;
+        var cardEle = self.$$("card_container_1zjxwa");
+        // console.log('cardEle', cardEle);
+        var tableComp = cardEle.$vm.setupState.dataList;
+        // console.log('tableComp', tableComp);
+        var targetIdsEle = self.$$("query_field_wrapper_cgwqay");
+        // 取到组件输入的值
+        let curValue = targetIdsEle.getCurrentValue();
+        // debugger
+        // console.log(curValue);
+        curValue.then((curData) => {
+            // console.log('curData type:', typeof curData);
+            // console.log(curData);
+            // debugger
+            // 判断 curData 是否包含分号
+            if (!curData || curData.trim() === '') {
+                // console.log('字符串为空，跳出逻辑');
+                return; // 跳出后续所有代码
+            }
+            if (curData.includes(';') || curData === undefined) {
+                // console.log('包含分号，或者没有值跳出后续代码');
+                return; // 跳出后续所有代码
+            }
+            //测试数据
+            // curData = 701;
+            //获取数据模型数据，查出对应的组件
+            const query1 = [
+                {
+                    name: "recId",
+                    valueContent: curData
+                }
+            ];
+            // console.log(query1)
+            // 执行 query1
+            api.DATA_SOURCE_EXECUTE("8bf2d2a1-1795-45b5-aadc-1619cf61c8ca", "api", query1, [], "").then(res => {
+                if (!res.hasError) {
+                    // 打印result的数据
+                    // debugger
+                    const result = JSON.parse(res.result);
+                    // console.log('成功的数据:', result.result);
+                    const tagTypeIds = result.result.map(item1 => Number(item1.tag_type_id));
+                    // console.log('成功的数据:', tagTypeIds);
+                   
+                    // debugger
+                    //  && typeof cardEle.onCheckedChange === 'function'
+                    // && tagTypeIds.includes(item.tag_type_id.value)
+                    //计算两个数组的重合部分，按照重合部分进行处理选中逻辑
+                    const filteredData = tableComp.filter(item =>
+                        tagTypeIds.includes(Number(item.tag_type_id.value))
+                    );
+                    // console.log('filteredData',filteredData);
+                    // const intersection = tagTypeIds.filter(id => tableComp.includes(id));
+                    // cardEle.onCheckedChange("checkbox", tableComp[1], true);
+                    if (filteredData) {
+                        filteredData.forEach(item => {
+                            // if (item) {
+                                cardEle.onCheckedChange("checkbox", item, true);
+                                // console.log('计数减一')
+                            // } else {
+                            //     console.log('计数加一')
+                            // }
+                        });
+                    } else {
+                        console.error('未执行代码！', {
+                            tableComp,
+                            'cardEle.onCheckedChange': typeof cardEle.onCheckedChange
+                        });
+                    }
+                } else {
+                    console.error('请求错误:', res.message);
+                }
+            }).catch(err => {
+                console.error('API 调用错误:', err);
+            });
+            // var targetIds = curData.split(";");
+            // targetIds = [1, 2, 3]
+        }).catch(err => {
+            // 处理错误
+            console.error('获取 curData 时出错:', err);
+        });
+    }, 0);
+}
+4、常见问题
+这个方法只适用于嵌入麒舰的情况，因为麒舰使用的vue3的api构建的而灵珑基本上基于vue2，所以如果在vue2的环境下会可能导致找不到组件的问题，实现思路可参考。

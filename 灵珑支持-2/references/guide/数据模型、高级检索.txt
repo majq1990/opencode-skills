@@ -1,0 +1,525 @@
+数据模型、高级检索
+后置字段拼接使用场景
+现场数据量太大，单纯用视图的性能不行；
+列表的查询字段需要处理复杂逻辑，例如需要实现在工单描述字段中输入“AAA，BBB”需要在sql中需要查出来既包含AAA，也需要包含BBB的数据；
+需要根据用户权限来判断过滤当前人是否有查看全部部门的数据，还是只能查看自己部门数据的优先过滤；
+需要注意的点目前这种方式构建的列表，无法根据字段升序降序排列。
+建立数据模型
+数据视图（sql语法）
+《数据视图（sql语法）》
+视图参数配置
+sql参考如下
+select 
+    rc.work_rec_id,
+    rc.task_num,
+rc.other_task_num,
+    rc.rec_id,
+    rc.rec_type_id,
+    rc.rec_type_name,
+    rc.rec_src_id,
+    rc.rec_src_name,
+    rc.urgent_grade_id,
+    rc.urgent_grade_name,
+    rc.district_id,
+    rc.district_name,
+    rc.street_id,
+    rc.street_name,
+    rc.community_id,
+    rc.community_name,
+    rc.address,
+    rc.class1_id,
+    rc.class1_name,
+    rc.class2_id,
+    rc.class2_name,
+    rc.duty_dept_id,
+    rc.duty_dept_name,
+    rc.undertake_dept_id,
+    rc.undertake_dept_name,
+    rc.rec_property_id,
+    rc.rec_property_name,
+    rc.content_desc,
+    rc.title,
+    rc.call_number,
+    rc.call_name,
+    rc.undertake_opinion,
+    rc.finish_opinion,
+    rc.rec_status_name,
+    rc.create_time,
+    rc.finish_time,
+    extra.info_verify_flag,
+    extra.difficult_flag,
+    extra.indirect_finish_flag,
+    extra.label_nlp_version,
+    extra.label_gather_time,
+    extra.info_verify_human_id,
+    extra.info_verify_human_name,
+'' as lable_topic,
+'' as lable_subject,
+'' as lable_geography,
+'' as label_rec_type,
+'' as label_other
+FROM 
+    mis_percept_rec_info rc 
+LEFT JOIN 
+    mis_percept_rec_extra extra ON rc.work_rec_id = extra.work_rec_id
+WHERE 1=1
+
+/*时间过滤*/
+#if(createTime_start != null && createTime_start != '')
+    and rc.create_time between '${createTime_start}' and '${createTime_end}'
+#end
+
+/*工单性质*/
+#if(rec_type_id != null && rec_type_id != '')
+    and rc.rec_type_id = ${rec_type_id}
+#end
+
+/*工单编号*/
+#if(task_num != null && task_num != '')
+    AND rc.task_num in (${task_num})
+#end
+
+/*工单性质*/
+#if(rec_property_id != null && rec_property_id != '')
+    AND rc.rec_property_id = ${rec_property_id}
+#end
+
+/*工单描述*/
+#if(content_desc != null && content_desc != '')
+and rc.content_desc like '%${content_desc}%'
+#end
+
+/*类型*/
+#if(class1_name != null && class1_name != "")
+ AND (rc.class1_id IN ('${class1_name}') OR rc.class2_id IN ('${class1_name}') OR rc.class3_id IN ('${class1_name}')) 
+#end
+
+/*所属区域*/
+#if( district_name != null && district_name != "")
+ AND (district_name = ${district_name} OR street_id = ${district_name} OR community_id = ${district_name}) 
+#end
+
+/*地址描述*/
+#if(address != null && address != '')
+    and rc.address like '%${address}%'
+#end
+
+/*联系方式*/
+#if(call_number != null && call_number != '')
+    and call_number like '%${call_number}%'
+#end
+
+/*处置部门*/
+#if(undertake_dept_name != null && undertake_dept_name != '')
+    and undertake_dept_name like '%${undertake_dept_name}%'
+#end
+
+/*处置意见*/
+#if(undertake_opinion != null && undertake_opinion != '')
+    and undertake_opinion like '%${undertake_opinion}%'
+#end
+
+/*是否核验*/
+#if(info_verify_flag != null && info_verify_flag != '')
+    and extra.info_verify_flag = ${info_verify_flag}
+#end
+
+/*根据work_rec_id过滤工单*/
+#if(workRecIdArray != null && workRecIdArray != '')
+and rc.work_rec_id in (
+#for (Integer workRecId : workRecIdArray)
+  #if (for.index > 1)
+  ,
+  #end
+  '${workRecId}'
+#end
+  )
+#end
+
+/*根据task_num过滤工单*/
+#if(taskNumArray != null && taskNumArray != '')
+and rc.task_num in (
+#for (String taskNum : taskNumArray)
+  #if (for.index > 1)
+  ,
+  #end
+  '${taskNum}'
+#end
+  )
+#end
+
+/*标签过滤*/
+#if(labelNamesAId != null && labelNamesAId != "")
+AND EXISTS (SELECT id FROM mis_label_record WHERE relation_type_id = 1 AND relation_id = rc.work_rec_id AND label_id IN (${labelNamesAId}) )
+#end
+
+/*根据修改标签人员姓名过滤*/
+#if(modifyHumanName != null && modifyHumanName != '')
+and exists (select 1 from mis_percept_rec_label_modify where operate_type = 0 and modify_field_name = 'recLabel' and relation_id = rc.work_rec_id and modify_human_name like '%${modifyHumanName}%')
+#end
+
+/*根据修改标签时间过滤*/
+#if(modifyTime_start != null && modifyTime_start != '')
+    and exists (select 1 from mis_percept_rec_label_modify where operate_type = 0 and modify_field_name = 'recLabel' and relation_id = rc.work_rec_id and modify_time between '${modifyTime_start}' and '${modifyTime_end}')
+#end
+
+/*根据核验人员姓名过滤*/
+#if(verifyHumanName != null && verifyHumanName != '')
+and exists (select 1 from mis_percept_rec_label_modify where operate_type = 0 and modify_field_name = 'recVerify' and relation_id = rc.work_rec_id and modify_human_name like '%${verifyHumanName}%')
+#end
+
+/*根据核验时间过滤*/
+#if(verifyTime_start != null && verifyTime_start != '')
+    and exists (select 1 from mis_percept_rec_label_modify where operate_type = 0 and modify_field_name = 'recVerify' and relation_id = rc.work_rec_id and verify_time between '${verifyTime_start}' and '${verifyTime_end}')
+#end
+
+order by rc.create_time desc
+视图参数配置（写好sql后需要点击运行之后右侧会自动生成参数）
+根据业务逻辑调整过滤字段是否是必填
+配置api脚本
+查询参数配置
+query参数值配置（参数名称按照上一步中构建的请求参数即可）
+body参数配置（在灵珑里面查询参数超过get请求最大长度的时候使用）
+注意只有post请求才能接收使用body参数（body参数是一个json字符串）
+body参数格式如下
+{"labelNamesAId":"21408169"}
+验证构建列表
+数据视图中配置sql视图
+获取返回的参数（填如必填参数在api中点击发送即可获取响应的json字符串。PS：勾选转换后的）
+"result": [
+        {
+            "work_rec_id": "177731",
+            "task_num": "DH9915050026040103001",
+            "other_task_num": null,
+            "rec_id": null,
+            "rec_type_id": null,
+            "rec_type_name": null,
+            "rec_src_id": null,
+            "rec_src_name": "12345政务服务便民热线（本地）",
+            "urgent_grade_id": null,
+            "urgent_grade_name": null,
+            "district_id": null,
+            "district_name": "科尔沁区",
+            "street_id": null,
+            "street_name": null,
+            "community_id": null,
+            "community_name": null,
+            "address": "科尔沁区平安路与中心大街交汇处",
+            "class1_id": null,
+            "class1_name": null,
+            "class2_id": null,
+            "class2_name": null,
+            "duty_dept_id": null,
+            "duty_dept_name": null,
+            "undertake_dept_id": null,
+            "undertake_dept_name": "A班",
+            "rec_property_id": 30,
+            "rec_property_name": "求助",
+            "content_desc": "来电人反映，蒙G38833停放在科尔沁区平安路与中心大街交汇处，已阻碍其他车辆通行，已发送短信告知车主需要挪车。",
+            "title": "科尔沁区平安路与中心大街交汇处",
+            "call_number": null,
+            "call_name": null,
+            "undertake_opinion": null,
+            "finish_opinion": null,
+            "rec_status_name": null,
+            "create_time": "2026-04-01 23:17:26",
+            "finish_time": null,
+            "info_verify_flag": 0,
+            "difficult_flag": null,
+            "indirect_finish_flag": null,
+            "label_nlp_version": null,
+            "label_gather_time": "2026-05-04 00:05:33",
+            "info_verify_human_id": null,
+            "info_verify_human_name": null,
+            "lable_topic": "",
+            "lable_subject": "",
+            "lable_geography": "",
+            "label_rec_type": "",
+            "label_other": ""
+        }
+返回值的字段，构建对应的sql视图（查询过滤参数也需要创建因为灵珑的参数是从查询框传入，另外需要注意需要时间关于的date属性字段需要用NOW()来AS字段名；例如：NOW() AS create_time）
+SELECT 
+    0 AS work_rec_id,
+    '' AS task_num,
+    '' AS other_task_num,
+    '' AS rec_id,
+    '' AS rec_type_id,
+    '' AS rec_type_name,
+    '' AS rec_src_id,
+    '' AS rec_src_name,
+    '' AS urgent_grade_id,
+    '' AS urgent_grade_name,
+    '' AS district_id,
+    '' AS district_name,
+    '' AS street_id,
+    '' AS street_name,
+    '' AS community_id,
+    '' AS community_name,
+    '' AS address,
+    '' AS class1_id,
+    '' AS class1_name,
+    '' AS class2_id,
+    '' AS class2_name,
+    '' AS duty_dept_id,
+    '' AS undertake_dept_name,
+    0 AS rec_property_id,
+    '' AS rec_property_name,
+    '' AS content_desc,
+    '' AS title,
+    '' AS call_number,
+    '' AS call_name,
+    '' AS undertake_opinion,
+    '' AS finish_opinion,
+    '' AS rec_status_name,
+    NOW() AS create_time,
+    '' AS finish_time,
+    0 AS info_verify_flag,
+    '' AS difficult_flag,
+    '' AS indirect_finish_flag,
+    '' AS label_nlp_version,
+    NOW() AS label_gather_time,
+    '' AS info_verify_human_id,
+    '' AS info_verify_human_name,
+    '' AS lable_topic,
+    '' AS lable_subject,
+    '' AS lable_geography,
+    '' AS label_rec_type,
+    '' AS label_other
+列表配置（配置完列表，填写对应参数能出来数据即可）参考文档《列表通过hook调用接口显示数据方法》
+50zt地址：http://10.250.1.50:8080/linglongZT/design.html#/list-design/e86afdbb-454f-45a7-8433-cecd968d2bbc
+阿里云示例库地址：/linglong/design.html#/list-design/a09e09f8-e1b0-474b-9f9a-61f9f3531442
+通过api后置脚本增加字段
+后置脚本配置
+基本原理就是通过获取到数据模型的返回参数，然后通过返回参数中的参数把所需要外部补充的字段通过sql查询出来后，拼接到最后输出的参数中，以此方法来提升列表查询效率（可以用AI来分析这个脚本逻辑不复杂）
+现场是160以上版本的建议使用全局变量来替换 variables['env'].dealDbName  这种写法来获取数     据库名称，下面是     全局变量的使用规则
+《V1.6.0.0应用全局变量管理》
+import java.util.stream.Collectors;
+var dataMap = com.egova.json.utils.JsonUtils.deserialize(data, Map.class);
+
+var workRecIds = null;
+if(dataMap && dataMap.result && dataMap.result.size() > 0){
+    workRecIds = dataMap.result.collect {it.work_rec_id};
+    // out.println("workRecIds:" + workRecIds);
+}
+
+if (!workRecIds){
+    return 
+}
+
+var dealDbName  = variables['env'].dealDbName ;
+var queryTemplate = sql.ofNamed(dealDbName);
+var labelList = queryTemplate.forList('select relation_id as workRecId,class_id as classId, label_id as labelId,label_name as labelName,gather_src_type_id as gatherSrcTypeId from mis_label_record where relation_id in (:workRecIds) ',5000, ['workRecIds': workRecIds]);
+def labelIds = labelList.stream().map{ it.labelId }.distinct().collect(Collectors.toList());
+var labelInfoList = queryTemplate.forList('select id as labelId,name as labelName from mis_label_info where id in (:labelIds) ',5000, ['labelIds': labelIds]);
+def labelIdNameMap = labelInfoList.collectEntries { 
+    [(it.labelId): it.labelName] 
+}
+
+var labelMap = new HashMap();
+for (label in labelList) {
+    if (label.labelName == null || label.labelName == "") {
+        continue;
+    }
+    
+    var labelNameStr = null;
+    var classId = null;
+    //罗湖现场话题、主体、地理三类标签单独显示，剩下的标签显示在其他标签字段中
+    //可根据现场需求定制调整
+    if (label.classId == 1 || label.classId == 2 || label.classId ==3 
+        || label.classId == 4 || label.classId ==104){
+        classId = label.classId;
+    } else {
+        classId = 0
+    }
+
+    labelNameStr = labelMap.get(label.workRecId + '-' + classId);
+    
+    //从第二个标签开始，加“；”和前面的标签分隔开
+    if (labelNameStr == null) {
+        labelNameStr = "";
+    } else {
+        labelNameStr += "；"
+    }
+    //构造标签的打标方式
+    if (label.gatherSrcTypeId == 3){
+        labelNameStr += "【人】"
+    } else if (label.gatherSrcTypeId == 5){
+        labelNameStr += "【规】"
+    } else if (label.gatherSrcTypeId == 1){
+        labelNameStr += "【智】"
+    }
+    var labelInfoName = labelIdNameMap.get(label.labelId)
+    labelNameStr += labelInfoName;
+    labelMap.put(label.workRecId + '-' + classId, labelNameStr);
+}
+
+var verifyList = queryTemplate.forList('select work_rec_id workRecId, case when rv.topic_status_id = 0 then \'正确\' when rv.topic_status_id = -1 then \'错误\' else rv.topic_status_id end as topicStatusName, case when rv.subject_status_id = 0 then \'正确\' when rv.subject_status_id = -1 then \'错误\'else rv.subject_status_id end as subjectStatusName,opinion as verifyOpinion from mis_label_rec_verify rv where work_rec_id in (:workRecIds) ',workRecIds.size(), ['workRecIds': workRecIds]);
+
+var verifyMap = new HashMap();
+if (verifyList) {
+  for (verifyInfo in verifyList) {
+      verifyMap.put("" + verifyInfo.workRecId,verifyInfo);
+  }
+}
+
+for (var i=0; i < dataMap.result.size(); i++) {
+    recInfo = dataMap.result[i];
+    recInfo.value = variables['value'];
+    recInfo.lable_topic = labelMap.get(recInfo.work_rec_id + '-' + 1);
+    recInfo.lable_subject = labelMap.get(recInfo.work_rec_id + '-' + 2);
+    recInfo.lable_geography = labelMap.get(recInfo.work_rec_id + '-' + 3);
+    recInfo.label_complainant = labelMap.get(recInfo.work_rec_id + '-' + 4);
+    recInfo.label_respondent = labelMap.get(recInfo.work_rec_id + '-' + 104);
+    recInfo.label_other = labelMap.get(recInfo.work_rec_id + '-' + 0);
+    
+    if (verifyMap.get("" + recInfo.work_rec_id)) {
+        recInfo.topicStatusName = verifyMap.get(recInfo.work_rec_id)?.topicStatusName;
+        recInfo.subjectStatusName = verifyMap.get(recInfo.work_rec_id)?.subjectStatusName;
+        recInfo.verifyOpinion = verifyMap.get(recInfo.work_rec_id)?.verifyOpinion;
+    }
+    
+}
+return com.egova.json.utils.JsonUtils.serialize(dataMap);
+处理前，处理后对比
+处理前
+处理后
+对比可以看出来，经过后置脚本拼接后，原本虚拟的空的字段有了数据
+通过api前置脚本处理查询数据
+通过前置脚本处理传入数据
+参数在query里面，主要需要熟悉怎么获取query的参数
+//工单编号
+var taskNum = request.getQueryParam('task_num');
+//获取query参数
+if(taskNum != null && taskNum != ''){
+    var taskNumbers = formatTaskNumbers(taskNum);
+    request.setQueryParam('task_num', taskNumbers);
+}
+
+//处理工单编号符号问题
+String formatTaskNumbers(String taskNum) {
+    if (!taskNum?.trim()) return "''"
+    
+    def buffer = new StringBuilder()
+    int start = 0
+    int end = taskNum.indexOf(',')
+    
+    while (end != -1) {
+        def num = taskNum.substring(start, end).trim()
+        if (num) buffer.append("'${num.replace("'", "''")}',") // 处理单引号转义
+        start = end + 1
+        end = taskNum.indexOf(',', start)
+    }
+    
+    def lastNum = taskNum.substring(start).trim()
+    if (lastNum) buffer.append("'${lastNum.replace("'", "''")}'")
+    
+    buffer.length() > 0 ? buffer.toString() : "''"
+}
+参数在body里面主要是获取body的参数，然后将json字符串序列化，处理在反序列化回去
+var str = request.getBody().getString();
+var map = com.egova.json.utils.JsonUtils.deserialize(str, Map.class);
+var labelNamesAIds = '';
+if(map.labelNamesAId){
+    labelNamesAIds = map.labelNamesAId;
+}
+if(labelNamesAIds != null && labelNamesAIds != ''){
+    map.labelNamesAId = labelNamesAIds;
+    request.setBody(com.egova.json.utils.JsonUtils.serialize(map));
+}
+
+//处理工单编号符号问题
+String formatTaskNumbers(String taskNum) {
+    if (!taskNum?.trim()) return "''"
+    
+    def buffer = new StringBuilder()
+    int start = 0
+    int end = taskNum.indexOf(',')
+    
+    while (end != -1) {
+        def num = taskNum.substring(start, end).trim()
+        if (num) buffer.append("'${num.replace("'", "''")}',") // 处理单引号转义
+        start = end + 1
+        end = taskNum.indexOf(',', start)
+    }
+    
+    def lastNum = taskNum.substring(start).trim()
+    if (lastNum) buffer.append("'${lastNum.replace("'", "''")}'")
+    
+    buffer.length() > 0 ? buffer.toString() : "''"
+}
+通过判断当前用户权限来获取对应标志位来进行首轮过滤
+var params = request.getQueryParams();
+request.setQueryParam('startTime', params.createTime_start);
+request.setQueryParam('endTime', params.createTime_end);
+
+request.setQueryParam('labelNameSearch', params.topicName);
+request.setQueryParam('termNameSearch', params.subjectName);
+
+request.setQueryParam('pageSize', params.pageSize);
+request.setQueryParam('pageIndex', params.pageIndex);
+
+
+//获取人员是否查看条件
+var departmentPermissions = com.egova.lowcode.data.util.AppConstUtils.getValue("bd_var_6a64aca5-dc86-4f5a-8278-a69675aa427b-eda3")
+// out.println(departmentPermissions)
+var departmentId = ''
+if(params.unitId != null) {
+    if(departmentPermissions == 'false'){
+    //去掉左右[]
+             // 兼容：字符串带括号 或 真正的数组
+        def unitIds = ''
+        def raw = params.unitId
+        if(raw instanceof CharSequence || raw instanceof String) {
+            String s = raw.toString()
+            if(s.startsWith('[') && s.endsWith(']')) {
+                unitIds = s[1..-2]       // 去除左右括号
+            } else {
+                unitIds = s
+            }
+        } else if(raw instanceof Collection || raw.getClass().isArray()) {
+            unitIds = raw.join(',')      // 数组/列表 → 逗号分隔字符串
+        } else {
+            unitIds = raw.toString()
+        }
+        departmentId = unitIds;
+    }else{
+        departmentId = com.egova.lowcode.data.util.AppConstUtils.getValue("us-1")
+    }
+}
+out.println('测试  '+departmentId);
+request.setQueryParam('unitId', '');
+
+request.setQueryParam('sceneIds',departmentId);
+
+// out.println(request.getQueryParams())
+引申hook中写脚本，剔除不必要的数据
+剔除多余的参数文本
+灵珑的查询条件均存储在condition中，如果我们有某一个字段只需要展示，实际上不需要参与过滤，例如标签名称，如果选中了几千条标签，字符串长度会特别长的时候就可以在hook请求前就把参数干掉
+function main(pageId, param) {
+    // debugger
+    return new Promise((resolve, reject) => {
+        // console.log(pageId, param)
+        if(param.condition 
+            && param.condition.tableConditionDescriptor
+            && param.condition.tableConditionDescriptor.members.length > 0){
+    
+            // 从 members 中过滤掉 field 匹配的成员
+            param.condition.tableConditionDescriptor.members = 
+                param.condition.tableConditionDescriptor.members.filter(
+                    member => member.field !== "3bad5df7-62bc-42af-9da6-9ef8ce1a1625"
+                //字符串id指填写的是，查询条件在视图中的id
+                );
+        }
+        api.API_DATA_EXECUTE("5945ac16-45a1-4ac8-aae8-b6d9b57d4422", "BUNCHES", param, { lostAbility: "01" })
+            .then(res => {
+                resolve(res);
+            }).catch(() => {
+                reject();
+            })
+    })
+}
+使用脚本打印出来结果可以看到，其中我们不需要的名称字段在请求前就已经剔除
+高级搜索和表单结合列表参数查询
+高级搜索
+《高级搜索》
+http://10.250.1.50:8080/linglongZT/design.html#/list-design/a3178d2d-7a45-4809-b450-ef8132a4b4ba: http://10.250.1.50:8080/linglongZT/design.html#/list-design/a3178d2d-7a45-4809-b450-ef8132a4b4ba

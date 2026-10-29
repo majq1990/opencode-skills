@@ -1,0 +1,527 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""eUrbanMIS 单独切金仓（KingbaseES V9）并验证——端到端一把跑完。
+
+范围刻意收窄到 eUrbanMIS 一个应用：eUrbanUMA / IMserver 的 schema 映射没有默认值，
+不猜，这次不碰。
+
+四个阶段，每阶段有门禁，前一阶段不过就不往下走：
+  1. 预检（只读）  ：定位 jdbc.properties / 金仓端点 / 驱动 jar / liquibase 桥接 jar
+  2. 切换          ：改写 jdbc.properties，先备份，口令从 600 文件读，回显脱敏
+  3. 重启          ：systemctl restart tomcat-MIS，轮询 HTTP（要 --restart 才做）
+  4. 验证          ：HTTP 200 + 金仓活会话 + 真实业务 SQL + 3306 零残留 + 日志异常
+
+用法：
+    python3 emis_kb.py                       # 预检 + dry-run，什么都不改
+    python3 emis_kb.py --apply               # 预检 + 真切换（不重启）
+    python3 emis_kb.py --apply --restart     # 预检 + 切换 + 重启 + 验证
+
+口令：/root/.kb_mig_pw（600）。脚本与输出里不出现任何口令字面量。
+"""
+import datetime
+import glob
+import json
+import os
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import time
+import zipfile
+from pathlib import Path
+
+APP = "eUrbanMIS"
+PROPS = Path("/egova/web") / APP / "WEB-INF/classes/jdbc.properties"
+
+KB_DRIVER = "com.kingbase8.Driver"
+KB_VERSION = "KINGBASE"
+KB_VALID = "select 1"
+KB_USER = "mig"
+
+# eUrbanMIS 的数据源前缀 → 金仓 schema（逻辑名，小写）。只有这两个；发现别的前缀
+# 一律拒绝，不猜——猜错会把 CGDB 的数据指到别的 schema 上，而且不报错。
+# 真正的 schema 名（大小写）在预检时按大小写不敏感从 pg_namespace 查出来，
+# 见下面 SCHEMA_OF。这里写小写是因为金仓和 PostgreSQL 一样会折叠成小写。
+KNOWN_PREFIXES = {"biz": "cgdb", "stat": "cgdbstat"}
+# 预检时从库里查到的 schema 真名，URL 用这个写。
+SCHEMA_OF = {}
+
+PWD_KEYS = ("jdbc.cryptogram", "jdbc.password")
+VAL_KEYS = ("jdbc.validation.query", "jdbc.validationQuery")
+
+# 桥接 jar 里的 ServiceLoader 注册文件名。注意：这是 jar **内部**的条目名，
+# 不是 WEB-INF/lib 下的文件路径——桥接 jar 本身就是个 jar，没解压过。
+BRIDGE_SVC = "META-INF/services/liquibase.database.Database"
+
+# 进程级可变状态。main() 每次进来先清空：本脚本会被 skill 反复调用
+# （预检、切换、验证各跑一次），不清就会把上一轮的阻断项带到下一轮。
+FAILS = []
+STAGE = "预检"
+
+
+def jk(pre, name):
+    return name if not pre else "%s.%s" % (pre, name)
+
+
+def chown_like(path, uid, gid):
+    if hasattr(os, "chown"):
+        try:
+            os.chown(str(path), uid, gid)
+        except Exception:
+            pass
+
+
+def sh(cmd, timeout=45):
+    try:
+        r = subprocess.run(cmd, shell=True, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace",
+                           timeout=timeout)
+        return r.returncode, (r.stdout or "") + (r.stderr or "")
+    except Exception as ex:
+        return 127, "ERR %s" % ex
+
+
+def http_code(url, timeout=10):
+    rc, out = sh('curl -s -o /dev/null -w "%%{http_code}" --max-time %d "%s"'
+                 % (timeout, url))
+    return out.strip() or "000"
+
+
+def parse_props(text):
+    d = {}
+    for line in text.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#") or s.startswith("!") or "=" not in s:
+            continue
+        k, v = s.split("=", 1)
+        d[k.strip()] = v.strip()
+    return d
+
+
+def set_key(text, key, value):
+    pat = re.compile(r"(?m)^(\s*)" + re.escape(key) + r"(\s*=\s*).*$")
+    if pat.search(text):
+        return pat.sub(lambda m: m.group(1) + key + m.group(2) + value,
+                       text, count=1)
+    return text.rstrip("\n") + "\n" + key + "=" + value + "\n"
+
+
+def head(t):
+    print("\n" + "=" * 74)
+    print(t)
+    print("=" * 74)
+
+
+def echo(text):
+    """回显改后的配置，口令一律只打长度不打值。"""
+    print("  回显（脱敏）：")
+    for ln in text.splitlines():
+        s = ln.strip()
+        if not s or s.startswith("#"):
+            continue
+        if re.search(r"(?i)(cryptogram|password)\s*=", s):
+            print("    %s=<len=%d>" % (s.split("=", 1)[0],
+                                       len(s.split("=", 1)[1])))
+        else:
+            print("    " + s)
+
+
+def find_unit_and_port():
+    """从 systemd 单元反查 CATALINA_BASE，再解析 server.xml 拿 Connector 端口。
+    不硬编码 8081——上一轮就是靠这个方法才发现 4 个 tomcat 单元塞了 6 个应用。"""
+    rc, out = sh("systemctl list-unit-files --type=service --no-pager "
+                 "| grep -iE 'tomcat' ")
+    units = [ln.split()[0] for ln in out.splitlines()
+             if ln.strip() and ln.split()[0].endswith(".service")]
+    for u in units:
+        rc, body = sh("systemctl cat %s --no-pager" % u)
+        base = None
+        m = re.search(r"(?m)^\s*Environment\s*=\s*.*CATALINA_BASE\s*=\s*(\S+)", body)
+        if m:
+            base = m.group(1).strip('"')
+        if not base:
+            m = re.search(r"(?m)^\s*WorkingDirectory\s*=\s*(\S+)", body)
+            if m:
+                base = m.group(1).strip('"')
+        if not base or not os.path.isdir(base):
+            continue
+        sxml = Path(base) / "conf" / "server.xml"
+        if not sxml.is_file():
+            continue
+        txt = sxml.read_text(encoding="utf-8", errors="replace")
+        # docBase 指向 eUrbanMIS 的那个 Context，才认这个单元
+        owns = re.search(r'docBase\s*=\s*"[^"]*%s"' % re.escape(APP), txt)
+        if not owns:
+            continue
+        ports = [int(m.group(1)) for m in
+                 re.finditer(r'<Connector[^>]*?\bport\s*=\s*"(\d+)"', txt)]
+        return u, base, sorted(set(ports))
+    return None, None, []
+
+
+def bridge_jars(lib):
+    """找 liquibase 金仓桥接。必须逐个 jar 看内部条目——桥接 jar 是 jar 不是目录，
+    按 WEB-INF/lib/META-INF/services/... 当文件路径 glob 永远查不到，
+    那种预检会把切换永久卡死在"缺桥接"上。"""
+    if not lib.is_dir():
+        return []
+    hits = []
+    for jar in sorted(lib.glob("*.jar")):
+        try:
+            with zipfile.ZipFile(str(jar)) as zf:
+                if BRIDGE_SVC not in zf.namelist():
+                    continue
+                body = zf.read(BRIDGE_SVC).decode("utf-8", "replace")
+                if re.search(r"(?i)kingbase", body):
+                    hits.append(jar.name)
+        except Exception:
+            continue
+    # 兼容已解压到 lib 下的情况
+    for svc in lib.glob(BRIDGE_SVC.replace("/", "/**/")):
+        try:
+            if re.search(r"(?i)kingbase",
+                         svc.read_text(encoding="utf-8", errors="replace")):
+                hits.append(svc.name)
+        except Exception:
+            continue
+    return hits
+
+
+def main():
+    global STAGE
+    del FAILS[:]
+    argv = sys.argv[1:]
+    kb_host, kb_port, kb_db = "127.0.0.1", 54321, "test"
+    kb_pw_file = "/root/.kb_mig_pw"
+    apply_mode = do_restart = False
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--kb-host":
+            kb_host = argv[i + 1]; i += 2
+        elif a == "--kb-port":
+            kb_port = int(argv[i + 1]); i += 2
+        elif a == "--kb-db":
+            kb_db = argv[i + 1]; i += 2
+        elif a == "--kb-pw-file":
+            kb_pw_file = argv[i + 1]; i += 2
+        elif a == "--apply":
+            apply_mode = True; i += 1
+        elif a == "--restart":
+            do_restart = True; i += 1
+        else:
+            print("未知参数 %s" % a); return 2
+
+    # ---------------- 阶段 1：预检（只读） ----------------
+    STAGE = "预检"
+    head("阶段 1/4 预检（只读，不改任何东西）")
+    if not PROPS.is_file():
+        print("[阻断] 找不到 %s" % PROPS)
+        FAILS.append("jdbc.properties 不存在")
+        return report(1)
+    raw = PROPS.read_text(encoding="utf-8", errors="replace")
+    props = parse_props(raw)
+    pres = sorted({re.match(r"^(.*)\.jdbc\.url$", k).group(1)
+                   for k in props if re.match(r"^(.*)\.jdbc\.url$", k)}
+                  | ({""} if "jdbc.url" in props else set()))
+    print("  jdbc.properties: %s" % PROPS)
+    print("  发现数据源前缀：%s" % (pres or "无"))
+    unknown = [p for p in pres if p not in KNOWN_PREFIXES]
+    if unknown:
+        print("  [阻断] 这些前缀没有 schema 映射，我不猜：%s" % unknown)
+        FAILS.append("未知前缀 %s" % unknown)
+        return report(1)
+    # 金仓端点。先连上——schema 的真名要从库里查，不能靠人记大小写。
+    print("\n  金仓端点 %s:%s/%s" % (kb_host, kb_port, kb_db))
+    try:
+        with socket.create_connection((kb_host, kb_port), timeout=6):
+            print("    TCP 可达")
+    except Exception as ex:
+        print("    [阻断] TCP 不可达：%s" % ex)
+        FAILS.append("金仓 TCP 不可达")
+    conn = None
+    try:
+        import psycopg2
+        conn = psycopg2.connect(host=kb_host, port=kb_port, user=KB_USER,
+                                dbname=kb_db, connect_timeout=8)
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute("SELECT version()")
+        print("    版本：%s" % cur.fetchone()[0][:100])
+        # 金仓和 PostgreSQL 一样，会把不带引号的标识符折叠成小写。达梦那轮的
+        # 配置里写的是大写 CGDB，照抄会让 currentSchema 指向一个不存在的名字。
+        # 所以按大小写不敏感查出库里的实际名字，URL 用查出来的这个。
+        for pre in pres:
+            want = KNOWN_PREFIXES[pre]
+            cur.execute("SELECT nspname FROM pg_namespace "
+                        "WHERE lower(nspname) = lower(%s) LIMIT 1", (want,))
+            row = cur.fetchone()
+            if row:
+                SCHEMA_OF[pre] = row[0]
+                print("    schema %-10s -> 库中实际名 %s" % (want, row[0]))
+            else:
+                print("    schema %-10s -> **不存在**" % want)
+                FAILS.append("金仓找不到 schema %s" % want)
+    except ImportError:
+        print("    [提示] 无 psycopg2，schema 大小写未核实")
+    except Exception as ex:
+        print("    [阻断] mig 用户连不上：%s" % str(ex).split("\n")[0][:140])
+        FAILS.append("金仓 mig 连不上")
+
+    for pre in pres:
+        # 查得到用库里的真名，查不到退回逻辑名（小写）。此时若还要真写盘就得拦。
+        schema = SCHEMA_OF.get(pre) or KNOWN_PREFIXES[pre]
+        pkey = next((jk(pre, k) for k in PWD_KEYS if jk(pre, k) in props), None)
+        vkey = next((jk(pre, k) for k in VAL_KEYS if jk(pre, k) in props), None)
+        url = props.get(jk(pre, "jdbc.url"), "")
+        print("    前缀=%-6s -> schema=%-10s" % (pre or "(空)", schema))
+        print("      url=%s" % re.sub(r"(?i)(password|pwd)=[^&\s]*",
+                                     r"\1=***", url) or "<缺失>")
+        print("      driver=%s user=%s 口令键=%s 校验键=%s"
+              % (props.get(jk(pre, "jdbc.driverClassName"), "<缺失>"),
+                 props.get(jk(pre, "jdbc.username"), "<缺失>"),
+                 pkey or "<缺失>", vkey or "<缺失>"))
+        if not pkey:
+            print("      [阻断] 找不到口令键")
+            FAILS.append("前缀 %r 无口令键" % pre)
+        if pre not in SCHEMA_OF and apply_mode:
+            print("      [阻断] schema 真名没从库里核实到，不写盘")
+            FAILS.append("schema %s 真名未核实" % schema)
+
+    # 驱动 jar 与 liquibase 桥接 jar
+    lib = PROPS.parent.parent / "lib"
+    jars = sorted(p.name for p in lib.glob("kingbase8*.jar")) if lib.is_dir() else []
+    bridge = bridge_jars(lib)
+    print("\n  kingbase8 驱动：%s" % (jars or "**缺失**"))
+    print("  liquibase 金仓桥接：%s" % (bridge or "**缺失**"))
+    if not jars:
+        FAILS.append("WEB-INF/lib 缺 kingbase8 驱动 jar")
+    if not bridge:
+        FAILS.append("缺 liquibase 金仓桥接 jar——不补的话 fork liquibase 兜底 "
+                     "UnsupportedDatabase，发 Oracle 风格 call current_schema，"
+                     "金仓语法报错，应用必死")
+
+    # tomcat 单元与端口
+    unit, base, ports = find_unit_and_port()
+    print("\n  tomcat 单元：%s" % (unit or "**未定位**"))
+    print("  CATALINA_BASE：%s" % (base or "-"))
+    print("  Connector 端口：%s" % (ports or "-"))
+    if not unit:
+        FAILS.append("没定位到托管 eUrbanMIS 的 tomcat 单元")
+    rc, out = sh("ss -tnp 2>/dev/null | grep ':3306' ")
+    m3306 = [ln.strip() for ln in out.splitlines() if ln.strip()]
+    print("  当前 3306 连接：%s" % (len(m3306) or "0"))
+
+    if FAILS:
+        print("\n预检有 %d 个阻断项，先处理再切：" % len(FAILS))
+        for f in FAILS:
+            print("  [阻断] %s" % f)
+        return report(1)
+
+    # ---------------- 阶段 2：切换 ----------------
+    STAGE = "切换"
+    head("阶段 2/4 切换 jdbc.properties（%s）"
+         % ("APPLY 真写盘" if apply_mode else "DRY-RUN 只打印"))
+    if not os.path.isfile(kb_pw_file):
+        print("[阻断] 金仓口令文件 %s 不存在" % kb_pw_file)
+        FAILS.append("口令文件缺失")
+        return report(1)
+    kb_pw = None
+    with open(kb_pw_file, encoding="utf-8") as fh:
+        kb_pw = fh.read().strip()
+    if len(kb_pw) < 8:
+        print("[阻断] 口令长度异常")
+        FAILS.append("口令长度异常")
+        return report(1)
+
+    ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    text = raw
+    old_pws = {k: v for k, v in props.items() if k.endswith(PWD_KEYS)}
+    for pre in pres:
+        schema = SCHEMA_OF.get(pre) or KNOWN_PREFIXES[pre]
+        # 必须是**带前缀的完整键名**。写成裸的 jdbc.cryptogram 会追加一个顶层键，
+        # Spring 只读 biz.jdbc.cryptogram——等于没换口令还看不出来。
+        pkey = next((jk(pre, k) for k in PWD_KEYS if jk(pre, k) in props), None)
+        vkey = next((jk(pre, k) for k in VAL_KEYS if jk(pre, k) in props), None)
+        url = "jdbc:kingbase8://%s:%d/%s?currentSchema=%s" % (
+            kb_host, kb_port, kb_db, schema)
+        print("\n  前缀=%-6s -> %s" % (pre or "(空)", url))
+        print("    %-32s = %s" % (jk(pre, "jdbc.driverClassName"), KB_DRIVER))
+        print("    %-32s = %s" % (jk(pre, "jdbc.username"), KB_USER))
+        print("    %-32s = <len=%d>" % (pkey or "<缺失>", len(kb_pw)))
+        print("    %-32s = %s" % (vkey or jk(pre, "jdbc.validation.query"),
+                                   KB_VALID))
+        if apply_mode:
+            for k, v in ((jk(pre, "jdbc.url"), url),
+                         (jk(pre, "jdbc.driverClassName"), KB_DRIVER),
+                         (jk(pre, "jdbc.username"), KB_USER),
+                         (pkey, kb_pw),
+                         (vkey or jk(pre, "jdbc.validation.query"), KB_VALID)):
+                text = set_key(text, k, v)
+    # 已经是金仓就不再写。重复执行是正常用法（先 dry-run 预检，再 --apply，
+    # 再 --apply --restart），原样重写会让下面"还是原口令"的自检误报成没换。
+    already_kb = all("kingbase8" in props.get(jk(pre, "jdbc.url"), "")
+                     for pre in pres)
+    if already_kb:
+        print("\n  url 已经指向金仓——跳过写盘（无需重复切），直接进后续阶段。")
+        echo(text)
+    elif apply_mode:
+        if not re.search(r"(?m)^\s*jdbc\.version\s*=", text):
+            text = set_key(text, "jdbc.version", KB_VERSION)
+        st = PROPS.stat()
+        bak = PROPS.with_name("%s.bak.%s.dm" % (PROPS.name, ts))
+        shutil.copy2(PROPS, bak)
+        chown_like(bak, st.st_uid, st.st_gid)
+        os.chmod(str(bak), st.st_mode)
+        PROPS.write_text(text, encoding="utf-8")
+        chown_like(PROPS, st.st_uid, st.st_gid)
+        os.chmod(str(PROPS), st.st_mode)
+
+        # 写后立刻回读自检。键名错位（写成顶层 jdbc.cryptogram 而不是
+        # biz.jdbc.cryptogram）这类错，回显看着像成功了，实际 Spring 读不到，
+        # 重启后只会得到一堆误导性报错。所以写完必须自己核一遍。
+        chk = parse_props(text)
+        for pre in pres:
+            tag = pre or "(空)"
+            u = chk.get(jk(pre, "jdbc.url"), "")
+            want_schema = SCHEMA_OF.get(pre) or KNOWN_PREFIXES[pre]
+            if "kingbase8" not in u or \
+                    ("currentSchema=" + want_schema) not in u:
+                FAILS.append("写回后 %s 的 url 不是金仓" % tag)
+            if chk.get(jk(pre, "jdbc.driverClassName")) != KB_DRIVER:
+                FAILS.append("写回后 %s 驱动没换成金仓" % tag)
+            if chk.get(jk(pre, "jdbc.username")) != KB_USER:
+                FAILS.append("写回后 %s 用户名没换成 mig" % tag)
+            pk = next((jk(pre, k) for k in PWD_KEYS if jk(pre, k) in chk), None)
+            if not pk:
+                FAILS.append("写回后 %s 找不到口令键" % tag)
+            elif chk.get(pk) != kb_pw:
+                FAILS.append("写回后 %s 的口令键 %s 不是金仓口令" % (tag, pk))
+        for k, v in chk.items():
+            if (k.endswith(".jdbc.url") or k == "jdbc.url") and \
+                    "mysql" in v.lower():
+                FAILS.append("写回后 %s 仍指向 MySQL" % k)
+        for k, v in old_pws.items():
+            if v and chk.get(k) == v:
+                FAILS.append("写回后 %s 还是原口令" % k)
+        if FAILS:
+            print("\n  [阻断] 写回自检不过，不重启。回滚命令：")
+            print("      cp -p %s %s" % (bak, PROPS))
+            return report(1)
+
+        print("\n  已写回，备份 -> %s" % bak.name)
+        echo(text)
+    else:
+        print("\n  DRY-RUN：以上是将要发生的改动。加 --apply 执行。")
+
+    # ---------------- 阶段 3：重启 ----------------
+    STAGE = "重启"
+    if not do_restart:
+        head("阶段 3/4 重启：跳过（未加 --restart）")
+        print("  重启是不可逆动作，单独一个开关。要跑就加 --restart。")
+    else:
+        head("阶段 3/4 重启 %s" % unit)
+        rc, _ = sh("systemctl restart %s" % unit)
+        print("  restart rc=%d，等待就绪…" % rc)
+        port = ports[0] if ports else None
+        code = "000"
+        if port:
+            for k in range(36):
+                time.sleep(10)
+                code = http_code("http://127.0.0.1:%d/%s/" % (port, APP))
+                print("    t=%3ds HTTP=%s" % ((k + 1) * 10, code))
+                if code not in ("000", "404", "400", "500", "502", "503"):
+                    break
+        print("  最终 HTTP=%s" % code)
+        if code in ("000", "404", "400", "500", "502", "503"):
+            FAILS.append("重启后 HTTP=%s" % code)
+
+    # ---------------- 阶段 4：验证 ----------------
+    STAGE = "验证"
+    head("阶段 4/4 验证")
+    if not do_restart:
+        print("  未重启，跳过探活与会话证据（避免把上一轮的会话当成本轮证据）。")
+        return report(1 if FAILS else 0)
+
+    port = ports[0] if ports else None
+    if port:
+        for _ in range(3):
+            http_code("http://127.0.0.1:%d/%s/" % (port, APP), timeout=20)
+    time.sleep(3)
+
+    if not conn:
+        print("  [FAIL] 没有金仓连接，无法取会话证据")
+        FAILS.append("无金仓连接")
+    else:
+        cur = conn.cursor()
+        cur.execute("SELECT datname, COUNT(*) FROM pg_stat_activity "
+                    "WHERE usename = %s GROUP BY datname ORDER BY 2 DESC",
+                    (KB_USER,))
+        rows = cur.fetchall()
+        print("  金仓 mig 会话：%s"
+              % (", ".join("%s=%s" % r for r in rows) or "**无**"))
+        if not rows:
+            FAILS.append("金仓侧看不到 mig 会话")
+        cur.execute("SELECT pid, datname, state, LEFT(COALESCE(query,''),170) "
+                    "FROM pg_stat_activity WHERE usename = %s "
+                    "AND COALESCE(query,'') <> '' ORDER BY pid DESC LIMIT 6",
+                    (KB_USER,))
+        qrows = cur.fetchall()
+        print("  最近执行过的 SQL %d 条：" % len(qrows))
+        for r in qrows:
+            print("    pid=%s db=%s %s" % (r[0], r[1], (r[2] or "")[:110]))
+        biz = [r for r in qrows if re.search(
+            r"(?i)\b(select|insert|update|delete)\b.*\b(from|into|tc_|pub_|sm_)",
+            r[3] or "")]
+        if not biz:
+            print("  [提示] 没抓到业务 SQL——连接池空闲时只有 idle 会话，")
+            print("         多打几次业务页面再跑一遍本阶段。")
+        else:
+            print("  其中业务 SQL %d 条，证明应用在读金仓里的迁移数据" % len(biz))
+
+    rc, out = sh("ss -tnp 2>/dev/null | grep ':3306' ")
+    lines = [ln.strip() for ln in out.splitlines() if ln.strip()]
+    if lines:
+        print("  [FAIL] 仍有 %d 条 3306 连接：" % len(lines))
+        for ln in lines:
+            print("    " + ln)
+        FAILS.append("3306 残留 %d 条" % len(lines))
+    else:
+        print("  MySQL 3306 残留：0（OK）")
+
+    if base:
+        logs = sorted(glob.glob(os.path.join(base, "logs", "localhost.*.log")),
+                      key=os.path.getmtime)
+        if logs:
+            tail = Path(logs[-1]).read_text(encoding="utf-8", errors="replace")
+            exc = [ln for ln in tail.splitlines()
+                   if re.search(r"(?i)\bexception\b|\b严重\b|checksum", ln)]
+            print("  日志 %s 异常/校验和行 %d"
+                  % (os.path.basename(logs[-1]), len(exc)))
+            for ln in exc[-5:]:
+                print("    " + ln[:180])
+            if any(re.search(r"(?i)checksum", ln) for ln in exc):
+                print("  [提示] 出现 checksum 相关行——金仓切换后 liquibase 校验值")
+                print("         可能不匹配。按规程这一步只报告不自动修，用 B1Fix")
+                print("         金仓变体处理（URL 带 currentSchema=CGDB）。")
+                FAILS.append("liquibase 校验和可能不匹配，需人工确认")
+    if conn:
+        conn.close()
+    return report(1 if FAILS else 0)
+
+
+def report(rc):
+    print("\n" + "=" * 74)
+    if FAILS:
+        print("结论：**未通过，%d 项（阶段：%s）**" % (len(FAILS), STAGE))
+        for f in FAILS:
+            print("  [FAIL] %s" % f)
+    else:
+        print("结论：通过")
+    print("=" * 74)
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main())

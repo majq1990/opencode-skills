@@ -1,0 +1,151 @@
+{
+  "version": "1.2.0",
+  "updated": "2026-10-02",
+  "note": "监控告警通用处置剧本库。triage 类子工具按关键词匹配（标题/告警名/指标名，中英文均可；ASCII 关键词要求词左边界，防 replication 误命中 io 这类词中片段，允许右向扩展如 connection 命中 connections），命中则输出 steps 作为处置引导；未命中给通用建议并提示用 05 号子工具检索历史案例。match_keywords 全小写。",
+  "playbooks": [
+    {
+      "id": "cpu_high",
+      "match_keywords": ["cpu", "processor", "load", "处理器", "负载"],
+      "title": "CPU 使用率/负载过高",
+      "severity_hint": "high",
+      "steps": [
+        "top -c -bn1 确认占用 CPU 的进程，区分应用进程（java/nginx/mysql）与系统进程",
+        "应用进程占用高：结合线程栈（jstack）或慢请求日志定位热点代码，必要时限流降级",
+        "异常进程（挖矿/未知程序）：立即隔离排查，检查告警入侵与计划任务",
+        "确属业务增长：评估扩容或负载均衡分流"
+      ]
+    },
+    {
+      "id": "memory_high",
+      "match_keywords": ["memory", "mem", "swap", "内存", "oom"],
+      "title": "内存使用率过高/OOM 风险",
+      "severity_hint": "high",
+      "steps": [
+        "free -h 与 ps aux --sort=-%mem 确认内存分布，区分缓存与进程占用",
+        "应用内存持续增长：排查内存泄漏（对比多日趋势），必要时安排重启窗口",
+        "发生 OOM：dmesg | grep -i oom 定位被杀进程，评估容器/进程内存上限设置",
+        "swap 频繁：检查 swappiness 与物理内存容量规划"
+      ]
+    },
+    {
+      "id": "disk_usage_high",
+      "match_keywords": ["disk", "storage", "inode", "磁盘", "空间"],
+      "title": "磁盘空间/ inode 不足",
+      "severity_hint": "high",
+      "steps": [
+        "df -h 与 df -i 定位满的挂载点，du -sh 逐层找出大目录",
+        "清理目标优先级：应用日志轮转（logrotate）、临时文件、过期备份",
+        "日志增长过快：调整日志级别与保留策略，必要时压缩归档",
+        "inode 耗尽：查找海量小文件目录（队列/缓存碎文件）清理"
+      ]
+    },
+    {
+      "id": "disk_io_high",
+      "match_keywords": ["io", "iostat", "await", "util", "磁盘io", "读写"],
+      "title": "磁盘 I/O 压力高",
+      "severity_hint": "medium",
+      "steps": [
+        "iostat -x 1 确认 %util/await 与读写比例，iotop 定位进程",
+        "数据库类 I/O 高：使用本工具集 02 号子工具（iostat+digest+DDL 分诊）做根因分析",
+        "评估读写放大：日志同步刷盘、频繁小事务、备份窗口冲突",
+        "必要时升配 SSD 或调整数据分布"
+      ]
+    },
+    {
+      "id": "mysql_slow",
+      "match_keywords": ["mysql", "slow", "慢查询", "慢sql"],
+      "title": "MySQL 慢查询堆积",
+      "severity_hint": "high",
+      "steps": [
+        "show processlist 确认当前堆积查询，EXPLAIN 分析执行计划",
+        "使用本工具集 02 号子工具解析慢查询 digest 定位 TOP SQL 与根因",
+        "补索引/改写 SQL 需在测试环境验证后走变更流程",
+        "检查慢查询日志阈值 long_query_time 设置是否合理"
+      ]
+    },
+    {
+      "id": "mysql_conn_high",
+      "match_keywords": ["connection", "threads_connected", "连接数", "连接"],
+      "title": "MySQL 连接数接近/达到上限",
+      "severity_hint": "high",
+      "steps": [
+        "show status like 'Threads_connected' 与 max_connections 对比",
+        "排查连接泄漏：应用连接池配置（最大连接/超时回收）、未关闭的会话",
+        "临时缓解：kill 空闲会话；根因：调连接池与 max_connections（需评估内存）",
+        "检查是否存在慢查询占住连接导致的连锁堆积"
+      ]
+    },
+    {
+      "id": "mysql_replication",
+      "match_keywords": ["replication", "slave", "replica", "主从", "复制延迟"],
+      "title": "MySQL 主从复制延迟/中断",
+      "severity_hint": "high",
+      "steps": [
+        "show slave status\\G 确认 Slave_IO/SQL_Running 与 Seconds_Behind_Master",
+        "IO 线程断开：检查网络与主库 binlog 保留；SQL 线程断开：分析报错事务",
+        "延迟大：检查从库机器负载、大事务、并行复制配置",
+        "只读副本 I/O 高场景配合本工具集 02 号子工具分析"
+      ]
+    },
+    {
+      "id": "redis_memory",
+      "match_keywords": ["redis", "内存碎片", "mem_fragmentation"],
+      "title": "Redis 内存/连接异常",
+      "severity_hint": "high",
+      "steps": [
+        "info memory 确认 used_memory 与 maxmemory 比例、碎片率",
+        "evicted_keys 增长：评估淘汰策略与容量，清理无 TTL 的大 key",
+        "info clients 确认连接数与阻塞客户端，排查未释放连接",
+        "大 key 定位：--bigkeys 扫描，分批治理"
+      ]
+    },
+    {
+      "id": "tomcat_threadpool",
+      "match_keywords": ["tomcat", "thread", "catalina", "线程池", "jvm"],
+      "title": "Tomcat 线程池/JVM 异常",
+      "severity_hint": "high",
+      "steps": [
+        "确认线程池使用率（server.xml maxThreads 与活跃线程数）",
+        "线程堆积：抓 jstack 分析 BLOCKED/WAITING，定位慢接口",
+        "JVM 频繁 Full GC：jstat -gcutil 观察，排查内存泄漏与大对象",
+        "必要时调优线程池/堆参数（先测试环境验证）"
+      ]
+    },
+    {
+      "id": "nginx_5xx",
+      "match_keywords": ["nginx", "5xx", "502", "504", "upstream", "网关"],
+      "title": "Nginx 网关错误/上游异常",
+      "severity_hint": "high",
+      "steps": [
+        "error.log 确认 502/504 的 upstream 与原因（连接拒绝/超时）",
+        "上游服务健康检查：进程存活、端口监听、响应耗时",
+        "上游慢导致超时：调 proxy_read_timeout 或扩容上游",
+        "结合应用侧慢请求日志定位根因接口"
+      ]
+    },
+    {
+      "id": "service_down",
+      "match_keywords": ["down", "unreachable", "unavailable", "服务不可用", "宕机", "失联"],
+      "title": "服务/主机失联",
+      "severity_hint": "critical",
+      "steps": [
+        "ping/端口探测确认网络可达性与进程存活",
+        "主机失联：确认电源/宿主机/网络设备，联系机房或云平台",
+        "进程死亡：查看退出日志（core dump/OOM kill/异常退出），恢复后排查原因",
+        "恢复后验证：健康检查接口、核心业务链路回归"
+      ]
+    },
+    {
+      "id": "security_port",
+      "match_keywords": ["port", "firewall", "端口", "暴露", "安全"],
+      "title": "安全暴露面异常（端口/弱口令/漏洞）",
+      "severity_hint": "high",
+      "steps": [
+        "确认暴露端口的服务归属与必要性，非必要立即关闭",
+        "必须对外暴露的：收敛访问源（白名单/防火墙/安全组）",
+        "漏洞 jar/组件：按公司补丁流程升级，先测试环境验证兼容性",
+        "涉及攻击行为：保留证据，按公司安全应急预案上报处置"
+      ]
+    }
+  ]
+}

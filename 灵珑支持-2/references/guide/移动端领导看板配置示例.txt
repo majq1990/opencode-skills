@@ -1,0 +1,191 @@
+移动端领导看板配置示例
+文档说明：本文档对移动端领导看板基础形态（筛选条件加数据展示）的配置进行说明
+示例链接：http://10.250.1.50:8080/linglongZT/design.html#/design/b5117019-93f1-418a-bba5-2b28f7182353
+或
+http://10.250.1.50:8080/linglongZT/design.html#/design/054b12ab-d1d8-4a1c-a9f3-240c89880521
+需要提前掌握灵珑基础的脚本及配置：《灵珑动作交互&js脚本示例模板》
+数据来源准备：API注册
+将领导看板所需要的接口注册到API管理中
+1.1 新增接口
+点击新增接口
+选择环境变量，填写接口名称
+1.2 获取当前接口ID
+在当前页面打开控制台（f12）后在页面点击发送
+查看控制台-网络最新的一个请求
+查看ID，如下图标红处
+配置领导看板
+2.1 新增表单
+部件管理中选择创建空白部件 -> 新增不同表单 -> 基于自动策略创建
+2.2 配置表单
+刚新建完后表单为pc模式，需要切换移动端模式
+将所需组件从左侧组件库中拖入右侧
+上图展示了拖入一个时间组件、看板下拉单选组件和一个指标展示组件，具体要按照实际情况拖入所需的组件，布局也可自由组合
+2.3 脚本编写
+在时间组件或者页面的didMount中编写脚本
+‘
+脚本基本思路
+获取时间组件和下拉组件中的值作为筛选条件
+const start = that.$$m('csdn_form_custom_date_gz8j4b').props.currentTime.start.format("YYYY-MM-DD");
+    const end = that.$$m('csdn_form_custom_date_gz8j4b').props.currentTime.end.format("YYYY-MM-DD");
+    const type = that.$$m('csdn_form_custom_date_gz8j4b').props.defaultValue.value;
+其中组件的标识通过点击组件-高级-唯一标识获取
+将筛选条件拼接为接口参数调用接口，获取数据赋值给数据展示的组件
+const params = [
+    { name: "start", valueContent: start},
+    { name: "end", valueContent: end },
+    { name: "type", valueContent: type }
+  ]
+
+// 接口调用的apiId参考1.2获取
+api.DATA_SOURCE_EXECUTE("ds_api:d2dabd8d-76fa-45d0-8825-64f5457bdd3c", "api", params, [], "").then(res => {
+  if (res && !res.hasError && res.result) {
+    const jsonRes = JSON.parse(res.result);
+    if (jsonRes && !jsonRes.hasError && jsonRes.result) {
+      const data = jsonRes.result;
+      that.$$m('csdn_page_indicator_9otgae').props.dataSource.options = data;
+    } 
+  } 
+}).catch(err => {
+  console.error(err);
+});
+注意接口返回的值要和组件需要的值格式一致，组件一般初始拖入后会有默认数据，可以在组件的自定义数据中查看组件数据的格式
+编写完整脚本
+首先需要将数据展示的脚本封装起来，最后挂到window上以便其他地方调用
+数据封装示例：
+（1）《AI封装组件模板数据》
+（2）在接口后置脚本中进行数据格式转换
+const refreshData = () => {
+// 此处写数据展示的脚本
+}
+定义数据获取失败时回调函数
+const errCallBack = () => {
+      // 数据获取失败后，展示的组件赋值空数据
+      that.$$m('csdn_page_indicator_9otgae').props.dataSource.options = [];
+      // 结束组件的加载中效果
+      that.$$m('csdn_page_indicator_9otgae').props.loadingConfig.loading = false;
+    }
+获取筛选条件的值
+const start = that.$$m('csdn_form_custom_date_gz8j4b').props.currentTime.start.format("YYYY-MM-DD");
+    const end = that.$$m('csdn_form_custom_date_gz8j4b').props.currentTime.end.format("YYYY-MM-DD");
+    const type = that.$$m('csdn_form_custom_date_gz8j4b').props.defaultValue.value;
+调用接口前先将组件置于加载中
+that.$$m('csdn_page_indicator_9otgae').props.loadingConfig.loading = true;
+调用接口赋值
+", const params = [
+    { name: "start", valueContent: start},
+    { name: "end", valueContent: end },
+    { name: "type", valueContent: type }
+  ]
+
+api.DATA_SOURCE_EXECUTE("ds_api:d2dabd8d-76fa-45d0-8825-64f5457bdd3c", "api", params, [], "").then(res => {
+  if (res && !res.hasError && res.result) {
+    const jsonRes = JSON.parse(res.result);
+    if (jsonRes && !jsonRes.hasError && jsonRes.result) {
+      const data = jsonRes.result;
+      that.$$m('csdn_page_indicator_9otgae').props.dataSource.options = data;
+    } 
+  } 
+}).catch(err => {
+  console.error(err);
+});
+封装后refreshData完整函数如下
+const refreshData = () => {
+
+    const errCallBack = () => {
+      that.$$m('csdn_page_indicator_9otgae').props.dataSource.options = [];
+      that.$$m('csdn_page_indicator_9otgae').props.loadingConfig.loading = false;
+    }
+    const start = that.$$m('csdn_form_custom_date_gz8j4b').props.currentTime.start.format("YYYY-MM-DD");
+    const end = that.$$m('csdn_form_custom_date_gz8j4b').props.currentTime.end.format("YYYY-MM-DD");
+    const type = that.$$m('csdn_form_custom_date_gz8j4b').props.defaultValue.value;
+
+    const params = [
+      { name: "start", valueContent: start},
+      { name: "end", valueContent: end },
+      { name: "type", valueContent: type }
+    ]
+
+    that.$$m('csdn_page_indicator_9otgae').props.loadingConfig.loading = true;
+
+    api.DATA_SOURCE_EXECUTE("ds_api:d2dabd8d-76fa-45d0-8825-64f5457bdd3c", "api", params, [], "").then(res => {
+      if (res && !res.hasError && res.result) {
+        const jsonRes = JSON.parse(res.result);
+        if (jsonRes && !jsonRes.hasError && jsonRes.result) {
+          const data = jsonRes.result;
+          that.$$m('csdn_page_indicator_9otgae').props.dataSource.options = data;
+          that.$$m('csdn_page_indicator_9otgae').props.loadingConfig.loading = false;
+        } else {
+          errCallBack();
+        }
+      } else {
+        errCallBack();
+      }
+    }).catch(err => {
+      console.error(err);
+      errCallBack();
+    });
+  }
+定义完后将refreshData挂载到window上
+window.REFRESHDATA = refreshData;
+完整脚本如下：
+export function init() {
+  let that = this;
+  const refreshData = () => {
+
+    const errCallBack = () => {
+      that.$$m('csdn_page_indicator_9otgae').props.dataSource.options = [];
+      that.$$m('csdn_page_indicator_9otgae').props.loadingConfig.loading = false;
+    }
+    const start = that.$$m('csdn_form_custom_date_gz8j4b').props.currentTime.start.format("YYYY-MM-DD");
+    const end = that.$$m('csdn_form_custom_date_gz8j4b').props.currentTime.end.format("YYYY-MM-DD");
+    const type = that.$$m('csdn_form_custom_date_gz8j4b').props.defaultValue.value;
+
+    const params = [
+      { name: "start", valueContent: start},
+      { name: "end", valueContent: end },
+      { name: "type", valueContent: type }
+    ]
+
+    that.$$m('csdn_page_indicator_9otgae').props.loadingConfig.loading = true;
+
+    api.DATA_SOURCE_EXECUTE("ds_api:d2dabd8d-76fa-45d0-8825-64f5457bdd3c", "api", params, [], "").then(res => {
+      if (res && !res.hasError && res.result) {
+        const jsonRes = JSON.parse(res.result);
+        if (jsonRes && !jsonRes.hasError && jsonRes.result) {
+          const data = jsonRes.result;
+          that.$$m('csdn_page_indicator_9otgae').props.dataSource.options = data;
+          that.$$m('csdn_page_indicator_9otgae').props.loadingConfig.loading = false;
+        } else {
+          errCallBack();
+        }
+      } else {
+        errCallBack();
+      }
+    }).catch(err => {
+      console.error(err);
+      errCallBack();
+    });
+  }
+
+  refreshData();
+
+  window.REFRESHDATA = refreshData;
+}
+此处init就是一开始didMount绑定的事件
+点击筛选条件需要重新获取数据，需要在筛选条件的组件如时间组件、下拉组件的onChange事件编写如下脚本
+function main() {
+    if ('REFRESHDATA' in window && typeof window.REFRESHDATA === 'function') {
+        window.REFRESHDATA();
+    }
+
+}
+2.4 调整样式
+根据实际需求调整表单、布局的样式
+部分数据展示的组件也提供了一些属性可以修改布局、样式等
+如果需要数据加载功能需要在组件开启如下配置
+效果展示：
+视频讲解
+请至钉钉文档查看附件《领导看板.mp4》。
+点击看板组件反查列表
+参考文档：
+《移动端列表查询面板获取参数》

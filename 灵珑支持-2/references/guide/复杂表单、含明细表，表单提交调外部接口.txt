@@ -1,0 +1,121 @@
+复杂表单、含明细表，表单提交调外部接口
+复杂表单
+表单组件特殊唯一验证
+《表单组件特殊唯一验证》
+基于js给表单组件赋值
+《基于js计算给表单组件赋值》
+地图
+《地图》
+地图绘制
+《地图绘制》
+地图定位并自动填充区划
+《地图定位并自动填充区划》
+基于某字段对详情页面控制显隐控制
+《基于某字段对详情页面控制显隐控制》
+动态控制表单字段必填校验规则及清除提示语
+《动态控制表单字段必填校验规则及清除提示语》
+组件默认值实体联动
+《组件默认值实体联动》
+组件日期选择开始时间不得大于结束时间、结束时间不得小于开始时间
+《组件日期选择开始时间不得大于结束时间、结束时间不得小于开始时间》
+明细表配置
+《明细表格》
+表单明细表格赋值接口返回的数据
+《表单明细表格赋值接口返回的数据》
+表单提交调用外部接口
+表单提交
+在表单提交的时候定义一个全局变量，这样在退回列表时可以限制只在页面做保存后刷新列表
+function main() {
+    let formPartEle = this.$$element("form_part_7imsy8");
+    let self = this
+    if (formPartEle) {
+        self.$$startDataLoading();
+        let pageRenderElement = this.$$root().$parent.$parent.$parent;
+        formPartEle.$$getRenderElement().onSave().then((res) => {
+            self.$$stopDataLoading();
+            if (res.result) {
+                //定义属性isSave
+                window["isSave"] = "save";
+                if (pageRenderElement) {
+                    pageRenderElement.goHistory(-1);
+                }
+            }
+        });
+    }
+}
+列表后置脚本
+function main() {
+    if (window["isSave"] == "save") {
+        window["isSave"] = null;
+        let pageListEle =this.$$element("page_widget_list_7vvamt");
+        // 获取列表渲染页实例
+        let listRenderView = pageListEle.$$getRenderElement();
+        // 获取当前显示的组件，表格或者卡片
+        let currentListEle = listRenderView.$$getListElement();
+        // 调用刷新方法
+        currentListEle.$$refreshData(); 
+    }
+    window["isSave"] = null;
+}
+表单提交调用接口
+调用接口方法
+function main() {
+  // DATA_SOURCE_EXECUTE 参数为
+  // 数据源id、数据源类型(ddcat/api)、queryParams、formParams、jsonParams
+  // queryParams，formParams参数结构如下
+  // {
+  //     name: ""  参数名称
+  //     type: "FormData"  参数类型
+  //     valueContent: ""  参数值
+// }
+  // json 参数
+  //  let jsonParams = {"label": "测试json", "value": "test"};
+  // 传参方式 api.DATA_SOURCE_EXECUTE("", "api", [], [], JSON.stringify(jsonParams))
+
+    api.DATA_SOURCE_EXECUTE("9ca5a4e5-f89f-4cd0-bab7-23447e4a3f19", "api", [], [], "").then(res => {
+        console.log(res);
+    }).catch(err => {
+        console.error(err);
+    });
+}
+表单提交调用接口常见的业务场景是拿表单的值传参给接口进行调用， 定义好传参后使用调接口的方法
+function main() {
+  const self = this;
+  var formPartEle = this.$$element("form_part_6a337r");
+  let formValue = this.$$("form_part_6a337r").$$getRenderElement().$$getFormValue();
+  //获取组件值
+  let objectId = formValue["t_aa3f97e66f104d91ad3ff97c72525e66"]["single_select_cwcea6"]; 
+  let documentNo1 = formValue["t_aa3f97e66f104d91ad3ff97c72525e66"]["text_input_7bmu2m"]; 
+
+
+  let param1 = [{name: "objectId",valueContent: objectId},{name:"documentNo",valueContent: documentNo1}]
+
+  if (formPartEle) {
+    let pageRenderElement = this.$$root().$parent.$parent.$parent;
+    formPartEle.$$getRenderElement().onSave().then((res) => {
+      if (res.result) {
+        const formDocumentNo = res.result.documentNo;
+        let param2 = [{name:"documentNo",valueContent: formDocumentNo}]
+
+        // this.$message.success("提交成功");
+        // 调用 API更新状态
+        api.DATA_SOURCE_EXECUTE("ds_api:abd339db-df0a-4c8a-9faf-eef0ec4c0123", "api", param1 ).then((res)=>{
+          // 调用 API生成隐患
+          api.DATA_SOURCE_EXECUTE("ds_api:63bdd6b6-f318-4811-82cf-de78d5fa6e55", "api", param2 ).then((res)=>{
+            console.log(res)
+            window["isSave"] = "save";
+            if (pageRenderElement) {
+              pageRenderElement.goHistory(-1);
+            }
+          }).catch(err => {
+            console.error(err);
+          });
+
+        }).catch(err => {
+          console.error(err);
+        });
+
+      }
+    });
+  }
+}

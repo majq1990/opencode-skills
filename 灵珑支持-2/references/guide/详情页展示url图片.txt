@@ -1,0 +1,18 @@
+详情页展示url图片
+1 使用场景
+多媒体图片展示，通过公式拼接得到图片的url，在详情中进行展示。
+2 效果
+详情对应展示多媒体图片。
+3 配置
+1、详情字段新建计算字段
+2、编辑表达式打开公式编辑页面
+3、参考下图标注内容：
+使用TO_MEDIA_FILE_FORMAT()将url链接转换成灵珑展示的格式
+使用CONCATENATE()拼接所需要的字符串
+如果一个字段里面有多条需要拼接16位编码，使用，隔开的话需要使用到REPLACE_TO()字段进行替换拼接
+原字段内容A16CBD350854476C9E39A31689278B34,C5AA349CB0E54E6F837007724C213AAC,6A04FE911443409C9FD16D8DF86FC778
+公式转换后内容(id需要动态获取，这地方使用id作为占位符使用)
+https://www.shdow.cn/media-api/free/media/getdata/HttpFileServer_2/quhuan/id/A16CBD350854476C9E39A31689278B34.png,https://www.shdow.cn/media-api/free/media/getdata/HttpFileServer_2/quhuan/id/C5AA349CB0E54E6F837007724C213AAC.png,https://www.shdow.cn/media-api/free/media/getdata/HttpFileServer_2/quhuan/id/6A04FE911443409C9FD16D8DF86FC778.png
+4、图片字段，配置显示为图片
+4 常见问题
+无。

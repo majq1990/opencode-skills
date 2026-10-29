@@ -1,0 +1,22 @@
+在表单中保存信息可多次保存（非新增）
+1 使用场景
+在表单填写过程中如果存在多个页签，且在每个页签下的表单都不相同时会存在保存当前表单信息之后切换到其他标签页中进行信息填写而非关闭当前页面。在这种情况下会出现用户存在回到之前填写的表单进行信息修改，用户想要达到的目的是对表单信息进行修改而非新增。然而传统的onSave()方法只能新增数据。
+2 效果
+在第一次点击表单中的保存时能够对表单中的信息进行新增，之后再次点击保存后是对原有的信息进行修改而非新增。
+3 配置
+step1：新建所需要的表单，并且注意在表单中需要与对应表中的必填字段需要在表单中进行数据填充
+step2：将表单放在页面中并加入保存按钮
+function saveRecForm(self, formRenderEle) {
+    formRenderEle.onSave().then((res) => {
+        if (res && res.result) {
+            self.$message.success("提交成功");
+            formRenderEle.$$setExtraParams({
+                "documentNo": res.result.documentNo
+            });
+        }
+    });
+}
+代码说明：
+表单的校验 
+formEle.$$validateData()；
+formRenderEle.$$setExtraParams() 是给表单进行赋值，将表单的documentNo进行赋值为新增后对应数据的documentNo从而使得表单在下次进行数据保存的时候是对数据的保存而非新增

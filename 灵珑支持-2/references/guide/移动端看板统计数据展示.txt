@@ -1,0 +1,149 @@
+移动端看板统计数据展示
+1 使用场景
+移动端看板统计数据的展示；
+2 效果
+这里使用了城市大脑部门开发的业务组件，整体效果如下：
+回归公司地址：页面管理
+3 配置
+1、上方使用“自定义时间选择”业务组件
+绑定动作-onChange事件
+这里通过选择的时间范围，进行过滤查询后，为下方的统计数据赋值
+function main(param) {
+    let self = this;
+    var currentDate = new Date();
+    const startTime = currentDate.getFullYear() + '-' + (currentDate.getMonth() + 1) + '-01 00:00:00';
+    const endTime = currentDate.getFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate() + ' 23:59:59';
+    if (param) {
+        startTime = param.start.format("YYYY-MM-DD 00:00:00");
+        endTime = param.end.format("YYYY-MM-DD 23:59:59");
+    }
+    //调用ddcat数据模型
+    api.DATA_SOURCE_EXECUTE('eaa4f91a-0f1e-4726-a131-3834c682c69f', 'ddcat', [
+        {
+            name: 'startTime',
+            text: '开始时间',
+            type: 'QueryString',
+            valueContent: startTime,
+            valueType: null
+        },
+        {
+            name: 'endTime',
+            text: '截止时间',
+            type: 'QueryString',
+            valueContent: endTime,
+            valueType: null
+        }
+    ], [], '').then(res => {
+        if (res && !res.hasError && res.result) {
+            let item1 = res.result[0];
+            let item2 = res.result[1];
+            let item3 = res.result[2];
+            let item4 = res.result[3];
+            let list1 = [
+                {
+                    "text": "自然灾害",
+                    "value": item1.totalNum,
+                    "unit": ""
+                },
+                {
+                    "text": "处置中",
+                    "value": item1.disposeNum,
+                    "unit": ""
+                },
+                {
+                    "text": "已结案",
+                    "value": item1.finishNum,
+                    "unit": ""
+                },
+                {
+                    "text": "办结率",
+                    "value": item1.finishRate,
+                    "unit": "%"
+                }
+            ];
+            let list2 = [
+                {
+                    "text": "事故灾难",
+                    "value": item2.totalNum,
+                    "unit": ""
+                },
+                {
+                    "text": "处置中",
+                    "value": item2.disposeNum,
+                    "unit": ""
+                },
+                {
+                    "text": "已结案",
+                    "value": item2.finishNum,
+                    "unit": ""
+                },
+                {
+                    "text": "办结率",
+                    "value": item2.finishRate,
+                    "unit": "%"
+                }
+            ];
+            let list3 = [
+                {
+                    "text": "公共卫生事件",
+                    "value": item3.totalNum,
+                    "unit": ""
+                },
+                {
+                    "text": "处置中",
+                    "value": item3.disposeNum,
+                    "unit": ""
+                },
+                {
+                    "text": "已结案",
+                    "value": item3.finishNum,
+                    "unit": ""
+                },
+                {
+                    "text": "办结率",
+                    "value": item3.finishRate,
+                    "unit": "%"
+                }
+            ];
+            let list4 = [
+                {
+                    "text": "社会安全事件",
+                    "value": item4.totalNum,
+                    "unit": ""
+                },
+                {
+                    "text": "处置中",
+                    "value": item4.disposeNum,
+                    "unit": ""
+                },
+                {
+                    "text": "已结案",
+                    "value": item4.finishNum,
+                    "unit": ""
+                },
+                {
+                    "text": "办结率",
+                    "value": item4.finishRate,
+                    "unit": "%"
+                }
+            ];
+            self.$$('csdn_form_data_overview_35fgii').data.props.dataSource.options = list1;
+            self.$$('csdn_form_data_overview_uxfz7').data.props.dataSource.options = list2;
+            self.$$('csdn_form_data_overview_3ykc48').data.props.dataSource.options = list3;
+            self.$$('csdn_form_data_overview_gu2j2h').data.props.dataSource.options = list4;
+        }
+    }).catch(err => { });
+}
+2、使用“数据概览”组件展示
+绑定动作-onClick事件，点击跳转到相应栏目列表
+需要使用“自定义”方式传参过滤条件，到列表的查询条件中，进行相应的条件过滤
+function main() {
+    
+    window.ldkbdata = this.$$("csdn_form_custom_date_btzhlr");
+    const startTime = window.ldkbdata.currentTime.start.format("YYYY-MM-DD 00:00:00");
+    const endTime = window.ldkbdata.currentTime.end.format("YYYY-MM-DD 23:59:59");
+    console.log(startTime);
+    return { 'query_field_wrapper_21vxlj': 2, 'query_field_wrapper_62ogmt': startTime + ',' + endTime };
+}
+4 常见问题
+无

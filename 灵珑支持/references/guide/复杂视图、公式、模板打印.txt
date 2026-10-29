@@ -1,0 +1,1021 @@
+复杂视图、公式、模板打印
+一、复杂数据视图
+数据视图（sql语法）
+《数据视图（sql语法）》
+系统变量及公式的使用
+系统变量分为会话变量和静态变量。
+《V1.6.0.0应用全局变量管理》
+会话变量
+会话变量主要是配置表达式，分为内置会话变量和自定义会话变量。内置会话变量不允许编辑和删除。
+《会话变量配置》
+内置会话变量
+自定义组合公式
+TO_REGION_PATH(REGION_ID())
+http://10.250.1.50:8080/linglongZT/workspace.html#/2054794240744058880/settings/basic-config/conversation
+自定义会话变量
+通过调用数据模型或API接口获取返回值
+定义数据模型
+SELECT
+  id,
+  uid,
+  NAME,
+  region_id
+FROM
+  sys_unit 
+WHERE
+  delete_flag = 0
+ AND id = '${com.egova.lowcode.base.util.TemplateFormulaUtils::runInSQL("DEPARTMENT_ID()")}'
+自定义会话变量中定义数据模型或API
+获取数据模型或API的标识id
+在自定义数据模型中获取数据模型或API返回值
+DDCAT_CALL()
+DDCAT_CALL('ds_mod_9bdc40be-4da5-437c-a2c6-c4a045f872d7','','','result.uid')
+API_CALL()
+API_CALL()
+API_CALL('ds_api:82e4341d-182f-4434-abd0-27740a0df03d', 'userId', USER_ID(), 'result.processedRegionCode')
+http://10.250.1.50:8080/linglongZT/workspace.html#/2054794240744058880/settings/basic-config/conversation
+静态变量
+静态变量是在灵珑版本1.6.0之后加入的功能，其主要用来管理常量，包括在APP_CONST()公式、数据视图，JS脚本、列表部件过滤条件，表单组件配置项属性，api前后置脚本引用的常量内容。
+变量的使用
+在数据视图/数据模型中使用变量
+《如何在sql视图中执行公式》
+公式调用格式：
+${com.egova.lowcode.base.util.TemplateFormulaUtils::runInSQL("公式名")}
+http://10.250.1.50:8080/linglongZT/workspace.html#/2054794240744058880/data-management/dataView/sql?categoryId=e7c92333-af84-4f38-96bc-f4b9c632e174&viewid=ds_tbl_t_0231c1d193014ae08ef0fde91cff7a8c
+会话变量格式：
+${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("会话变量ID", true)}
+http://10.250.1.50:8080/linglongZT/workspace.html#/2054794240744058880/data-management/dataView/sql?categoryId=e7c92333-af84-4f38-96bc-f4b9c632e174&viewid=ds_tbl_t_07910540ecfc4b7f8b93786914996608
+在js脚本中使用变量
+《灵珑前端 JS-API》
+api.EXEC_FORMULA("NOW()").then(res => {
+  console.log("公式执行结果为：", res.result);
+});
+静态变量的获取
+公式获取
+APP_CONST("bd_var:54fb7c11-3be6-4cc3-bdbe-e7b75a36a1e3")
+数据视图
+${com.egova.lowcode.data.util.AppConstUtils::getValue("bd_var:4ea81933-13ff-4d82-af96-b110b4a2f82c-70bb-4d7d")}
+
+${com.egova.lowcode.base.util.TemplateFormulaUtils::runInSQL("APP_CONST(\"bd_var:4ea81933-13ff-4d82-af96-b110b4a2f82c-70bb-4d7d\")")}
+脚本获取
+const a = this.$$getConst("bd_var:086c04a1-bd3b-4fb2-a5c2-503ebde192e6");
+console.log("常量值：this.$$getConst", a);
+
+console.log(api.CONST["bd_var:24bda5c2-f79d-4bc0-9c89-ed91f4763067"]);
+会话变量常用的场景
+根据当前用户信息，根据用户的区域，所属部门进行过滤；
+可以实现不同数据库中的数据获取，比如获取用户中心的用户数据在业务库中使用。
+公式的使用场景
+表单中使用公式获取值；
+js调用向实体表中插入数据；
+在列表过滤条件中配置条件。（不推荐，建议写在视图中）
+《公式使用场景示例》
+数据视图、数据模型中使用条件判断语句
+sql模板语法
+渲染单值
+${value}
+
+示例：
+select * from xxx where name = '${name}';
+select * from xxx where age = ${age};
+http://10.250.1.50:8080/linglongZT/workspace.html#/2054794240744058880/data-management/dataView/sql?categoryId=e0afb94b-40d9-4e78-ac94-3e86b548e90c&viewid=ds_tbl_t_6094b9624f6443e39747d5e82546b902
+条件
+#if (role == "admin")
+ ...
+#elseif (role == "user")
+ ...
+#else
+ ...
+#end
+#if(systemType == '1')
+    SELECT id,unit_id,unit_name from law_unit_extend_info
+#elseif(systemType == '2')
+    SELECT id,human_id,human_name from law_human_extend_info
+#else
+    SELECT id,name,code from sys_region
+#end
+
+使用场景：
+可以在条件中使用调用公式或者会话变量的形式获取当前登陆人员属性或配置项来判断执行的实体表为哪一个
+
+SELECT 
+    id,
+    human_id,
+    human_name,
+    age,
+    identity_no
+from law_human_extend_info
+WHERE 1=1
+and delete_flag = 0
+#if(ageValue !=null && ageValue != '')
+    #if(ageValue <= 80)
+        AND age = ${ageValue}
+    #elseif(ageValue > 80 && ageValue <= 100)
+        AND age IS NULL
+    #else
+        and 1=1
+    #end
+#end
+http://10.250.1.50:8080/linglongZT/workspace.html#/2054794240744058880/data-management/dataView/sql?categoryId=e0afb94b-40d9-4e78-ac94-3e86b548e90c&viewid=ds_tbl_t_5cd49cedb8bf4c6b9a3324c999183aee
+for 语句
+#for (String userId : userIds)
+ // 内部循环计数器，从 1 开始计数
+ ${for.index}
+ ...
+#end
+视图变量
+业务场景：根据当前登陆人员所属部门过滤部门
+操作步骤：
+1. 获取当前登陆人员所属部门以及所属部门的下级部门列表
+  a. 当前采用的是获取当前登录人员部门的 unit_path 查询出子列表，也可以使用灵珑公式       DEPARTMENT_CHILD_LIST(DEPARTMENT_ID(),3,true,'id')
+2. 在视图中使用条件语句、值渲染和视图变量在视图中完成过滤
+
+
+SELECT
+    unit.id,
+    unit.unit_id,
+    unit.unit_name,
+    unit.senior_id,
+'${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("bd_var_0d9c68af-ef22-49a2-baaf-7f5b5ed4abcd", true)}' as unit_ids
+FROM
+    law_unit_extend_info unit
+WHERE
+    unit.delete_flag = 0
+#if(com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("bd_var_0d9c68af-ef22-49a2-baaf-7f5b5ed4abcd", true) != null 
+&& com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("bd_var_0d9c68af-ef22-49a2-baaf-7f5b5ed4abcd", true) != '')
+    AND unit.unit_id in (${com.egova.lowcode.foundation.util.UserSessionUtils::getSessionVariable("bd_var_0d9c68af-ef22-49a2-baaf-7f5b5ed4abcd", true)})
+#else
+    AND 1=1
+#end
+http://10.250.1.50:8080/linglongZT/workspace.html#/2054794240744058880/data-management/dataView/sql?categoryId=e0afb94b-40d9-4e78-ac94-3e86b548e90c&viewid=ds_tbl_t_a01617eaf4cc4561b46ccebe5a10b771
+《SQL模版语法》
+《低代码SQL编写规范(培训)》
+《灵珑列表性能优化场景》
+导航属性、性能
+视图里导航属性
+列表或详情涉及到多张表数据查询时，可以通过导航属性来加载对应的数据。这样可以减少不必要的在联表查询，从而提升查询效率。
+添加导航属性“任务信息”，配置关联关系
+在列表的数据面板“隐藏字段”栏点击添加来增加计算字段，把任务信息里面的taskId和nodeName字段进行拆解。如下图：
+ARRAY_FIRST('#{regions.name}')
+《灵珑性能配置及问题排查》
+http://10.250.1.50:8080/linglongZT/design.html#/list-design/5f49508a-1f2d-461c-b842-7e4e48ac9c7d
+灵珑性能配置及问题排查
+《灵珑性能配置及问题排查》
+相关场景构造树
+树视图的编写
+sys_region 表结构（区域表）
+law_unit_extend_info 表结构（部门表）
+区域部门树
+R_10  湖北省
+├─ R_11  武汉市
+│   ├─ U_100  市公安局
+│   └─ U_101  市司法局
+└─ R_12  XXX市
+    └─ U_200  XX市监局
+        └─ U_201  XX分局
+SELECT
+    node_id AS id,
+    senior_id,
+    node_name AS name,
+    node_type
+FROM
+    (
+        SELECT
+            CONCAT ('R_', id) AS node_id,
+            CONCAT ('R_', senior_id) AS senior_id,
+            name AS node_name,
+            1 AS node_type
+        FROM
+            sys_region
+        where type < 3
+        UNION ALL
+        SELECT
+            CONCAT ('U_', unit_id) AS node_id,
+            CASE
+                WHEN senior_id = 0 OR senior_id IS NULL THEN CONCAT ('R_', region_id)
+                ELSE CONCAT ('U_', senior_id)
+            END AS senior_id,
+            unit_name AS node_name,
+            2 AS node_type
+        FROM
+            law_unit_extend_info
+        WHERE
+            delete_flag = 0
+    ) AS tree
+ORDER BY
+    node_type,
+    id
+http://10.250.1.50:8080/linglongZT/design.html#/tree-design/d948f399-2c65-4e2c-9395-86a487265f47
+统计区域或部门节点下的列表数据
+SELECT
+    sr.id,
+    sr.senior_id,
+    sr.name,
+    IFNULL (COUNT(h.id), 0) AS total
+FROM
+    sys_region sr
+    LEFT JOIN law_human_extend_info h ON sr.ID = h.region_id
+    AND h.delete_flag = 0
+WHERE
+    sr.type < 3
+GROUP BY
+    sr.ID,
+    sr.senior_id,
+    sr.name
+ORDER BY
+    sr.ID
+http://10.250.1.50:8080/linglongZT/design.html#/tree-design/c2f782eb-ea8f-4c06-908c-8a03ab2ea634
+二、复杂公式
+在脚本中使用公式
+通过脚本获取数据模型或API接口
+公式：api.DATA_SOURCE_EXECUTE()
+function main() {
+    const self = this;
+    const userNameValue = self.$$("text_input_g0k8ow").$$getValue();
+    const params = [{
+        name: "userName", valueContent: userNameValue
+    }];
+
+    let jsonParams = {pageSize: 99999};
+
+    api.DATA_SOURCE_EXECUTE("ds_mod_26e4e425-c0f8-4b47-bc80-1395a8643e99", "ddcat", params, [], JSON.stringify(jsonParams))
+        .then(function (res) {
+            console.log(res);
+            self.$$("textarea_fqwnvh").$$setValue(JSON.stringify(res.result[0]));
+        })
+        .catch(function (err) {
+            console.log(err);
+        })
+}
+function main() {
+    const self = this;
+    const userNameValue = self.$$("text_input_g0k8ow").$$getValue();
+    const params = [{
+        name: "userName", valueContent: userNameValue
+    }];
+    let jsonParams = {pageSize: 99999};
+
+    api.DATA_SOURCE_EXECUTE("ds_api_cfbca62d-befe-4f75-8d4b-a22b42814850", "api", params, [], JSON.stringify(jsonParams))
+        .then(function (res) {
+            
+            let apiResult =JSON.parse(res.result);
+            let data = JSON.parse(res.result).result[0];
+            console.log("api接口返回值：", apiResult);
+            console.log("用户信息：", data);
+            self.$$("textarea_592gls").$$setValue(JSON.stringify(data));
+        })
+        .catch(function (err) {
+            console.log(err);
+        })
+}
+http://10.250.1.50:8080/linglongZT/design.html#/design/7bc675e3-78ab-492e-b3b0-8dd00e90504a
+使用脚本新增数据
+law_unit_extend_info 表结构（部门表）
+function main() {
+    const self = this;
+    const insertSql = insertTable({
+        unitPath: '/root/dept/1001',
+        unitNameAbbr: '执法一队',
+        unitSubjectId: 2001,
+        unitSubjectName: 'XX市综合行政执法局',
+        seniorId: 1000,
+        unitCode: 'ZF001'
+    });
+    
+    console.log(insertSql);
+    self.$$("textarea_bsmakz").$$setValue(insertSql);
+    api.EXEC_FORMULA(insertSql).then(res=>{
+        console.log(res);
+    });
+}
+
+function insertTable(data) {
+
+    const insertFields = [
+        // 根部门到自己的路径
+        ['unit_path', `'${data.unitPath}'`],
+        // 创建时间
+        ['create_time', 'NOW()'],
+        // 部门简称
+        ['unit_name_abbr', `'${data.unitNameAbbr}'`],
+        // 执法主体标识
+        ['unit_subject_id', data.unitSubjectId],
+        // 执法主体名称
+        ['unit_subject_name', `'${data.unitSubjectName}'`],
+        // 父级部门id
+        ['senior_id', data.seniorId],
+        // 部门用户中心uuid
+        ['unit_uuid', 'UUID()'],
+        // 是否删除，默认0
+        ['delete_flag', 0],
+        // 部门编码，默认0
+        ['unit_code', `'${data.unitCode}'`]
+    ];
+
+    const formattedFields = insertFields.map(([key, value]) => {
+        return `'${key}',${value}`;
+    });
+
+    const lawLitigantVerifyRecordId = "ds_tbl_t_f8d02f88524e48b7987092d2429b582f";
+    const insertSql = `INSERT('${lawLitigantVerifyRecordId}', [${formattedFields.join(',')}])`;
+    return insertSql;
+}
+http://10.250.1.50:8080/linglongZT/design.html#/design/7bc675e3-78ab-492e-b3b0-8dd00e90504a
+数据视图中的导航角标的配置
+导航初始加载时加载角标值
+function main() {
+    const self = this;
+    api.PUBLISH_COUNTING_EVENT(self, {
+        type: "appMenu",
+        counting: {
+            "xjyjcd-v2i3f6": 1024
+        }
+    });
+}
+列表加载完成后根据列表值更新导航角标
+function onTableChange(params) {
+    const self = this;
+    let pageListEle = self.$$("page_widget_list_gb8u2a");
+    let paging = pageListEle.$$getRenderElement().$$getListElement().paging.total;
+    api.PUBLISH_COUNTING_EVENT(self, {
+        type: "appMenu",
+        counting: {
+            "xjyjcd-v2i3f6": Number(paging.total)
+        }
+    });
+}
+《如何配置导航菜单、标签页角标》
+http://10.250.1.50:8080/linglongZT/workspace.html#/2054794240744058880/nav
+多表联动的数据处理
+公式 INSERT_FROM_SELECT_WITH_PARAMS 的使用
+INSERT_FROM_SELECT_WITH_PARAMS(toTableId, columnIds, formTableId, fromColumnIds, fromWhere, params)，按条件查询出fromTable表（支持实体和SQL视图）的某几个字段的数据插入到toTableId表的某几个字段中, tableId在业务实体管理页面中获取；fromTable为SQL视图时，支持解析视图中的会话变量和国产化函数，支持传入自定义变量
+
+
+INSERT_FROM_SELECT_WITH_PARAMS('toTable_id_A', ['column1','column2'], 'formTable_id_B', QUERY_EQ('id',15),['A','1'])，
+翻译成SQL为：
+  
+Insert into table_A (column1,column2) select fromColumn1, fromColumn2 from (select fromColumn1, fromColumn2 from table_B where A = '1' ) as temp where table_B.id = 15
+INSERT INTO 实体表名 
+    (uid, appointment_verify_id, appointment_date, stall_id, holder_id, stall_use_period_type, appointment_state_id, create_appointment_time, create_appointment_human_id, create_appointment_human_name)
+SELECT 
+    uid, 
+    appointment_verify_id, 
+    appointment_date, 
+    stall_id, 
+    holder_id, 
+    period_type, 
+    appointment_state_id, 
+    create_appointment_time, 
+    apply_human_id, 
+    apply_human_name
+FROM ds_tbl_t_29337a2f630244e6ae5cd1e57a69be65  （视图的标识id）
+WHERE appointment_verify_id = 'appointmentVerifyId的具体值'
+业务场景：根据摊位预约审核表的起止时间，按天 + 时段拆分生成连续的预约记录（比如一个申请用 7 天、早中晚三时段的摊位，会生成 7×3=21 条独立预约数据），用于批量生成预约数据。
+摊点预约记录表(law_stall_appointment_record_info)
+CREATE TABLE `law_stall_appointment_record_info` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `uid` varchar(64) DEFAULT NULL COMMENT 'uid',
+  `appointment_verify_id` int DEFAULT NULL COMMENT '预约审核id,对应law_stall_appoint_verify 主键',
+  `remove_appointment_verify_id` int DEFAULT NULL COMMENT '解除预约审核id,对应law_stall_appoint_verify 主键',
+  `appointment_date` date DEFAULT NULL COMMENT '预约日期，以天为单位格式：2025-03-21',
+  `stall_id` int DEFAULT NULL COMMENT '摊位id',
+  `holder_id` int DEFAULT NULL COMMENT '摊主id',
+  `stall_use_period_type` varchar(20) DEFAULT NULL COMMENT '1：早摊 2：中午摊 3：晚摊',
+  `appointment_state_id` int DEFAULT NULL COMMENT '当前状态，1：已预约 -1：已解除预约',
+  `create_appointment_time` datetime DEFAULT NULL COMMENT '创建预约时间',
+  `create_appointment_human_id` int DEFAULT NULL COMMENT '创建预约操作人id',
+  `create_appointment_human_name` varchar(100) DEFAULT NULL COMMENT '创建预约操作人name',
+  `remove_appointment_time` datetime DEFAULT NULL COMMENT '解除预约时间',
+  `remove_appointment_human_id` int DEFAULT NULL COMMENT '解除预约操作人id',
+  `remove_appointment_human_name` varchar(100) DEFAULT NULL COMMENT '解除预约操作人name',
+  PRIMARY KEY (`id`),
+  KEY `idx_lsari_appointment_verify_id` (`appointment_verify_id`),
+  KEY `idx_lsari_stall_use_period_type` (`stall_use_period_type`)
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='摊点预约记录表';
+摊位预约待插入明细预约
+
+SELECT 
+    @UUID() as uid,
+    t1.id AS appointment_verify_id,
+    t1.stall_id,
+    t1.holder_id,
+    DATE_ADD(t1.apply_use_start, INTERVAL nums.day_num DAY) AS appointment_date,
+    p.period_type,
+    CASE p.period_type
+        WHEN '1' THEN '早摊'
+        WHEN '2' THEN '中午摊' 
+        WHEN '3' THEN '晚摊'
+    END AS period_name,
+    1 AS appointment_state_id,
+    @NOW() AS create_appointment_time,
+    t1.apply_human_id,
+    t1.apply_human_name,
+    0 AS verify_state_id
+FROM law_stall_appointment_verify t1
+JOIN (
+    SELECT 
+        (TEN_10.SeqValue + TEN_100.SeqValue + TEN_1000.SeqValue) AS day_num
+    FROM 
+        (SELECT 0 AS SeqValue UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 
+            UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) TEN_10,
+        (SELECT 0 AS SeqValue UNION SELECT 10 UNION SELECT 20 UNION SELECT 30 UNION SELECT 40 
+            UNION SELECT 50 UNION SELECT 60 UNION SELECT 70 UNION SELECT 80 UNION SELECT 90) TEN_100,
+        (SELECT 0 AS SeqValue UNION SELECT 100 UNION SELECT 200 UNION SELECT 300) TEN_1000
+) nums ON nums.day_num <= DATEDIFF(t1.apply_use_end, t1.apply_use_start)
+JOIN (
+    #set(periods = ["1","2","3"])
+    #for(pt : periods)
+        #if(for.index == 1)
+            SELECT '${pt}' AS period_type
+        #else
+            UNION ALL SELECT '${pt}'
+        #end
+    #end
+) p ON (t1.stall_use_period_type LIKE CONCAT('%', p.period_type, '%') OR 
+    t1.stall_use_period_type LIKE CONCAT('%\"', p.period_type, '\"%'))
+WHERE 1=1 
+#if(appointmentVerifyId != null && appointmentVerifyId != '')
+    AND t1.id = ${appointmentVerifyId}
+#end
+ORDER BY appointment_date, t1.stall_id, p.period_type
+function main(defaultParams) {
+    const self = this;
+    const formData = getFormData(self);
+
+    getLawStallAppointmentRecordInfo(formData)
+        .then(function (appointmentRecords) {
+            // 返回一个 Promise 链，而不是直接抛出错误
+            return checkAppointmentConflict.call(self, formData, appointmentRecords)
+                .then(function (hasConflict) {
+                    if (hasConflict) {
+                        // 存在冲突，返回一个特殊标记，后续处理会跳过保存步骤
+                        return {type: 'conflict', conflict: true};
+                    }
+                    // 没有冲突，继续保存表单
+                    return saveFormData.call(self, formData)
+                        .then(function (saveResult) {
+                            return {type: 'save', result: saveResult};
+                        });
+                });
+        })
+        .then(function (operationResult) {
+            // 根据上一步的结果决定后续操作
+            if (operationResult.type === 'conflict') {
+                // 存在冲突，直接返回，不继续执行
+                return Promise.reject({name: 'AppointmentConflictError', message: '存在预约冲突'});
+            }
+
+            if (operationResult.type === 'save' && operationResult.result) {
+                // 保存成功，添加详细记录
+                return addDetailedAppointmentRecords.call(operationResult.result.result.documentNo);
+            }
+
+            // 保存失败
+            return Promise.reject(new Error('表单保存失败'));
+        })
+        .then(function () {
+            self.$message.success('预约成功');
+            openPage(self, '1955802345355870208', '我的预约', formData.holderIdValue, '')
+            
+        })
+        .catch(function (error) {
+            // 分离错误处理：冲突错误已经提示过，不再显示通用错误
+            if (error.name !== 'AppointmentConflictError') {
+                console.error('摊位预约处理失败:', error);
+                self.$message.error('预约处理失败，请稍后重试');
+            }
+        });
+}
+
+/**
+ * 检查预约冲突
+ * @returns {Promise<boolean>} true-存在冲突，false-无冲突
+ */
+function checkAppointmentConflict(formData, appointmentRecords) {
+    const self = this;
+
+    return new Promise(function (resolve) {
+        if (!appointmentRecords || appointmentRecords.length === 0) {
+            resolve(false);
+            return;
+        }
+
+        // 查找与当前预约时段冲突的记录
+        const conflictRecord = findConflictRecord(formData, appointmentRecords);
+
+        if (!conflictRecord) {
+            resolve(false);
+            return;
+        }
+
+        const appointmentType = conflictRecord.appointment_type;
+        const appointmentDate = conflictRecord.appointment_date;
+        const stallCode = conflictRecord.stall_code;
+
+        if (appointmentType == 1) {
+            self.$message.warning("当前摊位 " + appointmentDate + " 已被预约");
+        } else {
+            self.$message.warning("您已预约 " + appointmentDate + " 的摊位 " + stallCode);
+        }
+
+        resolve(true);
+    });
+}
+
+/**
+ * 查找冲突记录 - 改进版本
+ */
+function findConflictRecord(formData, appointmentRecords) {
+    const appointmentRecordInfo = appointmentRecords.find(item => formData.stallUsePeriodType.includes(item.stall_use_period_type));
+    return appointmentRecordInfo;
+}
+
+/**
+ * 保存表单数据
+ */
+function saveFormData(formData) {
+    const self = this;
+    return new Promise(function (resolve, reject) {
+        const formPartEle = self.$$("form_part_eyozep");
+        const formRenderEle = formPartEle.$$getRenderElement();
+
+        formRenderEle.onSave()
+            .then(function (saveResult) {
+                resolve(saveResult);
+            })
+            .catch(function (error) {
+                console.error('表单保存失败:', error);
+                reject(new Error('表单保存失败: ' + error.message));
+            });
+    });
+}
+
+/**
+ * 添加详细的预约记录
+ */
+function addDetailedAppointmentRecords() {
+    const appointmentVerifyId = this.toString();
+    return new Promise(function (resolve) {
+        console.log('添加详细预约记录，表单数据:', appointmentVerifyId);
+
+        let sql = "INSERT_FROM_SELECT_WITH_PARAMS("
+            + "'ds_tbl:t_bff53c221c8c45898d6ce2809c4eb637',"
+            + "['uid','appointment_verify_id','appointment_date','stall_id','holder_id','stall_use_period_type','appointment_state_id','create_appointment_time','create_appointment_human_id','create_appointment_human_name'],"
+            + "'ds_tbl_t_29337a2f630244e6ae5cd1e57a69be65',"
+            + "['uid','appointment_verify_id','appointment_date','stall_id','holder_id','period_type','appointment_state_id','create_appointment_time','apply_human_id','apply_human_name'],"
+            + "QUERY_EQ('1', 1),"
+            + "['appointmentVerifyId','" + appointmentVerifyId + "']"
+            + ")";
+
+        api.EXEC_FORMULA(sql).then(function (result) {
+            resolve(result);
+        });
+    });
+}
+
+
+/**
+ * 获取当前摊位在该时间段内是否有预约
+ */
+function getLawStallAppointmentRecordInfo(formData) {
+    return new Promise(function (resolve, reject) {
+        const params = [
+            {
+                name: "stallId",
+                valueContent: formData.stallId
+            },
+            {
+                name: "holderId",
+                valueContent: formData.holderId
+            },
+            {
+                name: "applyUseStartTime",
+                valueContent: formData.applyUseStart
+            },
+            {
+                name: "applyUseEndTime",
+                valueContent: formData.applyUseEnd
+            }
+        ];
+
+        api.DATA_SOURCE_EXECUTE(
+            "ds_mod_53599a0a-e342-48a6-8746-099d2e0830f5",
+            "ddcat",
+            params,
+            [],
+            ""
+        ).then(function (res) {
+            // 去重处理：保留相同id的第一条记录
+            const uniqueRecords = [];
+            const seenIds = {};
+
+            res.result.forEach(function (item) {
+                if (!seenIds[item.id]) {
+                    seenIds[item.id] = true;
+                    uniqueRecords.push(item);
+                }
+            });
+
+            resolve(uniqueRecords);
+        }).catch(function (error) {
+            console.error('获取预约记录失败:', error);
+            reject(new Error('无法获取预约记录，请检查网络连接'));
+        });
+    });
+}
+
+/**
+ * 打开页面
+ */
+function openPage(self, pageId, title, params, phone) {
+    self.$router.push({
+        name: "page-preview",
+        query: {
+            title: "我的预约",
+            pageId,
+            params,
+            phone,
+            showHeader: self.$route.query.showHeader,
+            pageTitle: title,
+            linkTitle: title,
+            showBackHeade: true,
+            isFromAction: 1,
+            _t: Date.now() + ""
+        }
+    });
+}
+
+
+/**
+ * 获取表单数据
+ */
+function getFormData(self) {
+    let stallIdValue = self.$$("number_input_gwgapp").cValue;
+    let holderIdValue = self.$$("single_select_2w97js").cValue;
+    let stallUsePeriodTypeValue = self.$$("checkbox_efk5x1").cValue;
+    let applyUseStartValue = self.$$("date_picker_83ajqw").cValue;
+    let applyUseEndValue = self.$$("date_picker_5y6q9a").cValue;
+    let applyReasonValue = self.$$("textarea_9vw1w8").cValue;
+
+    const formData = {
+        stallId: stallIdValue,
+        holderId: holderIdValue,
+        stallUsePeriodType: stallUsePeriodTypeValue ? stallUsePeriodTypeValue.map(String) : [],
+        applyUseStart: applyUseStartValue,
+        applyUseEnd: applyUseEndValue,
+        applyReason: applyReasonValue
+    };
+
+    return formData;
+}
+示例说明：
+const formData = {
+  // 摊位ID：固定摊位
+  stallId: "STALL_2025001",
+  // 持有人ID
+  holderId: "USER_10001",
+  // 预约时段：早、中、晚 都选了
+  stallUsePeriodType: ["1", "2", "3"],
+  // 预约开始日期：2025-01-01
+  applyUseStart: "2025-01-01",
+  // 预约结束日期：2025-01-02（共 2 天）
+  applyUseEnd: "2025-01-02",
+  // 申请原因
+  applyReason: "日常经营使用"
+};
+脚本调用流水号公式配置
+GENERATE_SEQUENCE()
+GENERATE_SEQUENCE('#{ruleId}', '#{tableName}', #{flag}, #{variables}, '#{applicationId}')，根据文号规则Id生成流水号, 其中flag填以下数字或0（0表不采用策略）: 1表示可重复、2表示可修改、4表示跳号重用、8表示废号重用;variables可填null
+api.EXEC_FORMULA("GENERATE_SEQUENCE('e287d779-3bdd-47d1-9906-d4d8554d70bf','gs_hlth_repair_process',0,null,'1955457034688561152')").then((res) => {
+    console.log("生成的流水号为：",res.result);
+});
+三、复杂部件/页面，复杂交互
+模板打印及批量打印
+《列表操作栏【打印】》
+《列表顶部操作【批量打印】》
+《使用打印设计按照文档格式导出文档数据》
+批量打印
+function main() {
+    var self = this;
+    var tableId = "ds_tbl_t_05edef2960b448ffa15cfea04f858861"; // 实体或视图id  实体：t_b4ef86258bfc444fb7e84216560a665e
+    var columnId = "85aeddeb-69f2-49e4-9184-ce5f5315c0e3"; // 实体或视图中的过滤字段，此处为列documentNo的id
+    var tableComp = self.findElement("table_3eyt0n"); // 获取表格元素
+    var fileName = "区域下的人员";
+    var queryParams = {
+        name: "fileName",
+        valueContent: fileName
+    }
+
+    //debugger
+    // 获取当前表格选中的行的documentNo
+    const values = (tableComp.rowSelection.selectedRows || []).map(f => f.region_id.value);
+    const jsonParams = getCondition(columnId, values, tableId);
+    //debugger;
+    api.DATA_SOURCE_EXECUTE("ds_api_1555fb77-3318-4705-83a6-758e599cfad4", "api", [queryParams], [], JSON.stringify(jsonParams)).then(res => {
+        console.log(res);
+        self.$message.success("文件开始下载")
+        var downloadUrl = JSON.parse(res.result).result;
+        downloadFile(downloadUrl);//下载文件
+        self.$message.success("文件下载完成")
+    }).catch(err => {
+        console.error(err);
+    });
+}
+
+function getCondition(columnId, values, tableId) {
+    return {
+        "tableConditionDescriptor": {
+            "members": [
+                {
+                    "operate": "In",
+                    "field": columnId,
+                    "valueType": "Constant",
+                    "values": values,
+                    "tableId": tableId,
+                    "className": "Single",
+                    "text": null,
+                    "type": "Single",
+                    "fieldType": "array"
+                }
+            ],
+            "className": "List",
+            "type": "List",
+            "combine": "And"
+        }
+    }
+}
+function downloadFile(fileUrl) {
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+预览打印
+function main(params) {
+function main() {
+    var self = this;
+    var tableId = "ds_tbl_t_05edef2960b448ffa15cfea04f858861"; // 实体或视图id  实体：t_b4ef86258bfc444fb7e84216560a665e
+    var columnId = "85aeddeb-69f2-49e4-9184-ce5f5315c0e3"; // 实体或视图中的过滤字段，此处为列documentNo的id
+    var tableComp = self.findElement("table_3eyt0n"); // 获取表格元素
+    var fileName = "区域下的人员";
+    var queryParams = {
+        name: "fileName",
+        valueContent: fileName
+    }
+
+    //debugger
+    // 获取当前表格选中的行的documentNo
+    const values = (tableComp.rowSelection.selectedRows || []).map(f => f.region_id.value);
+    const jsonParams = getCondition(columnId, values, tableId);
+    //debugger;
+    api.DATA_SOURCE_EXECUTE("ds_api_1555fb77-3318-4705-83a6-758e599cfad4", "api", [queryParams], [], JSON.stringify(jsonParams)).then(res => {
+        console.log(res);
+        self.$message.success("文件开始下载")
+        var downloadUrl = JSON.parse(res.result).result;
+        downloadFile(downloadUrl);//下载文件
+        self.$message.success("文件下载完成")
+    }).catch(err => {
+        console.error(err);
+    });
+}
+
+function getCondition(columnId, values, tableId) {
+    return {
+        "tableConditionDescriptor": {
+            "members": [
+                {
+                    "operate": "In",
+                    "field": columnId,
+                    "valueType": "Constant",
+                    "values": values,
+                    "tableId": tableId,
+                    "className": "Single",
+                    "text": null,
+                    "type": "Single",
+                    "fieldType": "array"
+                }
+            ],
+            "className": "List",
+            "type": "List",
+            "combine": "And"
+        }
+    }
+}
+function downloadFile(fileUrl) {
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+    const self = this;
+    const hideMessage = self.$message.loading('打印预览中...', 0);
+    let jsonParams = JSON.stringify({
+        region_id: params.region_id.value
+    });
+
+    api.DATA_SOURCE_EXECUTE("ds_api_1555fb77-3318-4705-83a6-758e599cfad4", 'api', [], [], jsonParams, new FormData()).then(res => {
+        if (!res.hasError && res.result) {
+            const result = JSON.parse(res.result);
+            console.log(result)
+            if (!result.hasError) {
+                self.$message.success('打印预览成功！');
+                var fileurl = result.result
+                const startIndex = fileurl.lastIndexOf('/file/') + 6;
+                const endIndex = fileurl.indexOf('/download');
+                const fileId = fileurl.substring(startIndex, endIndex);
+                // 需要拼接为灵珑实际的前端地址
+                const linglongZT = api.CONST["bd_var_1a69e007-9479-4dc4-9373-769a1b21db9a"];
+                const previewUrl = linglongZT + "/linglong/design.html#/template/preview/" + fileId;
+                console.log(previewUrl)
+                window.open(previewUrl, '_blank');
+            } else {
+                self.$message.error('打印预览失败！')
+            }
+        } else {
+            self.$message.error('打印预览失败！');
+        }
+    }).catch((err) => {
+        console.error(err);
+        self.$message.error('打印预览失败！');
+    }).finally(() => {
+        hideMessage();
+    });
+
+}
+打印
+function main(params) {
+    const self = this;
+    const hideMessage = self.$message.loading('打印中。。。', 0);
+
+    let jsonParams = JSON.stringify({
+        // id是列表中主键的id, 可以按实际调整为文档等，该参数作为查询数据的条件
+        region_id: params.region_id.value
+    });
+
+    api.DATA_SOURCE_EXECUTE("ds_api_1555fb77-3318-4705-83a6-758e599cfad4", 'api', [], [], jsonParams, new FormData()).then(res => {
+        if (!res.hasError && res.result) {
+            const result = JSON.parse(res.result);
+            console.log(result)
+            if (!result.hasError) {
+                self.$message.success('打印成功！');
+                var source = result.result.substr(0, result.result.indexOf('/linglongZT-api'))
+                var newValue = window.location.href.substr(0, window.location.href.indexOf('/linglong'))
+                result.result = result.result.replace(source, newValue);
+                // window.open(result.result, 'download');
+                downloadFile(result.result, '')
+            } else {
+                self.$message.error('打印失败！')
+            }
+        } else {
+            self.$message.error('打印失败！');
+        }
+    }).catch((err) => {
+        console.error(err);
+        self.$message.error('打印失败！');
+    }).finally(() => {
+        hideMessage();
+    });
+}
+
+function downloadFile(url, filename) {
+
+    const link = document.createElement('a');
+    link.href = url;
+    if (filename) {
+        link.download = filename;
+    }
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+}
+http://10.250.1.50:8080/linglongZT/workspace.html#/2054794240744058880/page-build/page/2054800776769925120
+
+[表格0]
+标识 | 变量名称 | 公共表达式
+us-1 | 所属单位 | DEPARTMENT_ID()
+us-2 | 用户标识 | USER_ID()
+us-3 | 用户账户 | USER_USERNAME()
+us-4 | 当前时间 | NOW()
+us-5 | 区域标识 | REGION_ID()
+
+[表格1]
+场景 | 页面参数 | SQL参数 | 模板示例
+等值查询 | p | p__equal__value 或 p | p = ${p__equal__value}
+范围查询 | p | p__between__start p__between__end | p between ${p__between__start} and ${p__between__end}
+IN查询 | p | p__in__value | p in ${p__in__value}
+
+[表格2]
+字段名 | 数据类型 | 允许空值 | 说明
+id | int | 否 | 主键 ID
+code | varchar(50) | 否 | 区域编码
+name | varchar(80) | 是 | 区域名称
+type | bigint | 是 | 区域类型
+senior_id | bigint | 是 | 上级标识
+senior_code | varchar(200) | 是 | 上级区域编码
+coordinate_x | decimal(22,0) | 是 | x 坐标
+coordinate_y | decimal(22,0) | 是 | y 坐标
+display_order | bigint | 是 | 排序
+area_type_id | bigint | 是 | 区域类型
+plan_id | bigint | 是 | 单元网格方案标识
+pack_id | varchar(50) | 是 | pack_id
+
+[表格3]
+字段名 | 数据类型 | 允许空值 | 说明
+id | int | 否 | 主键 ID
+unit_id | int | 是 | 机构标识
+unit_property_code | char(2) | 是 | 机构属性编码
+index_content | varchar(20) | 是 | 索引内容
+unit_path | varchar(100) | 否 | 根部门到自己的路径
+create_time | datetime | 否 | 创建时间
+update_time | datetime | 是 | 更新时间
+unit_name_abbr | varchar(20) | 否 | 部门简称
+unit_subject_id | int | 否 | 执法主体标识
+unit_subject_name | varchar(80) | 否 | 执法主体名称
+review_organ_name | varchar(80) | 是 | 复议机关名称
+lawsuit_court_name | varchar(80) | 是 | 诉讼法院名称
+payment_bank | varchar(80) | 是 | 付款银行
+payment_account_num | varchar(50) | 是 | 付款账号
+payment_account_name | varchar(50) | 是 | 付款户名
+senior_id | int | 否 | 父级部门 id
+unit_uuid | varchar(64) | 否 | 部门用户中心 uuid
+unit_name | varchar(80) | 是 | 部门 id（注释）
+unit_num_code | varchar(20) | 是 | 部门数字编码
+unit_node_type_code | char(2) | 是 | 节点类型编码，1：省 / 市 / 区直部门；2. 区级 / 街镇
+region_name_abbr | varchar(20) | 是 | 所属区划简称
+region_num_code | varchar(20) | 是 | 所属区划数字编码
+unit_industry_type_code | varchar(50) | 是 | 行业类型编码
+social_credit_code | varchar(20) | 是 | 统一社会信用代码
+delete_flag | tinyint | 否 | 是否删除，默认 0
+unit_code | varchar(80) | 否 | 部门编码，默认 0
+senior_unit_uuid | varchar(64) | 是 | 上级部门 unit_uuid
+address | varchar(200) | 是 | 部门地址
+phone | varchar(80) | 是 | 联系电话
+postal_code | varchar(6) | 是 | 邮政编码
+contact_person | varchar(200) | 是 | 联系人
+region_id | int | 是 | 所属区域标识
+unit_grade_code | char(1) | 是 | 部门级别编码，见字典表
+display_order | int | 是 | 显示顺序
+establishment_number | int | 是 | 编制人数
+legal_person | varchar(200) | 是 | 法人
+establis_time | datetime | 是 | 创建时间
+mail | varchar(40) | 是 | 电子邮箱
+fox | varchar(20) | 是 | 传真
+setting_basis | varchar(200) | 是 | 设立依据
+
+[表格4]
+字段名 | 数据类型 | 允许空值 | 说明
+id | int | 否 | 主键 ID
+unit_id | int | 是 | 机构标识
+unit_property_code | char(2) | 是 | 机构属性编码
+index_content | varchar(20) | 是 | 索引内容
+unit_path | varchar(100) | 否 | 根部门到自己的路径
+create_time | datetime | 否 | 创建时间
+update_time | datetime | 是 | 更新时间
+unit_name_abbr | varchar(20) | 否 | 部门简称
+unit_subject_id | int | 否 | 执法主体标识
+unit_subject_name | varchar(80) | 否 | 执法主体名称
+review_organ_name | varchar(80) | 是 | 复议机关名称
+lawsuit_court_name | varchar(80) | 是 | 诉讼法院名称
+payment_bank | varchar(80) | 是 | 付款银行
+payment_account_num | varchar(50) | 是 | 付款账号
+payment_account_name | varchar(50) | 是 | 付款户名
+senior_id | int | 否 | 父级部门 id
+unit_uuid | varchar(64) | 否 | 部门用户中心 uuid
+unit_name | varchar(80) | 是 | 部门 id（注释）
+unit_num_code | varchar(20) | 是 | 部门数字编码
+unit_node_type_code | char(2) | 是 | 节点类型编码，1：省 / 市 / 区直部门；2. 区级 / 街镇
+region_name_abbr | varchar(20) | 是 | 所属区划简称
+region_num_code | varchar(20) | 是 | 所属区划数字编码
+unit_industry_type_code | varchar(50) | 是 | 行业类型编码
+social_credit_code | varchar(20) | 是 | 统一社会信用代码
+delete_flag | tinyint | 否 | 是否删除，默认 0
+unit_code | varchar(80) | 否 | 部门编码，默认 0
+senior_unit_uuid | varchar(64) | 是 | 上级部门 unit_uuid
+address | varchar(200) | 是 | 部门地址
+phone | varchar(80) | 是 | 联系电话
+postal_code | varchar(6) | 是 | 邮政编码
+contact_person | varchar(200) | 是 | 联系人
+region_id | int | 是 | 所属区域标识
+unit_grade_code | char(1) | 是 | 部门级别编码，见字典表
+display_order | int | 是 | 显示顺序
+establishment_number | int | 是 | 编制人数
+legal_person | varchar(200) | 是 | 法人
+establis_time | datetime | 是 | 创建时间
+mail | varchar(40) | 是 | 电子邮箱
+fax | varchar(20) | 是 | 传真
+setting_basis | varchar(200) | 是 | 设立依据
+
+[表格5]
+uid (唯一 ID) | appointment_date | period_type | period_name | stall_id | holder_id
+UUID_001 | 2025-01-01 | 1 | 早摊 | STALL_2025001 | USER_10001
+UUID_002 | 2025-01-01 | 2 | 中午摊 | STALL_2025001 | USER_10001
+UUID_003 | 2025-01-01 | 3 | 晚摊 | STALL_2025001 | USER_10001
+UUID_004 | 2025-01-02 | 1 | 早摊 | STALL_2025001 | USER_10001
+UUID_005 | 2025-01-02 | 2 | 中午摊 | STALL_2025001 | USER_10001
+UUID_006 | 2025-01-02 | 3 | 晚摊 | STALL_2025001 | USER_10001

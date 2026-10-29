@@ -1,0 +1,40 @@
+表单选择下拉单选，向另一个组件中传参，实现数据回显
+1 使用场景
+在进行工单校验时，需要实现选择模版，然后在明细表格中回显模版的具体信息。
+注：工单所在表单与明细表格所在表单不为同一表单。
+2 效果
+用户在质检模版中选择模版，选择后，筛选数据，明细表格自动回显模版数据。
+3 配置
+该配置涉及3张表：
+质检模版表 mis_gh_quality_template
+质检模版明细 mis_gh_quality_template_item
+工单质检记录 mis_gh_quality_rec_log
+关联关系：mis_gh_quality_template.id  = mis_gh_quality_template_item.template_id
+mis_gh_quality_rec_log.template_id = mis_gh_quality_template.id
+本配置也是通过关联关系实现的，新建表单工单记录新增列表，业务实体为工单质检表。
+新建表单工单明细列表新增表单，业务实体主表为质检模版表，从表为质检模版明细表。
+质检模版组件映射模版标识字段，绑定模版树，通过下拉选择模版，获取模版id。
+该组件值改变后绑定方法：
+function main() {
+    console.log("number_input_ebwmv5", this.$$("single_select_7zuxi0"))
+    const id = this.$$("single_select_7zuxi0").$$getValue();
+    console.log("id", id)
+    // 找到页面中的表单渲染组件
+    var pageFormWidget = this.$$("form_part_azfm0o");
+    
+    if (pageFormWidget && pageFormWidget.$children) {
+   
+        // 真正的表单部件
+        var formRender = pageFormWidget.$children[0];
+        // 给表单传参
+        // 如果点树节点需要反查表单的数据，需要传参数documentNo
+        formRender.$$setFormValue({
+            documentNo: id
+        });
+    }
+
+}
+通过向工单明细列表新增表单传递模版id，筛选数据，得到需要的数据。
+本配置实际要实现将数据回显后，在明细列表中修改数据，最后将数据存储在工单质检结果明细记录 mis_gh_quality_rec_item，作为工单质检明细的数据。
+4 常见问题
+无

@@ -1,0 +1,65 @@
+详情部件hook使用
+1 使用场景
+移动端详情部件的数据最终来自接口，不来自实体或视图（数据源没有对应的实体，一开始绑定的视图是模拟数据），需要使用hook方法调用接口获取数据。
+2 效果
+点击列表卡片跳转至详情页面。
+3 配置
+配置入口：
+一级跳转列表部件
+二级被跳转详情部件
+配置步骤：
+step1：一级跳转列表页面
+使用自定义动作跳转至详情页面并传参。
+// 一级跳转列表页面
+function main(param) {
+    this.$router.push({
+        name: "page-preview",
+        query: {
+            title: "案件详情",
+            pageId: '1795420098544807936-65d8',
+            showHeader: this.$route.query.showHeader,
+            isFromAction: 1,
+            _t: new Date().getTime() + "",
+            recId: param.recId.value
+        }
+    });
+}
+step2：二级被跳转详情页面
+在详情部件hook方法中接收参数，并使用api.API_DETAIL_DATA_EXECUTE调用接口（与列表调用的方法不同，列表的方法为api.API_DATA_EXECUTE）。
+//二级被跳转详情页面
+function main(pageId, param) {
+    let id = 2071696;
+    let location = window.location;
+    // 拿到问号后的字符串
+    query = location.href.match(/(?<=\?.*).+/g) || [];
+    // 根据 & 拆分
+    if (query.length > 0) {
+        let params = {};
+        let paramArr = query[0].split("&");
+        paramArr.forEach((p) => {
+            // 等号拆分
+            let kv = p.split("=");
+            params[kv[0]] = decodeURI(kv[1] || "");
+        });
+        id = params.recId || 2071696
+    }
+    let self = this;
+    return new Promise((resolve, reject) => {
+        param.condition.params = {
+            "id": id,
+        }
+
+        api.API_DETAIL_DATA_EXECUTE("f158bd1b-6cf6-40ec-a8f8-4645e81e188c-65d8", "BUNCHES", param, { lostAbility: "00" })
+            .then(res => {
+                const newRes = res;
+                window.CSDN_LDKB_REC_DETAIL_PROCESSES = res.result[0].data.processes.value || [];
+                resolve(newRes);
+            }).catch(() => {
+                reject();
+            })
+    });
+}
+4 常见问题
+详情部件使用hook和列表部件使用hook，api请求的方法不同，如下：
+详情部件hook使用api请求方法为：api.API_DETAIL_DATA_EXECUTE()。
+列表部件hook使用api请求方法为：api.API_DATA_EXECUTE()。

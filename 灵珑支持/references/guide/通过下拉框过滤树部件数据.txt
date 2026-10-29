@@ -1,0 +1,37 @@
+通过下拉框过滤树部件数据
+1 使用场景
+页面中需要使用下拉框对树部件的数据进行过滤
+具体场景：页面中有一个树部件，需要通过下拉框选择企业对其进行过滤
+2 效果
+通过下拉框过滤左侧树部件的数据
+3 配置
+需要配置表单，使用下拉框组件，关闭存储。这里的表单可以随意选择，因为不会新增数据
+在下拉单选组件的值修改事件中添加脚本
+function main() {
+//获取当前标签页中的树部件
+      let tree1 = this.$$("page_tree_2ii6p0").$$getRenderElement();
+      let treeRefresh1 = this.$$("page_tree_2ii6p0").$$getRenderElement().$$getTreeElement();
+      //如果下拉框数据不为空则对树部件设置过滤，这里的enterprise_id需要根据实际情况的树部件列进行修改
+      if (this.cValue != null) {
+          tree1.$$setExtraParams({
+              enterprise_id: this.cValue
+          })
+          //刷新树部件，并选择第一个树节点
+          treeRefresh1.$$refreshData().then(() => {
+              const id = treeRefresh1.$$getRootNode()[0].id;
+              treeRefresh1.$$setExpandKeys([id]);
+              treeRefresh1.$$clickNode({ "id": id });
+          })
+          //如果下拉框数据为空则清空刚刚设置的过滤，需要和上面的列名保持一致
+      }else{
+          tree1.$$setExtraParams({
+              enterprise_id: null
+          })
+          treeRefresh1.$$refreshData().then(() => {
+              const id = treeRefresh1.$$getRootNode()[0].id;
+              treeRefresh1.$$setExpandKeys([id]);
+              treeRefresh1.$$clickNode({ "id": id });
+          })
+      } 
+}
+关键代码已注释

@@ -1,0 +1,22 @@
+URL传值给列表查询字段业务场景配置
+1 使用场景
+当页面加载时将URL的字段数据值传给列表查询字段框。
+2 效果
+需求：facility_code值不可展示给用户不可选择，因此facility_code由URL页面链接传出，列表facility_code查询字段获取值后级联给检测大类下拉框的下拉数据。
+3 配置
+1、使用页面传参的方式将页面URL的参数传给列表查询字段。
+2、页面配置页面JS触发facility_code字段框的onFieldChange()事件，使被联级的检测大类框获取联级下拉数据。
+export function main(params) {
+  // 节点参数
+  const pageRootList = this.$$roots();
+  let rootPageElement = pageRootList[0];
+  // 找到页面中的列表组件元素
+  let pageTableList = rootPageElement.$$element("page_widget_list_ee57ik");
+  if (pageTableList) {
+    //facility_code字段框的唯一标识
+    pageTableList.$$getRenderElement().dataEngine.state.getElement('query_field_wrapper_1janlu').onFieldChange()
+
+  }
+}
+4 常见问题
+需要将页面传值的字段放在列表查询面板第一个位置，因为页面加载是逐一加载的，否则传值不成功。

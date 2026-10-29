@@ -1,0 +1,88 @@
+{
+  "os_node_demo1": {
+    "version": "20261001",
+    "report_time": "2026-10-07 02:00:00",
+    "data": {
+      "basic": {
+        "01:hostname": "demo-node-1",
+        "02:clock_diff:s:abs_lbc_DATA_rbc_gt_10:#9775": "0.35",
+        "03:fstab::WRAPDATA_eq__quot_ERROR_quot_:#9776": "OK"
+      },
+      "topics": {
+        "01:cpu": [
+          {
+            "01:cpu_used%:%:DATA_gt_60:#4864": "95.3",
+            "02:cpu_loadavg1::DATA_gt_10:#4864": "2.5",
+            "03:cpu_loadavg5::DATA_gt_10:#4864": "2.1",
+            "04:cpu_loadavg15::DATA_gt_10:#4864": "1.8",
+            "05:cpu_processors": "8"
+          }
+        ],
+        "02:memory": [
+          {
+            "01:memory_total:KB": "16333088",
+            "02:memory_used%:%:DATA_gt_98:#4891": "98.7",
+            "03:swap_total:KB": "2097148",
+            "04:swap_used%:%:DATA_gt_90:#4891": "95.5"
+          }
+        ],
+        "03:disk": [
+          {
+            "01:mount": "/egova/data",
+            "02:in_fstab::WRAPDATA_eq__quot_NO_quot_:#9776": "YES",
+            "03:size_total:KB": "104857600",
+            "04:size_available::DATA_lt_10240000:#4870": "8602304",
+            "05:inode_available::DATA_lt_100000:#4908": "86000",
+            "06:inode_used%:%:DATA_gt_90:#4908": "12.5"
+          },
+          {
+            "01:mount": "/",
+            "02:in_fstab::WRAPDATA_eq__quot_NO_quot_:#9776": "YES",
+            "03:size_total:KB": "52428800",
+            "04:size_available::DATA_lt_10240000:#4870": "41000000",
+            "05:inode_available::DATA_lt_100000:#4908": "12000000",
+            "06:inode_used%:%:DATA_gt_90:#4908": "8.1"
+          }
+        ],
+        "04:network": [
+          {
+            "01:tcpconnection:::#9779": {
+              "01:ESTABLISHED::DATA_gt_5000:#9779": "320",
+              "02:TIME_WAIT::DATA_gt_5000:#9779": "6800"
+            },
+            "00:access_to_internet": "True"
+          }
+        ]
+      }
+    }
+  },
+  "mysql_node_demo1": {
+    "version": "20261001",
+    "report_time": "2026-10-07 02:05:00",
+    "data": {
+      "basic": {
+        "01:hostname": "demo-node-1"
+      },
+      "topics": {
+        "01:mysql": [
+          {
+            "01:threads_connected::DATA_gt_1200:#9822": "1500",
+            "02:slow_count::DATA_gt_50:#9814": "128",
+            "03:version::": "8.0.32"
+          }
+        ],
+        "02:replication": [
+          {
+            "01:slave_delay::DATA_gt_10000:#9845": "25000",
+            "02:slave_running::WRAPDATA_eq__quot_NO_quot_:#9845": "YES"
+          }
+        ],
+        "03:memory": [
+          {
+            "01:used_memory:B:DATA_gt_3221225472:#5027": "4294967296"
+          }
+        ]
+      }
+    }
+  }
+}
