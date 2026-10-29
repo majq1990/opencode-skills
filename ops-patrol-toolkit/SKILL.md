@@ -114,3 +114,13 @@ python scripts/09_skywalking_triage.py triage --alarms work/skywalking/alarms.js
 - **auto-check 解决文档链接（已同步，2026-10）**：auto-check 解决文档已从 Redmine WIKI 迁移到钉钉文档，链接映射唯一来源 wiki_map.yml（本 skill 同步为 `references/autocheck_wiki_map.yml`，38 条旧 ID → 钉钉文档）。06 按 auto-check 协议解析指标键第 5 段：完整链接直用 / 旧 ID 查表跳钉钉 / 未命中回退旧 Redmine / 留空按指标名查 names 节。auto-check 侧更新映射表后重新拷贝覆盖本文件即可完成再同步
 - **处置引导终态（用户拍板）**：与 auto-check 一致走链接方式，且 06 **默认经 dws 拉取钉钉文档正文嵌入处置引导报告**（按链接去重、超 1500 字截断、拉取失败降级为仅链接并记 warning 不中断）；`06 doc --url <链接>` 可单篇拉取。无 dws 环境加 `--no-doc-body` 跳过。`--metrics`/`--playbooks` 外挂参数保留作扩展位，缺文件静默跳过
 - 剧本关键词为边界感知匹配（词左边界 + 驼峰词首，见 `patrol_lib.keyword_hit`）：replication 不会误命中 io 剧本，HighCpuLoad 能命中 cpu 剧本；新增剧本关键词时用全词或中文词
+
+---
+
+<!-- feedback-channel v1 -->
+## 反馈渠道
+
+本技能已纳入企业反馈监控。使用中如遇「连续多轮仍未解决同一类问题」、「工具执行报错」，或你想主动反馈：
+
+- 在装有 feedback-monitor 插件的 agent（opencode / Claude Code / 腾讯 WorkBuddy）中，会自动采集并（脱敏后）上报到企业反馈平台；
+- 也可随时在 **skills-manager 应用 →「反馈 / 建议」** 手动提交，会自动记录关联技能与提交人。
