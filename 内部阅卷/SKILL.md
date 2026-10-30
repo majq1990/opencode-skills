@@ -1,15 +1,16 @@
 ---
 name: 内部阅卷
-version: 2.0.0
+version: 2.1.0
 description: |
-  公司内部统一阅卷工具，一套 skill 支持 5 类阅卷工作（通道自动路由）：
+  公司内部统一阅卷工具，一套 skill 支持 6 类阅卷工作（通道自动路由）：
   ①性能安全认证阅卷（onekey.egova.com.cn Moodle quiz，双题 Q1/Q2 各 50 分）：登录→下载docx→解析→关键词初评→视觉细查→基线校准→HTML评语→dry-run→批量POST录入；
   ②麒舰实操阅卷（本地 docx 目录，10 大模块 100 分）：docx 解析→关键词+截图初评→基线校准→扣分明细+分数建议，仅出报告不回写；
   ③星桥高级认证阅卷（Moodle quiz 263，5 场景×20 分共 39 采分点）：拉卷→解析→关键词/代码/截图证据初评→人工复核应用→评语→提交 Moodle Q2~Q6；
   ④社招笔试阅卷（assesscenter.italent.cn 链接，Shell/Python/SQL/日期题）：打开链接→分析题目→下载答题附件→(连库取正确答案)→自动评分→MD 报告；
-  ⑤AI认证阅卷（quiz265笔试 + quiz266实操 T1/30+T2/30+T3/40=100，增量）：录入笔试/实操地址→只拉未阅卷记录→独立阅卷→回写→更新表格（详见 references/RUN_aicert.md）。
-  ⑥未交卷处理（所有 Moodle 通道通用）：发现“进行中/未交卷”试答→列清单→人工确认→批量代交卷→删覆盖（详见 references/RUN_submit_onbehalf.md）。
-  触发词：内部阅卷 / 阅卷 / 评分 / 批改试卷 / 性能安全认证阅卷 / 性能安全评分 / 麒舰阅卷 / 麒舰实操打分 / 星桥高级阅卷 / 星桥评分 / 社招笔试 / Moodle 阅卷 / quiz 259 / quiz 263 / assesscenter / italent.cn / AI认证阅卷 / AI认证评分 / quiz 265 / quiz 266 / 未交卷 / 代交卷 / 批量交卷 / 进行中试答。
+  ⑤AI认证阅卷（quiz265笔试 + quiz266实操 T1/30+T2/30+T3/40=100，增量）：录入笔试/实操地址→只拉未阅卷记录→独立阅卷→回写→更新表格（详见 references/RUN_aicert.md）；
+  ⑥悟空3.0认证阅卷（悟空平台 http://8.130.127.28:8080/wukong 实操 + 钉钉阅卷分配表，36 项扣分制 100 分）：登录考生账号→查看/编辑双模式核 1.1-1.4→城管秩序大屏 2.1-2.6（效果优先+动态接口/静态数据判别+交互行为测试+图层配置）→智能视频专题 27-39→批量写钉钉表（详见 references/RUN_wukong.md）。
+  未交卷处理（所有 Moodle 通道通用）：发现“进行中/未交卷”试答→列清单→人工确认→批量代交卷→删覆盖（详见 references/RUN_submit_onbehalf.md）。
+  触发词：内部阅卷 / 阅卷 / 评分 / 批改试卷 / 性能安全认证阅卷 / 性能安全评分 / 麒舰阅卷 / 麒舰实操打分 / 星桥高级阅卷 / 星桥评分 / 社招笔试 / Moodle 阅卷 / quiz 259 / quiz 263 / assesscenter / italent.cn / AI认证阅卷 / AI认证评分 / quiz 265 / quiz 266 / 悟空阅卷 / 悟空认证阅卷 / 悟空3.0 / wukong / 未交卷 / 代交卷 / 批量交卷 / 进行中试答。
   旧 skill（社招阅卷 / 麒舰实操考核-阅卷 / 星桥高级认证-阅卷 / company-grading-perf-sec）均已废弃，统一走本 skill。
 author: majianquan
 category: support-dept
@@ -18,7 +19,7 @@ visibility: support-dept
 
 # 内部阅卷（统一阅卷 Skill）
 
-公司内部统一阅卷工具。把原先分散的 4 个阅卷 skill（性能安全 / 麒舰实操 / 星桥高级 / 社招）合并为一套，共享下载、解析、视觉细查、报告、Moodle 提交底座，按触发信号自动路由到对应通道；另有⑤AI认证增量通道。
+公司内部统一阅卷工具。把原先分散的 4 个阅卷 skill（性能安全 / 麒舰实操 / 星桥高级 / 社招）合并为一套，共享下载、解析、视觉细查、报告、Moodle 提交底座，按触发信号自动路由到对应通道；另有⑤AI认证增量通道、⑥悟空3.0认证通道。
 
 ## 通道路由表
 
@@ -31,6 +32,7 @@ visibility: support-dept
 | `quiz?id=263` / "星桥高级阅卷" / "星桥评分" | **starbridge 星桥高级** | Moodle quiz 263（5 场景×20 分） | ✅ 提交 Q2~Q6 |
 | `assesscenter.italent.cn` 链接 / "社招笔试" / "社招评分" | **social 社招** | AssessCenter 网页 | ❌ 仅报告 |
 | 笔试quiz地址 + 实操quiz地址 / "AI认证阅卷" / "AI认证评分" / quiz 265 / quiz 266 | **aicert AI认证** | quiz265笔试 + quiz266实操（T1/30+T2/30+T3/40）+ 花名册 | ✅ 增量回写 + 表格 |
+| 悟空平台 URL / "悟空阅卷" / "悟空认证阅卷" / "悟空3.0" / 阅卷分配表节点 ZX6GRezw… | **wukong 悟空认证** | 悟空平台实操（36 项扣分制）+ 钉钉阅卷分配表 | ✅ 写钉钉 sheet |
 
 > 注：原 company-grading-perf-sec 的「麒舰部署 quiz 259」通道本次未并入；需要时按「扩展新通道」章节补脚本即可。
 >
@@ -69,11 +71,19 @@ visibility: support-dept
 │   ├── aicert/                  # 通道⑤AI认证（增量）
 │       ├── grading_aicert.py        # T1/30+T2/30+T3/40 初评（argv[1]=workdir）
 │       └── submit_aicert.py         # 按题扣分明细评语回写（默认dry-run，--commit提交）
+│   ├── wukong/                  # 通道⑥悟空3.0认证
+│       ├── wukong-actions.mjs       # 登录考生/打开页面/截图/页面内evaljs（CDP 9333）
+│       ├── byurl.mjs                # 按URL定位标签页执行动作（tab顺序不稳定，禁用索引）
+│       ├── reload_layers.mjs        # 刷新页面抓 page-layer/list + layer-menu 响应
+│       ├── get_projects.mjs         # 读项目列表+拦截window.open拿页面URL
+│       ├── pull_page_config.js      # 页面内回放 page/detail 拿接口分类/过滤器/extractor
+│       └── write_scores.py          # 阅卷表36行批量写入+回读（--dry-run 预览）
 ├── references/                  # 各通道评分规则 + 基线
 │   ├── grading_rules_perfsec.md / reference_baseline_perfsec.json / visual_check_prompt.md / RUN_perfsec.md
 │   ├── grading_rules_qijian.md
 │   ├── grading_rules_starbridge.md / reference_baseline_starbridge.json
 │   ├── grading_rules_aicert.md / RUN_aicert.md
+│   ├── grading_rules_wukong.md / RUN_wukong.md
 │   └── RUN_submit_onbehalf.md   # 批量代交卷流程（未交卷处理）
 ├── reference_answers/           # 性能安全标准答卷（基线重建用）
 └── templates/grading_report_template.md   # 社招评分报告模板
@@ -160,6 +170,23 @@ visibility: support-dept
 5. **对碰**：只看花名册“全员状态”（已交卷/参考中未交卷/实际未参考），重名取最高
 6. **回写**：`submit_aicert.py <workdir>` dry-run 预览 → 用户确认 → `--commit`（只POST未POST slot，按题扣分明细评语）
 7. **更新表格**：版本A/B双表全量覆盖 + 文档同步
+
+---
+
+## 通道⑥ 悟空3.0认证阅卷（悟空平台实操 + 钉钉阅卷分配表）
+
+评分规则详见 `references/grading_rules_wukong.md`，完整流程详见 `references/RUN_wukong.md`。
+
+**核心口径**：效果优先（查看模式看呈现）；查看+编辑双模式（URL view→create）；数据对接判别动态接口/静态数据（编辑模式→数据页→接入方式）；地图没点位=效果不存在；核心扣分点对应评分说明逐项扣。
+
+1. **登录考生**：`wukong-actions.mjs login <拼音+工号>`（密码 eGova@123，平台 http://8.130.127.28:8080/wukong）
+2. **项目搭建**：项目配置页 basic/theme/map/nav 四 tab 核 1.1-1.4（行4-7）
+3. **城管秩序**：查看模式截图比对模板大屏（2.1.x/2.3.1）+ 交互行为测试（2.3.2 弹窗反查/2.3.3 详情/2.3.4 全局时间/2.3.5 处置数图层逻辑/2.5.1 tab传参）+ 编辑模式核接入方式与级联图层ID（2.2.x/2.5.1/2.6.2）
+4. **图层核查**：`reload_layers.mjs` 抓 page-layer/list（视频图层 status 三目/离线条件样式/菜单多选/网格三级图层）+ interaction/chain 响应（交互链在此，page/detail 的 interaction 全 null 属正常）
+5. **智能视频专题**：打开智能视频页核 27-39（识别成效/识别类型/时段分析/最新识别案件/设备总览/违规高发类型/违规高发区域/监控抓拍/视频设备图层/案件热力/整体风格）
+6. **写表**：`write_scores.py --sheet <考官sheet> --col <扣分列> --rows rows.json`（36 行，写后回读第3行验证；人工核对不一致以人工为准）
+
+**网络红线**：本机代理 127.0.0.1:18083 会掐断到考核服务器的连接；浏览器/脚本直连（`NO_PROXY=127.0.0.1,localhost` + 清 HTTP(S)_PROXY）。GIS 地图/视频流黑屏先对照模板大屏是否同样黑，模板正常才判考生问题。
 
 ---
 
