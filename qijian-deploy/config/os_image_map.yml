@@ -8,7 +8,8 @@
 #   → 合并 dl_v2_input_template 生成完整 10 行输入序列
 #
 # 注意：
-#   - 架构菜单 1/2 基于 2026-04-16 实测（kylin V10 SP3 x86 用 3→1→2），推断 2=x86 / 1=arm；首次跑新 OS 需在 node1 手工确认
+#   - 架构/服务菜单已按 2026-11-06 实测修正：arch 1=x86 / 2=arm；服务类型 1=V14标准城管、2=麒舰平台微服务（选 1 会下错成 V14 包集！）
+#   - 麒舰（script_select=2）不弹 web 版本菜单，web_version_select 空时默认 WEB_VERS[0]=release720
 #   - CentOS 7.9 自定义镜像都是已特化业务镜像，跑麒舰栈建议选公共镜像或重装
 #   - 镜像清单最后一次同步时间：2026-04-16（aliyun ecs DescribeImages --ImageOwnerAlias self）
 
@@ -19,24 +20,24 @@ default_os: kylin_v10_sp3_x86
 # line 1-3  ← dl_v2_menu（各 OS 独立）
 # line 4    ← base_select
 # line 5    ← script_select
-# line 6    ← web_ver（空行）
+# line 6    ← web_ver（空行；仅 script_select=1/V14 会弹此菜单，麒舰不弹）
 # line 7-9  ← account / password / project
-# line 10   ← web_app_select（应对 ini 含 '-' 触发的子菜单）
+# line 10   ← web_app_select（应对 ini 含 '-' 触发子菜单的额外确认）
 dl_v2_input_template:
   base_select: 2       # 2 = 含 env/repo
-  script_select: 1     # 1 = 麒舰微服务 v14-standard
-  web_ver: ""          # 空 = release720（默认）
+  script_select: 2     # 2 = 麒舰平台微服务（1 = V14 智信云标准，勿选错！）
+  web_ver: ""          # 麒舰不弹版本菜单，默认 release720（当前唯一版本）
   account: majianquan
   password: Egova@123
   project: faq
-  web_app_select: 0    # 0 = 全选（[dataflow-毕升采集] 含 '-' 会触发菜单）
+  web_app_select: 0    # 0 = 全选（[dataflow-毕升采集] 含 '-' 会触发子菜单）
 
 # OS 定义
 operating_systems:
 
   kylin_v10_sp3_x86:
     aliases: ["麒麟 V10 SP3 x86", "kylin V10 SP3", "kylin V10 SP3 x86", "银河麒麟 V10 SP3", "kylinv10sp3"]
-    dl_v2_menu: [3, 1, 2]     # 银河麒麟 → V10 SP3 → x86（本次实测基线）
+    dl_v2_menu: [3, 1, 1]     # 银河麒麟 → V10 SP3 → x86（2026-11-06 实测：arch 1=x86）
     images:
       cn-beijing: m-2ze1eyekppxowe73c3g7      # kylinv10-sp3-amd64-修改后
       cn-wulanchabu: m-0jl4fem5xgqm8roo9hhq   # kylin_v10_amd64_修改后

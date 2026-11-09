@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# fill_depends — 依赖预填：microservice_template depends → metadata depend_key（2026-11-08 定型）
+# 支持软件 CLI 预装后执行；type→实例 key 动态读取，无实例记 MISS
+OI=/egova/onekey_install/oneinstall_v2
+export PATH=$OI/src/bin:$PATH
+cd $OI/shell/tools || exit 9
+M=../../ansible/inventory/metadata.yml
+TPL=../template/microservice_template.yml
+MYSQL_KEY=$(yq '.mysql | keys | .[0]' $M)
+REDIS_BIZ=$(yq '.redis.[] | select(.host == "node1") | key' $M | head -1)
+REDIS_UC=$(yq '.redis.[] | select(.host == "node3") | key' $M | head -1)
+NACOS_KEY=$(yq '.nacos | keys | .[0]' $M)
+ZK_KEY=$(yq '.zookeeper | keys | .[0]' $M)
+KAFKA_KEY=$(yq '.kafka | keys | .[0]' $M)
+PG_KEY=$(yq '.postgresql | keys | .[0]' $M)
+TD_KEY=$(yq '.TDengine | keys | .[0]' $M)
+TD3_KEY=$(yq '.TDengine3 | keys | .[0]' $M)
+RUSTFS_KEY=$(yq '.rustfs | keys | .[0]' $M)
+echo "KEYS mysql=$MYSQL_KEY redis_biz=$REDIS_BIZ redis_uc=$REDIS_UC nacos=$NACOS_KEY zk=$ZK_KEY kafka=$KAFKA_KEY pg=$PG_KEY td=$TD_KEY td3=$TD3_KEY rustfs=$RUSTFS_KEY"
+
+FILLED=0; MISS=0
+for app in $(yq 'keys | .[]' $TPL); do
+  DN=$(yq ".${app}.depends | length" $TPL 2>/dev/null)
+  [ "${DN:-0}" -eq 0 ] && continue
+  MK=$(yq ".microservice.${app} | keys | .[0]" $M 2>/dev/null)
+  [ -z "$MK" -o "$MK" = "null" ] && continue
+  i=0
+  while [ $i -lt $DN ]; do
+    DT=$(yq ".${app}.depends[$i].type" $TPL)
+    case "$DT" in
+      mysql) DK=$MYSQL_KEY ;; redis) DK=$REDIS_BIZ ;;
+      usercenter_redis) DK=$REDIS_UC ;; nacos) DK=$NACOS_KEY ;;
+      zookeeper) DK=$ZK_KEY ;; kafka) DK=$KAFKA_KEY ;;
+      rustfs) DK=$RUSTFS_KEY ;; postgresql) DK=$PG_KEY ;;
+      TDengine) DK=$TD_KEY ;; TDengine3) DK=$TD3_KEY ;;
+      microservice)
+        ST=$(yq ".${app}.depends[$i].sub_type" $TPL)
+        DK=$(yq ".microservice.${ST} | keys | .[0]" $M 2>/dev/null) ;;
+      *) DK="" ;;
+    esac
+    if [ -n "$DK" ] && [ "$DK" != "null" ]; then
+      yq -i ".microservice.${app}.${MK}.depends[$i].depend_key = \"${DK}\"" $M && FILLED=$((FILLED+1))
+    else
+      MISS=$((MISS+1)); echo "STILL_MISS $app[$i] type=$DT"
+    fi
+    i=$((i+1))
+  done
+done
+echo "FILLED=$FILLED MISS=$MISS"
